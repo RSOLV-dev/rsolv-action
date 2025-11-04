@@ -188,98 +188,14 @@ groups:
               5. Monitor for patterns (specific plans, customer segments)
           dashboard: "https://grafana.rsolv.dev/d/billing-metrics"
 
-  - name: billing_infrastructure_alerts
-    interval: 30s
-    rules:
-      # Alert 7: Database connection pool usage high (>80%)
-      - alert: BillingDatabaseConnectionPoolHigh
-        expr: |
-          (
-            sum(db_connection_pool_size{app="rsolv"})
-            -
-            sum(db_connection_pool_available{app="rsolv"})
-          ) / sum(db_connection_pool_size{app="rsolv"}) > 0.80
-        for: 10m
-        labels:
-          severity: warning
-          component: billing
-          subsystem: database
-        annotations:
-          summary: "Database connection pool usage is high"
-          description: |
-            Connection pool usage is {{ $value | humanizePercentage }}.
-            High usage may lead to connection timeouts.
-
-            **Current value**: {{ $value | humanizePercentage }}
-            **Threshold**: 80%
-            **Impact**: High - May cause request failures
-            **Action**:
-              1. Check for long-running queries
-              2. Review slow query logs
-              3. Check for connection leaks
-              4. Consider increasing pool size if sustained
-              5. Review billing-related queries for optimization
-          dashboard: "https://grafana.rsolv.dev/d/ecto"
-
-      # Alert 8: Application memory usage high (>80%)
-      - alert: BillingAppMemoryUsageHigh
-        expr: |
-          (
-            container_memory_usage_bytes{namespace="rsolv-production", pod=~"rsolv-platform.*"}
-            /
-            container_memory_max_usage_bytes{namespace="rsolv-production", pod=~"rsolv-platform.*"}
-          ) > 0.80
-        for: 15m
-        labels:
-          severity: warning
-          component: billing
-          subsystem: infrastructure
-        annotations:
-          summary: "Application memory usage is high"
-          description: |
-            Memory usage is {{ $value | humanizePercentage }}.
-            High memory usage may lead to OOM kills.
-
-            **Current value**: {{ $value | humanizePercentage }}
-            **Threshold**: 80%
-            **Impact**: High - May cause pod restarts
-            **Action**:
-              1. Check for memory leaks in billing code
-              2. Review recent deployments
-              3. Check garbage collection metrics
-              4. Review cache sizes
-              5. Consider increasing memory limits if sustained
-          dashboard: "https://grafana.rsolv.dev/d/beam"
-
-      # Alert 9: Rate limit hit rate spike (>10 hits/minute)
-      - alert: BillingRateLimitHitRateHigh
-        expr: rate(rate_limit_hits_total{endpoint=~".*billing.*|.*customer.*"}[5m]) > 10
-        for: 10m
-        labels:
-          severity: warning
-          component: billing
-          subsystem: ratelimit
-        annotations:
-          summary: "Rate limit hit rate is high"
-          description: |
-            Rate limit hits: {{ $value | printf "%.2f" }}/minute.
-            This may indicate abuse or legitimate burst traffic.
-
-            **Current value**: {{ $value | printf "%.2f" }}/minute
-            **Threshold**: 10/minute
-            **Impact**: Medium - Some requests being rejected
-            **Action**:
-              1. Check for single IP making many requests
-              2. Review recent rate limit changes
-              3. Check if legitimate traffic (adjust limits if needed)
-              4. Look for potential abuse patterns
-              5. Review affected customer IPs for block consideration
-          dashboard: "https://grafana.rsolv.dev/d/billing-metrics"
+  # NOTE: Infrastructure alerts (connection pool, memory) removed as they are
+  # app-wide concerns, not billing-specific. Create general infrastructure alerts
+  # in a separate file if needed.
 
   - name: billing_business_alerts
     interval: 5m
     rules:
-      # Alert 10: Credit system anomaly (large credit grant)
+      # Alert 7: Credit system anomaly (large credit grant)
       - alert: BillingCreditGrantAnomalyDetected
         expr: |
           histogram_quantile(0.99,
