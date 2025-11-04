@@ -91,29 +91,36 @@ defmodule Rsolv.Billing.WebhookProcessor do
     customer = find_customer_by_stripe_id(invoice["customer"])
 
     # Update subscription state to past_due
-    Customers.update_customer(customer, %{
-      subscription_state: "past_due"
-    })
+    Customers.update_customer(customer, %{subscription_state: "past_due"})
 
     # Queue dunning email notification
-    %{
-      type: "payment_failed",
-      customer_id: customer.id,
-      invoice_id: invoice["id"],
-      amount_due: invoice["amount_due"],
-      attempt_count: invoice["attempt_count"],
-      next_payment_attempt: invoice["next_payment_attempt"]
-    }
-    |> Rsolv.Workers.EmailWorker.new()
-    |> Oban.insert()
+    with {:ok, _job} <-
+           %{
+             type: "payment_failed",
+             customer_id: customer.id,
+             invoice_id: invoice["id"],
+             amount_due: invoice["amount_due"],
+             attempt_count: invoice["attempt_count"],
+             next_payment_attempt: invoice["next_payment_attempt"]
+           }
+           |> Rsolv.Workers.EmailWorker.new()
+           |> Oban.insert() do
+      Logger.warning("Payment failed for customer",
+        customer_id: customer.id,
+        stripe_invoice_id: invoice["id"],
+        amount: invoice["amount_due"]
+      )
 
-    Logger.warning("Payment failed for customer",
-      customer_id: customer.id,
-      stripe_invoice_id: invoice["id"],
-      amount: invoice["amount_due"]
-    )
+      {:ok, :processed}
+    else
+      {:error, changeset} ->
+        Logger.error("Failed to enqueue payment failed email",
+          customer_id: customer.id,
+          errors: inspect(changeset.errors)
+        )
 
-    {:ok, :processed}
+        {:error, :job_enqueue_failed}
+    end
   end
 
   # customer.subscription.created - Record new subscription

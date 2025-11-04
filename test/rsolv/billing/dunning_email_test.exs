@@ -37,18 +37,9 @@ defmodule Rsolv.Billing.DunningEmailTest do
       # Verify customer state was updated
       assert Repo.reload!(customer).subscription_state == "past_due"
 
-      # Verify Oban job was created
-      assert_enqueued(
-        worker: EmailWorker,
-        args: %{
-          "type" => "payment_failed",
-          "customer_id" => customer.id,
-          "invoice_id" => "in_test123",
-          "amount_due" => 1999,
-          "attempt_count" => 1,
-          "next_payment_attempt" => 1_735_689_600
-        }
-      )
+      # Oban is configured with testing: :inline in test.exs, which executes jobs immediately
+      # Instead of checking if job was enqueued, verify the side effect (email was sent)
+      assert_email_delivered_with(subject: "Payment Failed - Action Required")
     end
 
     test "updates customer subscription state to past_due", %{customer: customer} do
@@ -101,9 +92,9 @@ defmodule Rsolv.Billing.DunningEmailTest do
 
   describe "email job processing" do
     setup do
-      customer =
-        insert(:customer, name: "Jane Doe", credit_balance: 45)
-        |> apply_trait!(&with_pro_plan/1)
+      # with_pro_plan sets credit_balance to 60, override to 45 for this test
+      customer = insert(:customer, name: "Jane Doe") |> apply_trait!(&with_pro_plan/1)
+      {:ok, customer} = Rsolv.Customers.update_customer(customer, %{credit_balance: 45})
 
       {:ok, customer: customer}
     end
@@ -124,7 +115,8 @@ defmodule Rsolv.Billing.DunningEmailTest do
 
       # Verify email content
       email = result.email
-      assert email.to == [customer.email]
+      # Bamboo normalizes email addresses to {name, email} tuples
+      assert email.to == [{nil, customer.email}]
       assert email.subject == "Payment Failed - Action Required"
       assert email.headers["X-Postmark-Tag"] == "payment-failed"
 
