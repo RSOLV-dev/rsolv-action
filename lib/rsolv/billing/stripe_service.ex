@@ -40,10 +40,13 @@ defmodule Rsolv.Billing.StripeService do
 
   # Runtime configuration lookup for testability
   defp stripe_client, do: Application.get_env(:rsolv, :stripe_client, Stripe.Customer)
+
   defp stripe_payment_method,
     do: Application.get_env(:rsolv, :stripe_payment_method, Stripe.PaymentMethod)
+
   defp stripe_subscription,
     do: Application.get_env(:rsolv, :stripe_subscription, Stripe.Subscription)
+
   defp stripe_charge, do: Application.get_env(:rsolv, :stripe_charge, Stripe.Charge)
 
   # Retry configuration
