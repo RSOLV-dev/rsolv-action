@@ -121,12 +121,12 @@ export class ASTValidator {
       id: `${v.type}-${v.line}-${v.column || 0}`, // Generate ID from available fields
       type: v.type, // Include type field for API
       patternId: v.type, // Use type as pattern ID
-      filePath: v.filePath || '',
+      file: v.filePath || '', // API expects 'file', not 'filePath'
       line: v.line,
       code: v.snippet || '', // Use snippet as code
       severity: v.severity
     }));
-    
+
     // Build files object from map with proper structure
     const files: Record<string, { content: string }> = {};
     for (const [path, content] of fileContents) {

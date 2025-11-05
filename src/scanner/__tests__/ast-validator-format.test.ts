@@ -32,8 +32,12 @@ describe('ASTValidator API Format', () => {
     expect(request.files['app.js']).toBeDefined();
     expect(request.files['app.js'].content).toBe('const code = "test";');
 
-    // Check that vulnerabilities include type field
+    // Check that vulnerabilities include required fields
     expect(request.vulnerabilities[0].type).toBe('sql_injection');
     expect(request.vulnerabilities[0].patternId).toBe('sql_injection');
+
+    // CRITICAL: API expects 'file' field, not 'filePath' (see platform schema at lib/rsolv_web/schemas/vulnerability.ex:322)
+    expect(request.vulnerabilities[0].file).toBe('app.js');
+    expect(request.vulnerabilities[0].filePath).toBeUndefined();
   });
 });
