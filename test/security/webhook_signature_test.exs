@@ -131,6 +131,28 @@ defmodule Rsolv.Security.WebhookSignatureTest do
     end
   end
 
+  describe "raw body capture" do
+    test "captures raw body without manual assignment", %{conn: conn} do
+      # This test verifies that the ParseableBodyReader is properly configured
+      # to capture raw body for signature verification WITHOUT manual put_private
+      timestamp = System.system_time(:second)
+      signature = generate_stripe_signature(@valid_payload, timestamp, @webhook_secret)
+
+      # DO NOT manually set :raw_body - let the endpoint's body_reader do it
+      conn =
+        conn
+        |> put_req_header("stripe-signature", signature)
+        |> put_req_header("content-type", "application/json")
+        |> post("/api/webhooks/stripe", @valid_payload)
+
+      # Should accept valid signature (200 or 202)
+      # This will FAIL until body_reader is configured in endpoint.ex
+      assert conn.status in [200, 202, 204],
+             "Expected successful webhook processing, got #{conn.status}. " <>
+               "This likely means body_reader is not configured in endpoint.ex"
+    end
+  end
+
   describe "signature format validation" do
     test "rejects malformed signature format", %{conn: conn} do
       malformed_signatures = [
