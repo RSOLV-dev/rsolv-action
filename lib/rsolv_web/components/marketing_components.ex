@@ -1,8 +1,20 @@
 defmodule RsolvWeb.MarketingComponents do
   @moduledoc """
   Reusable components for marketing pages (landing, pricing, etc.).
+
+  These components are optimized for marketing pages with centered layouts,
+  full SVG icons, and gradient backgrounds. They differ from the standard
+  `RsolvWeb.Components.FeatureCard` which is designed for blog/docs pages
+  with border-top cards and letter icons.
+
+  ## Component Relationships
+
+  - `feature_card/1` - Marketing-style centered card with full SVG icon
+  - `RsolvWeb.Components.FeatureCard` - Blog/docs-style card with border and letter icon
+  - Uses `DarkModeHelpers` for consistent dark mode styling
   """
   use Phoenix.Component
+  import RsolvWeb.Components.DarkModeHelpers
 
   @doc """
   Renders a feature card with icon, title, and description.
@@ -26,8 +38,8 @@ defmodule RsolvWeb.MarketingComponents do
       <div class="mb-4 flex justify-center">
         <%= Phoenix.HTML.raw(@icon) %>
       </div>
-      <h3 class="text-xl font-semibold mb-2 text-gray-900 dark:text-gray-100"><%= @title %></h3>
-      <p class="text-gray-600 dark:text-gray-400"><%= @description %></p>
+      <h3 class={text_classes(:heading, "text-xl font-semibold mb-2")}><%= @title %></h3>
+      <p class={text_classes(:muted)}><%= @description %></p>
     </div>
     """
   end
@@ -117,7 +129,7 @@ defmodule RsolvWeb.MarketingComponents do
     ~H"""
     <div class={@class}>
       <div class="text-4xl font-bold text-blue-600 dark:text-blue-400 mb-2"><%= @number %></div>
-      <div class="text-gray-600 dark:text-gray-400"><%= @label %></div>
+      <div class={text_classes(:muted)}><%= @label %></div>
     </div>
     """
   end
