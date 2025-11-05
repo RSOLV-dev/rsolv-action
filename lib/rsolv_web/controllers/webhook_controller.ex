@@ -42,21 +42,21 @@ defmodule RsolvWeb.WebhookController do
       |> put_status(:ok)
       |> json(%{status: "success"})
     else
-      {:error, :missing_signature} = error ->
+      {:error, :missing_signature} ->
         emit_webhook_failure(start_time, "missing_signature")
 
         conn
         |> put_status(:unauthorized)
         |> json(%{error: "Missing signature"})
 
-      {:error, :invalid_signature} = error ->
+      {:error, :invalid_signature} ->
         emit_webhook_failure(start_time, "invalid_signature")
 
         conn
         |> put_status(:unauthorized)
         |> json(%{error: "Invalid signature"})
 
-      {:error, :signature_expired} = error ->
+      {:error, :signature_expired} ->
         emit_webhook_failure(start_time, "signature_expired")
 
         conn
