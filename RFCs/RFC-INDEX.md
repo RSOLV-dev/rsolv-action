@@ -102,6 +102,7 @@ All RFCs are now located in the `/RFCs` directory for better organization. This 
 | 077 | [Tailwind Syntax Template Adoption](RFC-077-TAILWIND-SYNTAX-TEMPLATE-ADOPTION.md) | Draft (Phase 2 - post Task #5697) | 2025-10-24 | Task #5697 |
 | 078 | [Public Site Self-Service](RFC-078-PUBLIC-SITE-SELF-SERVICE.md) | Draft | 2025-11-01 | N/A |
 | 079 | [Alert Configuration Review and Optimization](RFC-079-ALERT-CONFIGURATION-REVIEW.md) | Draft (Post RFC-077) | 2025-11-01 | N/A |
+| 080 | [Sealed Secrets for Production Secret Management](RFC-080-SEALED-SECRETS.md) | Draft | 2025-11-05 | N/A |
 
 ## RFC Implementation Tracking
 
