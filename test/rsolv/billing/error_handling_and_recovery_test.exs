@@ -52,8 +52,10 @@ defmodule Rsolv.Billing.ErrorHandlingAndRecoveryTest do
             "lines" => %{
               "data" => [
                 %{
-                  "price" => %{
-                    "metadata" => %{"plan" => "pro"}
+                  "pricing" => %{
+                    "price_details" => %{
+                      "price" => "price_0SPvUw7pIu1KP146qVYwNTQ8"
+                    }
                   }
                 }
               ]
@@ -90,8 +92,10 @@ defmodule Rsolv.Billing.ErrorHandlingAndRecoveryTest do
             "lines" => %{
               "data" => [
                 %{
-                  "price" => %{
-                    "metadata" => %{"plan" => "pro"}
+                  "pricing" => %{
+                    "price_details" => %{
+                      "price" => "price_0SPvUw7pIu1KP146qVYwNTQ8"
+                    }
                   }
                 }
               ]

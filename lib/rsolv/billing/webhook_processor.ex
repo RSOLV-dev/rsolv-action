@@ -69,16 +69,18 @@ defmodule Rsolv.Billing.WebhookProcessor do
   defp handle_event("invoice.payment_succeeded", %{"object" => invoice}) do
     customer = find_customer_by_stripe_id(invoice["customer"])
 
-    # Pro subscription payment → Credit 60 fixes
+    # Pro subscription payment → Credit configured amount
     if invoice["lines"]["data"] |> Enum.any?(&pro_subscription?/1) do
-      CreditLedger.credit(customer, 60, "pro_subscription_payment", %{
+      credits = pro_subscription_credits()
+
+      CreditLedger.credit(customer, credits, "pro_subscription_payment", %{
         stripe_invoice_id: invoice["id"],
         amount_cents: invoice["amount_paid"]
       })
 
       Logger.info("Pro subscription payment processed",
         customer_id: customer.id,
-        credits_added: 60,
+        credits_added: credits,
         stripe_invoice_id: invoice["id"]
       )
     end
@@ -207,12 +209,20 @@ defmodule Rsolv.Billing.WebhookProcessor do
   end
 
   # Check if line item is for Pro subscription
+  # Uses Stripe API 2025-10-29 format: pricing.price_details.price
   defp pro_subscription?(line_item) do
-    # Check both metadata and price lookup key
-    metadata_plan = get_in(line_item, ["price", "metadata", "plan"])
-    lookup_key = get_in(line_item, ["price", "lookup_key"])
+    price_id = get_in(line_item, ["pricing", "price_details", "price"])
+    price_id == pro_price_id()
+  end
 
-    metadata_plan == "pro" || lookup_key == "pro_monthly"
+  # Get Pro price ID from config
+  defp pro_price_id do
+    Application.get_env(:rsolv, :stripe_billing)[:pro_price_id]
+  end
+
+  # Get Pro subscription credit amount from config
+  defp pro_subscription_credits do
+    Application.get_env(:rsolv, :stripe_billing)[:pro_subscription_credits]
   end
 
   # Find customer by Stripe customer ID

@@ -310,9 +310,10 @@ defmodule Rsolv.BillingOnboardingIntegrationTest do
             "lines" => %{
               "data" => [
                 %{
-                  "price" => %{
-                    "metadata" => %{"plan" => "pro"},
-                    "lookup_key" => "pro_monthly"
+                  "pricing" => %{
+                    "price_details" => %{
+                      "price" => "price_0SPvUw7pIu1KP146qVYwNTQ8"
+                    }
                   }
                 }
               ]
@@ -350,7 +351,15 @@ defmodule Rsolv.BillingOnboardingIntegrationTest do
             "customer" => "cus_idempotent",
             "amount_paid" => 59900,
             "lines" => %{
-              "data" => [%{"price" => %{"metadata" => %{"plan" => "pro"}}}]
+              "data" => [
+                %{
+                  "pricing" => %{
+                    "price_details" => %{
+                      "price" => "price_0SPvUw7pIu1KP146qVYwNTQ8"
+                    }
+                  }
+                }
+              ]
             }
           }
         }
@@ -527,7 +536,17 @@ defmodule Rsolv.BillingOnboardingIntegrationTest do
           "object" => %{
             "customer" => "cus_e2e_test",
             "amount_paid" => 59900,
-            "lines" => %{"data" => [%{"price" => %{"metadata" => %{"plan" => "pro"}}}]}
+            "lines" => %{
+              "data" => [
+                %{
+                  "pricing" => %{
+                    "price_details" => %{
+                      "price" => "price_0SPvUw7pIu1KP146qVYwNTQ8"
+                    }
+                  }
+                }
+              ]
+            }
           }
         }
       }
