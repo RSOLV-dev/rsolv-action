@@ -120,48 +120,24 @@ config :rsolv, Oban,
 **Commit**: d2d77fc9
 **Deployed**: 2025-11-05 03:35:00 UTC (staging-d2d77fc9)
 
-Updated `pro_subscription?/1` function with three-tier fallback strategy:
+Updated `pro_subscription?/1` function to use Stripe API 2025-10-29 format:
 
 ```elixir
-# lib/rsolv/billing/webhook_processor.ex:209-249
+# lib/rsolv/billing/webhook_processor.ex:209-216
+# Check if line item is for Pro subscription
+# Uses Stripe API 2025-10-29 format: pricing.price_details.price
 defp pro_subscription?(line_item) do
-  price_id = get_price_id(line_item)
+  price_id = get_in(line_item, ["pricing", "price_details", "price"])
 
   # Check if this is the Pro monthly price
-  price_id == "price_0SPvUw7pIu1KP146qVYwNTQ8" ||
-    check_lookup_key(line_item, "pro_monthly") ||
-    check_metadata_plan(line_item, "pro")
-end
-
-# Extract price ID from various API formats
-defp get_price_id(line_item) do
-  # New API format: pricing.price_details.price
-  get_in(line_item, ["pricing", "price_details", "price"]) ||
-    # Old API format: price.id
-    get_in(line_item, ["price", "id"]) ||
-    # Legacy format: plan.id
-    get_in(line_item, ["plan", "id"])
-end
-
-defp check_lookup_key(line_item, expected_key) do
-  lookup_key =
-    get_in(line_item, ["price", "lookup_key"]) ||
-      get_in(line_item, ["plan", "lookup_key"])
-  lookup_key == expected_key
-end
-
-defp check_metadata_plan(line_item, expected_plan) do
-  metadata_plan =
-    get_in(line_item, ["price", "metadata", "plan"]) ||
-      get_in(line_item, ["plan", "metadata", "plan"])
-  metadata_plan == expected_plan
+  price_id == "price_0SPvUw7pIu1KP146qVYwNTQ8"
 end
 ```
 
-**Strategy**:
-1. **Primary**: Check hardcoded price ID (works with new format)
-2. **Secondary**: Check lookup_key (backwards compatibility)
-3. **Tertiary**: Check metadata.plan (legacy support)
+**Design Decision**: Simplified to only support current Stripe API version (2025-10-29). No backwards compatibility needed since:
+- We control our API version pin at the webhook endpoint
+- Old invoice formats (`price.lookup_key`, `plan.id`) don't exist in this version
+- Simpler code is easier to maintain and understand
 
 **Trade-off**: Hardcoding the price ID (`price_0SPvUw7pIu1KP146qVYwNTQ8`) creates tight coupling to Stripe configuration. Alternative considered: fetch price object via Stripe API, but rejected due to:
 - Additional API call latency
@@ -169,7 +145,17 @@ end
 - Unnecessary complexity for single price point
 - Price IDs are stable and rarely change
 
-**Migration Path**: When creating additional Pro plans (annual, team, etc.), update this function to check against a list of Pro price IDs or add product-level metadata.
+**Migration Path**: When creating additional Pro plans (annual, team, etc.), update this function to check against a list of Pro price IDs:
+```elixir
+defp pro_subscription?(line_item) do
+  price_id = get_in(line_item, ["pricing", "price_details", "price"])
+  price_id in ~w[
+    price_0SPvUw7pIu1KP146qVYwNTQ8
+    price_pro_annual_xxx
+    price_pro_team_xxx
+  ]
+end
+```
 
 ## Consequences
 
