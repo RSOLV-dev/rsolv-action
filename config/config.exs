@@ -14,7 +14,7 @@ config :rsolv,
 config :rsolv, Oban,
   repo: Rsolv.Repo,
   plugins: [Oban.Plugins.Pruner],
-  queues: [default: 10, emails: 5]
+  queues: [default: 10, emails: 5, webhooks: 10]
 
 # Configures the endpoint
 config :rsolv, RsolvWeb.Endpoint,
