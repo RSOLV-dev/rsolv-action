@@ -11,6 +11,11 @@ defmodule RsolvWeb.LandingLive do
 
   import RsolvWeb.MarketingComponents
 
+  # Import new Tailwind Plus marketing components
+  alias RsolvWeb.Components.Marketing.HeroSimpleCentered
+  alias RsolvWeb.Components.Marketing.FeaturesGrid2x2
+  alias RsolvWeb.Components.Marketing.CtaSimpleCentered
+
   alias RsolvWeb.Services.Analytics
   alias RsolvWeb.Helpers.TrackingHelper
 
@@ -58,27 +63,31 @@ defmodule RsolvWeb.LandingLive do
     [
       %{
         icon:
-          ~s(<svg class="w-12 h-12 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>),
-        title: "Detects Real Vulnerabilities",
-        description: "Not false positives - only actionable security issues"
+          ~S'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="size-6 text-white"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>',
+        title: "Real Vulnerabilities",
+        description:
+          "Not false positives - only actionable security issues validated by AST analysis."
       },
       %{
         icon:
-          ~s(<svg class="w-12 h-12 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>),
-        title: "Generates Tested Fixes",
-        description: "Automated remediation with validation tests"
+          ~S'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="size-6 text-white"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" /></svg>',
+        title: "Verified Fixes",
+        description:
+          "Every fix is tested to ensure it resolves the vulnerability without breaking functionality."
       },
       %{
         icon:
-          ~s(<svg class="w-12 h-12 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>),
-        title: "Creates Pull Requests",
-        description: "Ready-to-review PRs with complete validation"
+          ~S'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="size-6 text-white"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" /></svg>',
+        title: "Lightning Fast",
+        description:
+          "Fixes generated and tested in minutes, not days. Get pull requests ready to merge."
       },
       %{
         icon:
-          ~s(<svg class="w-12 h-12 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"></path></svg>),
-        title: "Multi-Language Support",
-        description: "JavaScript, Python, Ruby, and more"
+          ~S'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="size-6 text-white"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18 9 11.25l4.306 4.306a11.95 11.95 0 0 1 5.814-5.518l2.74-1.22m0 0-5.94-2.281m5.94 2.28-2.28 5.941" /></svg>',
+        title: "Continuous Security",
+        description:
+          "Automated scanning and fixing integrated into your development workflow."
       }
     ]
   end

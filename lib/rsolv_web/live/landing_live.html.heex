@@ -1,47 +1,28 @@
-<!-- RFC-078: Public Site Landing Page -->
+<!-- RFC-078: Public Site Landing Page - Using Tailwind Plus Components -->
 
-<!-- Hero Section -->
-<.gradient_section>
-  <div class="text-center">
-    <h1 class="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6">
-      Automated Security Fixes for Your Codebase
-    </h1>
-    <p class="text-xl sm:text-2xl mb-8 text-blue-100 dark:text-blue-50 max-w-3xl mx-auto">
-      AI-powered vulnerability detection and remediation. Get 10 free credits to start.
-    </p>
-    <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
-      <.cta_button
-        navigate="/signup"
-        track_destination="/signup"
-        class="bg-white text-blue-600 hover:bg-blue-50"
-      >
-        Start Free Trial
-      </.cta_button>
-      <span class="text-sm text-blue-100">No credit card required</span>
-    </div>
-  </div>
-</.gradient_section>
+<!-- Hero Section - Tailwind Plus Hero Component -->
+<HeroSimpleCentered.hero_simple_centered
+  heading="Automated Security Fixes for Your Codebase"
+  subheading="AI-powered vulnerability detection and remediation. Get 10 free credits to start - no credit card required."
+  primary_cta_text="Start Free Trial"
+  primary_cta_link="/signup"
+  secondary_cta_text="View Demo"
+  secondary_cta_link="https://github.com/RSOLV-dev/nodegoat-vulnerability-demo"
+  announcement_text="New: Lightning-fast fix generation with GPT-4"
+  announcement_link="/blog/gpt4-faster-fixes"
+  announcement_link_text="Learn more"
+/>
 
-<!-- Features Section -->
-<section class="py-20 px-4 sm:px-6 lg:px-8 bg-white dark:bg-dark-800">
-  <div class="container mx-auto max-w-6xl">
-    <h2 class="text-3xl font-bold text-center mb-12 text-gray-900 dark:text-gray-100">
-      Why RSOLV?
-    </h2>
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-      <%= for feature <- @features do %>
-        <.feature_card
-          icon={feature.icon}
-          title={feature.title}
-          description={feature.description}
-        />
-      <% end %>
-    </div>
-  </div>
-</section>
+<!-- Features Section - Tailwind Plus Features Grid Component -->
+<FeaturesGrid2x2.features_grid_2x2
+  eyebrow="Why RSOLV?"
+  heading="Automated Security at Scale"
+  subheading="AI-powered vulnerability detection and remediation for your entire codebase."
+  features={@features}
+/>
 
-<!-- Social Proof Section -->
-<section class="py-20 px-4 sm:px-6 lg:px-8 bg-gray-50 dark:bg-dark-900">
+<!-- Social Proof Section - Keep existing stats component -->
+<section class="py-20 px-4 sm:px-6 lg:px-8 bg-gray-50 dark:bg-gray-900">
   <div class="container mx-auto max-w-4xl text-center">
     <h2 class="text-3xl font-bold mb-8 text-gray-900 dark:text-gray-100">
       Trusted by Development Teams
@@ -54,8 +35,8 @@
   </div>
 </section>
 
-<!-- Pricing Teaser Section -->
-<section class="py-20 px-4 sm:px-6 lg:px-8 bg-white dark:bg-dark-800">
+<!-- Pricing Teaser Section - Keep simple version for now -->
+<section class="py-20 px-4 sm:px-6 lg:px-8 bg-white dark:bg-gray-800">
   <div class="container mx-auto max-w-4xl text-center">
     <h2 class="text-3xl font-bold mb-4 text-gray-900 dark:text-gray-100">
       Start with 10 Free Credits
@@ -79,22 +60,12 @@
   </div>
 </section>
 
-<!-- Demo CTA Section -->
-<.gradient_section class="bg-gradient-to-r">
-  <div class="max-w-4xl mx-auto text-center">
-    <h2 class="text-3xl font-bold mb-4">
-      See RSOLV in Action
-    </h2>
-    <p class="text-xl mb-8 text-blue-100 dark:text-blue-50">
-      Check out our demo repository with real vulnerability fixes
-    </p>
-    <.cta_button
-      href="https://github.com/RSOLV-dev/nodegoat-vulnerability-demo"
-      track_destination="demo-repo"
-      size="small"
-      class="bg-white text-blue-600 hover:bg-blue-50"
-    >
-      View Demo Repository
-    </.cta_button>
-  </div>
-</.gradient_section>
+<!-- Demo CTA Section - Tailwind Plus CTA Component -->
+<CtaSimpleCentered.cta_simple_centered
+  heading="See RSOLV in Action"
+  description="Check out our demo repository with real vulnerability fixes from our automated security system."
+  primary_cta_text="View Demo Repository"
+  primary_cta_link="https://github.com/RSOLV-dev/nodegoat-vulnerability-demo"
+  secondary_cta_text="Read the Docs"
+  secondary_cta_link="/docs"
+/>
