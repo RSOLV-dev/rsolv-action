@@ -22,6 +22,7 @@ defmodule RsolvWeb.Plugs.ApiAuthentication do
 
   import Plug.Conn
   alias Rsolv.Accounts
+  alias Rsolv.FunnelTracking
   alias RsolvWeb.ApiErrorCodes
   require Logger
 
@@ -89,6 +90,18 @@ defmodule RsolvWeb.Plugs.ApiAuthentication do
 
         case rate_limit_result do
           {:ok, metadata} ->
+            # Track API call in funnel (best-effort, non-blocking)
+            Task.start(fn ->
+              try do
+                FunnelTracking.track_api_call(customer)
+              rescue
+                e ->
+                  Logger.warning(
+                    "[ApiAuthentication] Funnel tracking failed (non-critical): #{inspect(e)}"
+                  )
+              end
+            end)
+
             conn
             |> assign(:customer, customer)
             |> assign(:api_key, api_key_record)

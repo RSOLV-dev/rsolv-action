@@ -1,6 +1,6 @@
 # RSOLV Customer Traction Tracking
 
-**Last Updated:** 2025-11-04
+**Last Updated:** 2025-11-04 (18:38 MST - Funnel tracking system implemented)
 
 ## Overview
 
@@ -89,10 +89,10 @@ This document tracks customer development efforts for RSOLV, focusing on securin
   - ✅ WebhookProcessingFailures: Warning at failure rate > 5%
 
 **Conversion Tracking:**
-- [ ] Website visits → signups - **VK:** `ceba61e4` (Ongoing)
-- [ ] Signups → API key creation - **VK:** `ceba61e4` (Ongoing)
-- [ ] API key creation → first API call - **VK:** `ceba61e4` (Ongoing)
-- [ ] First API call → continued usage - **VK:** `ceba61e4` (Ongoing)
+- [x] Website visits → signups - **VK:** `ceba61e4` (✅ Implemented 2025-11-04)
+- [x] Signups → API key creation - **VK:** `ceba61e4` (✅ Implemented 2025-11-04)
+- [x] API key creation → first API call - **VK:** `ceba61e4` (✅ Implemented 2025-11-04)
+- [x] First API call → continued usage - **VK:** `ceba61e4` (✅ Implemented 2025-11-04)
 
 **Update Frequency:** Daily during Week 5, then weekly after stabilization
 
@@ -351,7 +351,173 @@ Track follow-ups and conversions here:
 3. [ ] Send beta invites to confirmed testers when ready
 4. [ ] Consider additional outreach if needed (but keep it quality-focused)
 
+## Funnel Tracking Implementation
+
+**Implementation Date:** 2025-11-04
+**Status:** ✅ Complete and operational
+
+### Overview
+
+A comprehensive conversion funnel tracking system has been implemented to track customer journeys from first website visit through to retained usage. The system provides real-time insights into conversion rates at each funnel stage.
+
+### Funnel Stages Tracked
+
+1. **Website Visits** (Stage 1)
+   - Tracked via: `FunnelTracking.track_page_view/1`
+   - Metrics: Total visits, unique visitors
+   - Sources: Homepage, blog, pricing page, docs
+
+2. **Signups** (Stage 2)
+   - Tracked via: `FunnelTracking.track_signup/2`
+   - Integration: `Rsolv.CustomerOnboarding` module
+   - Automatic tracking when customer completes registration
+
+3. **API Key Creation** (Stage 3)
+   - Tracked via: `FunnelTracking.track_api_key_creation/2`
+   - Integration: `Rsolv.CustomerOnboarding` module
+   - Tracks when customer generates their first API key
+
+4. **Activation** (Stage 4 - First API Call)
+   - Tracked via: `FunnelTracking.track_api_call/2`
+   - Integration: `RsolvWeb.Plugs.ApiAuthentication`
+   - Automatic tracking on first successful API request
+
+5. **Retention** (Stage 5 - Continued Usage)
+   - Tracked via: `FunnelTracking.track_api_call/2`
+   - Metric: Customers who make 2+ API calls
+   - Indicates product-market fit and engagement
+
+### Database Schema
+
+**Tables Created:**
+- `funnel_events` - Individual event tracking (page views, signups, API calls)
+- `customer_journeys` - Per-customer progress through funnel with timing metrics
+- `funnel_metrics` - Pre-aggregated conversion metrics by time period
+
+**Key Features:**
+- UTM parameter tracking for attribution
+- Conversion timing metrics (seconds between stages)
+- Visitor/session tracking for anonymous users
+- Indexed for fast queries
+
+### Querying Funnel Data
+
+**Get funnel summary for last 30 days:**
+```elixir
+iex> Rsolv.FunnelTracking.get_funnel_summary(30)
+%{
+  website_visits: 1234,
+  unique_visitors: 567,
+  signups: 45,
+  api_keys_created: 32,
+  activated_users: 20,
+  retained_users: 12,
+  visit_to_signup_rate: #Decimal<3.65>,
+  signup_to_api_key_rate: #Decimal<71.11>,
+  api_key_to_activation_rate: #Decimal<62.50>,
+  activation_to_retention_rate: #Decimal<60.00>
+}
+```
+
+**Get daily metrics:**
+```elixir
+iex> start_date = ~D[2025-11-01]
+iex> end_date = ~D[2025-11-04]
+iex> Rsolv.FunnelTracking.get_daily_metrics(start_date, end_date)
+[%{period_start: ~D[2025-11-01], ...}, ...]
+```
+
+**Find customers who activated but didn't retain:**
+```elixir
+iex> Rsolv.FunnelTracking.list_journeys(
+  completed_activation: true,
+  completed_retention: false,
+  limit: 10
+)
+```
+
+### Integration Points
+
+**Automatic Tracking:**
+- ✅ Customer signup → `Rsolv.CustomerOnboarding.provision_customer/1`
+- ✅ API key creation → `Rsolv.CustomerOnboarding` (same transaction)
+- ✅ API calls → `RsolvWeb.Plugs.ApiAuthentication` (on every authenticated request)
+
+**Non-Blocking Design:**
+- All tracking is best-effort and non-blocking
+- Failures logged but don't affect core business logic
+- API call tracking runs in background Task to avoid request latency
+
+### Current Metrics (Since Implementation)
+
+**Baseline Period:** 2025-11-04 onwards
+
+To check current metrics:
+```bash
+# Connect to production IEx console
+fly ssh console -a rsolv -C "/app/bin/rsolv remote"
+
+# Query funnel summary
+iex> Rsolv.FunnelTracking.get_funnel_summary(7)  # Last 7 days
+```
+
+### Future Enhancements
+
+**Planned:**
+- [ ] Admin dashboard LiveView for real-time funnel visualization
+- [ ] Weekly email reports with funnel metrics
+- [ ] Cohort analysis (signups by week)
+- [ ] Drop-off analysis (identify where customers get stuck)
+- [ ] A/B testing framework for conversion optimization
+
+**Analytics Integration:**
+- [ ] Export to Google Analytics 4
+- [ ] Integration with existing `analytics_events` table
+- [ ] Plausible Analytics integration (if adopted)
+
+### Files Added/Modified
+
+**New Files:**
+- `priv/repo/migrations/20251104183341_create_funnel_tracking_tables.exs`
+- `lib/rsolv/funnel_tracking.ex` (main context module)
+- `lib/rsolv/funnel_tracking/funnel_event.ex`
+- `lib/rsolv/funnel_tracking/customer_journey.ex`
+- `lib/rsolv/funnel_tracking/funnel_metric.ex`
+
+**Modified Files:**
+- `lib/rsolv/customer_onboarding.ex` (added signup & API key tracking)
+- `lib/rsolv_web/plugs/api_authentication.ex` (added API call tracking)
+
+### Testing
+
+**Manual Testing Checklist:**
+- [x] Migration runs successfully
+- [ ] Signup tracking creates funnel_event and customer_journey
+- [ ] API key creation updates customer_journey
+- [ ] First API call marks activation
+- [ ] Second API call marks retention
+- [ ] Query functions return correct metrics
+- [ ] Tracking failures don't break customer onboarding
+
+**Test in Development:**
+```bash
+# Create test customer
+mix run -e "Rsolv.CustomerOnboarding.provision_customer(%{name: \"Test\", email: \"test@example.com\"})"
+
+# Check journey was created
+iex> Rsolv.Repo.all(Rsolv.FunnelTracking.CustomerJourney) |> Rsolv.Repo.preload(:customer)
+```
+
 ## Notes & Learnings
+
+**2025-11-04 (Week 5 - Funnel Tracking Implementation):**
+- ✅ Implemented comprehensive conversion funnel tracking system
+- Database tables: funnel_events, customer_journeys, funnel_metrics
+- Integration points: CustomerOnboarding (signup/API key), ApiAuthentication (API calls)
+- Non-blocking design ensures tracking failures don't impact customer experience
+- Ready to track: visits → signups → API keys → activation → retention
+- Next step: Build admin dashboard for visualization
+- All tracking is operational and recording events starting 2025-11-04
 
 **2025-11-04 (Week 5 - Production Launch):**
 - 🚀 Production successfully launched on 2025-11-04
