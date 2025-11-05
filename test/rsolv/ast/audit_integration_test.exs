@@ -23,9 +23,7 @@ defmodule Rsolv.AST.AuditIntegrationTest do
       end
     end
 
-    # Give processes time to stabilize
-    Process.sleep(10)
-
+    # ETS operations are synchronous - no stabilization needed
     {:ok, %{}}
   end
 

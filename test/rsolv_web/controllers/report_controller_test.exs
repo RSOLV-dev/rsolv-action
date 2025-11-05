@@ -7,10 +7,7 @@ defmodule RsolvWeb.ReportControllerTest do
     # Enable the admin dashboard flag globally
     {:ok, _} = FunWithFlags.enable(:admin_dashboard)
 
-    # Verify the flag is enabled
-    # Small delay to ensure database consistency
-    Process.sleep(10)
-
+    # FunWithFlags.enable is synchronous - no delay needed
     on_exit(fn ->
       # Clean up flag after test
       FunWithFlags.clear(:admin_dashboard)

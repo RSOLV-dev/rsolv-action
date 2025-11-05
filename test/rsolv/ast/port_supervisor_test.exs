@@ -143,9 +143,7 @@ defmodule Rsolv.AST.PortSupervisorTest do
 
       {:ok, port_id} = PortSupervisor.start_port(supervisor, parser_config)
 
-      # Wait for initial stats to be set
-      Process.sleep(10)
-
+      # Stats are set synchronously during start_port - no wait needed
       # Simulate memory limit exceeded by updating stats and restarting
       {:ok, _} = PortSupervisor.restart_unhealthy_port(supervisor, port_id)
 
@@ -238,9 +236,7 @@ defmodule Rsolv.AST.PortSupervisorTest do
       # Return to pool
       PortSupervisor.release_port(supervisor, port_id1)
 
-      # Small delay to ensure pool update completes
-      Process.sleep(10)
-
+      # release_port/add_to_pool are synchronous ETS operations - no wait needed
       # Request another port for same language
       {:ok, port_id2} = PortSupervisor.start_port(supervisor, parser_config)
       pid2 = PortSupervisor.get_port_pid(supervisor, port_id2)
@@ -367,14 +363,11 @@ defmodule Rsolv.AST.PortSupervisorTest do
 
       {:ok, port_id} = PortSupervisor.start_port(supervisor, parser_config)
 
-      # Small delay to ensure uptime > 0
-      Process.sleep(10)
-
       # Do some operations
       PortSupervisor.call_port(supervisor, port_id, "parse1", 5000)
       PortSupervisor.call_port(supervisor, port_id, "parse2", 5000)
 
-      # Get statistics
+      # Get statistics (uptime calculated on-demand in get_port_stats)
       stats = PortSupervisor.get_port_stats(supervisor, port_id)
 
       assert stats.requests_handled >= 2

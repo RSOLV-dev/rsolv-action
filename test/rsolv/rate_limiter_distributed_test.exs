@@ -77,8 +77,8 @@ defmodule Rsolv.RateLimiterDistributedTest do
       [node3] = LocalCluster.start_nodes("test", 1)
       :rpc.call(node3, Rsolv.RateLimiter, :start_link, [[]])
 
-      # Wait a moment for sync
-      Process.sleep(100)
+      # Wait for Mnesia table to sync (using proper table wait instead of fixed sleep)
+      assert :ok = :rpc.call(node3, :mnesia, :wait_for_tables, [[:rsolv_rate_limiter], 5000])
 
       # Node3 should continue counting from where we left off
       for i <- 51..100 do

@@ -49,8 +49,8 @@ defmodule Rsolv.CustomerSessionsClusteringTest do
       :rpc.call(node2, Application, :ensure_all_started, [:rsolv])
       :rpc.call(node2, CustomerSessions, :start_link, [[]])
 
-      # Wait for Mnesia to sync
-      Process.sleep(1000)
+      # Wait for Mnesia to sync (using proper table wait instead of fixed sleep)
+      assert :ok = wait_for_mnesia_sync(node2)
 
       # Create session on local node
       token = "distributed-test-token"
@@ -79,8 +79,8 @@ defmodule Rsolv.CustomerSessionsClusteringTest do
       :rpc.call(node2, Application, :ensure_all_started, [:rsolv])
       :rpc.call(node2, CustomerSessions, :start_link, [[]])
 
-      # Wait for Mnesia to sync
-      Process.sleep(1000)
+      # Wait for Mnesia to sync (using proper table wait instead of fixed sleep)
+      assert :ok = wait_for_mnesia_sync(node2)
 
       # Create session on local node
       token = "delete-test-token"
@@ -118,8 +118,8 @@ defmodule Rsolv.CustomerSessionsClusteringTest do
       :rpc.call(node2, Application, :ensure_all_started, [:rsolv])
       :rpc.call(node2, CustomerSessions, :start_link, [[]])
 
-      # Wait for Mnesia to sync
-      Process.sleep(2000)
+      # Wait for Mnesia to sync (using proper table wait instead of fixed sleep)
+      assert :ok = wait_for_mnesia_sync(node2)
 
       # Verify the new node can see the pre-existing session
       remote_result = :rpc.call(node2, CustomerSessions, :get_session, [token])
@@ -132,6 +132,48 @@ defmodule Rsolv.CustomerSessionsClusteringTest do
   end
 
   # Helper functions for managing peer nodes
+
+  defp wait_for_mnesia_sync(node, timeout \\ 5000) do
+    # Wait for Mnesia to be running on the remote node
+    deadline = System.monotonic_time(:millisecond) + timeout
+
+    wait_for_running = fn ->
+      do_wait_for_mnesia_running(node, deadline)
+    end
+
+    case wait_for_running.() do
+      :ok ->
+        # Now wait for the customer_sessions_mnesia table to be available
+        case :rpc.call(node, :mnesia, :wait_for_tables, [[:customer_sessions_mnesia], timeout]) do
+          :ok ->
+            :ok
+
+          {:timeout, bad_tables} ->
+            {:error, "Tables timed out: #{inspect(bad_tables)}"}
+
+          {:error, reason} ->
+            {:error, "Table sync error: #{inspect(reason)}"}
+        end
+
+      error ->
+        error
+    end
+  end
+
+  defp do_wait_for_mnesia_running(node, deadline) do
+    if System.monotonic_time(:millisecond) >= deadline do
+      {:error, "Mnesia not running on node #{node}"}
+    else
+      case :rpc.call(node, :mnesia, :system_info, [:is_running]) do
+        :yes ->
+          :ok
+
+        _ ->
+          Process.sleep(10)
+          do_wait_for_mnesia_running(node, deadline)
+      end
+    end
+  end
 
   defp start_slave_node(name) do
     # Ensure epmd is running

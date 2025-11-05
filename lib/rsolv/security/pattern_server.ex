@@ -56,9 +56,10 @@ defmodule Rsolv.Security.PatternServer do
 
   @doc """
   Reload all patterns from modules.
+  Returns :ok after reload completes.
   """
   def reload_patterns do
-    GenServer.cast(__MODULE__, :reload_patterns)
+    GenServer.call(__MODULE__, :reload_patterns)
   end
 
   @doc """
@@ -120,12 +121,12 @@ defmodule Rsolv.Security.PatternServer do
   end
 
   @impl true
-  def handle_cast(:reload_patterns, state) do
+  def handle_call(:reload_patterns, _from, state) do
     Logger.info("PatternServer: Reloading all patterns...")
 
     stats = load_all_patterns()
 
-    {:noreply, %{state | loaded_at: DateTime.utc_now(), stats: stats}}
+    {:reply, :ok, %{state | loaded_at: DateTime.utc_now(), stats: stats}}
   end
 
   @impl true

@@ -55,9 +55,7 @@ defmodule RsolvWeb.Admin.LoginLiveTest do
       |> form("form", %{email: "wrong@example.com", password: "wrongpass"})
       |> render_submit()
 
-      # Wait for async authentication
-      Process.sleep(100)
-
+      # LiveView is synchronous in tests - render_submit() already waited for processing
       html = render(view)
       assert html =~ "Invalid email or password"
     end
@@ -69,9 +67,7 @@ defmodule RsolvWeb.Admin.LoginLiveTest do
       |> form("form", %{email: regular_user.email, password: "Test@Password123!"})
       |> render_submit()
 
-      # Wait for async authentication
-      Process.sleep(100)
-
+      # LiveView is synchronous in tests - render_submit() already waited for processing
       html = render(view)
       assert html =~ "You are not authorized to access the admin area"
     end
@@ -83,9 +79,7 @@ defmodule RsolvWeb.Admin.LoginLiveTest do
       |> form("form", %{email: staff_user.email, password: "Test@Password123!"})
       |> render_submit()
 
-      # Wait for async authentication
-      Process.sleep(100)
-
+      # LiveView is synchronous in tests - render_submit() already waited for processing
       # JavaScript redirect: verify the push_event was sent
       # The event contains the redirect URL for the browser to navigate to
       assert has_element?(view, "#admin-login[phx-hook='Redirect']")

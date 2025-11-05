@@ -50,11 +50,8 @@ defmodule Rsolv.Security.PatternServerTest do
       # Get initial patterns
       {:ok, initial} = PatternServer.get_patterns("ruby")
 
-      # Reload
+      # Reload (now synchronous - waits for completion)
       :ok = PatternServer.reload_patterns()
-
-      # Small delay to ensure reload completes
-      Process.sleep(100)
 
       # Patterns should still be available
       {:ok, reloaded} = PatternServer.get_patterns("ruby")

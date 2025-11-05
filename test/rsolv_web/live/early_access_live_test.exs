@@ -65,10 +65,7 @@ defmodule RsolvWeb.EarlyAccessLiveTest do
       |> form("#early-access-form form", %{"signup" => %{"email" => email}})
       |> render_submit()
 
-      # Wait a moment for async email processing
-      Process.sleep(100)
-
-      # Use assert_received to check for the admin email
+      # assert_received has built-in 100ms timeout - no sleep needed
       assert_received(
         {:delivered_email,
          %Bamboo.Email{

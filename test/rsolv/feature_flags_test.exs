@@ -22,9 +22,7 @@ defmodule Rsolv.FeatureFlagsTest do
       FunWithFlags.disable(:api_access)
       FunWithFlags.disable(:advanced_analytics)
 
-      # Give a small delay to ensure database writes propagate
-      Process.sleep(50)
-
+      # FunWithFlags operations are synchronous - no delay needed
       :ok
     end
 
