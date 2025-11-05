@@ -20,6 +20,7 @@ defmodule Rsolv.CustomerOnboarding do
   alias Rsolv.Repo
   alias Rsolv.Billing
   alias Rsolv.Billing.CreditLedger
+  alias Rsolv.FunnelTracking
   alias RsolvWeb.Services.EmailSequence
 
   @doc """
@@ -216,6 +217,28 @@ defmodule Rsolv.CustomerOnboarding do
 
     # Extract raw key from the result
     raw_key = api_key_result.raw_key
+
+    # Track signup in funnel (best-effort, don't fail provisioning if tracking fails)
+    try do
+      FunnelTracking.track_signup(customer_with_credits)
+      Logger.info("✅ [CustomerOnboarding] Funnel tracking: signup recorded")
+    rescue
+      e ->
+        Logger.warning(
+          "⚠️ [CustomerOnboarding] Funnel tracking failed (non-critical): #{inspect(e)}"
+        )
+    end
+
+    # Track API key creation in funnel
+    try do
+      FunnelTracking.track_api_key_creation(customer_with_credits)
+      Logger.info("✅ [CustomerOnboarding] Funnel tracking: API key creation recorded")
+    rescue
+      e ->
+        Logger.warning(
+          "⚠️ [CustomerOnboarding] Funnel tracking failed (non-critical): #{inspect(e)}"
+        )
+    end
 
     # Start onboarding email sequence (Day 0 sent immediately, rest scheduled)
     # IMPORTANT: Email sequence failures are logged but don't block provisioning.

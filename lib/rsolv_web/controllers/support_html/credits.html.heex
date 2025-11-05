@@ -2,9 +2,18 @@
   <div class="container mx-auto px-4 py-12 max-w-4xl">
     <%!-- Header --%>
     <div class="mb-8">
-      <a href="/support" class="inline-flex items-center text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 mb-4">
+      <a
+        href="/support"
+        class="inline-flex items-center text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 mb-4"
+      >
         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M15 19l-7-7 7-7"
+          >
+          </path>
         </svg>
         Back to Support
       </a>
@@ -20,19 +29,24 @@
     <div class="prose prose-slate dark:prose-invert max-w-none">
       <%!-- What Are Credits --%>
       <div class="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-8 mb-6 border border-slate-200 dark:border-slate-700">
-        <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-4 mt-0">What Are Credits?</h2>
+        <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-4 mt-0">
+          What Are Credits?
+        </h2>
         <p class="text-slate-700 dark:text-slate-300 mb-4">
           Credits are RSOLV's unit of consumption for automated vulnerability fixes. Think of them as "fix tokens" - each successful fix deployment consumes one credit from your account.
         </p>
         <.callout variant="info" title="Key Point">
-          <strong>1 Credit = 1 Successfully Deployed Fix</strong><br>
+          <strong>1 Credit = 1 Successfully Deployed Fix</strong>
+          <br />
           Only the MITIGATE phase (when fixes are created and deployed) consumes credits. SCAN and VALIDATE phases are completely free.
         </.callout>
       </div>
 
       <%!-- How Credits Flow --%>
       <div class="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-8 mb-6 border border-slate-200 dark:border-slate-700">
-        <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-4 mt-0">Credit Flow Through RSOLV Phases</h2>
+        <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-4 mt-0">
+          Credit Flow Through RSOLV Phases
+        </h2>
         <p class="text-slate-700 dark:text-slate-300 mb-6">
           Understanding which phases consume credits helps you optimize your usage:
         </p>
@@ -42,11 +56,15 @@
               FREE
             </div>
             <div class="flex-1">
-              <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">SCAN Phase</h3>
+              <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+                SCAN Phase
+              </h3>
               <p class="text-slate-700 dark:text-slate-300 text-sm mb-2">
                 Analyzes your code for security vulnerabilities using pattern matching and AST analysis.
               </p>
-              <p class="text-xs text-green-700 dark:text-green-400 font-semibold">No credits consumed</p>
+              <p class="text-xs text-green-700 dark:text-green-400 font-semibold">
+                No credits consumed
+              </p>
             </div>
           </div>
 
@@ -55,11 +73,15 @@
               FREE
             </div>
             <div class="flex-1">
-              <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">VALIDATE Phase</h3>
+              <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+                VALIDATE Phase
+              </h3>
               <p class="text-slate-700 dark:text-slate-300 text-sm mb-2">
                 Creates RED/GREEN/REFACTOR tests to verify vulnerabilities are real, reducing false positives.
               </p>
-              <p class="text-xs text-green-700 dark:text-green-400 font-semibold">No credits consumed</p>
+              <p class="text-xs text-green-700 dark:text-green-400 font-semibold">
+                No credits consumed
+              </p>
             </div>
           </div>
 
@@ -68,11 +90,15 @@
               -1
             </div>
             <div class="flex-1">
-              <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">MITIGATE Phase</h3>
+              <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+                MITIGATE Phase
+              </h3>
               <p class="text-slate-700 dark:text-slate-300 text-sm mb-2">
                 Generates fixes, validates them against tests, and creates a pull request with the remediation.
               </p>
-              <p class="text-xs text-orange-700 dark:text-orange-400 font-semibold">1 credit consumed on success</p>
+              <p class="text-xs text-orange-700 dark:text-orange-400 font-semibold">
+                1 credit consumed on success
+              </p>
             </div>
           </div>
         </div>
@@ -80,7 +106,9 @@
 
       <%!-- How to Earn Credits --%>
       <div class="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-8 mb-6 border border-slate-200 dark:border-slate-700">
-        <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-4 mt-0">How Do I Earn Credits?</h2>
+        <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-4 mt-0">
+          How Do I Earn Credits?
+        </h2>
         <p class="text-slate-700 dark:text-slate-300 mb-6">
           There are several ways to earn credits in your RSOLV account:
         </p>
@@ -88,9 +116,13 @@
         <div class="space-y-6">
           <%!-- Signup Credits --%>
           <div class="border-l-4 border-blue-500 pl-4">
-            <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">1. Signup Bonus</h3>
+            <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+              1. Signup Bonus
+            </h3>
             <div class="flex items-center justify-between mb-2">
-              <span class="text-slate-700 dark:text-slate-300">When you create your RSOLV account</span>
+              <span class="text-slate-700 dark:text-slate-300">
+                When you create your RSOLV account
+              </span>
               <span class="text-2xl font-bold text-blue-600 dark:text-blue-400">+5 credits</span>
             </div>
             <p class="text-sm text-slate-600 dark:text-slate-400">
@@ -100,10 +132,16 @@
 
           <%!-- Billing Added --%>
           <div class="border-l-4 border-green-500 pl-4">
-            <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">2. Adding Payment Method</h3>
+            <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+              2. Adding Payment Method
+            </h3>
             <div class="flex items-center justify-between mb-2">
-              <span class="text-slate-700 dark:text-slate-300">When you add billing information</span>
-              <span class="text-2xl font-bold text-green-600 dark:text-green-400">+5 credits</span>
+              <span class="text-slate-700 dark:text-slate-300">
+                When you add billing information
+              </span>
+              <span class="text-2xl font-bold text-green-600 dark:text-green-400">
+                +5 credits
+              </span>
             </div>
             <p class="text-sm text-slate-600 dark:text-slate-400">
               Bonus credits when you upgrade from trial - gives you 10 total free fixes before any charges.
@@ -112,10 +150,16 @@
 
           <%!-- Pro Monthly --%>
           <div class="border-l-4 border-purple-500 pl-4">
-            <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">3. Pro Plan Monthly Allotment</h3>
+            <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+              3. Pro Plan Monthly Allotment
+            </h3>
             <div class="flex items-center justify-between mb-2">
-              <span class="text-slate-700 dark:text-slate-300">Every month on Pro plan ($599/mo)</span>
-              <span class="text-2xl font-bold text-purple-600 dark:text-purple-400">+60 credits</span>
+              <span class="text-slate-700 dark:text-slate-300">
+                Every month on Pro plan ($599/mo)
+              </span>
+              <span class="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                +60 credits
+              </span>
             </div>
             <p class="text-sm text-slate-600 dark:text-slate-400">
               Your monthly credit allocation resets at the start of each billing cycle. Unused credits don't roll over.
@@ -124,13 +168,16 @@
         </div>
 
         <.callout variant="warning" title="Credit Expiration">
-          <strong>Trial and bonus credits never expire.</strong> Pro plan monthly credits reset each billing cycle - use them or lose them!
+          <strong>Trial and bonus credits never expire.</strong>
+          Pro plan monthly credits reset each billing cycle - use them or lose them!
         </.callout>
       </div>
 
       <%!-- How to Spend Credits --%>
       <div class="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-8 mb-6 border border-slate-200 dark:border-slate-700">
-        <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-4 mt-0">How Do I Spend Credits?</h2>
+        <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-4 mt-0">
+          How Do I Spend Credits?
+        </h2>
         <p class="text-slate-700 dark:text-slate-300 mb-6">
           Credits are consumed automatically when fixes are successfully deployed:
         </p>
@@ -146,34 +193,90 @@
           </p>
         </div>
 
-        <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-3">When Are Credits Consumed?</h3>
+        <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-3">
+          When Are Credits Consumed?
+        </h3>
         <ul class="space-y-3 mb-6">
           <li class="flex items-start">
-            <svg class="w-5 h-5 text-green-600 dark:text-green-400 mr-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            <svg
+              class="w-5 h-5 text-green-600 dark:text-green-400 mr-3 mt-0.5 flex-shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M5 13l4 4L19 7"
+              >
+              </path>
             </svg>
             <div>
-              <span class="text-slate-700 dark:text-slate-300"><strong>MITIGATE Success:</strong> Fix generated, tested, and PR created</span>
-              <span class="ml-2 text-orange-600 dark:text-orange-400 font-semibold">(-1 credit)</span>
+              <span class="text-slate-700 dark:text-slate-300">
+                <strong>MITIGATE Success:</strong> Fix generated, tested, and PR created
+              </span>
+              <span class="ml-2 text-orange-600 dark:text-orange-400 font-semibold">
+                (-1 credit)
+              </span>
             </div>
           </li>
           <li class="flex items-start">
-            <svg class="w-5 h-5 text-green-600 dark:text-green-400 mr-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            <svg
+              class="w-5 h-5 text-green-600 dark:text-green-400 mr-3 mt-0.5 flex-shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              >
+              </path>
             </svg>
-            <span class="text-slate-700 dark:text-slate-300"><strong>SCAN finds no vulnerabilities:</strong> No credits consumed</span>
+            <span class="text-slate-700 dark:text-slate-300">
+              <strong>SCAN finds no vulnerabilities:</strong> No credits consumed
+            </span>
           </li>
           <li class="flex items-start">
-            <svg class="w-5 h-5 text-green-600 dark:text-green-400 mr-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            <svg
+              class="w-5 h-5 text-green-600 dark:text-green-400 mr-3 mt-0.5 flex-shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              >
+              </path>
             </svg>
-            <span class="text-slate-700 dark:text-slate-300"><strong>VALIDATE determines false positive:</strong> No credits consumed</span>
+            <span class="text-slate-700 dark:text-slate-300">
+              <strong>VALIDATE determines false positive:</strong> No credits consumed
+            </span>
           </li>
           <li class="flex items-start">
-            <svg class="w-5 h-5 text-green-600 dark:text-green-400 mr-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            <svg
+              class="w-5 h-5 text-green-600 dark:text-green-400 mr-3 mt-0.5 flex-shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              >
+              </path>
             </svg>
-            <span class="text-slate-700 dark:text-slate-300"><strong>MITIGATE fails or is skipped:</strong> No credits consumed</span>
+            <span class="text-slate-700 dark:text-slate-300">
+              <strong>MITIGATE fails or is skipped:</strong> No credits consumed
+            </span>
           </li>
         </ul>
 
@@ -184,32 +287,67 @@
 
       <%!-- Viewing Balance --%>
       <div class="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-8 mb-6 border border-slate-200 dark:border-slate-700">
-        <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-4 mt-0">Where Can I See My Credit Balance?</h2>
+        <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-4 mt-0">
+          Where Can I See My Credit Balance?
+        </h2>
         <p class="text-slate-700 dark:text-slate-300 mb-6">
           Your credit balance and transaction history are available in multiple places:
         </p>
 
         <div class="space-y-4">
           <div class="flex items-start">
-            <svg class="w-6 h-6 text-blue-600 dark:text-blue-400 mr-3 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+            <svg
+              class="w-6 h-6 text-blue-600 dark:text-blue-400 mr-3 mt-0.5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+              >
+              </path>
             </svg>
             <div>
               <h3 class="font-semibold text-slate-900 dark:text-white mb-1">Dashboard</h3>
               <p class="text-slate-700 dark:text-slate-300 text-sm">
-                Visit your <a href="/admin/dashboard" class="text-blue-600 dark:text-blue-400 hover:underline">account dashboard</a> to see your current balance and recent activity.
+                Visit your
+                <a
+                  href="/admin/dashboard"
+                  class="text-blue-600 dark:text-blue-400 hover:underline"
+                >
+                  account dashboard
+                </a>
+                to see your current balance and recent activity.
               </p>
             </div>
           </div>
 
           <div class="flex items-start">
-            <svg class="w-6 h-6 text-blue-600 dark:text-blue-400 mr-3 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+            <svg
+              class="w-6 h-6 text-blue-600 dark:text-blue-400 mr-3 mt-0.5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+              >
+              </path>
             </svg>
             <div>
               <h3 class="font-semibold text-slate-900 dark:text-white mb-1">Credit Ledger</h3>
               <p class="text-slate-700 dark:text-slate-300 text-sm mb-2">
-                Access your complete <a href="/admin/credits" class="text-blue-600 dark:text-blue-400 hover:underline">credit transaction history</a> showing all credits earned and consumed.
+                Access your complete
+                <a href="/admin/credits" class="text-blue-600 dark:text-blue-400 hover:underline">
+                  credit transaction history
+                </a>
+                showing all credits earned and consumed.
               </p>
               <div class="bg-slate-100 dark:bg-slate-700 rounded p-3 text-xs font-mono">
                 <div class="grid grid-cols-4 gap-2 mb-2 font-bold text-slate-900 dark:text-white">
@@ -241,11 +379,24 @@
           </div>
 
           <div class="flex items-start">
-            <svg class="w-6 h-6 text-blue-600 dark:text-blue-400 mr-3 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+            <svg
+              class="w-6 h-6 text-blue-600 dark:text-blue-400 mr-3 mt-0.5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+              >
+              </path>
             </svg>
             <div>
-              <h3 class="font-semibold text-slate-900 dark:text-white mb-1">Email Notifications</h3>
+              <h3 class="font-semibold text-slate-900 dark:text-white mb-1">
+                Email Notifications
+              </h3>
               <p class="text-slate-700 dark:text-slate-300 text-sm">
                 Receive alerts when credits are consumed, when you're running low, or when you need to add billing.
               </p>
@@ -256,7 +407,9 @@
 
       <%!-- What Happens When Out of Credits --%>
       <div class="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-8 mb-6 border border-slate-200 dark:border-slate-700">
-        <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-4 mt-0">What Happens When I Run Out of Credits?</h2>
+        <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-4 mt-0">
+          What Happens When I Run Out of Credits?
+        </h2>
         <p class="text-slate-700 dark:text-slate-300 mb-6">
           What happens depends on your account type:
         </p>
@@ -265,14 +418,20 @@
           <%!-- Trial Account --%>
           <div class="border border-slate-300 dark:border-slate-600 rounded-lg p-6">
             <div class="flex items-center justify-between mb-4">
-              <h3 class="text-xl font-semibold text-slate-900 dark:text-white">Trial Account (No Payment Method)</h3>
-              <span class="px-3 py-1 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-sm font-semibold rounded-full">FREE</span>
+              <h3 class="text-xl font-semibold text-slate-900 dark:text-white">
+                Trial Account (No Payment Method)
+              </h3>
+              <span class="px-3 py-1 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-sm font-semibold rounded-full">
+                FREE
+              </span>
             </div>
             <div class="space-y-3">
               <div class="flex items-start">
                 <span class="text-2xl mr-3">🛑</span>
                 <div>
-                  <p class="font-semibold text-slate-900 dark:text-white mb-1">MITIGATE Phase Blocked</p>
+                  <p class="font-semibold text-slate-900 dark:text-white mb-1">
+                    MITIGATE Phase Blocked
+                  </p>
                   <p class="text-sm text-slate-700 dark:text-slate-300">
                     SCAN and VALIDATE will continue to work, but MITIGATE will be skipped with a message prompting you to add payment.
                   </p>
@@ -281,9 +440,18 @@
               <div class="flex items-start">
                 <span class="text-2xl mr-3">💳</span>
                 <div>
-                  <p class="font-semibold text-slate-900 dark:text-white mb-1">Add Payment to Continue</p>
+                  <p class="font-semibold text-slate-900 dark:text-white mb-1">
+                    Add Payment to Continue
+                  </p>
                   <p class="text-sm text-slate-700 dark:text-slate-300">
-                    Visit your <a href="/admin/billing" class="text-blue-600 dark:text-blue-400 hover:underline">billing settings</a> to add a payment method and receive +5 bonus credits immediately.
+                    Visit your
+                    <a
+                      href="/admin/billing"
+                      class="text-blue-600 dark:text-blue-400 hover:underline"
+                    >
+                      billing settings
+                    </a>
+                    to add a payment method and receive +5 bonus credits immediately.
                   </p>
                 </div>
               </div>
@@ -293,14 +461,20 @@
           <%!-- PAYG Account --%>
           <div class="border border-blue-300 dark:border-blue-600 rounded-lg p-6">
             <div class="flex items-center justify-between mb-4">
-              <h3 class="text-xl font-semibold text-slate-900 dark:text-white">Pay-As-You-Go (PAYG)</h3>
-              <span class="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-sm font-semibold rounded-full">$29/fix</span>
+              <h3 class="text-xl font-semibold text-slate-900 dark:text-white">
+                Pay-As-You-Go (PAYG)
+              </h3>
+              <span class="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-sm font-semibold rounded-full">
+                $29/fix
+              </span>
             </div>
             <div class="space-y-3">
               <div class="flex items-start">
                 <span class="text-2xl mr-3">⚡</span>
                 <div>
-                  <p class="font-semibold text-slate-900 dark:text-white mb-1">Automatic Charge & Credit</p>
+                  <p class="font-semibold text-slate-900 dark:text-white mb-1">
+                    Automatic Charge & Credit
+                  </p>
                   <p class="text-sm text-slate-700 dark:text-slate-300">
                     When you have 0 credits, your card is charged $29, you receive 1 credit, and it's immediately consumed for the fix.
                   </p>
@@ -322,13 +496,17 @@
           <div class="border border-purple-300 dark:border-purple-600 rounded-lg p-6">
             <div class="flex items-center justify-between mb-4">
               <h3 class="text-xl font-semibold text-slate-900 dark:text-white">Pro Plan</h3>
-              <span class="px-3 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 text-sm font-semibold rounded-full">$599/mo + $15/fix</span>
+              <span class="px-3 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 text-sm font-semibold rounded-full">
+                $599/mo + $15/fix
+              </span>
             </div>
             <div class="space-y-3">
               <div class="flex items-start">
                 <span class="text-2xl mr-3">📦</span>
                 <div>
-                  <p class="font-semibold text-slate-900 dark:text-white mb-1">60 Credits Included Monthly</p>
+                  <p class="font-semibold text-slate-900 dark:text-white mb-1">
+                    60 Credits Included Monthly
+                  </p>
                   <p class="text-sm text-slate-700 dark:text-slate-300">
                     Your monthly allotment resets at the start of each billing cycle.
                   </p>
@@ -337,7 +515,9 @@
               <div class="flex items-start">
                 <span class="text-2xl mr-3">💰</span>
                 <div>
-                  <p class="font-semibold text-slate-900 dark:text-white mb-1">Discounted Overages</p>
+                  <p class="font-semibold text-slate-900 dark:text-white mb-1">
+                    Discounted Overages
+                  </p>
                   <p class="text-sm text-slate-700 dark:text-slate-300">
                     After using your 60 credits, additional fixes are $15 each (50% off PAYG pricing) - charged automatically.
                   </p>
@@ -359,7 +539,9 @@
 
       <%!-- Credit Transaction Types --%>
       <div class="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-8 mb-6 border border-slate-200 dark:border-slate-700">
-        <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-4 mt-0">Credit Transaction Types</h2>
+        <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-4 mt-0">
+          Credit Transaction Types
+        </h2>
         <p class="text-slate-700 dark:text-slate-300 mb-6">
           Your credit ledger tracks all transactions with these source types:
         </p>
@@ -382,22 +564,32 @@
               <tr class="border-b border-slate-200 dark:border-slate-700">
                 <td class="py-3 font-mono text-slate-700 dark:text-slate-300">billing_added</td>
                 <td class="py-3 text-green-600 dark:text-green-400 font-semibold">+5</td>
-                <td class="py-3 text-slate-700 dark:text-slate-300">First payment method added</td>
+                <td class="py-3 text-slate-700 dark:text-slate-300">
+                  First payment method added
+                </td>
               </tr>
               <tr class="border-b border-slate-200 dark:border-slate-700">
-                <td class="py-3 font-mono text-slate-700 dark:text-slate-300">pro_monthly_allotment</td>
+                <td class="py-3 font-mono text-slate-700 dark:text-slate-300">
+                  pro_monthly_allotment
+                </td>
                 <td class="py-3 text-green-600 dark:text-green-400 font-semibold">+60</td>
                 <td class="py-3 text-slate-700 dark:text-slate-300">Monthly Pro plan reset</td>
               </tr>
               <tr class="border-b border-slate-200 dark:border-slate-700">
                 <td class="py-3 font-mono text-slate-700 dark:text-slate-300">consumed</td>
                 <td class="py-3 text-red-600 dark:text-red-400 font-semibold">-1</td>
-                <td class="py-3 text-slate-700 dark:text-slate-300">Successful MITIGATE (with existing credits)</td>
+                <td class="py-3 text-slate-700 dark:text-slate-300">
+                  Successful MITIGATE (with existing credits)
+                </td>
               </tr>
               <tr class="border-b border-slate-200 dark:border-slate-700">
-                <td class="py-3 font-mono text-slate-700 dark:text-slate-300">charged_and_consumed</td>
+                <td class="py-3 font-mono text-slate-700 dark:text-slate-300">
+                  charged_and_consumed
+                </td>
                 <td class="py-3 text-orange-600 dark:text-orange-400 font-semibold">+1, -1</td>
-                <td class="py-3 text-slate-700 dark:text-slate-300">PAYG/Pro overage: charge card, credit, consume</td>
+                <td class="py-3 text-slate-700 dark:text-slate-300">
+                  PAYG/Pro overage: charge card, credit, consume
+                </td>
               </tr>
             </tbody>
           </table>
@@ -406,14 +598,29 @@
 
       <%!-- Do Credits Expire --%>
       <div class="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-8 mb-6 border border-slate-200 dark:border-slate-700">
-        <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-4 mt-0">Do Credits Expire?</h2>
+        <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-4 mt-0">
+          Do Credits Expire?
+        </h2>
         <div class="space-y-4">
           <div class="flex items-start">
-            <svg class="w-6 h-6 text-green-600 dark:text-green-400 mr-3 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            <svg
+              class="w-6 h-6 text-green-600 dark:text-green-400 mr-3 mt-0.5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M5 13l4 4L19 7"
+              >
+              </path>
             </svg>
             <div>
-              <h3 class="font-semibold text-slate-900 dark:text-white mb-1">Trial and Bonus Credits: Never Expire</h3>
+              <h3 class="font-semibold text-slate-900 dark:text-white mb-1">
+                Trial and Bonus Credits: Never Expire
+              </h3>
               <p class="text-slate-700 dark:text-slate-300 text-sm">
                 Credits from signup bonuses, billing bonuses, and any promotional credits remain in your account indefinitely until used.
               </p>
@@ -421,11 +628,24 @@
           </div>
 
           <div class="flex items-start">
-            <svg class="w-6 h-6 text-orange-600 dark:text-orange-400 mr-3 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            <svg
+              class="w-6 h-6 text-orange-600 dark:text-orange-400 mr-3 mt-0.5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+              >
+              </path>
             </svg>
             <div>
-              <h3 class="font-semibold text-slate-900 dark:text-white mb-1">Pro Monthly Credits: Reset Each Cycle</h3>
+              <h3 class="font-semibold text-slate-900 dark:text-white mb-1">
+                Pro Monthly Credits: Reset Each Cycle
+              </h3>
               <p class="text-slate-700 dark:text-slate-300 text-sm">
                 Your 60 monthly Pro credits reset at the start of each billing period. Unused credits from the previous month don't carry over - they're "use it or lose it."
               </p>
@@ -436,40 +656,90 @@
 
       <%!-- Can I Buy Credits in Bulk --%>
       <div class="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-8 mb-6 border border-slate-200 dark:border-slate-700">
-        <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-4 mt-0">Can I Buy Credits in Bulk?</h2>
+        <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-4 mt-0">
+          Can I Buy Credits in Bulk?
+        </h2>
         <p class="text-slate-700 dark:text-slate-300 mb-6">
           Currently, RSOLV operates on a usage-based model without bulk credit purchases. Here's how our pricing works:
         </p>
 
         <div class="grid md:grid-cols-2 gap-6">
           <div class="border border-slate-300 dark:border-slate-600 rounded-lg p-6">
-            <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-3">Pay-As-You-Go (PAYG)</h3>
+            <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-3">
+              Pay-As-You-Go (PAYG)
+            </h3>
             <div class="mb-4">
               <span class="text-3xl font-bold text-slate-900 dark:text-white">$29</span>
               <span class="text-slate-600 dark:text-slate-400">/fix</span>
             </div>
             <ul class="space-y-2 text-sm">
               <li class="flex items-start">
-                <svg class="w-4 h-4 text-green-600 dark:text-green-400 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                <svg
+                  class="w-4 h-4 text-green-600 dark:text-green-400 mr-2 mt-0.5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M5 13l4 4L19 7"
+                  >
+                  </path>
                 </svg>
                 <span class="text-slate-700 dark:text-slate-300">No monthly commitment</span>
               </li>
               <li class="flex items-start">
-                <svg class="w-4 h-4 text-green-600 dark:text-green-400 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                <svg
+                  class="w-4 h-4 text-green-600 dark:text-green-400 mr-2 mt-0.5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M5 13l4 4L19 7"
+                  >
+                  </path>
                 </svg>
-                <span class="text-slate-700 dark:text-slate-300">Only pay for successful fixes</span>
+                <span class="text-slate-700 dark:text-slate-300">
+                  Only pay for successful fixes
+                </span>
               </li>
               <li class="flex items-start">
-                <svg class="w-4 h-4 text-green-600 dark:text-green-400 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                <svg
+                  class="w-4 h-4 text-green-600 dark:text-green-400 mr-2 mt-0.5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M5 13l4 4L19 7"
+                  >
+                  </path>
                 </svg>
                 <span class="text-slate-700 dark:text-slate-300">Automatic billing per fix</span>
               </li>
               <li class="flex items-start">
-                <svg class="w-4 h-4 text-green-600 dark:text-green-400 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                <svg
+                  class="w-4 h-4 text-green-600 dark:text-green-400 mr-2 mt-0.5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M5 13l4 4L19 7"
+                  >
+                  </path>
                 </svg>
                 <span class="text-slate-700 dark:text-slate-300">Best for occasional use</span>
               </li>
@@ -487,35 +757,87 @@
             </div>
             <ul class="space-y-2 text-sm">
               <li class="flex items-start">
-                <svg class="w-4 h-4 text-green-600 dark:text-green-400 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                <svg
+                  class="w-4 h-4 text-green-600 dark:text-green-400 mr-2 mt-0.5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M5 13l4 4L19 7"
+                  >
+                  </path>
                 </svg>
-                <span class="text-slate-700 dark:text-slate-300"><strong>60 fixes included</strong> (~$10/fix)</span>
+                <span class="text-slate-700 dark:text-slate-300">
+                  <strong>60 fixes included</strong> (~$10/fix)
+                </span>
               </li>
               <li class="flex items-start">
-                <svg class="w-4 h-4 text-green-600 dark:text-green-400 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                <svg
+                  class="w-4 h-4 text-green-600 dark:text-green-400 mr-2 mt-0.5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M5 13l4 4L19 7"
+                  >
+                  </path>
                 </svg>
-                <span class="text-slate-700 dark:text-slate-300">Additional fixes: $15 (50% off)</span>
+                <span class="text-slate-700 dark:text-slate-300">
+                  Additional fixes: $15 (50% off)
+                </span>
               </li>
               <li class="flex items-start">
-                <svg class="w-4 h-4 text-green-600 dark:text-green-400 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                <svg
+                  class="w-4 h-4 text-green-600 dark:text-green-400 mr-2 mt-0.5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M5 13l4 4L19 7"
+                  >
+                  </path>
                 </svg>
                 <span class="text-slate-700 dark:text-slate-300">Predictable monthly costs</span>
               </li>
               <li class="flex items-start">
-                <svg class="w-4 h-4 text-green-600 dark:text-green-400 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                <svg
+                  class="w-4 h-4 text-green-600 dark:text-green-400 mr-2 mt-0.5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M5 13l4 4L19 7"
+                  >
+                  </path>
                 </svg>
-                <span class="text-slate-700 dark:text-slate-300">Best for active repositories</span>
+                <span class="text-slate-700 dark:text-slate-300">
+                  Best for active repositories
+                </span>
               </li>
             </ul>
           </div>
         </div>
 
         <.callout variant="info" title="Need Custom Pricing?">
-          For enterprise customers with high-volume needs, <a href="/contact" class="underline">contact our sales team</a> to discuss custom plans and bulk pricing options.
+          For enterprise customers with high-volume needs,
+          <a href="/contact" class="underline">contact our sales team</a>
+          to discuss custom plans and bulk pricing options.
         </.callout>
       </div>
 
@@ -523,21 +845,41 @@
       <div class="bg-blue-50 dark:bg-slate-800 rounded-lg p-8 border border-blue-200 dark:border-slate-700">
         <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-4">Learn More</h2>
         <div class="grid md:grid-cols-2 gap-4">
-          <a href="/support/billing-faq" class="block p-4 bg-white dark:bg-slate-700 rounded-lg hover:shadow-md transition-shadow">
+          <a
+            href="/support/billing-faq"
+            class="block p-4 bg-white dark:bg-slate-700 rounded-lg hover:shadow-md transition-shadow"
+          >
             <h3 class="font-semibold text-slate-900 dark:text-white mb-2">Billing FAQ</h3>
-            <p class="text-sm text-slate-600 dark:text-slate-300">Common questions about plans, pricing, and payments</p>
+            <p class="text-sm text-slate-600 dark:text-slate-300">
+              Common questions about plans, pricing, and payments
+            </p>
           </a>
-          <a href="/support/onboarding" class="block p-4 bg-white dark:bg-slate-700 rounded-lg hover:shadow-md transition-shadow">
+          <a
+            href="/support/onboarding"
+            class="block p-4 bg-white dark:bg-slate-700 rounded-lg hover:shadow-md transition-shadow"
+          >
             <h3 class="font-semibold text-slate-900 dark:text-white mb-2">Getting Started</h3>
-            <p class="text-sm text-slate-600 dark:text-slate-300">Set up RSOLV in your repository</p>
+            <p class="text-sm text-slate-600 dark:text-slate-300">
+              Set up RSOLV in your repository
+            </p>
           </a>
-          <a href="/admin/billing" class="block p-4 bg-white dark:bg-slate-700 rounded-lg hover:shadow-md transition-shadow">
+          <a
+            href="/admin/billing"
+            class="block p-4 bg-white dark:bg-slate-700 rounded-lg hover:shadow-md transition-shadow"
+          >
             <h3 class="font-semibold text-slate-900 dark:text-white mb-2">Manage Billing</h3>
-            <p class="text-sm text-slate-600 dark:text-slate-300">Update payment methods and view invoices</p>
+            <p class="text-sm text-slate-600 dark:text-slate-300">
+              Update payment methods and view invoices
+            </p>
           </a>
-          <a href="/admin/credits" class="block p-4 bg-white dark:bg-slate-700 rounded-lg hover:shadow-md transition-shadow">
+          <a
+            href="/admin/credits"
+            class="block p-4 bg-white dark:bg-slate-700 rounded-lg hover:shadow-md transition-shadow"
+          >
             <h3 class="font-semibold text-slate-900 dark:text-white mb-2">View Credit History</h3>
-            <p class="text-sm text-slate-600 dark:text-slate-300">Check your balance and transaction ledger</p>
+            <p class="text-sm text-slate-600 dark:text-slate-300">
+              Check your balance and transaction ledger
+            </p>
           </a>
         </div>
       </div>
