@@ -223,10 +223,10 @@ defmodule Rsolv.Billing.WebhookProcessor do
   # Extract price ID from various API formats
   defp get_price_id(line_item) do
     # New API format: pricing.price_details.price
+    # Old API format: price.id
+    # Legacy format: plan.id
     get_in(line_item, ["pricing", "price_details", "price"]) ||
-      # Old API format: price.id
       get_in(line_item, ["price", "id"]) ||
-      # Legacy format: plan.id
       get_in(line_item, ["plan", "id"])
   end
 
