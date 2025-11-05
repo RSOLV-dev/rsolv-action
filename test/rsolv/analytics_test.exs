@@ -17,9 +17,7 @@ defmodule Rsolv.AnalyticsTest do
       # Track a page view using WebAnalytics
       WebAnalytics.track_page_view("/blog/security-patterns", "https://twitter.com", utm_params)
 
-      # Verify it was tracked in the database
-      # Give async task time to complete
-      Process.sleep(100)
+      # Verify it was tracked in the database (tracking is synchronous)
       events = Analytics.list_events_by_type("page_view")
       assert length(events) >= 1
     end
@@ -29,16 +27,11 @@ defmodule Rsolv.AnalyticsTest do
       test_email = unique_email()
       WebAnalytics.track_conversion("early_access_signup", %{email: test_email})
 
-      # Verify it was tracked in the database
-      # Give async task time to complete
-      Process.sleep(100)
+      # Verify it was tracked in the database (tracking is synchronous)
       events = Analytics.list_events_by_type("conversion")
       assert length(events) >= 1
 
       # Verify it's persisted to analytics_events table as conversion type
-      # Give it a moment for the async task to complete
-      Process.sleep(100)
-
       conversion_events = Analytics.list_events_by_type("conversion")
       assert length(conversion_events) >= 1
 
@@ -52,9 +45,7 @@ defmodule Rsolv.AnalyticsTest do
       # Track a custom event using WebAnalytics
       WebAnalytics.track("button_click", %{button_id: "cta_signup", page: "/pricing"})
 
-      # Verify it was tracked in the database
-      # Give async task time to complete
-      Process.sleep(100)
+      # Verify it was tracked in the database (tracking is synchronous)
       events = Analytics.list_events_by_type("button_click")
       assert length(events) >= 1
     end
@@ -66,10 +57,7 @@ defmodule Rsolv.AnalyticsTest do
       WebAnalytics.track("search", %{query: "security"})
       WebAnalytics.track_conversion("newsletter_signup", %{})
 
-      # Give async tasks time to complete
-      Process.sleep(100)
-
-      # Verify events were created
+      # Verify events were created (tracking is synchronous)
       all_events = Analytics.list_events()
       assert length(all_events) >= 4
 
@@ -85,10 +73,7 @@ defmodule Rsolv.AnalyticsTest do
       WebAnalytics.track_page_view("/test", nil, %{})
       WebAnalytics.track_page_view("/test", "", %{"campaign" => "test"})
 
-      # Give async tasks time to complete
-      Process.sleep(100)
-
-      # Verify events were created
+      # Verify events were created (tracking is synchronous)
       events = Analytics.list_events_by_type("page_view")
       assert length(events) >= 3
 

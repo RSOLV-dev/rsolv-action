@@ -132,9 +132,7 @@ defmodule Rsolv.CustomerOnboarding.EventsTest do
       customer = customer_fixture()
 
       {:ok, event1} = Events.log_customer_created(customer, %{order: 1})
-      Process.sleep(50)
       {:ok, event2} = Events.log_api_key_generated(customer, Ecto.UUID.generate())
-      Process.sleep(50)
       {:ok, event3} = Events.log_email_sent(customer, "success", %{order: 3})
 
       events = Events.list_events(customer)
@@ -174,9 +172,7 @@ defmodule Rsolv.CustomerOnboarding.EventsTest do
       customer = customer_fixture()
 
       {:ok, event1} = Events.log_customer_created(customer)
-      Process.sleep(1)
       {:ok, _event2} = Events.log_api_key_generated(customer, Ecto.UUID.generate())
-      Process.sleep(1)
       {:ok, _event3} = Events.log_email_sent(customer, "success")
 
       events = Events.list_events_by_type(customer, "customer_created")
@@ -200,8 +196,6 @@ defmodule Rsolv.CustomerOnboarding.EventsTest do
       {:ok, event1} =
         Events.log_email_sent(customer, "success", %{postmark_message_id: "first"})
 
-      Process.sleep(10)
-
       {:ok, event2} =
         Events.log_email_sent(customer, "success", %{postmark_message_id: "second"})
 
@@ -224,12 +218,10 @@ defmodule Rsolv.CustomerOnboarding.EventsTest do
 
       # 1. Customer created
       {:ok, _} = Events.log_customer_created(customer, %{auto_provisioned: true})
-      Process.sleep(50)
 
       # 2. API key generated
       api_key_id = Ecto.UUID.generate()
       {:ok, _} = Events.log_api_key_generated(customer, api_key_id)
-      Process.sleep(50)
 
       # 3. Welcome email sent
       {:ok, _} =
@@ -263,11 +255,9 @@ defmodule Rsolv.CustomerOnboarding.EventsTest do
 
       # Customer created successfully
       {:ok, _} = Events.log_customer_created(customer)
-      Process.sleep(50)
 
       # API key generated successfully
       {:ok, _} = Events.log_api_key_generated(customer, Ecto.UUID.generate())
-      Process.sleep(50)
 
       # Email failed
       {:ok, failed_event} =
@@ -275,8 +265,6 @@ defmodule Rsolv.CustomerOnboarding.EventsTest do
           email_type: "welcome",
           error: "smtp_error"
         })
-
-      Process.sleep(50)
 
       # Email retrying
       {:ok, retry_event} =

@@ -44,14 +44,14 @@ defmodule Rsolv.AST.PortCleanupTest do
           end
         end)
 
-      # Give it a moment to start the infinite loop
-      Process.sleep(200)
+      # Give it a moment to start the slow operation (reduced from 200ms)
+      Process.sleep(50)
 
       # Kill the port
       PortSupervisor.stop_port(PortSupervisor, port_id)
 
-      # Wait for cleanup
-      Process.sleep(500)
+      # Wait for cleanup (using polling instead of fixed sleep)
+      assert_processes_terminated([os_pid], 500)
 
       # Verify process is gone
       {output, _exit_code} = System.cmd("ps", ["-p", "#{os_pid}"], stderr_to_stdout: true)
@@ -160,14 +160,15 @@ defmodule Rsolv.AST.PortCleanupTest do
           end
         end)
 
-      # Give it a moment to start
-      Process.sleep(200)
+      # Give it a moment to start (reduced from 200ms)
+      Process.sleep(50)
 
       # Kill the port
       PortSupervisor.stop_port(PortSupervisor, port_id)
 
       # Wait for cleanup (SIGKILL should work even if SIGTERM is ignored)
-      Process.sleep(500)
+      # Using polling instead of fixed sleep
+      assert_processes_terminated([os_pid], 500)
 
       # Verify process is gone
       {output, _} = System.cmd("ps", ["-p", "#{os_pid}"], stderr_to_stdout: true)
@@ -191,24 +192,28 @@ defmodule Rsolv.AST.PortCleanupTest do
           :error -> 0
         end
 
-      # Start and stop many parsers
-      for i <- 1..10 do
-        config = %{
-          language: "test#{i}",
-          command: "python3",
-          args: ["-u", Path.join([__DIR__, "fixtures", "simple_js_parser.py"])],
-          timeout: 5000
-        }
+      # Start and stop many parsers, tracking OS PIDs for verification
+      os_pids =
+        for i <- 1..10 do
+          config = %{
+            language: "test#{i}",
+            command: "python3",
+            args: ["-u", Path.join([__DIR__, "fixtures", "simple_js_parser.py"])],
+            timeout: 5000
+          }
 
-        {:ok, port_id} = PortSupervisor.start_port(PortSupervisor, config)
-        # Do some work
-        {:ok, _} = PortSupervisor.call_port(PortSupervisor, port_id, "const x = 1", 1000)
-        # Stop it
-        PortSupervisor.stop_port(PortSupervisor, port_id)
-      end
+          {:ok, port_id} = PortSupervisor.start_port(PortSupervisor, config)
+          # Get OS PID before stopping
+          os_pid = assert_port_started(PortSupervisor, port_id)
+          # Do some work
+          {:ok, _} = PortSupervisor.call_port(PortSupervisor, port_id, "const x = 1", 1000)
+          # Stop it
+          PortSupervisor.stop_port(PortSupervisor, port_id)
+          os_pid
+        end
 
-      # Wait for cleanup
-      Process.sleep(1000)
+      # Wait for cleanup using polling instead of fixed sleep
+      assert_processes_terminated(os_pids, 1000)
 
       # Check Python process count hasn't increased significantly
       {final_output, _exit_code} = System.cmd("pgrep", ["-c", "python3"], stderr_to_stdout: true)

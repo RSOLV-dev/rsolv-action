@@ -120,9 +120,14 @@ defmodule Rsolv.AST.PortSupervisorTest do
         Process.sleep(50)
       end
 
-      # Port should be terminated after max restarts
-      Process.sleep(100)
-      assert PortSupervisor.get_port(supervisor, port_id) == nil
+      # Port should be terminated after max restarts (using polling instead of fixed wait)
+      assert wait_for_condition(
+               fn ->
+                 PortSupervisor.get_port(supervisor, port_id) == nil
+               end,
+               200,
+               "Port was not terminated after max restarts"
+             )
     end
   end
 
@@ -200,11 +205,14 @@ defmodule Rsolv.AST.PortSupervisorTest do
       # Port should exist initially
       assert PortSupervisor.get_port(supervisor, port_id) != nil
 
-      # Wait for idle timeout
-      Process.sleep(150)
-
-      # Port should be terminated
-      assert PortSupervisor.get_port(supervisor, port_id) == nil
+      # Wait for idle timeout (using polling instead of fixed wait)
+      assert wait_for_condition(
+               fn ->
+                 PortSupervisor.get_port(supervisor, port_id) == nil
+               end,
+               200,
+               "Port was not terminated after idle timeout"
+             )
     end
   end
 
@@ -312,11 +320,14 @@ defmodule Rsolv.AST.PortSupervisorTest do
 
       {:ok, port_id} = PortSupervisor.start_port(supervisor, parser_config)
 
-      # Wait for health check
-      Process.sleep(150)
-
-      # Port should be healthy
-      assert PortSupervisor.is_port_healthy?(supervisor, port_id) == true
+      # Wait for health check (using polling instead of fixed wait)
+      assert wait_for_condition(
+               fn ->
+                 PortSupervisor.is_port_healthy?(supervisor, port_id) == true
+               end,
+               200,
+               "Port did not become healthy"
+             )
     end
 
     test "restarts unhealthy ports", %{supervisor: supervisor} do
@@ -330,11 +341,14 @@ defmodule Rsolv.AST.PortSupervisorTest do
       {:ok, port_id} = PortSupervisor.start_port(supervisor, parser_config)
       original_pid = PortSupervisor.get_port_pid(supervisor, port_id)
 
-      # Wait for health check to fail
-      Process.sleep(150)
-
-      # Check if port is unhealthy
-      assert PortSupervisor.is_port_healthy?(supervisor, port_id) == false
+      # Wait for health check to fail (using polling instead of fixed wait)
+      assert wait_for_condition(
+               fn ->
+                 PortSupervisor.is_port_healthy?(supervisor, port_id) == false
+               end,
+               200,
+               "Port did not become unhealthy"
+             )
 
       # Manually restart the unhealthy port (simulating automated restart)
       {:ok, _} = PortSupervisor.restart_unhealthy_port(supervisor, port_id)
@@ -409,9 +423,14 @@ defmodule Rsolv.AST.PortSupervisorTest do
       # Force termination
       PortSupervisor.terminate_port(supervisor, port_id)
 
-      # Process should be dead
-      Process.sleep(50)
-      refute Process.alive?(port_pid)
+      # Process should be dead (using polling instead of fixed wait)
+      assert wait_for_condition(
+               fn ->
+                 not Process.alive?(port_pid)
+               end,
+               100,
+               "Port process did not terminate"
+             )
 
       # Port should be removed from tracking
       assert PortSupervisor.get_port(supervisor, port_id) == nil
