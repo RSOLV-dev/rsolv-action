@@ -36,10 +36,10 @@ defmodule RsolvWeb.MarketingComponents do
     ~H"""
     <div class={"text-center #{@class}"}>
       <div class="mb-4 flex justify-center">
-        <%= Phoenix.HTML.raw(@icon) %>
+        {Phoenix.HTML.raw(@icon)}
       </div>
-      <h3 class={text_classes(:heading, "text-xl font-semibold mb-2")}><%= @title %></h3>
-      <p class={text_classes(:muted)}><%= @description %></p>
+      <h3 class={text_classes(:heading, "text-xl font-semibold mb-2")}>{@title}</h3>
+      <p class={text_classes(:muted)}>{@description}</p>
     </div>
     """
   end
@@ -76,7 +76,7 @@ defmodule RsolvWeb.MarketingComponents do
         phx-value-destination={@track_destination}
         class={@button_class}
       >
-        <%= render_slot(@inner_block) %>
+        {render_slot(@inner_block)}
       </.link>
     <% else %>
       <a
@@ -86,7 +86,7 @@ defmodule RsolvWeb.MarketingComponents do
         class={@button_class}
         {if @href =~ "http", do: [target: "_blank", rel: "noopener noreferrer"], else: []}
       >
-        <%= render_slot(@inner_block) %>
+        {render_slot(@inner_block)}
       </a>
     <% end %>
     """
@@ -128,8 +128,8 @@ defmodule RsolvWeb.MarketingComponents do
   def stat(assigns) do
     ~H"""
     <div class={@class}>
-      <div class="text-4xl font-bold text-blue-600 dark:text-blue-400 mb-2"><%= @number %></div>
-      <div class={text_classes(:muted)}><%= @label %></div>
+      <div class="text-4xl font-bold text-blue-600 dark:text-blue-400 mb-2">{@number}</div>
+      <div class={text_classes(:muted)}>{@label}</div>
     </div>
     """
   end
@@ -145,7 +145,7 @@ defmodule RsolvWeb.MarketingComponents do
     ~H"""
     <section class={"relative bg-gradient-to-br from-blue-600 to-emerald-600 dark:from-blue-700 dark:to-emerald-700 text-white px-4 sm:px-6 lg:px-8 #{@padding} #{@class}"}>
       <div class="container mx-auto max-w-6xl">
-        <%= render_slot(@inner_block) %>
+        {render_slot(@inner_block)}
       </div>
     </section>
     """

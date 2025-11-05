@@ -13,7 +13,7 @@ defmodule RsolvWeb.LandingLiveTest do
 
     test "renders hero section with value proposition", %{conn: conn} do
       # Temporarily bypass feature flag for this test
-      with_mock Rsolv.FeatureFlags, [enabled?: fn _ -> true end] do
+      with_mock Rsolv.FeatureFlags, enabled?: fn _ -> true end do
         {:ok, _view, html} = live(conn, "/landing")
 
         assert html =~ "Automated Security Fixes"
@@ -23,7 +23,7 @@ defmodule RsolvWeb.LandingLiveTest do
     end
 
     test "displays 'Start Free Trial' CTA in hero", %{conn: conn} do
-      with_mock Rsolv.FeatureFlags, [enabled?: fn _ -> true end] do
+      with_mock Rsolv.FeatureFlags, enabled?: fn _ -> true end do
         {:ok, view, _html} = live(conn, "/landing")
 
         # Check CTA exists and links to /signup
@@ -34,7 +34,7 @@ defmodule RsolvWeb.LandingLiveTest do
     end
 
     test "shows 'No credit card required' message", %{conn: conn} do
-      with_mock Rsolv.FeatureFlags, [enabled?: fn _ -> true end] do
+      with_mock Rsolv.FeatureFlags, enabled?: fn _ -> true end do
         {:ok, _view, html} = live(conn, "/landing")
 
         assert html =~ "No credit card required"
@@ -42,7 +42,7 @@ defmodule RsolvWeb.LandingLiveTest do
     end
 
     test "displays features section", %{conn: conn} do
-      with_mock Rsolv.FeatureFlags, [enabled?: fn _ -> true end] do
+      with_mock Rsolv.FeatureFlags, enabled?: fn _ -> true end do
         {:ok, _view, html} = live(conn, "/landing")
 
         # Key features should be listed
@@ -54,7 +54,7 @@ defmodule RsolvWeb.LandingLiveTest do
     end
 
     test "displays social proof section", %{conn: conn} do
-      with_mock Rsolv.FeatureFlags, [enabled?: fn _ -> true end] do
+      with_mock Rsolv.FeatureFlags, enabled?: fn _ -> true end do
         {:ok, _view, html} = live(conn, "/landing")
 
         assert html =~ "Trusted by Development Teams"
@@ -66,7 +66,7 @@ defmodule RsolvWeb.LandingLiveTest do
     end
 
     test "displays pricing teaser with link to /pricing", %{conn: conn} do
-      with_mock Rsolv.FeatureFlags, [enabled?: fn _ -> true end] do
+      with_mock Rsolv.FeatureFlags, enabled?: fn _ -> true end do
         {:ok, view, html} = live(conn, "/landing")
 
         assert html =~ "Start with 10 Free Credits"
@@ -81,7 +81,7 @@ defmodule RsolvWeb.LandingLiveTest do
     end
 
     test "displays demo repository CTA", %{conn: conn} do
-      with_mock Rsolv.FeatureFlags, [enabled?: fn _ -> true end] do
+      with_mock Rsolv.FeatureFlags, enabled?: fn _ -> true end do
         {:ok, view, html} = live(conn, "/landing")
 
         assert html =~ "See RSOLV in Action"
@@ -94,7 +94,7 @@ defmodule RsolvWeb.LandingLiveTest do
     end
 
     test "has multiple CTAs linking to /signup", %{conn: conn} do
-      with_mock Rsolv.FeatureFlags, [enabled?: fn _ -> true end] do
+      with_mock Rsolv.FeatureFlags, enabled?: fn _ -> true end do
         {:ok, _view, html} = live(conn, "/landing")
 
         # Count occurrences of signup links in the HTML
@@ -106,7 +106,7 @@ defmodule RsolvWeb.LandingLiveTest do
 
   describe "responsive design" do
     test "uses responsive Tailwind classes for mobile (320px+)", %{conn: conn} do
-      with_mock Rsolv.FeatureFlags, [enabled?: fn _ -> true end] do
+      with_mock Rsolv.FeatureFlags, enabled?: fn _ -> true end do
         {:ok, _view, html} = live(conn, "/landing")
 
         # Check for Tailwind responsive classes
@@ -118,7 +118,7 @@ defmodule RsolvWeb.LandingLiveTest do
     end
 
     test "has container classes for layout", %{conn: conn} do
-      with_mock Rsolv.FeatureFlags, [enabled?: fn _ -> true end] do
+      with_mock Rsolv.FeatureFlags, enabled?: fn _ -> true end do
         {:ok, _view, html} = live(conn, "/landing")
 
         # Should use container for layout
@@ -175,7 +175,7 @@ defmodule RsolvWeb.LandingLiveTest do
 
   describe "dark mode support" do
     test "includes dark mode Tailwind classes", %{conn: conn} do
-      with_mock Rsolv.FeatureFlags, [enabled?: fn _ -> true end] do
+      with_mock Rsolv.FeatureFlags, enabled?: fn _ -> true end do
         {:ok, _view, html} = live(conn, "/landing")
 
         # Should have dark: variants
