@@ -1,5 +1,5 @@
 defmodule RsolvWeb.LandingLiveTest do
-  use RsolvWeb.ConnCase
+  use RsolvWeb.ConnCase, async: false
   import Phoenix.LiveViewTest
   import Mock
 
@@ -9,7 +9,6 @@ defmodule RsolvWeb.LandingLiveTest do
     # Clean up feature flags after each test
     on_exit(fn ->
       FunWithFlags.disable(:public_site)
-      FunWithFlags.clear(:public_site)
     end)
 
     :ok
@@ -19,7 +18,6 @@ defmodule RsolvWeb.LandingLiveTest do
     test "redirects to / when :public_site flag is disabled", %{conn: conn} do
       # Ensure flag is disabled
       FunWithFlags.disable(:public_site)
-      FunWithFlags.clear(:public_site)
 
       # Attempt to access landing page
       {:error, {:redirect, %{to: redirect_path, flash: flash}}} = live(conn, "/landing")
@@ -32,8 +30,10 @@ defmodule RsolvWeb.LandingLiveTest do
 
     test "allows access when :public_site flag is enabled", %{conn: conn} do
       # Enable the flag
-      {:ok, _} = FunWithFlags.enable(:public_site)
-      FunWithFlags.clear(:public_site)
+      Rsolv.Repo.query!(
+        "INSERT INTO fun_with_flags_toggles (flag_name, gate_type, target, enabled) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING",
+        ["public_site", "boolean", nil, true]
+      )
 
       # Should successfully mount
       assert {:ok, _view, _html} = live(conn, "/landing")
@@ -42,9 +42,11 @@ defmodule RsolvWeb.LandingLiveTest do
 
   describe "landing page rendering (when flag is enabled)" do
     setup %{conn: conn} do
-      # Enable flag for these tests
-      {:ok, _} = FunWithFlags.enable(:public_site)
-      FunWithFlags.clear(:public_site)
+      # Enable flag for these tests - use Ecto to insert the flag
+      Rsolv.Repo.query!(
+        "INSERT INTO fun_with_flags_toggles (flag_name, gate_type, target, enabled) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING",
+        ["public_site", "boolean", nil, true]
+      )
 
       {:ok, conn: conn}
     end
@@ -128,8 +130,10 @@ defmodule RsolvWeb.LandingLiveTest do
   describe "responsive design" do
     setup %{conn: conn} do
       # Enable flag for these tests
-      {:ok, _} = FunWithFlags.enable(:public_site)
-      FunWithFlags.clear(:public_site)
+      Rsolv.Repo.query!(
+        "INSERT INTO fun_with_flags_toggles (flag_name, gate_type, target, enabled) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING",
+        ["public_site", "boolean", nil, true]
+      )
 
       {:ok, conn: conn}
     end
@@ -156,8 +160,10 @@ defmodule RsolvWeb.LandingLiveTest do
   describe "analytics tracking" do
     setup %{conn: conn} do
       # Enable flag for these tests
-      {:ok, _} = FunWithFlags.enable(:public_site)
-      FunWithFlags.clear(:public_site)
+      Rsolv.Repo.query!(
+        "INSERT INTO fun_with_flags_toggles (flag_name, gate_type, target, enabled) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING",
+        ["public_site", "boolean", nil, true]
+      )
 
       {:ok, conn: conn}
     end
@@ -203,8 +209,10 @@ defmodule RsolvWeb.LandingLiveTest do
   describe "dark mode support" do
     setup %{conn: conn} do
       # Enable flag for these tests
-      {:ok, _} = FunWithFlags.enable(:public_site)
-      FunWithFlags.clear(:public_site)
+      Rsolv.Repo.query!(
+        "INSERT INTO fun_with_flags_toggles (flag_name, gate_type, target, enabled) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING",
+        ["public_site", "boolean", nil, true]
+      )
 
       {:ok, conn: conn}
     end
