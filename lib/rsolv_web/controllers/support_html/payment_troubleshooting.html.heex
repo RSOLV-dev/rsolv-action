@@ -2,9 +2,18 @@
   <div class="container mx-auto px-4 py-12 max-w-4xl">
     <%!-- Header --%>
     <div class="mb-8">
-      <a href="/support" class="inline-flex items-center text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 mb-4">
+      <a
+        href="/support"
+        class="inline-flex items-center text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 mb-4"
+      >
         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M15 19l-7-7 7-7"
+          >
+          </path>
         </svg>
         Back to Support
       </a>
@@ -20,7 +29,9 @@
     <div class="prose prose-slate dark:prose-invert max-w-none">
       <%!-- Common Payment Issues --%>
       <div class="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-8 mb-6 border border-slate-200 dark:border-slate-700">
-        <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-4 mt-0">Common Payment Issues</h2>
+        <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-4 mt-0">
+          Common Payment Issues
+        </h2>
         <p class="text-slate-700 dark:text-slate-300 mb-6">
           Most payment failures fall into these categories. Find your issue below for quick resolution:
         </p>
@@ -30,22 +41,43 @@
           <div class="border border-slate-300 dark:border-slate-600 rounded-lg p-6">
             <div class="flex items-start">
               <div class="flex-shrink-0 w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mr-4">
-                <svg class="w-6 h-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                <svg
+                  class="w-6 h-6 text-red-600 dark:text-red-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M6 18L18 6M6 6l12 12"
+                  >
+                  </path>
                 </svg>
               </div>
               <div class="flex-1">
-                <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">Card Declined</h3>
+                <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+                  Card Declined
+                </h3>
                 <p class="text-sm text-slate-700 dark:text-slate-300 mb-3">
                   Your bank or card issuer rejected the payment.
                 </p>
                 <div class="bg-slate-50 dark:bg-slate-900/50 rounded p-4 text-sm">
                   <p class="font-semibold text-slate-900 dark:text-white mb-2">What to do:</p>
                   <ul class="space-y-1 ml-4">
-                    <li class="text-slate-700 dark:text-slate-300">Contact your bank to authorize charges from Stripe/RSOLV</li>
-                    <li class="text-slate-700 dark:text-slate-300">Verify your card has sufficient funds</li>
-                    <li class="text-slate-700 dark:text-slate-300">Check that your billing address matches bank records</li>
-                    <li class="text-slate-700 dark:text-slate-300">Try a different payment method</li>
+                    <li class="text-slate-700 dark:text-slate-300">
+                      Contact your bank to authorize charges from Stripe/RSOLV
+                    </li>
+                    <li class="text-slate-700 dark:text-slate-300">
+                      Verify your card has sufficient funds
+                    </li>
+                    <li class="text-slate-700 dark:text-slate-300">
+                      Check that your billing address matches bank records
+                    </li>
+                    <li class="text-slate-700 dark:text-slate-300">
+                      Try a different payment method
+                    </li>
                   </ul>
                 </div>
               </div>
@@ -56,22 +88,49 @@
           <div class="border border-slate-300 dark:border-slate-600 rounded-lg p-6">
             <div class="flex items-start">
               <div class="flex-shrink-0 w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center mr-4">
-                <svg class="w-6 h-6 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                <svg
+                  class="w-6 h-6 text-orange-600 dark:text-orange-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                  >
+                  </path>
                 </svg>
               </div>
               <div class="flex-1">
-                <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">Expired Card</h3>
+                <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+                  Expired Card
+                </h3>
                 <p class="text-sm text-slate-700 dark:text-slate-300 mb-3">
                   The payment method on file has expired.
                 </p>
                 <div class="bg-slate-50 dark:bg-slate-900/50 rounded p-4 text-sm">
                   <p class="font-semibold text-slate-900 dark:text-white mb-2">What to do:</p>
                   <ul class="space-y-1 ml-4">
-                    <li class="text-slate-700 dark:text-slate-300">Go to <a href="/account/billing" class="text-blue-600 dark:text-blue-400 hover:underline">Account Settings → Billing</a></li>
-                    <li class="text-slate-700 dark:text-slate-300">Click "Update Payment Method"</li>
-                    <li class="text-slate-700 dark:text-slate-300">Enter your new card details</li>
-                    <li class="text-slate-700 dark:text-slate-300">Retry the failed payment if prompted</li>
+                    <li class="text-slate-700 dark:text-slate-300">
+                      Go to
+                      <a
+                        href="/account/billing"
+                        class="text-blue-600 dark:text-blue-400 hover:underline"
+                      >
+                        Account Settings → Billing
+                      </a>
+                    </li>
+                    <li class="text-slate-700 dark:text-slate-300">
+                      Click "Update Payment Method"
+                    </li>
+                    <li class="text-slate-700 dark:text-slate-300">
+                      Enter your new card details
+                    </li>
+                    <li class="text-slate-700 dark:text-slate-300">
+                      Retry the failed payment if prompted
+                    </li>
                   </ul>
                 </div>
               </div>
@@ -82,22 +141,49 @@
           <div class="border border-slate-300 dark:border-slate-600 rounded-lg p-6">
             <div class="flex items-start">
               <div class="flex-shrink-0 w-10 h-10 bg-yellow-100 dark:bg-yellow-900/30 rounded-full flex items-center justify-center mr-4">
-                <svg class="w-6 h-6 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                <svg
+                  class="w-6 h-6 text-yellow-600 dark:text-yellow-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  >
+                  </path>
                 </svg>
               </div>
               <div class="flex-1">
-                <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">Insufficient Funds</h3>
+                <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+                  Insufficient Funds
+                </h3>
                 <p class="text-sm text-slate-700 dark:text-slate-300 mb-3">
                   Your account doesn't have enough balance to cover the charge.
                 </p>
                 <div class="bg-slate-50 dark:bg-slate-900/50 rounded p-4 text-sm">
                   <p class="font-semibold text-slate-900 dark:text-white mb-2">What to do:</p>
                   <ul class="space-y-1 ml-4">
-                    <li class="text-slate-700 dark:text-slate-300">Add funds to your bank account or credit card</li>
-                    <li class="text-slate-700 dark:text-slate-300">Wait for the automatic retry (we try 3 times over 7 days)</li>
-                    <li class="text-slate-700 dark:text-slate-300">Or manually retry in your <a href="/account/billing" class="text-blue-600 dark:text-blue-400 hover:underline">billing dashboard</a></li>
-                    <li class="text-slate-700 dark:text-slate-300">Consider adding a backup payment method</li>
+                    <li class="text-slate-700 dark:text-slate-300">
+                      Add funds to your bank account or credit card
+                    </li>
+                    <li class="text-slate-700 dark:text-slate-300">
+                      Wait for the automatic retry (we try 3 times over 7 days)
+                    </li>
+                    <li class="text-slate-700 dark:text-slate-300">
+                      Or manually retry in your
+                      <a
+                        href="/account/billing"
+                        class="text-blue-600 dark:text-blue-400 hover:underline"
+                      >
+                        billing dashboard
+                      </a>
+                    </li>
+                    <li class="text-slate-700 dark:text-slate-300">
+                      Consider adding a backup payment method
+                    </li>
                   </ul>
                 </div>
               </div>
@@ -108,23 +194,56 @@
           <div class="border border-slate-300 dark:border-slate-600 rounded-lg p-6">
             <div class="flex items-start">
               <div class="flex-shrink-0 w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center mr-4">
-                <svg class="w-6 h-6 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                <svg
+                  class="w-6 h-6 text-purple-600 dark:text-purple-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                  >
+                  </path>
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                  >
+                  </path>
                 </svg>
               </div>
               <div class="flex-1">
-                <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">Billing Address Mismatch</h3>
+                <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+                  Billing Address Mismatch
+                </h3>
                 <p class="text-sm text-slate-700 dark:text-slate-300 mb-3">
                   The billing address doesn't match what your bank has on file.
                 </p>
                 <div class="bg-slate-50 dark:bg-slate-900/50 rounded p-4 text-sm">
                   <p class="font-semibold text-slate-900 dark:text-white mb-2">What to do:</p>
                   <ul class="space-y-1 ml-4">
-                    <li class="text-slate-700 dark:text-slate-300">Update your billing address in <a href="/account/billing" class="text-blue-600 dark:text-blue-400 hover:underline">billing settings</a></li>
-                    <li class="text-slate-700 dark:text-slate-300">Ensure ZIP/postal code matches your bank records exactly</li>
-                    <li class="text-slate-700 dark:text-slate-300">Check for typos in street address or city</li>
-                    <li class="text-slate-700 dark:text-slate-300">Verify with your bank if unsure of the address on file</li>
+                    <li class="text-slate-700 dark:text-slate-300">
+                      Update your billing address in
+                      <a
+                        href="/account/billing"
+                        class="text-blue-600 dark:text-blue-400 hover:underline"
+                      >
+                        billing settings
+                      </a>
+                    </li>
+                    <li class="text-slate-700 dark:text-slate-300">
+                      Ensure ZIP/postal code matches your bank records exactly
+                    </li>
+                    <li class="text-slate-700 dark:text-slate-300">
+                      Check for typos in street address or city
+                    </li>
+                    <li class="text-slate-700 dark:text-slate-300">
+                      Verify with your bank if unsure of the address on file
+                    </li>
                   </ul>
                 </div>
               </div>
@@ -135,22 +254,43 @@
           <div class="border border-slate-300 dark:border-slate-600 rounded-lg p-6">
             <div class="flex items-start">
               <div class="flex-shrink-0 w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mr-4">
-                <svg class="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                <svg
+                  class="w-6 h-6 text-blue-600 dark:text-blue-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                  >
+                  </path>
                 </svg>
               </div>
               <div class="flex-1">
-                <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">3D Secure Authentication Failed</h3>
+                <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+                  3D Secure Authentication Failed
+                </h3>
                 <p class="text-sm text-slate-700 dark:text-slate-300 mb-3">
                   Your bank requires additional verification (like a code or app approval) and the authentication didn't complete.
                 </p>
                 <div class="bg-slate-50 dark:bg-slate-900/50 rounded p-4 text-sm">
                   <p class="font-semibold text-slate-900 dark:text-white mb-2">What to do:</p>
                   <ul class="space-y-1 ml-4">
-                    <li class="text-slate-700 dark:text-slate-300">Check your phone for verification prompts from your bank</li>
-                    <li class="text-slate-700 dark:text-slate-300">Try the payment again and complete the authentication</li>
-                    <li class="text-slate-700 dark:text-slate-300">Make sure pop-ups are enabled in your browser</li>
-                    <li class="text-slate-700 dark:text-slate-300">Contact your bank if authentication keeps failing</li>
+                    <li class="text-slate-700 dark:text-slate-300">
+                      Check your phone for verification prompts from your bank
+                    </li>
+                    <li class="text-slate-700 dark:text-slate-300">
+                      Try the payment again and complete the authentication
+                    </li>
+                    <li class="text-slate-700 dark:text-slate-300">
+                      Make sure pop-ups are enabled in your browser
+                    </li>
+                    <li class="text-slate-700 dark:text-slate-300">
+                      Contact your bank if authentication keeps failing
+                    </li>
                   </ul>
                 </div>
               </div>
@@ -161,7 +301,9 @@
 
       <%!-- Update Payment Method --%>
       <div class="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-8 mb-6 border border-slate-200 dark:border-slate-700">
-        <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-4 mt-0">How to Update Your Payment Method</h2>
+        <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-4 mt-0">
+          How to Update Your Payment Method
+        </h2>
         <p class="text-slate-700 dark:text-slate-300 mb-6">
           Updating your payment information is quick and secure through Stripe:
         </p>
@@ -171,13 +313,18 @@
             <strong>Sign in</strong> to your RSOLV account
           </li>
           <li class="text-slate-700 dark:text-slate-300">
-            <strong>Navigate</strong> to <a href="/account/billing" class="text-blue-600 dark:text-blue-400 hover:underline">Account Settings → Billing</a>
+            <strong>Navigate</strong>
+            to
+            <a href="/account/billing" class="text-blue-600 dark:text-blue-400 hover:underline">
+              Account Settings → Billing
+            </a>
           </li>
           <li class="text-slate-700 dark:text-slate-300">
             <strong>Click</strong> "Update Payment Method" or "Add Payment Method"
           </li>
           <li class="text-slate-700 dark:text-slate-300">
-            <strong>Enter</strong> your new card details in the secure Stripe form:
+            <strong>Enter</strong>
+            your new card details in the secure Stripe form:
             <ul class="ml-6 mt-2 space-y-1 list-disc">
               <li class="text-slate-600 dark:text-slate-400">Card number</li>
               <li class="text-slate-600 dark:text-slate-400">Expiration date (MM/YY)</li>
@@ -197,28 +344,44 @@
 
       <%!-- Retry Failed Payment --%>
       <div class="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-8 mb-6 border border-slate-200 dark:border-slate-700">
-        <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-4 mt-0">Retrying a Failed Payment</h2>
+        <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-4 mt-0">
+          Retrying a Failed Payment
+        </h2>
         <p class="text-slate-700 dark:text-slate-300 mb-6">
           If a payment fails, RSOLV will automatically retry the charge:
         </p>
 
         <div class="mb-6">
-          <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-3">Automatic Retry Schedule</h3>
+          <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-3">
+            Automatic Retry Schedule
+          </h3>
           <div class="space-y-2">
             <div class="flex items-center">
-              <div class="w-24 text-sm font-semibold text-slate-700 dark:text-slate-300">Day 1</div>
+              <div class="w-24 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                Day 1
+              </div>
               <div class="flex-1 h-2 bg-blue-200 dark:bg-blue-900/40 rounded-full"></div>
-              <div class="w-32 text-right text-sm text-slate-600 dark:text-slate-400">Initial attempt</div>
+              <div class="w-32 text-right text-sm text-slate-600 dark:text-slate-400">
+                Initial attempt
+              </div>
             </div>
             <div class="flex items-center">
-              <div class="w-24 text-sm font-semibold text-slate-700 dark:text-slate-300">Day 3</div>
+              <div class="w-24 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                Day 3
+              </div>
               <div class="flex-1 h-2 bg-blue-300 dark:bg-blue-800/60 rounded-full"></div>
-              <div class="w-32 text-right text-sm text-slate-600 dark:text-slate-400">First retry</div>
+              <div class="w-32 text-right text-sm text-slate-600 dark:text-slate-400">
+                First retry
+              </div>
             </div>
             <div class="flex items-center">
-              <div class="w-24 text-sm font-semibold text-slate-700 dark:text-slate-300">Day 7</div>
+              <div class="w-24 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                Day 7
+              </div>
               <div class="flex-1 h-2 bg-blue-400 dark:bg-blue-700/80 rounded-full"></div>
-              <div class="w-32 text-right text-sm text-slate-600 dark:text-slate-400">Final retry</div>
+              <div class="w-32 text-right text-sm text-slate-600 dark:text-slate-400">
+                Final retry
+              </div>
             </div>
           </div>
           <p class="text-sm text-slate-600 dark:text-slate-400 mt-3">
@@ -231,10 +394,19 @@
           To retry a failed payment immediately:
         </p>
         <ol class="space-y-2 ml-4 list-decimal list-inside mb-6">
-          <li class="text-slate-700 dark:text-slate-300">Go to <a href="/account/billing" class="text-blue-600 dark:text-blue-400 hover:underline">Account Settings → Billing</a></li>
-          <li class="text-slate-700 dark:text-slate-300">Find the failed payment in your billing history</li>
+          <li class="text-slate-700 dark:text-slate-300">
+            Go to
+            <a href="/account/billing" class="text-blue-600 dark:text-blue-400 hover:underline">
+              Account Settings → Billing
+            </a>
+          </li>
+          <li class="text-slate-700 dark:text-slate-300">
+            Find the failed payment in your billing history
+          </li>
           <li class="text-slate-700 dark:text-slate-300">Click "Retry Payment"</li>
-          <li class="text-slate-700 dark:text-slate-300">The charge will be attempted with your current payment method</li>
+          <li class="text-slate-700 dark:text-slate-300">
+            The charge will be attempted with your current payment method
+          </li>
         </ol>
 
         <.callout variant="warning" title="Service Interruption">
@@ -244,35 +416,89 @@
 
       <%!-- Dispute or Refund --%>
       <div class="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-8 mb-6 border border-slate-200 dark:border-slate-700">
-        <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-4 mt-0">Disputing a Charge or Requesting a Refund</h2>
+        <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-4 mt-0">
+          Disputing a Charge or Requesting a Refund
+        </h2>
 
         <div class="mb-6">
-          <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-3">When to Dispute a Charge</h3>
+          <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-3">
+            When to Dispute a Charge
+          </h3>
           <p class="text-slate-700 dark:text-slate-300 mb-3">Contact our support team if:</p>
           <ul class="space-y-2 ml-4">
             <li class="flex items-start">
-              <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              <svg
+                class="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2 mt-0.5 flex-shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                >
+                </path>
               </svg>
-              <span class="text-slate-700 dark:text-slate-300">You were charged for a fix that didn't work or introduced a bug</span>
+              <span class="text-slate-700 dark:text-slate-300">
+                You were charged for a fix that didn't work or introduced a bug
+              </span>
             </li>
             <li class="flex items-start">
-              <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              <svg
+                class="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2 mt-0.5 flex-shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                >
+                </path>
               </svg>
               <span class="text-slate-700 dark:text-slate-300">You see duplicate charges</span>
             </li>
             <li class="flex items-start">
-              <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              <svg
+                class="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2 mt-0.5 flex-shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                >
+                </path>
               </svg>
-              <span class="text-slate-700 dark:text-slate-300">You were billed for more credits than you used</span>
+              <span class="text-slate-700 dark:text-slate-300">
+                You were billed for more credits than you used
+              </span>
             </li>
             <li class="flex items-start">
-              <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              <svg
+                class="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2 mt-0.5 flex-shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                >
+                </path>
               </svg>
-              <span class="text-slate-700 dark:text-slate-300">There's an unrecognized charge on your account</span>
+              <span class="text-slate-700 dark:text-slate-300">
+                There's an unrecognized charge on your account
+              </span>
             </li>
           </ul>
         </div>
@@ -287,7 +513,9 @@
               </p>
             </div>
             <div class="border-l-4 border-green-500 pl-4">
-              <p class="font-semibold text-slate-900 dark:text-white mb-1">Per-Fix Charges (PAYG)</p>
+              <p class="font-semibold text-slate-900 dark:text-white mb-1">
+                Per-Fix Charges (PAYG)
+              </p>
               <p class="text-sm text-slate-700 dark:text-slate-300">
                 Refunds considered on a case-by-case basis if the fix was defective or didn't resolve the vulnerability.
               </p>
@@ -301,10 +529,15 @@
           </div>
         </div>
 
-        <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-3">How to Request a Refund</h3>
+        <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-3">
+          How to Request a Refund
+        </h3>
         <ol class="space-y-2 ml-4 list-decimal list-inside">
           <li class="text-slate-700 dark:text-slate-300">
-            <a href="/contact" class="text-blue-600 dark:text-blue-400 hover:underline">Contact our support team</a> with your account email
+            <a href="/contact" class="text-blue-600 dark:text-blue-400 hover:underline">
+              Contact our support team
+            </a>
+            with your account email
           </li>
           <li class="text-slate-700 dark:text-slate-300">
             Provide the transaction ID and date of the charge
@@ -324,14 +557,19 @@
 
       <%!-- Invoice and Receipt --%>
       <div class="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-8 mb-6 border border-slate-200 dark:border-slate-700">
-        <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-4 mt-0">Finding Invoices and Receipts</h2>
+        <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-4 mt-0">
+          Finding Invoices and Receipts
+        </h2>
         <p class="text-slate-700 dark:text-slate-300 mb-6">
           All invoices and receipts are available in your billing dashboard:
         </p>
 
         <ol class="space-y-3 ml-4 list-decimal list-inside mb-6">
           <li class="text-slate-700 dark:text-slate-300">
-            Go to <a href="/account/billing" class="text-blue-600 dark:text-blue-400 hover:underline">Account Settings → Billing</a>
+            Go to
+            <a href="/account/billing" class="text-blue-600 dark:text-blue-400 hover:underline">
+              Account Settings → Billing
+            </a>
           </li>
           <li class="text-slate-700 dark:text-slate-300">
             Scroll to "Billing History"
@@ -341,37 +579,100 @@
           </li>
         </ol>
 
-        <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-3">What's Included on Invoices</h3>
+        <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-3">
+          What's Included on Invoices
+        </h3>
         <ul class="space-y-2 ml-4 mb-6">
           <li class="flex items-start">
-            <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            <svg
+              class="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2 mt-0.5 flex-shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+              >
+              </path>
             </svg>
             <span class="text-slate-700 dark:text-slate-300">Transaction date and amount</span>
           </li>
           <li class="flex items-start">
-            <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            <svg
+              class="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2 mt-0.5 flex-shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+              >
+              </path>
             </svg>
-            <span class="text-slate-700 dark:text-slate-300">Line items showing which vulnerabilities were fixed</span>
+            <span class="text-slate-700 dark:text-slate-300">
+              Line items showing which vulnerabilities were fixed
+            </span>
           </li>
           <li class="flex items-start">
-            <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            <svg
+              class="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2 mt-0.5 flex-shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+              >
+              </path>
             </svg>
-            <span class="text-slate-700 dark:text-slate-300">Payment method used (last 4 digits)</span>
+            <span class="text-slate-700 dark:text-slate-300">
+              Payment method used (last 4 digits)
+            </span>
           </li>
           <li class="flex items-start">
-            <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            <svg
+              class="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2 mt-0.5 flex-shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+              >
+              </path>
             </svg>
             <span class="text-slate-700 dark:text-slate-300">Billing address</span>
           </li>
           <li class="flex items-start">
-            <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            <svg
+              class="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2 mt-0.5 flex-shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+              >
+              </path>
             </svg>
-            <span class="text-slate-700 dark:text-slate-300">Subtotal, taxes (if applicable), and total</span>
+            <span class="text-slate-700 dark:text-slate-300">
+              Subtotal, taxes (if applicable), and total
+            </span>
           </li>
         </ul>
 
@@ -382,43 +683,110 @@
 
       <%!-- Contact Support --%>
       <div class="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-8 mb-6 border border-slate-200 dark:border-slate-700">
-        <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-4 mt-0">Still Having Issues?</h2>
+        <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-4 mt-0">
+          Still Having Issues?
+        </h2>
         <p class="text-slate-700 dark:text-slate-300 mb-6">
           If you're still experiencing payment problems after trying these solutions, our support team is here to help.
         </p>
 
         <div class="grid md:grid-cols-2 gap-6">
           <div class="border border-slate-300 dark:border-slate-600 rounded-lg p-6">
-            <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-3">What to Include</h3>
-            <p class="text-sm text-slate-700 dark:text-slate-300 mb-3">When contacting support, please provide:</p>
+            <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-3">
+              What to Include
+            </h3>
+            <p class="text-sm text-slate-700 dark:text-slate-300 mb-3">
+              When contacting support, please provide:
+            </p>
             <ul class="space-y-2 text-sm">
               <li class="flex items-start">
-                <svg class="w-4 h-4 text-blue-600 dark:text-blue-400 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                <svg
+                  class="w-4 h-4 text-blue-600 dark:text-blue-400 mr-2 mt-0.5 flex-shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 5l7 7-7 7"
+                  >
+                  </path>
                 </svg>
                 <span class="text-slate-700 dark:text-slate-300">Your account email address</span>
               </li>
               <li class="flex items-start">
-                <svg class="w-4 h-4 text-blue-600 dark:text-blue-400 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                <svg
+                  class="w-4 h-4 text-blue-600 dark:text-blue-400 mr-2 mt-0.5 flex-shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 5l7 7-7 7"
+                  >
+                  </path>
                 </svg>
-                <span class="text-slate-700 dark:text-slate-300">Transaction ID or invoice number</span>
+                <span class="text-slate-700 dark:text-slate-300">
+                  Transaction ID or invoice number
+                </span>
               </li>
               <li class="flex items-start">
-                <svg class="w-4 h-4 text-blue-600 dark:text-blue-400 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                <svg
+                  class="w-4 h-4 text-blue-600 dark:text-blue-400 mr-2 mt-0.5 flex-shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 5l7 7-7 7"
+                  >
+                  </path>
                 </svg>
-                <span class="text-slate-700 dark:text-slate-300">Error message (screenshot if possible)</span>
+                <span class="text-slate-700 dark:text-slate-300">
+                  Error message (screenshot if possible)
+                </span>
               </li>
               <li class="flex items-start">
-                <svg class="w-4 h-4 text-blue-600 dark:text-blue-400 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                <svg
+                  class="w-4 h-4 text-blue-600 dark:text-blue-400 mr-2 mt-0.5 flex-shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 5l7 7-7 7"
+                  >
+                  </path>
                 </svg>
-                <span class="text-slate-700 dark:text-slate-300">Last 4 digits of payment method</span>
+                <span class="text-slate-700 dark:text-slate-300">
+                  Last 4 digits of payment method
+                </span>
               </li>
               <li class="flex items-start">
-                <svg class="w-4 h-4 text-blue-600 dark:text-blue-400 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                <svg
+                  class="w-4 h-4 text-blue-600 dark:text-blue-400 mr-2 mt-0.5 flex-shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 5l7 7-7 7"
+                  >
+                  </path>
                 </svg>
                 <span class="text-slate-700 dark:text-slate-300">Steps you've already tried</span>
               </li>
@@ -426,22 +794,30 @@
           </div>
 
           <div class="border border-slate-300 dark:border-slate-600 rounded-lg p-6">
-            <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-3">Response Times</h3>
+            <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-3">
+              Response Times
+            </h3>
             <div class="space-y-3">
               <div class="flex items-start">
-                <div class="flex-shrink-0 w-20 text-sm font-semibold text-slate-700 dark:text-slate-300">Urgent</div>
+                <div class="flex-shrink-0 w-20 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                  Urgent
+                </div>
                 <div class="text-sm text-slate-700 dark:text-slate-300">
                   Payment failures affecting service: <strong>4 hours</strong>
                 </div>
               </div>
               <div class="flex items-start">
-                <div class="flex-shrink-0 w-20 text-sm font-semibold text-slate-700 dark:text-slate-300">Normal</div>
+                <div class="flex-shrink-0 w-20 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                  Normal
+                </div>
                 <div class="text-sm text-slate-700 dark:text-slate-300">
                   General billing questions: <strong>24 hours</strong>
                 </div>
               </div>
               <div class="flex items-start">
-                <div class="flex-shrink-0 w-20 text-sm font-semibold text-slate-700 dark:text-slate-300">Low</div>
+                <div class="flex-shrink-0 w-20 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                  Low
+                </div>
                 <div class="text-sm text-slate-700 dark:text-slate-300">
                   Historical invoice requests: <strong>48 hours</strong>
                 </div>
@@ -451,7 +827,10 @@
         </div>
 
         <div class="mt-6">
-          <a href="/contact" class="inline-flex items-center justify-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors">
+          <a
+            href="/contact"
+            class="inline-flex items-center justify-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors"
+          >
             Contact Support
           </a>
         </div>
@@ -461,19 +840,37 @@
       <div class="bg-blue-50 dark:bg-slate-800 rounded-lg p-8 border border-blue-200 dark:border-slate-700">
         <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-4">Related Resources</h2>
         <div class="grid md:grid-cols-2 gap-4">
-          <a href="/support/billing-faq" class="block p-4 bg-white dark:bg-slate-700 rounded-lg hover:shadow-md transition-shadow">
+          <a
+            href="/support/billing-faq"
+            class="block p-4 bg-white dark:bg-slate-700 rounded-lg hover:shadow-md transition-shadow"
+          >
             <h3 class="font-semibold text-slate-900 dark:text-white mb-2">Billing FAQ</h3>
-            <p class="text-sm text-slate-600 dark:text-slate-300">Common questions about plans and pricing</p>
+            <p class="text-sm text-slate-600 dark:text-slate-300">
+              Common questions about plans and pricing
+            </p>
           </a>
-          <a href="/support/credits" class="block p-4 bg-white dark:bg-slate-700 rounded-lg hover:shadow-md transition-shadow">
+          <a
+            href="/support/credits"
+            class="block p-4 bg-white dark:bg-slate-700 rounded-lg hover:shadow-md transition-shadow"
+          >
             <h3 class="font-semibold text-slate-900 dark:text-white mb-2">Credit System</h3>
-            <p class="text-sm text-slate-600 dark:text-slate-300">How credits work and tracking usage</p>
+            <p class="text-sm text-slate-600 dark:text-slate-300">
+              How credits work and tracking usage
+            </p>
           </a>
-          <a href="/account/billing" class="block p-4 bg-white dark:bg-slate-700 rounded-lg hover:shadow-md transition-shadow">
+          <a
+            href="/account/billing"
+            class="block p-4 bg-white dark:bg-slate-700 rounded-lg hover:shadow-md transition-shadow"
+          >
             <h3 class="font-semibold text-slate-900 dark:text-white mb-2">Manage Billing</h3>
-            <p class="text-sm text-slate-600 dark:text-slate-300">Update payment methods and view invoices</p>
+            <p class="text-sm text-slate-600 dark:text-slate-300">
+              Update payment methods and view invoices
+            </p>
           </a>
-          <a href="/contact" class="block p-4 bg-white dark:bg-slate-700 rounded-lg hover:shadow-md transition-shadow">
+          <a
+            href="/contact"
+            class="block p-4 bg-white dark:bg-slate-700 rounded-lg hover:shadow-md transition-shadow"
+          >
             <h3 class="font-semibold text-slate-900 dark:text-white mb-2">Contact Support</h3>
             <p class="text-sm text-slate-600 dark:text-slate-300">Get help with payment issues</p>
           </a>

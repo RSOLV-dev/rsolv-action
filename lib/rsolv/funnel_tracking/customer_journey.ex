@@ -143,7 +143,11 @@ defmodule Rsolv.FunnelTracking.CustomerJourney do
     # Calculate time from API key creation
     changes =
       if journey.api_key_created_at do
-        Map.put(changes, :api_key_to_first_call_seconds, DateTime.diff(now, journey.api_key_created_at))
+        Map.put(
+          changes,
+          :api_key_to_first_call_seconds,
+          DateTime.diff(now, journey.api_key_created_at)
+        )
       else
         changes
       end
@@ -165,7 +169,11 @@ defmodule Rsolv.FunnelTracking.CustomerJourney do
     # Calculate time from first API call
     changes =
       if journey.first_api_call_at do
-        Map.put(changes, :first_to_second_call_seconds, DateTime.diff(now, journey.first_api_call_at))
+        Map.put(
+          changes,
+          :first_to_second_call_seconds,
+          DateTime.diff(now, journey.first_api_call_at)
+        )
       else
         changes
       end

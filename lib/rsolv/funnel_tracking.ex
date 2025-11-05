@@ -330,14 +330,20 @@ defmodule Rsolv.FunnelTracking do
     activated_count =
       CustomerJourney
       |> where([j], j.completed_activation == true)
-      |> where([j], j.first_api_call_at >= ^start_datetime and j.first_api_call_at <= ^end_datetime)
+      |> where(
+        [j],
+        j.first_api_call_at >= ^start_datetime and j.first_api_call_at <= ^end_datetime
+      )
       |> select([j], count(j.id))
       |> Repo.one() || 0
 
     retained_count =
       CustomerJourney
       |> where([j], j.completed_retention == true)
-      |> where([j], j.second_api_call_at >= ^start_datetime and j.second_api_call_at <= ^end_datetime)
+      |> where(
+        [j],
+        j.second_api_call_at >= ^start_datetime and j.second_api_call_at <= ^end_datetime
+      )
       |> select([j], count(j.id))
       |> Repo.one() || 0
 

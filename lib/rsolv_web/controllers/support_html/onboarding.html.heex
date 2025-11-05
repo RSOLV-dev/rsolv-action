@@ -2,9 +2,18 @@
   <div class="container mx-auto px-4 py-12 max-w-4xl">
     <%!-- Header --%>
     <div class="mb-8">
-      <a href="/support" class="inline-flex items-center text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 mb-4">
+      <a
+        href="/support"
+        class="inline-flex items-center text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 mb-4"
+      >
         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M15 19l-7-7 7-7"
+          >
+          </path>
         </svg>
         Back to Support
       </a>
@@ -25,7 +34,9 @@
             1
           </div>
           <div>
-            <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-2 mt-0">Get Your API Key</h2>
+            <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-2 mt-0">
+              Get Your API Key
+            </h2>
             <p class="text-slate-600 dark:text-slate-300 mb-4">
               Your API key was sent to your email when you signed up. If you can't find it, you can generate a new one.
             </p>
@@ -33,19 +44,51 @@
         </div>
 
         <div class="ml-14">
-          <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-3">Where to find your API key:</h3>
+          <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-3">
+            Where to find your API key:
+          </h3>
           <ul class="space-y-2 mb-4">
             <li class="flex items-start">
-              <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              <svg
+                class="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2 mt-0.5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                >
+                </path>
               </svg>
-              <span class="text-slate-700 dark:text-slate-300">Check your welcome email (subject: "Welcome to RSOLV")</span>
+              <span class="text-slate-700 dark:text-slate-300">
+                Check your welcome email (subject: "Welcome to RSOLV")
+              </span>
             </li>
             <li class="flex items-start">
-              <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              <svg
+                class="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2 mt-0.5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                >
+                </path>
               </svg>
-              <span class="text-slate-700 dark:text-slate-300">Visit your <a href="/admin/api-keys" class="text-blue-600 dark:text-blue-400 hover:underline">API Keys dashboard</a> to generate a new one</span>
+              <span class="text-slate-700 dark:text-slate-300">
+                Visit your
+                <a href="/admin/api-keys" class="text-blue-600 dark:text-blue-400 hover:underline">
+                  API Keys dashboard
+                </a>
+                to generate a new one
+              </span>
             </li>
           </ul>
 
@@ -62,7 +105,9 @@
             2
           </div>
           <div>
-            <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-2 mt-0">Add RSOLV to Your Repository</h2>
+            <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-2 mt-0">
+              Add RSOLV to Your Repository
+            </h2>
             <p class="text-slate-600 dark:text-slate-300 mb-4">
               Create a GitHub Actions workflow file to enable automated vulnerability scanning and fixing.
             </p>
@@ -76,9 +121,16 @@
             <strong>1. Add your API key to GitHub Secrets:</strong>
           </p>
           <ul class="space-y-2 mb-4 ml-4">
-            <li class="text-slate-700 dark:text-slate-300">Go to your repository → Settings → Secrets and variables → Actions</li>
+            <li class="text-slate-700 dark:text-slate-300">
+              Go to your repository → Settings → Secrets and variables → Actions
+            </li>
             <li class="text-slate-700 dark:text-slate-300">Click "New repository secret"</li>
-            <li class="text-slate-700 dark:text-slate-300">Name: <code class="px-2 py-1 bg-slate-100 dark:bg-slate-700 rounded text-sm">RSOLV_API_KEY</code></li>
+            <li class="text-slate-700 dark:text-slate-300">
+              Name:
+              <code class="px-2 py-1 bg-slate-100 dark:bg-slate-700 rounded text-sm">
+                RSOLV_API_KEY
+              </code>
+            </li>
             <li class="text-slate-700 dark:text-slate-300">Value: Your API key from Step 1</li>
           </ul>
 
@@ -86,7 +138,11 @@
             <strong>2. Create workflow file:</strong>
           </p>
           <p class="text-slate-700 dark:text-slate-300 mb-3">
-            Create <code class="px-2 py-1 bg-slate-100 dark:bg-slate-700 rounded text-sm">.github/workflows/rsolv.yml</code> with this content:
+            Create
+            <code class="px-2 py-1 bg-slate-100 dark:bg-slate-700 rounded text-sm">
+              .github/workflows/rsolv.yml
+            </code>
+            with this content:
           </p>
 
           <pre class="bg-slate-900 text-slate-100 p-4 rounded-lg overflow-x-auto mb-4"><code>name: RSOLV Security Scan
@@ -109,7 +165,9 @@ jobs:
           rsolvApiKey: <%= raw("\${{ secrets.RSOLV_API_KEY }}") %></code></pre>
 
           <.callout variant="info" title="Tip">
-            For more advanced configuration options, see our <a href="/docs/configuration" class="underline">Configuration Guide</a> or browse <a href="/docs/workflows" class="underline">workflow templates</a>.
+            For more advanced configuration options, see our
+            <a href="/docs/configuration" class="underline">Configuration Guide</a>
+            or browse <a href="/docs/workflows" class="underline">workflow templates</a>.
           </.callout>
         </div>
       </div>
@@ -121,7 +179,9 @@ jobs:
             3
           </div>
           <div>
-            <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-2 mt-0">Run Your First Scan</h2>
+            <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-2 mt-0">
+              Run Your First Scan
+            </h2>
             <p class="text-slate-600 dark:text-slate-300 mb-4">
               Trigger your first security scan and watch RSOLV automatically find and fix vulnerabilities.
             </p>
@@ -129,32 +189,52 @@ jobs:
         </div>
 
         <div class="ml-14">
-          <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-3">Trigger a scan:</h3>
+          <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-3">
+            Trigger a scan:
+          </h3>
           <ul class="space-y-3 mb-4">
             <li class="flex items-start">
-              <span class="flex-shrink-0 w-6 h-6 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-full flex items-center justify-center text-sm mr-3 mt-0.5">A</span>
+              <span class="flex-shrink-0 w-6 h-6 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-full flex items-center justify-center text-sm mr-3 mt-0.5">
+                A
+              </span>
               <div>
-                <p class="text-slate-700 dark:text-slate-300 font-semibold">Push to main branch:</p>
-                <p class="text-slate-600 dark:text-slate-400 text-sm">Commit and push the workflow file you just created</p>
+                <p class="text-slate-700 dark:text-slate-300 font-semibold">
+                  Push to main branch:
+                </p>
+                <p class="text-slate-600 dark:text-slate-400 text-sm">
+                  Commit and push the workflow file you just created
+                </p>
               </div>
             </li>
             <li class="flex items-start">
-              <span class="flex-shrink-0 w-6 h-6 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-full flex items-center justify-center text-sm mr-3 mt-0.5">B</span>
+              <span class="flex-shrink-0 w-6 h-6 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-full flex items-center justify-center text-sm mr-3 mt-0.5">
+                B
+              </span>
               <div>
-                <p class="text-slate-700 dark:text-slate-300 font-semibold">Create a pull request:</p>
-                <p class="text-slate-600 dark:text-slate-400 text-sm">Open a PR and RSOLV will scan the changes</p>
+                <p class="text-slate-700 dark:text-slate-300 font-semibold">
+                  Create a pull request:
+                </p>
+                <p class="text-slate-600 dark:text-slate-400 text-sm">
+                  Open a PR and RSOLV will scan the changes
+                </p>
               </div>
             </li>
             <li class="flex items-start">
-              <span class="flex-shrink-0 w-6 h-6 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-full flex items-center justify-center text-sm mr-3 mt-0.5">C</span>
+              <span class="flex-shrink-0 w-6 h-6 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-full flex items-center justify-center text-sm mr-3 mt-0.5">
+                C
+              </span>
               <div>
                 <p class="text-slate-700 dark:text-slate-300 font-semibold">Manual trigger:</p>
-                <p class="text-slate-600 dark:text-slate-400 text-sm">Go to Actions tab → RSOLV Security Scan → Run workflow</p>
+                <p class="text-slate-600 dark:text-slate-400 text-sm">
+                  Go to Actions tab → RSOLV Security Scan → Run workflow
+                </p>
               </div>
             </li>
           </ul>
 
-          <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-3 mt-6">What happens next:</h3>
+          <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-3 mt-6">
+            What happens next:
+          </h3>
           <div class="space-y-3">
             <div class="flex items-start">
               <div class="flex-shrink-0 w-8 h-8 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full flex items-center justify-center text-sm font-bold mr-3">
@@ -162,7 +242,9 @@ jobs:
               </div>
               <div>
                 <p class="text-slate-700 dark:text-slate-300 font-semibold">SCAN Phase</p>
-                <p class="text-slate-600 dark:text-slate-400 text-sm">RSOLV scans your code for security vulnerabilities</p>
+                <p class="text-slate-600 dark:text-slate-400 text-sm">
+                  RSOLV scans your code for security vulnerabilities
+                </p>
               </div>
             </div>
             <div class="flex items-start">
@@ -171,7 +253,9 @@ jobs:
               </div>
               <div>
                 <p class="text-slate-700 dark:text-slate-300 font-semibold">VALIDATE Phase</p>
-                <p class="text-slate-600 dark:text-slate-400 text-sm">Creates tests to verify vulnerabilities are real</p>
+                <p class="text-slate-600 dark:text-slate-400 text-sm">
+                  Creates tests to verify vulnerabilities are real
+                </p>
               </div>
             </div>
             <div class="flex items-start">
@@ -180,7 +264,9 @@ jobs:
               </div>
               <div>
                 <p class="text-slate-700 dark:text-slate-300 font-semibold">MITIGATE Phase</p>
-                <p class="text-slate-600 dark:text-slate-400 text-sm">Automatically generates fixes and creates a pull request</p>
+                <p class="text-slate-600 dark:text-slate-400 text-sm">
+                  Automatically generates fixes and creates a pull request
+                </p>
               </div>
             </div>
           </div>
@@ -197,21 +283,41 @@ jobs:
       <div class="bg-blue-50 dark:bg-slate-800 rounded-lg p-8 border border-blue-200 dark:border-slate-700">
         <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-4">Next Steps</h2>
         <div class="grid md:grid-cols-2 gap-4">
-          <a href="/support/credits" class="block p-4 bg-white dark:bg-slate-700 rounded-lg hover:shadow-md transition-shadow">
+          <a
+            href="/support/credits"
+            class="block p-4 bg-white dark:bg-slate-700 rounded-lg hover:shadow-md transition-shadow"
+          >
             <h3 class="font-semibold text-slate-900 dark:text-white mb-2">Understand Credits</h3>
-            <p class="text-sm text-slate-600 dark:text-slate-300">Learn how the credit system works</p>
+            <p class="text-sm text-slate-600 dark:text-slate-300">
+              Learn how the credit system works
+            </p>
           </a>
-          <a href="/support/api-keys" class="block p-4 bg-white dark:bg-slate-700 rounded-lg hover:shadow-md transition-shadow">
+          <a
+            href="/support/api-keys"
+            class="block p-4 bg-white dark:bg-slate-700 rounded-lg hover:shadow-md transition-shadow"
+          >
             <h3 class="font-semibold text-slate-900 dark:text-white mb-2">Manage API Keys</h3>
             <p class="text-sm text-slate-600 dark:text-slate-300">Rotate and secure your keys</p>
           </a>
-          <a href="/docs/configuration" class="block p-4 bg-white dark:bg-slate-700 rounded-lg hover:shadow-md transition-shadow">
-            <h3 class="font-semibold text-slate-900 dark:text-white mb-2">Advanced Configuration</h3>
-            <p class="text-sm text-slate-600 dark:text-slate-300">Customize RSOLV for your needs</p>
+          <a
+            href="/docs/configuration"
+            class="block p-4 bg-white dark:bg-slate-700 rounded-lg hover:shadow-md transition-shadow"
+          >
+            <h3 class="font-semibold text-slate-900 dark:text-white mb-2">
+              Advanced Configuration
+            </h3>
+            <p class="text-sm text-slate-600 dark:text-slate-300">
+              Customize RSOLV for your needs
+            </p>
           </a>
-          <a href="/support/billing-faq" class="block p-4 bg-white dark:bg-slate-700 rounded-lg hover:shadow-md transition-shadow">
+          <a
+            href="/support/billing-faq"
+            class="block p-4 bg-white dark:bg-slate-700 rounded-lg hover:shadow-md transition-shadow"
+          >
             <h3 class="font-semibold text-slate-900 dark:text-white mb-2">Billing FAQ</h3>
-            <p class="text-sm text-slate-600 dark:text-slate-300">Questions about plans and pricing</p>
+            <p class="text-sm text-slate-600 dark:text-slate-300">
+              Questions about plans and pricing
+            </p>
           </a>
         </div>
       </div>

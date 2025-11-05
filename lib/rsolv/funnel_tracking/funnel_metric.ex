@@ -88,6 +88,7 @@ defmodule Rsolv.FunnelTracking.FunnelMetric do
   end
 
   defp calculate_rate(_numerator, 0), do: Decimal.new("0.00")
+
   defp calculate_rate(numerator, denominator) do
     Decimal.from_float(numerator / denominator * 100)
     |> Decimal.round(2)
