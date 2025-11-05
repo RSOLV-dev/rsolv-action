@@ -71,7 +71,7 @@ console.log('safe code');`]
           {
             id: 'js-eval-injection-2-3',
             patternId: 'js-eval-injection',
-            filePath: 'example.js',
+            file: 'example.js', // API expects 'file', not 'filePath'
             line: 2,
             code: '// eval(userInput)',
             severity: 'critical',

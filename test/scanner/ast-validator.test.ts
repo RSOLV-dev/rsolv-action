@@ -77,7 +77,7 @@ describe('ASTValidator', () => {
           id: 'command_injection-10-5',
           type: VulnerabilityType.COMMAND_INJECTION,
           patternId: 'command_injection',
-          filePath: 'src/app.js',
+          file: 'src/app.js', // API expects 'file', not 'filePath'
           line: 10,
           code: '  eval(userInput);',
           severity: 'critical'
