@@ -61,6 +61,13 @@ defmodule RsolvWeb.Router do
       message: "Feedback dashboard is currently unavailable."
   end
 
+  pipeline :require_customer_support_docs do
+    plug FeatureFlagPlug,
+      feature: :customer_support_docs,
+      fallback_url: "/",
+      message: "Customer support documentation is currently unavailable."
+  end
+
   scope "/", RsolvWeb do
     pipe_through :browser
 
@@ -105,6 +112,18 @@ defmodule RsolvWeb.Router do
 
     # SEO routes
     get "/sitemap.xml", SitemapController, :index
+  end
+
+  # Customer support documentation (protected by feature flag)
+  scope "/support", RsolvWeb do
+    pipe_through [:browser, :require_customer_support_docs]
+
+    get "/", SupportController, :index
+    get "/onboarding", SupportController, :onboarding
+    get "/billing-faq", SupportController, :billing_faq
+    get "/api-keys", SupportController, :api_keys
+    get "/credits", SupportController, :credits
+    get "/payment-troubleshooting", SupportController, :payment_troubleshooting
   end
 
   # Admin routes (public login via LiveView, protected admin area)

@@ -19,6 +19,7 @@ defmodule RsolvWeb.SitemapController do
       #{url_entry("https://rsolv.dev/terms", "0.3", "monthly")}
       #{url_entry("https://rsolv.dev/dashboard", "0.5", "weekly")}
       #{docs_entries()}
+      #{support_entries()}
       #{blog_post_entries()}
     </urlset>
     """
@@ -46,6 +47,20 @@ defmodule RsolvWeb.SitemapController do
       {"https://docs.rsolv.dev/workflows", "0.8", "weekly"},
       {"https://docs.rsolv.dev/configuration", "0.8", "weekly"},
       {"https://docs.rsolv.dev/faq", "0.7", "monthly"}
+    ]
+    |> Enum.map(fn {url, priority, freq} -> url_entry(url, priority, freq) end)
+    |> Enum.join("\n")
+  end
+
+  defp support_entries do
+    # Customer support documentation (high priority for customer onboarding)
+    [
+      {"https://support.rsolv.dev/", "0.9", "weekly"},
+      {"https://support.rsolv.dev/onboarding", "1.0", "weekly"},
+      {"https://support.rsolv.dev/billing-faq", "0.9", "weekly"},
+      {"https://support.rsolv.dev/api-keys", "0.9", "weekly"},
+      {"https://support.rsolv.dev/credits", "0.9", "weekly"},
+      {"https://support.rsolv.dev/payment-troubleshooting", "0.8", "weekly"}
     ]
     |> Enum.map(fn {url, priority, freq} -> url_entry(url, priority, freq) end)
     |> Enum.join("\n")

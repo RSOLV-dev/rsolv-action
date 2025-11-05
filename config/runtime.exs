@@ -104,12 +104,15 @@ if config_env() != :test do
       "https://www.#{phx_host}",
       "https://api.#{phx_host}",
       "https://docs.#{phx_host}",
+      "https://support.#{phx_host}",
       "https://rsolv.ai",
       "https://www.rsolv.ai",
       "https://rsolv.dev",
       "https://www.rsolv.dev",
       "https://docs.rsolv.dev",
       "https://docs.rsolv-staging.com",
+      "https://support.rsolv.dev",
+      "https://support.rsolv-staging.com",
       "http://localhost:4000",
       "http://localhost:4001"
     ]

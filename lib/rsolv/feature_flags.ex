@@ -50,7 +50,8 @@ defmodule Rsolv.FeatureFlags do
       :feedback_form,
       :early_access_signup,
       :welcome_email_sequence,
-      :core_features
+      :core_features,
+      :customer_support_docs
     ],
 
     # Feature access for Phase 1 users
@@ -412,6 +413,7 @@ defmodule Rsolv.FeatureFlags do
       :support_ticket_submission -> "Support ticket system"
       :user_engagement_tracking -> "User engagement analytics"
       :a_b_testing -> "A/B testing framework"
+      :customer_support_docs -> "Customer support documentation pages"
       :enabled_test_feature -> "Test feature (enabled)"
       :test_enabled_feature -> "Test feature (enabled)"
       :disabled_test_feature -> "Test feature (disabled)"
