@@ -32,6 +32,18 @@ else
 fi
 
 echo "🚀 Deploying RSOLV Platform to ${ENVIRONMENT}"
+echo "🔍 Running pre-flight checks..."
+
+# Run pre-flight check
+if [ -f "./scripts/k8s-preflight-check.sh" ]; then
+    ./scripts/k8s-preflight-check.sh "${NAMESPACE}" || {
+        echo "❌ Pre-flight check failed! Fix errors before deploying."
+        exit 1
+    }
+else
+    echo "⚠️  WARNING: Pre-flight check script not found, skipping..."
+fi
+
 echo "📦 Building image: ${IMAGE_TAG}"
 
 # Build and push image

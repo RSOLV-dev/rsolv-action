@@ -228,3 +228,48 @@ curl -H "Authorization: Bearer YOUR_API_KEY" \
 ## Deployment
 
 The API service is deployed using Docker and Kubernetes for high availability and scalability.
+
+### Pre-Flight Checks
+
+Before deploying to staging or production, run the Kubernetes secrets pre-flight check to verify all required configuration is present:
+
+```bash
+# Check staging secrets
+./scripts/k8s-preflight-check.sh rsolv-staging
+
+# Check production secrets
+./scripts/k8s-preflight-check.sh rsolv-production
+```
+
+The pre-flight check validates:
+
+**Required Secrets:**
+- `DATABASE_URL` - Must start with `postgresql://`
+- `SECRET_KEY_BASE` - Must be exactly 64 hex characters
+- `STRIPE_API_KEY` - Must start with `sk_live_` (production) or `sk_test_` (staging)
+- `STRIPE_WEBHOOK_SECRET` - Must start with `whsec_` (critical for Pro subscriptions)
+
+**Optional Secrets** (warnings if missing):
+- `ANTHROPIC_API_KEY`
+- `OPENAI_API_KEY`
+- `POSTMARK_API_KEY`
+- `SENTRY_DSN`
+
+**Exit Codes:**
+- `0` - All checks passed
+- `1` - Required secrets missing or invalid
+- `2` - Invalid usage
+
+The pre-flight check runs automatically when using `./scripts/deploy.sh`.
+
+### Deployment Process
+
+```bash
+# Deploy to staging (runs pre-flight check automatically)
+./scripts/deploy.sh staging
+
+# Deploy to production (runs pre-flight check automatically)
+./scripts/deploy.sh production
+```
+
+**Important:** Fix all CRITICAL errors from the pre-flight check before deploying. Missing `STRIPE_WEBHOOK_SECRET` will prevent Pro subscriptions from working correctly.
