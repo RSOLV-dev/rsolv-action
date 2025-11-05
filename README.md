@@ -228,3 +228,44 @@ curl -H "Authorization: Bearer YOUR_API_KEY" \
 ## Deployment
 
 The API service is deployed using Docker and Kubernetes for high availability and scalability.
+
+**IMPORTANT:** All deployments are managed through the [RSOLV-infrastructure](https://github.com/RSOLV-dev/rsolv-infrastructure) repository, which is the single source of truth for deployment configuration and orchestration.
+
+### Deployment Process
+
+Deployments should be run from the RSOLV-infrastructure repository:
+
+```bash
+# From the infrastructure repository
+cd ~/dev/rsolv/RSOLV-infrastructure
+./scripts/deploy-unified-platform.sh staging   # Deploy to staging
+./scripts/deploy-unified-platform.sh production # Deploy to production
+```
+
+Alternatively, you can use the delegating wrapper in this repository:
+
+```bash
+# From the platform repository (delegates to infrastructure)
+./scripts/deploy.sh staging
+./scripts/deploy.sh production
+```
+
+### Pre-Flight Checks
+
+The deployment script automatically runs pre-flight validation to verify all required secrets are present and valid. The pre-flight check (located in `RSOLV-infrastructure/tools/k8s-preflight-check.sh`) validates:
+
+**Required Secrets:**
+- `DATABASE_URL` - Must start with `postgresql://`
+- `SECRET_KEY_BASE` - Must be exactly 64 hex characters
+- `STRIPE_API_KEY` - Must start with `sk_live_` (production) or `sk_test_` (staging)
+- `STRIPE_WEBHOOK_SECRET` - Must start with `whsec_` (critical for Pro subscriptions)
+
+**Optional Secrets** (warnings if missing):
+- `ANTHROPIC_API_KEY`
+- `OPENAI_API_KEY`
+- `POSTMARK_API_KEY`
+- `SENTRY_DSN`
+
+**Important:** Fix all CRITICAL errors from the pre-flight check before deploying. Missing `STRIPE_WEBHOOK_SECRET` will prevent Pro subscriptions from working correctly.
+
+For detailed deployment documentation, see [RSOLV-infrastructure/DEPLOYMENT.md](https://github.com/RSOLV-dev/rsolv-infrastructure/blob/main/DEPLOYMENT.md).

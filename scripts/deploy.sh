@@ -1,111 +1,53 @@
 #!/bin/bash
-set -e
-
 # RSOLV Platform Deployment Script
+#
+# DEPRECATED: This script is deprecated in favor of the unified deployment script
+# in the RSOLV-infrastructure repository.
+#
 # Usage: ./deploy.sh [staging|production]
 #
-# IMPORTANT DATABASE NOTES:
-# - Production uses the existing rsolv_landing_prod database (consolidated as per RFC-037)
-# - Staging uses rsolv_staging database
-# - The empty rsolv_api_prod and rsolv_platform_prod databases can be cleaned up
-#
-# Database Configuration:
-# - Production: rsolv_landing_prod (contains all web + API data post-consolidation)
-# - Staging: rsolv_staging
-# - Database secret must be named: rsolv-platform-db-secret
+# This script now delegates to the infrastructure repo's deployment script,
+# which is the single source of truth for all deployments.
+
+set -e
 
 ENVIRONMENT=${1:-staging}
-NAMESPACE="rsolv-${ENVIRONMENT}"
-TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-MIGRATION_TIMEOUT=${MIGRATION_TIMEOUT:-600s}  # Allow overriding timeout, default 10 minutes
+INFRASTRUCTURE_REPO="${INFRASTRUCTURE_REPO:-$HOME/dev/rsolv/RSOLV-infrastructure}"
 
-if [ "$ENVIRONMENT" == "production" ]; then
-    IMAGE_TAG="ghcr.io/rsolv-dev/rsolv-platform:prod-${TIMESTAMP}"
-    echo "⚠️  WARNING: Deploying to PRODUCTION!"
-    read -p "Are you sure? (yes/no): " confirm
-    if [ "$confirm" != "yes" ]; then
-        echo "Deployment cancelled."
-        exit 1
-    fi
-else
-    IMAGE_TAG="ghcr.io/rsolv-dev/rsolv-platform:staging-${TIMESTAMP}"
+echo "════════════════════════════════════════════════════════════════"
+echo "⚠️  NOTICE: Using unified deployment from RSOLV-infrastructure"
+echo "════════════════════════════════════════════════════════════════"
+echo ""
+echo "This script delegates to the infrastructure repository's"
+echo "deployment script, which is the single source of truth for"
+echo "all RSOLV deployments."
+echo ""
+echo "Infrastructure repo: $INFRASTRUCTURE_REPO"
+echo "Environment: $ENVIRONMENT"
+echo ""
+
+# Check if infrastructure repo exists
+if [[ ! -d "$INFRASTRUCTURE_REPO" ]]; then
+    echo "❌ Error: Infrastructure repository not found at $INFRASTRUCTURE_REPO"
+    echo ""
+    echo "Please either:"
+    echo "  1. Clone the infrastructure repo to $INFRASTRUCTURE_REPO"
+    echo "  2. Set INFRASTRUCTURE_REPO environment variable to the correct path"
+    echo ""
+    echo "Example:"
+    echo "  git clone https://github.com/RSOLV-dev/rsolv-infrastructure.git $INFRASTRUCTURE_REPO"
+    echo "  INFRASTRUCTURE_REPO=/path/to/rsolv-infrastructure ./scripts/deploy.sh $ENVIRONMENT"
+    exit 1
 fi
 
-echo "🚀 Deploying RSOLV Platform to ${ENVIRONMENT}"
-echo "📦 Building image: ${IMAGE_TAG}"
+DEPLOY_SCRIPT="$INFRASTRUCTURE_REPO/scripts/deploy-unified-platform.sh"
 
-# Build and push image
-docker build -t "${IMAGE_TAG}" -t "ghcr.io/rsolv-dev/rsolv-platform:${ENVIRONMENT}" .
-docker push "${IMAGE_TAG}"
-docker push "ghcr.io/rsolv-dev/rsolv-platform:${ENVIRONMENT}"
+if [[ ! -f "$DEPLOY_SCRIPT" ]]; then
+    echo "❌ Error: Deployment script not found at $DEPLOY_SCRIPT"
+    exit 1
+fi
 
-echo "🔄 Running database migrations..."
-
-# Create migration job from template
-cat > /tmp/migration-job-${TIMESTAMP}.yaml <<EOF
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: rsolv-migrate-${TIMESTAMP}
-  namespace: ${NAMESPACE}
-spec:
-  ttlSecondsAfterFinished: 600  # Clean up after 10 minutes
-  template:
-    metadata:
-      labels:
-        app: rsolv-platform-migrate
-    spec:
-      restartPolicy: Never
-      containers:
-      - name: migrate
-        image: ${IMAGE_TAG}
-        command: ["/app/bin/rsolv", "eval", "Rsolv.Release.migrate()"]
-        env:
-        - name: DATABASE_URL
-          valueFrom:
-            secretKeyRef:
-              name: rsolv-secrets
-              key: database-url
-        - name: DATABASE_SSL
-          value: "false"
-        - name: SECRET_KEY_BASE
-          valueFrom:
-            secretKeyRef:
-              name: rsolv-secrets
-              key: secret-key-base
-        - name: MIX_ENV
-          value: "prod"
-      imagePullSecrets:
-      - name: ghcr-secret
-EOF
-
-# Run migration job
-kubectl apply -f /tmp/migration-job-${TIMESTAMP}.yaml
-
-# Wait for migration to complete
-echo "⏳ Waiting for migrations to complete (timeout: ${MIGRATION_TIMEOUT})..."
-kubectl wait --for=condition=complete job/rsolv-migrate-${TIMESTAMP} -n ${NAMESPACE} --timeout=${MIGRATION_TIMEOUT}
-
-# Check migration logs
-echo "📋 Migration logs:"
-kubectl logs job/rsolv-migrate-${TIMESTAMP} -n ${NAMESPACE}
-
-# Update deployment
-echo "🔄 Updating deployment..."
-kubectl set image deployment/${ENVIRONMENT}-rsolv-platform rsolv-platform=${IMAGE_TAG} -n ${NAMESPACE}
-
-# Wait for rollout
-echo "⏳ Waiting for rollout to complete..."
-kubectl rollout status deployment/${ENVIRONMENT}-rsolv-platform -n ${NAMESPACE}
-
-# Run health check
-echo "🏥 Running health check..."
-POD=$(kubectl get pods -n ${NAMESPACE} -l app=${ENVIRONMENT}-rsolv-platform -o jsonpath='{.items[0].metadata.name}')
-kubectl exec -n ${NAMESPACE} $POD -- wget -qO- http://localhost:4000/health | jq .
-
-echo "✅ Deployment complete!"
-echo "🌐 Environment: ${ENVIRONMENT}"
-echo "🏷️  Image: ${IMAGE_TAG}"
-
-# Cleanup
-rm -f /tmp/migration-job-${TIMESTAMP}.yaml
+# Delegate to infrastructure deployment script
+echo "🚀 Delegating to: $DEPLOY_SCRIPT"
+echo ""
+exec "$DEPLOY_SCRIPT" "$ENVIRONMENT"
