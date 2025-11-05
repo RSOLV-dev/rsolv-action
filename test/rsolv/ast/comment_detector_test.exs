@@ -9,7 +9,6 @@ defmodule Rsolv.AST.CommentDetectorTest do
   - One assertion per test
   - Tests pure functions with clear inputs/outputs
   """
-  # Changed: parser pool is singleton, must run sequentially
   use ExUnit.Case, async: false
 
   alias Rsolv.AST.CommentDetector

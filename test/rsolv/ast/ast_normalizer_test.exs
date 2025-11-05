@@ -6,7 +6,6 @@ defmodule Rsolv.AST.ASTNormalizerTest do
   that enables consistent pattern matching across all supported languages.
   """
 
-  # Changed: parser pool is singleton, must run sequentially
   use ExUnit.Case, async: false
 
   alias Rsolv.AST.ASTNormalizer
