@@ -1,0 +1,322 @@
+---
+# API Performance Baseline Monitoring Alerts
+# Week 5 (Nov 2025) - Establish baseline metrics and alerting
+#
+# These alerts monitor core API performance metrics to ensure
+# production service quality and detect performance degradation.
+#
+# Metrics source: PromEx.Plugins.Phoenix (HTTP request metrics)
+#                 PromEx.Plugins.Ecto (Database query metrics)
+
+groups:
+  - name: api_performance
+    interval: 30s
+    rules:
+      # ==============================================================
+      # API Error Rate Monitoring
+      # Requirement: Error rate should be < 1%
+      # ==============================================================
+
+      - alert: APIErrorRateHigh
+        expr: |
+          (
+            sum(rate(phoenix_http_request_duration_milliseconds_count{status=~"5.."}[5m]))
+            /
+            sum(rate(phoenix_http_request_duration_milliseconds_count[5m]))
+          ) * 100 > 1
+        for: 5m
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: "API error rate exceeds 1% threshold"
+          description: |
+            The API error rate (5xx responses) is {{ $value | humanizePercentage }} over the last 5 minutes.
+            This exceeds the acceptable threshold of 1%.
+
+            Baseline: < 1% error rate
+            Current: {{ $value | humanizePercentage }}
+
+            Check application logs and recent deployments.
+
+      - alert: APIErrorRateCritical
+        expr: |
+          (
+            sum(rate(phoenix_http_request_duration_milliseconds_count{status=~"5.."}[5m]))
+            /
+            sum(rate(phoenix_http_request_duration_milliseconds_count[5m]))
+          ) * 100 > 5
+        for: 2m
+        labels:
+          severity: critical
+          component: api
+        annotations:
+          summary: "CRITICAL: API error rate exceeds 5%"
+          description: |
+            The API error rate (5xx responses) is {{ $value | humanizePercentage }} over the last 5 minutes.
+            This is critically high and requires immediate attention.
+
+            Baseline: < 1% error rate
+            Critical threshold: > 5%
+            Current: {{ $value | humanizePercentage }}
+
+            IMMEDIATE ACTION REQUIRED: Check application health, database connections, and external dependencies.
+
+      # ==============================================================
+      # API Response Time / P95 Latency Monitoring
+      # Requirement: Establish baseline and alert on degradation
+      # ==============================================================
+
+      - alert: APIP95LatencyHigh
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le) (rate(phoenix_http_request_duration_milliseconds_bucket[5m]))
+          ) > 1000
+        for: 10m
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: "API P95 latency exceeds 1 second"
+          description: |
+            The 95th percentile (P95) API response time is {{ $value | humanizeDuration }} over the last 5 minutes.
+            This indicates performance degradation.
+
+            Baseline threshold: < 1000ms
+            Current P95: {{ $value | humanizeDuration }}
+
+            Review slow queries, external API calls, and system resources.
+
+      - alert: APIP95LatencyCritical
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le) (rate(phoenix_http_request_duration_milliseconds_bucket[5m]))
+          ) > 3000
+        for: 5m
+        labels:
+          severity: critical
+          component: api
+        annotations:
+          summary: "CRITICAL: API P95 latency exceeds 3 seconds"
+          description: |
+            The 95th percentile (P95) API response time is {{ $value | humanizeDuration }} over the last 5 minutes.
+            This is severely degraded and impacting user experience.
+
+            Baseline threshold: < 1000ms
+            Critical threshold: > 3000ms
+            Current P95: {{ $value | humanizeDuration }}
+
+            IMMEDIATE ACTION REQUIRED: Check database, external services, and application performance.
+
+      # ==============================================================
+      # API Endpoint-Specific Latency (High-value endpoints)
+      # ==============================================================
+
+      - alert: CredentialExchangeLatencyHigh
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le) (rate(phoenix_http_request_duration_milliseconds_bucket{
+              action="exchange"
+            }[5m]))
+          ) > 500
+        for: 10m
+        labels:
+          severity: warning
+          component: api
+          endpoint: credential_exchange
+        annotations:
+          summary: "Credential exchange endpoint P95 latency > 500ms"
+          description: |
+            The /api/v1/credentials/exchange endpoint P95 latency is {{ $value | humanizeDuration }}.
+            This is a critical path for GitHub Actions and should be < 500ms.
+
+            Expected: < 500ms
+            Current P95: {{ $value | humanizeDuration }}
+
+      - alert: VulnerabilityValidationLatencyHigh
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le) (rate(phoenix_http_request_duration_milliseconds_bucket{
+              action="validate"
+            }[5m]))
+          ) > 2000
+        for: 10m
+        labels:
+          severity: warning
+          component: api
+          endpoint: vulnerability_validation
+        annotations:
+          summary: "Vulnerability validation endpoint P95 latency > 2s"
+          description: |
+            The /api/v1/vulnerabilities/validate endpoint P95 latency is {{ $value | humanizeDuration }}.
+            This endpoint handles AST analysis and should complete within 2 seconds.
+
+            Expected: < 2000ms
+            Current P95: {{ $value | humanizeDuration }}
+
+      # ==============================================================
+      # Database Query Performance Monitoring
+      # Requirement: Monitor database query performance
+      # ==============================================================
+
+      - alert: DatabaseQueryLatencyHigh
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le) (rate(rsolv_prom_ex_ecto_query_duration_milliseconds_bucket[5m]))
+          ) > 100
+        for: 10m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "Database P95 query latency exceeds 100ms"
+          description: |
+            The 95th percentile database query latency is {{ $value | humanizeDuration }}.
+            This may indicate slow queries or database performance issues.
+
+            Baseline threshold: < 100ms
+            Current P95: {{ $value | humanizeDuration }}
+
+            Check slow query logs and database resource utilization.
+
+      - alert: DatabaseQueryLatencyCritical
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le) (rate(rsolv_prom_ex_ecto_query_duration_milliseconds_bucket[5m]))
+          ) > 500
+        for: 5m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: "CRITICAL: Database P95 query latency exceeds 500ms"
+          description: |
+            The 95th percentile database query latency is {{ $value | humanizeDuration }}.
+            This is critically slow and will impact all API endpoints.
+
+            Baseline threshold: < 100ms
+            Critical threshold: > 500ms
+            Current P95: {{ $value | humanizeDuration }}
+
+            IMMEDIATE ACTION REQUIRED: Check database connections, locks, and query plans.
+
+      # ==============================================================
+      # Database Connection Pool Monitoring
+      # ==============================================================
+
+      - alert: DatabaseConnectionPoolExhausted
+        expr: |
+          (
+            avg(rsolv_prom_ex_ecto_connection_pool_used_connections)
+            /
+            avg(rsolv_prom_ex_ecto_connection_pool_size)
+          ) * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "Database connection pool usage > 90%"
+          description: |
+            Database connection pool is {{ $value | humanizePercentage }} utilized.
+            This may cause connection timeouts and degraded performance.
+
+            Threshold: > 90%
+            Current: {{ $value | humanizePercentage }}
+
+            Consider increasing pool size or investigating connection leaks.
+
+      # ==============================================================
+      # Webhook Processing Latency
+      # Requirement: Track webhook processing latency
+      # Note: Webhook duration metrics from BillingPlugin
+      # ==============================================================
+
+      - alert: WebhookProcessingLatencyHigh
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le) (rate(rsolv_billing_stripe_webhook_received_duration_milliseconds_bucket[5m]))
+          ) > 1000
+        for: 10m
+        labels:
+          severity: warning
+          component: webhooks
+        annotations:
+          summary: "Webhook processing P95 latency > 1 second"
+          description: |
+            Stripe webhook processing P95 latency is {{ $value | humanizeDuration }}.
+            Stripe requires webhook responses within ~30 seconds.
+
+            Baseline: < 1000ms
+            Current P95: {{ $value | humanizeDuration }}
+
+            This alert is duplicated from billing-alerts.yml for completeness.
+
+      # ==============================================================
+      # Webhook Processing Failures
+      # ==============================================================
+
+      - alert: WebhookProcessingFailures
+        expr: |
+          (
+            sum(rate(rsolv_billing_stripe_webhook_received_total{status="failed"}[5m]))
+            /
+            sum(rate(rsolv_billing_stripe_webhook_received_total[5m]))
+          ) * 100 > 5
+        for: 5m
+        labels:
+          severity: warning
+          component: webhooks
+        annotations:
+          summary: "Webhook processing failure rate > 5%"
+          description: |
+            Stripe webhook processing failure rate is {{ $value | humanizePercentage }}.
+            Failed webhooks may result in billing inconsistencies.
+
+            Threshold: > 5%
+            Current: {{ $value | humanizePercentage }}
+
+            Check webhook signature validation and Oban worker health.
+
+      # ==============================================================
+      # API Request Rate Anomaly Detection
+      # ==============================================================
+
+      - alert: APIRequestRateAnomalyLow
+        expr: |
+          sum(rate(phoenix_http_request_duration_milliseconds_count[5m])) < 0.01
+          and
+          hour() >= 9 and hour() <= 17  # Business hours UTC
+        for: 30m
+        labels:
+          severity: info
+          component: api
+        annotations:
+          summary: "Unusually low API request rate during business hours"
+          description: |
+            API request rate is {{ $value | humanize }} req/s during business hours.
+            This may indicate service unavailability or customer issues.
+
+            Expected: > 0.01 req/s during business hours
+            Current: {{ $value | humanize }} req/s
+
+            Verify service health and check for connectivity issues.
+
+      # ==============================================================
+      # No API Requests (Complete Silence)
+      # ==============================================================
+
+      - alert: APIRequestsStopped
+        expr: |
+          sum(rate(phoenix_http_request_duration_milliseconds_count[5m])) == 0
+        for: 10m
+        labels:
+          severity: critical
+          component: api
+        annotations:
+          summary: "CRITICAL: No API requests received in 10 minutes"
+          description: |
+            The API has received zero requests for 10 minutes.
+            This indicates a complete service outage or routing issue.
+
+            IMMEDIATE ACTION REQUIRED: Check service health, load balancer, and DNS.

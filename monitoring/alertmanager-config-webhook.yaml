@@ -21,6 +21,53 @@ data:
       repeat_interval: 4h
       receiver: 'default-notifications'
       routes:
+      # API critical alerts - high priority
+      - match:
+          component: api
+          severity: critical
+        receiver: 'api-critical'
+        group_wait: 10s
+        group_interval: 5m
+        repeat_interval: 2h
+      # API warnings
+      - match:
+          component: api
+          severity: warning
+        receiver: 'api-warnings'
+        group_wait: 1m
+        group_interval: 10m
+        repeat_interval: 6h
+      # API info alerts
+      - match:
+          component: api
+          severity: info
+        receiver: 'api-info'
+        group_wait: 5m
+        group_interval: 30m
+        repeat_interval: 12h
+      # Database alerts
+      - match:
+          component: database
+          severity: critical
+        receiver: 'database-critical'
+        group_wait: 10s
+        group_interval: 5m
+        repeat_interval: 2h
+      - match:
+          component: database
+          severity: warning
+        receiver: 'database-warnings'
+        group_wait: 1m
+        group_interval: 10m
+        repeat_interval: 6h
+      # Webhook alerts
+      - match:
+          component: webhooks
+          severity: warning
+        receiver: 'webhook-warnings'
+        group_wait: 1m
+        group_interval: 10m
+        repeat_interval: 6h
       # Billing critical alerts - highest priority
       - match:
           component: billing
@@ -120,6 +167,49 @@ data:
       - to: 'alerts@rsolv.dev'
         headers:
           Subject: 'ℹ️  Billing Info: {{ .GroupLabels.alertname }}'
+
+    # API performance receivers
+    - name: 'api-critical'
+      email_configs:
+      - to: 'admin@rsolv.dev'
+        headers:
+          Subject: '🚨 CRITICAL API ALERT: {{ .GroupLabels.alertname }}'
+      # TODO: Add PagerDuty when configured
+      # pagerduty_configs:
+      # - service_key: '<PAGERDUTY_API_SERVICE_KEY>'
+      #   description: '{{ .GroupLabels.alertname }}: {{ .Annotations.summary }}'
+
+    - name: 'api-warnings'
+      email_configs:
+      - to: 'admin@rsolv.dev, alerts@rsolv.dev'
+        headers:
+          Subject: '⚠️  API Performance Warning: {{ .GroupLabels.alertname }}'
+
+    - name: 'api-info'
+      email_configs:
+      - to: 'alerts@rsolv.dev'
+        headers:
+          Subject: 'ℹ️  API Info: {{ .GroupLabels.alertname }}'
+
+    # Database performance receivers
+    - name: 'database-critical'
+      email_configs:
+      - to: 'admin@rsolv.dev'
+        headers:
+          Subject: '🚨 CRITICAL DATABASE ALERT: {{ .GroupLabels.alertname }}'
+
+    - name: 'database-warnings'
+      email_configs:
+      - to: 'admin@rsolv.dev, alerts@rsolv.dev'
+        headers:
+          Subject: '⚠️  Database Performance Warning: {{ .GroupLabels.alertname }}'
+
+    # Webhook processing receivers
+    - name: 'webhook-warnings'
+      email_configs:
+      - to: 'admin@rsolv.dev, alerts@rsolv.dev'
+        headers:
+          Subject: '⚠️  Webhook Processing Warning: {{ .GroupLabels.alertname }}'
 
     inhibit_rules:
       - source_match:

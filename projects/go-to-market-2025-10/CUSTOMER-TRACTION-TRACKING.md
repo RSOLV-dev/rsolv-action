@@ -36,15 +36,22 @@ This document tracks customer development efforts for RSOLV, focusing on securin
 - Beta tester signups: 0/5 (outreach pending)
 
 **API Performance:**
-- Total API requests: _[to be tracked]_
-- Average response time: _[to be tracked]_
-- Error rate: _[to be tracked]_
-- P95 latency: _[to be tracked]_
+- Total API requests: _[monitoring via Prometheus - see Grafana dashboard]_
+- Average response time (P50): _Target: < 200ms_ | _Alerting threshold: N/A (tracking only)_
+- P95 latency: _Target: < 1000ms_ | _Warning: > 1000ms_ | _Critical: > 3000ms_
+- Error rate (5xx): _Target: < 1%_ | _Warning: > 1%_ | _Critical: > 5%_
+- Dashboard: `grafana.rsolv.dev/d/api-performance-baseline`
+
+**Database Performance:**
+- P95 query latency: _Target: < 100ms_ | _Warning: > 100ms_ | _Critical: > 500ms_
+- Connection pool usage: _Target: < 80%_ | _Warning: > 90%_
+- Monitoring: Ecto metrics via PromEx
 
 **Webhook Processing:**
-- GitHub webhooks received: _[to be tracked]_
-- Webhook processing success rate: _[to be tracked]_
-- Failed webhooks: _[to be tracked]_
+- Stripe webhooks P95 latency: _Target: < 1000ms_ | _Warning: > 1000ms_
+- Webhook failure rate: _Target: < 5%_ | _Warning: > 5%_
+- Processing success rate: _Target: > 95%_
+- Monitoring: BillingPlugin telemetry metrics
 
 **Billing Activity:**
 - Transactions processed: 0
@@ -66,10 +73,20 @@ This document tracks customer development efforts for RSOLV, focusing on securin
 - [ ] Document common customer questions - **VK:** `5bea504c` (Due: Nov 11)
 
 **Monitoring & Operations:**
-- [ ] Establish baseline metrics for API performance - **VK:** `651a3ef1` (Due: Nov 8)
-- [ ] Set up alerting for error rates > 1% - **VK:** `651a3ef1` (Due: Nov 8)
-- [ ] Monitor database query performance - **VK:** `000a4bea` (Daily updates)
-- [ ] Track webhook processing latency - **VK:** `000a4bea` (Daily updates)
+- [x] Establish baseline metrics for API performance - **VK:** `651a3ef1` (Completed: Nov 4, 2025)
+  - ✅ Created Prometheus alerting rules: `config/prometheus/api-performance-alerts.yml`
+  - ✅ Created Grafana dashboard: `grafana_dashboards/api-performance-baseline.json`
+  - ✅ Updated AlertManager routing for API/database/webhook alerts
+  - ✅ Documented baseline thresholds (see Baseline Metrics section below)
+- [x] Set up alerting for error rates > 1% - **VK:** `651a3ef1` (Completed: Nov 4, 2025)
+  - ✅ APIErrorRateHigh: Warning at > 1%, Critical at > 5%
+  - ✅ Email notifications to admin@rsolv.dev and alerts@rsolv.dev
+- [x] Monitor database query performance - **VK:** `651a3ef1` (Completed: Nov 4, 2025)
+  - ✅ DatabaseQueryLatencyHigh: Warning at P95 > 100ms, Critical at > 500ms
+  - ✅ DatabaseConnectionPoolExhausted: Warning at > 90% utilization
+- [x] Track webhook processing latency - **VK:** `651a3ef1` (Completed: Nov 4, 2025)
+  - ✅ WebhookProcessingLatencyHigh: Warning at P95 > 1000ms
+  - ✅ WebhookProcessingFailures: Warning at failure rate > 5%
 
 **Conversion Tracking:**
 - [ ] Website visits → signups - **VK:** `ceba61e4` (Ongoing)
@@ -88,6 +105,130 @@ This document tracks customer development efforts for RSOLV, focusing on securin
 - `b80d8e09` - [Weekly] Update metrics (starts Nov 12)
 - `5bea504c` - [Week 5] Document common customer questions
 - `ceba61e4` - [Week 5] Track conversion funnel
+
+## Baseline Performance Metrics & Alerting
+
+**Established:** 2025-11-04 (Week 5)
+
+### Overview
+
+Comprehensive monitoring and alerting infrastructure has been established to ensure production service quality and detect performance degradation early. This system tracks API performance, database queries, and webhook processing with automated alerts for threshold violations.
+
+### Monitoring Stack
+
+- **Metrics Collection:** PromEx + Prometheus (30s scrape interval)
+- **Visualization:** Grafana dashboards at grafana.rsolv.dev
+- **Alerting:** AlertManager with email notifications
+- **Metrics Endpoint:** https://rsolv.dev/metrics (Prometheus format)
+
+### API Performance Baselines
+
+| Metric | Target | Warning Threshold | Critical Threshold | Alert Name |
+|--------|--------|-------------------|-------------------|------------|
+| **Error Rate (5xx)** | < 1% | > 1% for 5 min | > 5% for 2 min | APIErrorRateHigh / APIErrorRateCritical |
+| **P95 Latency** | < 1000ms | > 1000ms for 10 min | > 3000ms for 5 min | APIP95LatencyHigh / APIP95LatencyCritical |
+| **P50 Latency** | < 200ms | N/A (tracking only) | N/A | N/A |
+| **Request Rate** | > 0.01 req/s | < 0.01 req/s for 30 min (business hours) | 0 req/s for 10 min | APIRequestRateAnomalyLow / APIRequestsStopped |
+
+### Endpoint-Specific Baselines
+
+| Endpoint | Purpose | P95 Target | Warning Threshold |
+|----------|---------|------------|-------------------|
+| `/api/v1/credentials/exchange` | GitHub Action auth | < 500ms | > 500ms for 10 min |
+| `/api/v1/vulnerabilities/validate` | AST analysis | < 2000ms | > 2000ms for 10 min |
+| `/api/v1/test-integration/*` | Test generation | < 5000ms | (covered by RFC-060 alerts) |
+
+### Database Performance Baselines
+
+| Metric | Target | Warning Threshold | Critical Threshold | Alert Name |
+|--------|--------|-------------------|-------------------|------------|
+| **P95 Query Latency** | < 100ms | > 100ms for 10 min | > 500ms for 5 min | DatabaseQueryLatencyHigh / DatabaseQueryLatencyCritical |
+| **Connection Pool Usage** | < 80% | > 90% for 5 min | N/A | DatabaseConnectionPoolExhausted |
+
+### Webhook Processing Baselines
+
+| Metric | Target | Warning Threshold | Notes |
+|--------|--------|-------------------|-------|
+| **P95 Processing Latency** | < 1000ms | > 1000ms for 10 min | Stripe requires response within ~30s |
+| **Failure Rate** | < 5% | > 5% for 5 min | May indicate billing inconsistencies |
+
+### Alert Routing & Notifications
+
+**Email Notifications:**
+- **Critical API Alerts:** admin@rsolv.dev (immediate, repeat every 2h)
+- **API Warnings:** admin@rsolv.dev, alerts@rsolv.dev (repeat every 6h)
+- **Database Critical:** admin@rsolv.dev (immediate, repeat every 2h)
+- **Database Warnings:** admin@rsolv.dev, alerts@rsolv.dev (repeat every 6h)
+- **Webhook Warnings:** admin@rsolv.dev, alerts@rsolv.dev (repeat every 6h)
+
+**Alert Inhibition:**
+- Critical alerts suppress related warnings for the same instance
+- Prevents alert fatigue during incidents
+
+### Monitoring Resources
+
+**Dashboards:**
+- **API Performance Baseline:** https://grafana.rsolv.dev/d/api-performance-baseline
+- **Phoenix Metrics:** Auto-uploaded by PromEx (HTTP requests, response times)
+- **Ecto Metrics:** Auto-uploaded by PromEx (database queries, connection pool)
+- **Billing Dashboard:** https://grafana.rsolv.dev/d/billing_dashboard
+- **RFC-060 Validation Metrics:** https://grafana.rsolv.dev/d/rfc-060-validation-metrics
+
+**Alert Rule Files:**
+- `config/prometheus/api-performance-alerts.yml` - API/database/webhook alerts (NEW)
+- `config/prometheus/billing-alerts.yml` - Billing system alerts (RFC-069)
+- `config/prometheus/rfc-060-alerts.yml` - Validation/mitigation alerts (RFC-060)
+- `monitoring/rsolv-uptime-alerts.yaml` - Site availability alerts
+
+**Configuration Files:**
+- `monitoring/alertmanager-config-webhook.yaml` - AlertManager routing and receivers
+- `monitoring/prometheus-config-update.yaml` - Prometheus scrape and rule loading
+- `lib/rsolv/prom_ex.ex` - PromEx plugin configuration
+
+### Deployment Status
+
+**Current Status (2025-11-04):**
+- ⚠️ **NOT YET DEPLOYED** - Alert rules and dashboard created but not yet applied to production
+- ✅ Infrastructure exists (Prometheus, Grafana, AlertManager already deployed)
+- ✅ Metrics collection active (PromEx plugins running)
+- ⚠️ Awaiting deployment of new alert rules and dashboard
+
+**Deployment Required:**
+1. Apply updated AlertManager config: `kubectl apply -f monitoring/alertmanager-config-webhook.yaml`
+2. Load new alert rules into Prometheus ConfigMap
+3. Upload Grafana dashboard: `grafana_dashboards/api-performance-baseline.json`
+4. Verify alerts are firing correctly (test with simulated load)
+
+**Next Steps:**
+- Deploy alerting configuration to production Kubernetes cluster
+- Verify alert routing and email delivery
+- Monitor baseline metrics for 24-48 hours to validate thresholds
+- Adjust thresholds based on actual production traffic patterns
+- Document alert response runbooks
+
+### Metrics Already Being Collected
+
+The following metrics are **already available** via existing PromEx plugins:
+
+**Phoenix Plugin (HTTP Metrics):**
+- `phoenix_http_request_duration_milliseconds_bucket` - Request latency histogram
+- `phoenix_http_request_duration_milliseconds_count` - Total request count
+- Labels: `status`, `controller`, `action`, `path`
+
+**Ecto Plugin (Database Metrics):**
+- `rsolv_prom_ex_ecto_query_duration_milliseconds_bucket` - Query latency histogram
+- `rsolv_prom_ex_ecto_connection_pool_size` - Total pool size
+- `rsolv_prom_ex_ecto_connection_pool_used_connections` - Currently used connections
+
+**BillingPlugin (Webhook Metrics):**
+- `rsolv_billing_stripe_webhook_received_duration_milliseconds_bucket` - Webhook latency histogram
+- `rsolv_billing_stripe_webhook_received_total` - Webhook count by status
+- Labels: `event_type`, `status`, `failure_reason`
+
+**ValidationPlugin (RFC-060 Metrics):**
+- `rsolv_validation_test_generation_duration_milliseconds` - Test generation latency
+- `rsolv_validation_test_execution_duration_milliseconds` - Test execution latency
+- Labels: `language`, `status`
 
 ## Goals
 
