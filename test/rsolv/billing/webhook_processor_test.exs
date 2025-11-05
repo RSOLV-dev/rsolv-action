@@ -43,9 +43,10 @@ defmodule Rsolv.Billing.WebhookProcessorTest do
             "lines" => %{
               "data" => [
                 %{
-                  "price" => %{
-                    "lookup_key" => "pro_monthly",
-                    "metadata" => %{"plan" => "pro"}
+                  "pricing" => %{
+                    "price_details" => %{
+                      "price" => "price_0SPvUw7pIu1KP146qVYwNTQ8"
+                    }
                   }
                 }
               ]
@@ -73,8 +74,10 @@ defmodule Rsolv.Billing.WebhookProcessorTest do
             "lines" => %{
               "data" => [
                 %{
-                  "price" => %{
-                    "metadata" => %{"plan" => "pro"}
+                  "pricing" => %{
+                    "price_details" => %{
+                      "price" => "price_0SPvUw7pIu1KP146qVYwNTQ8"
+                    }
                   }
                 }
               ]
@@ -107,7 +110,17 @@ defmodule Rsolv.Billing.WebhookProcessorTest do
             "id" => "in_concurrent_123",
             "customer" => customer.stripe_customer_id,
             "amount_paid" => 59_900,
-            "lines" => %{"data" => [%{"price" => %{"metadata" => %{"plan" => "pro"}}}]}
+            "lines" => %{
+              "data" => [
+                %{
+                  "pricing" => %{
+                    "price_details" => %{
+                      "price" => "price_0SPvUw7pIu1KP146qVYwNTQ8"
+                    }
+                  }
+                }
+              ]
+            }
           }
         }
       }
@@ -150,8 +163,10 @@ defmodule Rsolv.Billing.WebhookProcessorTest do
             "lines" => %{
               "data" => [
                 %{
-                  "price" => %{
-                    "metadata" => %{"plan" => "pro"}
+                  "pricing" => %{
+                    "price_details" => %{
+                      "price" => "price_0SPvUw7pIu1KP146qVYwNTQ8"
+                    }
                   }
                 }
               ]

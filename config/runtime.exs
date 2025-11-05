@@ -195,3 +195,8 @@ config :rsolv, :monitoring, enabled: System.get_env("ENABLE_PROMETHEUS_METRICS",
 config :stripity_stripe,
   api_key: System.get_env("STRIPE_API_KEY"),
   signing_secret: System.get_env("STRIPE_WEBHOOK_SECRET")
+
+# Configure Stripe billing (RFC-066)
+config :rsolv, :stripe_billing,
+  pro_price_id: System.get_env("STRIPE_PRO_PRICE_ID") || "price_0SPvUw7pIu1KP146qVYwNTQ8",
+  pro_subscription_credits: String.to_integer(System.get_env("STRIPE_PRO_CREDITS") || "60")
