@@ -34,6 +34,8 @@ defmodule RsolvWeb.Components.Marketing.CtaSimpleCentered do
   """
   use Phoenix.Component
 
+  alias RsolvWeb.Components.Marketing.GradientDecoration
+
   @doc """
   Renders a simple centered CTA section with gradient decoration.
 
@@ -65,26 +67,7 @@ defmodule RsolvWeb.Components.Marketing.CtaSimpleCentered do
       <div class="mx-auto max-w-7xl py-24 sm:px-6 sm:py-32 lg:px-8">
         <div class="relative isolate overflow-hidden bg-gray-900 px-6 pt-16 shadow-2xl sm:rounded-3xl sm:px-16 md:pt-24 lg:flex lg:gap-x-20 lg:px-24 lg:pt-0">
           <!-- Gradient decoration -->
-          <svg
-            viewBox="0 0 1024 1024"
-            aria-hidden="true"
-            class="absolute top-1/2 left-1/2 -z-10 size-256 -translate-y-1/2 [mask-image:radial-gradient(closest-side,white,transparent)] sm:left-full sm:-ml-80 lg:left-1/2 lg:ml-0 lg:-translate-x-1/2 lg:translate-y-0"
-          >
-            <circle
-              r="512"
-              cx="512"
-              cy="512"
-              fill="url(#gradient-cta)"
-              fill-opacity="0.7"
-            >
-            </circle>
-            <defs>
-              <radialGradient id="gradient-cta">
-                <stop stop-color="#3B82F6"></stop>
-                <stop offset="1" stop-color="#10B981"></stop>
-              </radialGradient>
-            </defs>
-          </svg>
+          <GradientDecoration.gradient_blur variant={:radial} />
 
           <!-- Content -->
           <div class={"mx-auto max-w-md text-center lg:mx-0 lg:flex-auto lg:py-32 #{if @image_url, do: "lg:text-left", else: ""}"}>
