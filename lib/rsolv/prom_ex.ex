@@ -15,7 +15,8 @@ defmodule Rsolv.PromEx do
 
       # RSOLV custom plugins
       Rsolv.PromEx.ValidationPlugin,
-      Rsolv.PromEx.CustomerOnboardingPlugin
+      Rsolv.PromEx.CustomerOnboardingPlugin,
+      Rsolv.PromEx.BillingPlugin
       # TODO: Add custom plugin for rate limiter metrics after fixing metric name format
       # Rsolv.PromEx.RateLimiterPlugin
     ]
@@ -40,7 +41,8 @@ defmodule Rsolv.PromEx do
       {:prom_ex, "phoenix_live_view.json"},
 
       # RSOLV custom dashboards
-      {:otp_app, "grafana_dashboards/rfc-060-validation-metrics.json"}
+      {:otp_app, "grafana_dashboards/rfc-060-validation-metrics.json"},
+      {:otp_app, "grafana_dashboards/billing_dashboard.json"}
       # TODO: Add custom dashboard after fixing plugin
       # {:otp_app, "grafana_dashboards/rate_limiter.json"}
     ]

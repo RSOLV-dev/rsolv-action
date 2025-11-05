@@ -1,0 +1,289 @@
+---
+# Billing System Prometheus Alert Rules (RFC-069)
+# These alerts monitor the health and performance of the billing integration
+
+groups:
+  - name: billing_payment_alerts
+    interval: 30s
+    rules:
+      # Alert 1: High payment failure rate (>10% in 15 minutes)
+      - alert: BillingPaymentFailureRateHigh
+        expr: |
+          (
+            sum(rate(rsolv_billing_payment_processed_total{status="failed"}[5m]))
+            /
+            sum(rate(rsolv_billing_payment_processed_total[5m]))
+          ) > 0.10
+        for: 15m
+        labels:
+          severity: warning
+          component: billing
+          subsystem: payment
+        annotations:
+          summary: "High payment failure rate detected"
+          description: |
+            Payment failure rate is {{ $value | humanizePercentage }}.
+            This indicates issues with payment processing.
+
+            **Current value**: {{ $value | humanizePercentage }}
+            **Threshold**: 10%
+            **Impact**: Medium - Customers may be unable to complete payments
+            **Action**:
+              1. Check Stripe dashboard for API errors
+              2. Review payment method issues (expired cards, insufficient funds)
+              3. Verify Stripe API key validity
+              4. Check for rate limiting from Stripe
+          dashboard: "https://grafana.rsolv.dev/d/billing-metrics"
+          runbook: "https://docs.rsolv.dev/runbooks/billing-payment-failures"
+
+      # Alert 2: Critical payment failure rate (>25% in 10 minutes)
+      - alert: BillingPaymentFailureRateCritical
+        expr: |
+          (
+            sum(rate(rsolv_billing_payment_processed_total{status="failed"}[5m]))
+            /
+            sum(rate(rsolv_billing_payment_processed_total[5m]))
+          ) > 0.25
+        for: 10m
+        labels:
+          severity: critical
+          component: billing
+          subsystem: payment
+        annotations:
+          summary: "CRITICAL: Payment processing largely failing"
+          description: |
+            Payment failure rate is {{ $value | humanizePercentage }}.
+            This is a critical failure requiring immediate attention.
+
+            **Current value**: {{ $value | humanizePercentage }}
+            **Threshold**: 25%
+            **Impact**: High - Most customers cannot complete payments
+            **Action**:
+              1. Check Stripe status page: https://status.stripe.com
+              2. Verify production Stripe API key is valid
+              3. Check for configuration changes in production
+              4. Review Stripe webhook logs for errors
+              5. Consider rollback if issue started after deployment
+          dashboard: "https://grafana.rsolv.dev/d/billing-metrics"
+          runbook: "https://docs.rsolv.dev/runbooks/billing-payment-critical"
+
+  - name: billing_webhook_alerts
+    interval: 30s
+    rules:
+      # Alert 3: High webhook failure rate (>10%)
+      - alert: StripeWebhookFailureRateHigh
+        expr: |
+          (
+            sum(rate(rsolv_billing_stripe_webhook_received_total{status="failed"}[5m]))
+            /
+            sum(rate(rsolv_billing_stripe_webhook_received_total[5m]))
+          ) > 0.10
+        for: 15m
+        labels:
+          severity: warning
+          component: billing
+          subsystem: webhook
+        annotations:
+          summary: "Stripe webhook failure rate is high"
+          description: |
+            Webhook failure rate is {{ $value | humanizePercentage }}.
+            This may indicate signature verification or processing issues.
+
+            **Current value**: {{ $value | humanizePercentage }}
+            **Threshold**: 10%
+            **Impact**: Medium - Billing events may not be processed
+            **Action**:
+              1. Check webhook signature verification (STRIPE_WEBHOOK_SECRET)
+              2. Review webhook processing logs for errors
+              3. Verify webhook endpoint is accessible from Stripe
+              4. Check Stripe webhook retry attempts in dashboard
+              5. Verify Oban job queue is processing webhooks
+          dashboard: "https://grafana.rsolv.dev/d/billing-metrics"
+          runbook: "https://docs.rsolv.dev/runbooks/stripe-webhook-failures"
+
+      # Alert 4: Webhook processing duration high (p95 > 1s)
+      - alert: StripeWebhookProcessingDurationHigh
+        expr: |
+          histogram_quantile(0.95,
+            rate(rsolv_billing_stripe_webhook_received_duration_milliseconds_bucket[5m])
+          ) > 1000
+        for: 20m
+        labels:
+          severity: warning
+          component: billing
+          subsystem: webhook
+        annotations:
+          summary: "Stripe webhook processing is slow"
+          description: |
+            The 95th percentile webhook processing duration is {{ $value | humanizeDuration }}.
+            Stripe requires webhook responses within 30 seconds.
+
+            **Current p95**: {{ $value | humanizeDuration }}
+            **Threshold**: 1 second
+            **Stripe timeout**: 30 seconds
+            **Impact**: Medium - May cause webhook retries
+            **Action**:
+              1. Check Oban queue backlog
+              2. Review database query performance
+              3. Check for slow Stripe API calls
+              4. Verify database connection pool availability
+          dashboard: "https://grafana.rsolv.dev/d/billing-metrics"
+
+      # Alert 5: No webhooks received in 6 hours (during business hours)
+      - alert: StripeWebhooksStalled
+        expr: |
+          rate(rsolv_billing_stripe_webhook_received_total[1h]) == 0
+          and
+          hour() >= 8 and hour() <= 20
+        for: 6h
+        labels:
+          severity: info
+          component: billing
+          subsystem: webhook
+        annotations:
+          summary: "No Stripe webhooks received"
+          description: |
+            No Stripe webhooks have been received in 6 hours during business hours.
+            This may be normal if there's low activity, but could indicate a problem.
+
+            **Expected**: Some webhook activity during business hours
+            **Actual**: 0 webhooks/hour
+            **Action**:
+              1. Check if webhook endpoint is accessible: curl https://api.rsolv.dev/api/webhooks/stripe
+              2. Verify Stripe webhook configuration in dashboard
+              3. Check if webhook is disabled in Stripe
+              4. Review firewall/network rules
+              5. This may be normal during low-activity periods
+
+  - name: billing_subscription_alerts
+    interval: 30s
+    rules:
+      # Alert 6: High subscription cancellation rate (>10% of creations)
+      - alert: SubscriptionCancellationRateHigh
+        expr: |
+          (
+            sum(rate(rsolv_billing_subscription_cancelled_total[24h]))
+            /
+            sum(rate(rsolv_billing_subscription_created_total[24h]))
+          ) > 0.10
+        for: 1h
+        labels:
+          severity: warning
+          component: billing
+          subsystem: subscription
+        annotations:
+          summary: "High subscription cancellation rate"
+          description: |
+            Subscription cancellation rate is {{ $value | humanizePercentage }}.
+            This may indicate product or pricing issues.
+
+            **Current value**: {{ $value | humanizePercentage }}
+            **Threshold**: 10%
+            **Impact**: High - Revenue risk
+            **Action**:
+              1. Review recent cancellations in Stripe dashboard
+              2. Check cancellation reasons if available
+              3. Review customer feedback/support tickets
+              4. Check for recent product/pricing changes
+              5. Monitor for patterns (specific plans, customer segments)
+          dashboard: "https://grafana.rsolv.dev/d/billing-metrics"
+
+  # NOTE: Infrastructure alerts (connection pool, memory) removed as they are
+  # app-wide concerns, not billing-specific. Create general infrastructure alerts
+  # in a separate file if needed.
+
+  - name: billing_business_alerts
+    interval: 5m
+    rules:
+      # Alert 7: Credit system anomaly (large credit grant)
+      - alert: BillingCreditGrantAnomalyDetected
+        expr: |
+          histogram_quantile(0.99,
+            rate(rsolv_billing_credits_added_quantity_bucket[5m])
+          ) > 1000
+        for: 5m
+        labels:
+          severity: info
+          component: billing
+          subsystem: credits
+        annotations:
+          summary: "Large credit grant detected"
+          description: |
+            A credit grant of {{ $value }} credits was detected (p99).
+            This may be normal but could indicate an issue.
+
+            **Current p99**: {{ $value }}
+            **Typical**: 5-120 credits
+            **Impact**: Low - May indicate manual intervention or bug
+            **Action**:
+              1. Review recent credit transactions in database
+              2. Check for manual credit grants (legitimate)
+              3. Look for bugs in credit calculation
+              4. Verify customer_id is valid
+              5. Check for potential fraud or system abuse
+          dashboard: "https://grafana.rsolv.dev/d/billing-metrics"
+
+# Alert routing rules configuration
+# These should be added to Alertmanager configuration
+---
+# Example Alertmanager routing (add to monitoring/alertmanager-config-webhook.yaml):
+#
+# route:
+#   routes:
+#     # Billing critical alerts -> PagerDuty
+#     - match:
+#         component: billing
+#         severity: critical
+#       receiver: billing-oncall-pagerduty
+#       group_wait: 10s
+#       group_interval: 5m
+#       repeat_interval: 2h
+#
+#     # Billing warnings -> Email + Slack
+#     - match:
+#         component: billing
+#         severity: warning
+#       receiver: billing-team-alerts
+#       group_wait: 30s
+#       group_interval: 10m
+#       repeat_interval: 4h
+#
+#     # Billing info -> Email only
+#     - match:
+#         component: billing
+#         severity: info
+#       receiver: billing-team-email
+#       group_wait: 5m
+#       group_interval: 30m
+#       repeat_interval: 12h
+#
+# receivers:
+#   - name: billing-oncall-pagerduty
+#     pagerduty_configs:
+#       - service_key: '<PAGERDUTY_BILLING_SERVICE_KEY>'
+#         description: '{{ .GroupLabels.alertname }}: {{ .Annotations.summary }}'
+#
+#   - name: billing-team-alerts
+#     email_configs:
+#       - to: 'billing-alerts@rsolv.dev'
+#         from: 'alerts@rsolv.dev'
+#         smarthost: 'smtp.postmarkapp.com:587'
+#         auth_username: '<POSTMARK_API_KEY>'
+#         auth_password: '<POSTMARK_API_KEY>'
+#         headers:
+#           Subject: '[BILLING ALERT] {{ .GroupLabels.alertname }}'
+#     slack_configs:
+#       - api_url: '<SLACK_WEBHOOK_URL>'
+#         channel: '#billing-alerts'
+#         title: '{{ .GroupLabels.alertname }}'
+#         text: '{{ .Annotations.description }}'
+#
+#   - name: billing-team-email
+#     email_configs:
+#       - to: 'team@rsolv.dev'
+#         from: 'alerts@rsolv.dev'
+#         smarthost: 'smtp.postmarkapp.com:587'
+#         auth_username: '<POSTMARK_API_KEY>'
+#         auth_password: '<POSTMARK_API_KEY>'
+#         headers:
+#           Subject: '[BILLING INFO] {{ .GroupLabels.alertname }}'
