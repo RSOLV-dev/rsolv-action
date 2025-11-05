@@ -69,16 +69,18 @@ defmodule Rsolv.Billing.WebhookProcessor do
   defp handle_event("invoice.payment_succeeded", %{"object" => invoice}) do
     customer = find_customer_by_stripe_id(invoice["customer"])
 
-    # Pro subscription payment → Credit 60 fixes
+    # Pro subscription payment → Credit configured amount
     if invoice["lines"]["data"] |> Enum.any?(&pro_subscription?/1) do
-      CreditLedger.credit(customer, 60, "pro_subscription_payment", %{
+      credits = pro_subscription_credits()
+
+      CreditLedger.credit(customer, credits, "pro_subscription_payment", %{
         stripe_invoice_id: invoice["id"],
         amount_cents: invoice["amount_paid"]
       })
 
       Logger.info("Pro subscription payment processed",
         customer_id: customer.id,
-        credits_added: 60,
+        credits_added: credits,
         stripe_invoice_id: invoice["id"]
       )
     end
@@ -210,9 +212,17 @@ defmodule Rsolv.Billing.WebhookProcessor do
   # Uses Stripe API 2025-10-29 format: pricing.price_details.price
   defp pro_subscription?(line_item) do
     price_id = get_in(line_item, ["pricing", "price_details", "price"])
+    price_id == pro_price_id()
+  end
 
-    # Check if this is the Pro monthly price
-    price_id == "price_0SPvUw7pIu1KP146qVYwNTQ8"
+  # Get Pro price ID from config
+  defp pro_price_id do
+    Application.get_env(:rsolv, :stripe_billing)[:pro_price_id]
+  end
+
+  # Get Pro subscription credit amount from config
+  defp pro_subscription_credits do
+    Application.get_env(:rsolv, :stripe_billing)[:pro_subscription_credits]
   end
 
   # Find customer by Stripe customer ID
