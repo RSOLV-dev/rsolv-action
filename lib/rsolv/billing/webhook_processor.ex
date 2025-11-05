@@ -207,45 +207,12 @@ defmodule Rsolv.Billing.WebhookProcessor do
   end
 
   # Check if line item is for Pro subscription
+  # Uses Stripe API 2025-10-29 format: pricing.price_details.price
   defp pro_subscription?(line_item) do
-    # Handle both old API format (price/plan fields) and new format (pricing.price_details)
-    # Old format: line_item["price"]["lookup_key"] or line_item["plan"]["lookup_key"]
-    # New format: line_item["pricing"]["price_details"]["price"] (need to fetch price object)
-
-    price_id = get_price_id(line_item)
+    price_id = get_in(line_item, ["pricing", "price_details", "price"])
 
     # Check if this is the Pro monthly price
-    price_id == "price_0SPvUw7pIu1KP146qVYwNTQ8" ||
-      check_lookup_key(line_item, "pro_monthly") ||
-      check_metadata_plan(line_item, "pro")
-  end
-
-  # Extract price ID from various API formats
-  defp get_price_id(line_item) do
-    # New API format: pricing.price_details.price
-    # Old API format: price.id
-    # Legacy format: plan.id
-    get_in(line_item, ["pricing", "price_details", "price"]) ||
-      get_in(line_item, ["price", "id"]) ||
-      get_in(line_item, ["plan", "id"])
-  end
-
-  # Check lookup_key in various locations
-  defp check_lookup_key(line_item, expected_key) do
-    lookup_key =
-      get_in(line_item, ["price", "lookup_key"]) ||
-        get_in(line_item, ["plan", "lookup_key"])
-
-    lookup_key == expected_key
-  end
-
-  # Check metadata.plan in various locations
-  defp check_metadata_plan(line_item, expected_plan) do
-    metadata_plan =
-      get_in(line_item, ["price", "metadata", "plan"]) ||
-        get_in(line_item, ["plan", "metadata", "plan"])
-
-    metadata_plan == expected_plan
+    price_id == "price_0SPvUw7pIu1KP146qVYwNTQ8"
   end
 
   # Find customer by Stripe customer ID
