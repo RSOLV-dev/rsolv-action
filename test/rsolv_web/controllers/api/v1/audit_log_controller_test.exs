@@ -4,8 +4,10 @@ defmodule RsolvWeb.Api.V1.AuditLogControllerTest do
   alias Rsolv.AST.AuditLogger
 
   setup do
-    # Clear buffer before each test
+    # Clear buffer and ETS tables before each test to ensure isolation
     AuditLogger.clear_buffer()
+    :ets.delete_all_objects(:audit_log_buffer)
+    :ets.delete_all_objects(:audit_log_index)
     :ok
   end
 
