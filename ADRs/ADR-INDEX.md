@@ -46,6 +46,7 @@ Each ADR follows this structure:
 | [ADR-030](ADR-030-WORKER-THREAD-PATTERN-ISOLATION.md) | Worker Thread Isolation for Untrusted Regex Patterns | Implemented | 2025-10-11 | High - Prevents infinite hangs from pattern API regex |
 | [ADR-031](ADR-031-AST-TEST-INTEGRATION.md) | AST-Based Test Integration Architecture | Implemented | 2025-10-15 | Critical - Framework-native test integration via AST |
 | [ADR-032](ADR-032-BILLING-INTEGRATION-COMPLETION.md) | Billing Integration Week Completion | Implemented | 2025-11-04 | Critical - Automated provisioning, Stripe billing, production-ready |
+| [ADR-033](ADR-033-STRIPE-WEBHOOK-PROCESSING-FIXES.md) | Stripe Webhook Processing Fixes | Implemented | 2025-11-05 | High - Fixes Oban queue config & Stripe API format changes |
 
 ## Related Documentation
 
