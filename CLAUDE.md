@@ -492,6 +492,218 @@ When exploring a new system or determining what capabilities exist:
   - Use `kubectl get endpoints <service-name>` to verify endpoints exist
   - Common issue: `managed-by: RSOLV-infrastructure` vs `managed-by: rsolv-infrastructure`
 
+#### Feature Flag Deployment Strategy
+
+We use FunWithFlags for feature flags, enabling safe deployment of code to production before features go live.
+
+**Standard Deployment Pattern (RFC-078 Example):**
+
+1. **Create Feature Flag Migration**:
+   ```elixir
+   defmodule Rsolv.Repo.Migrations.AddFeatureFlag do
+     use Ecto.Migration
+
+     def up do
+       execute """
+       INSERT INTO fun_with_flags_toggles (flag_name, gate_type, target, enabled) VALUES
+       ('feature_name', 'boolean', NULL, false)
+       ON CONFLICT (flag_name, gate_type, target)
+       DO UPDATE SET enabled = false;
+       """
+     end
+
+     def down do
+       execute """
+       DELETE FROM fun_with_flags_toggles WHERE flag_name = 'feature_name';
+       """
+     end
+   end
+   ```
+
+2. **Wrap New Code in Feature Check**:
+   ```elixir
+   # In controllers/LiveViews
+   def mount(_params, _session, socket) do
+     if FunWithFlags.enabled?(:feature_name) do
+       # New feature code
+     else
+       # Fallback or redirect
+     end
+   end
+
+   # In router
+   scope "/" do
+     if FunWithFlags.enabled?(:feature_name) do
+       live "/new-page", NewPageLive
+     end
+   end
+   ```
+
+3. **Deploy to Production (Flag OFF)**:
+   - Code is deployed but inactive
+   - No risk to existing functionality
+   - Full production environment available for testing
+
+4. **Test on Staging (Flag ON)**:
+   ```sql
+   -- Enable in staging database
+   UPDATE fun_with_flags_toggles
+   SET enabled = true
+   WHERE flag_name = 'feature_name';
+   ```
+
+5. **Go-Live (Enable in Production)**:
+   ```sql
+   -- After staging validation, enable in production
+   UPDATE fun_with_flags_toggles
+   SET enabled = true
+   WHERE flag_name = 'feature_name';
+   ```
+
+6. **Instant Rollback (Disable Flag)**:
+   ```sql
+   -- No code deployment needed - just disable the flag
+   UPDATE fun_with_flags_toggles
+   SET enabled = false
+   WHERE flag_name = 'feature_name';
+   ```
+
+**Benefits:**
+- Zero-downtime deployments throughout development
+- Test in production environment (with flag enabled only in staging)
+- Instant rollback without code deployment
+- No regression risk to existing features
+- Gradual rollout capability (can enable for specific users)
+
+**Best Practices:**
+- Always deploy with flags OFF by default
+- Test thoroughly on staging with flag ON before production enablement
+- Document flag enablement/rollback procedures in deployment plan
+- Remove feature flags after feature is stable (typically 1-2 weeks post-launch)
+- Use `FunWithFlags.enabled?/1` for boolean flags, `FunWithFlags.enabled?/2` for user-specific flags
+
+### Stripe Payment Integration & PCI Compliance
+
+**CRITICAL**: Never send raw credit card numbers to Stripe API. Always use Stripe Elements for payment collection.
+
+#### PCI-Compliant Payment Flow
+
+Our billing system is designed to be PCI Level 1 compliant by never touching raw card data:
+
+1. **Frontend (Browser) - Stripe Elements**:
+   ```javascript
+   // Load Stripe.js from Stripe's CDN (never self-host)
+   const stripe = Stripe('pk_test_xxx'); // Use publishable key
+   const elements = stripe.elements();
+
+   // Create card element (hosted by Stripe in secure iframe)
+   const cardElement = elements.create('card');
+   cardElement.mount('#card-element');
+
+   // On form submit:
+   const {paymentMethod, error} = await stripe.createPaymentMethod({
+     type: 'card',
+     card: cardElement,
+   });
+
+   if (error) {
+     // Handle error
+   } else {
+     // Send ONLY the token to your server
+     const response = await fetch('/api/v1/payment-methods', {
+       method: 'POST',
+       headers: {'Authorization': 'Bearer ' + apiKey},
+       body: JSON.stringify({
+         payment_method_id: paymentMethod.id,  // e.g., pm_card_visa
+         billing_consent: true
+       })
+     });
+   }
+   ```
+
+2. **Backend (Phoenix/Elixir)**:
+   ```elixir
+   # Controller receives ONLY the tokenized payment method ID
+   def add_payment_method(conn, %{"payment_method_id" => pm_id, "billing_consent" => consent}) do
+     customer = conn.assigns.current_customer
+
+     case Billing.CustomerSetup.add_payment_method(customer, pm_id, consent) do
+       {:ok, updated_customer} ->
+         json(conn, %{success: true, customer: updated_customer})
+       {:error, reason} ->
+         # Handle error
+     end
+   end
+   ```
+
+3. **Billing Service**:
+   - Calls `StripeService.attach_payment_method(stripe_customer_id, pm_id)`
+   - Stripe SDK handles secure attachment
+   - No raw card data ever touches our servers
+
+#### Testing Stripe Integration
+
+**DO NOT** use raw card numbers when testing. Use Stripe's test tokens:
+
+**Test Payment Method IDs (already tokenized):**
+- `pm_card_visa` - Visa test card
+- `pm_card_mastercard` - Mastercard test card
+- `pm_card_amex` - American Express test card
+- `pm_card_discover` - Discover test card
+- `pm_card_declined` - Card that will be declined
+- `pm_card_insufficient_funds` - Insufficient funds error
+
+**Test Cards (for Stripe Elements/Checkout):**
+- `4242 4242 4242 4242` - Visa (succeeds)
+- `4000 0000 0000 0002` - Visa (card declined)
+- `4000 0000 0000 9995` - Visa (insufficient funds)
+
+Use any future expiry date (e.g., 12/34) and any 3-digit CVC.
+
+**NEVER** manually call Stripe API with raw card numbers like:
+```javascript
+// ❌ WRONG - PCI violation
+stripe.createPaymentMethod({
+  type: 'card',
+  card: {
+    number: '4242424242424242',  // Don't do this!
+    exp_month: 12,
+    exp_year: 2025,
+    cvc: '123'
+  }
+});
+
+// ✅ CORRECT - Use Stripe Elements
+const cardElement = elements.create('card');
+stripe.createPaymentMethod({type: 'card', card: cardElement});
+```
+
+#### PCI Compliance Checklist
+
+- [ ] Stripe Elements loaded from Stripe CDN (never self-hosted)
+- [ ] Card data never passes through your server
+- [ ] Only payment method tokens (`pm_xxx`) stored in database
+- [ ] SSL/TLS enabled for all connections (DATABASE_SSL=true in production)
+- [ ] Stripe webhook signatures verified (STRIPE_WEBHOOK_SECRET configured)
+- [ ] API keys stored in environment variables (never committed to git)
+- [ ] Test mode (`pk_test_`, `sk_test_`) used in development/staging
+- [ ] Production mode (`pk_live_`, `sk_live_`) only in production
+
+#### Current Implementation Status
+
+**Implemented (RFC-065, RFC-066):**
+- ✅ Backend `Billing.CustomerSetup.add_payment_method/3` API
+- ✅ PCI-compliant architecture (accepts only `payment_method_id`)
+- ✅ Stripe webhook handling
+- ✅ Credit ledger and billing tracking
+
+**Not Yet Implemented (Future: Customer Portal):**
+- ⏳ Frontend payment form with Stripe Elements
+- ⏳ Customer dashboard LiveView
+- ⏳ Payment method management UI
+
+**Note**: RFC-078 (Public Site) creates signup flow but does NOT include payment collection. Payment will be added later in customer portal (RFC-070/071).
+
 ## Blog and Content Guidelines
 
 ### Mastodon/Fediverse Attribution

@@ -191,34 +191,48 @@ end
 ## Verification
 
 ### Fix #1 Verification (Completed)
-```sql
--- Before fix: 10+ jobs stuck in available state
-SELECT COUNT(*) FROM oban_jobs
-WHERE worker = 'Rsolv.Workers.StripeWebhookWorker'
-AND state = 'available';
--- Result: 14
 
--- After fix: All jobs processed
-SELECT COUNT(*) FROM oban_jobs
-WHERE worker = 'Rsolv.Workers.StripeWebhookWorker'
-AND state = 'completed';
--- Result: 14 (then pruned by Oban cleanup)
+**Before Fix**: 10+ jobs stuck in available state
+```elixir
+# In IEx
+import Ecto.Query
+alias Rsolv.Repo
+
+from(j in Oban.Job,
+  where: j.worker == "Rsolv.Workers.StripeWebhookWorker",
+  where: j.state == "available",
+  select: count(j.id)
+)
+|> Repo.one()
+# Result: 14
+```
+
+**After Fix**: All jobs processed
+```elixir
+from(j in Oban.Job,
+  where: j.worker == "Rsolv.Workers.StripeWebhookWorker",
+  where: j.state == "completed",
+  select: count(j.id)
+)
+|> Repo.one()
+# Result: 14 (then pruned by Oban cleanup)
 ```
 
 ### Fix #2 Verification (Code-Level)
-**Actual Event Data**:
-```json
-{
-  "lines": {
-    "data": [{
-      "pricing": {
-        "price_details": {
-          "price": "price_0SPvUw7pIu1KP146qVYwNTQ8"
-        }
-      }
-    }]
-  }
-}
+
+**Actual Event Data** (from billing_events table):
+```elixir
+alias Rsolv.Billing.BillingEvent
+
+event = Repo.get_by!(BillingEvent, stripe_event_id: "evt_0SPxJl7pIu1KP1463Hw03hOE")
+
+# Extract price ID from new API format
+get_in(event.metadata, ["object", "lines", "data", Access.at(0), "pricing", "price_details", "price"])
+# Result: "price_0SPvUw7pIu1KP146qVYwNTQ8"
+
+# Old format lookup_key field is null
+get_in(event.metadata, ["object", "lines", "data", Access.at(0), "price", "lookup_key"])
+# Result: nil
 ```
 
 **Code Check**:

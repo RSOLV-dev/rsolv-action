@@ -183,25 +183,91 @@ lib/rsolv_web/
 
 ## Deployment Plan
 
-### Staging Deployment (Thursday EOD)
-1. Deploy to rsolv-staging.com
-2. Smoke test all pages
-3. Verify signup flow end-to-end
-4. Check analytics tracking
-5. Accessibility audit
+### Feature Flag Strategy
 
-### Production Deployment (Friday)
-1. Final QA on staging
-2. Deploy to production
-3. Smoke test on production
-4. Monitor error rates
-5. Watch conversion metrics
+**Feature Flag:** `public_site` (FunWithFlags)
+
+**Purpose:** Deploy code to production throughout Week 5 with flag OFF, enabling safe testing on staging before production launch.
+
+**Approach:**
+1. **Monday-Thursday:** Deploy each day's changes to production with flag OFF
+2. **Staging Testing:** Enable flag ON in staging environment for all testing
+3. **Friday Go-Live:** Enable flag ON in production after final validation
+
+**Benefits:**
+- Zero-downtime deployments throughout the week
+- Full production environment testing (with flag ON in staging)
+- Instant rollback capability (disable flag, no code deployment)
+- No regression risk to existing functionality
+
+**Implementation:**
+```elixir
+# In each new route/controller
+defmodule RsolvWeb.SignupLive do
+  use RsolvWeb, :live_view
+
+  def mount(_params, _session, socket) do
+    if FunWithFlags.enabled?(:public_site) do
+      # New public signup UI
+    else
+      # Redirect to early access or 404
+    end
+  end
+end
+```
+
+### Staging Deployment (Monday-Thursday, Continuous)
+1. Deploy to staging with feature flag OFF
+2. Manually enable `public_site` flag in staging database
+3. Smoke test new functionality
+4. Run automated test suite
+5. Performance/accessibility checks
+6. Deploy to production with flag OFF (safe, code inactive)
+
+### Production Deployment (Friday, Nov 8)
+1. **Pre-Launch Verification (Morning)**
+   - [ ] All tests passing on staging (flag ON)
+   - [ ] Lighthouse score ≥ 90
+   - [ ] Accessibility audit complete
+   - [ ] Mobile responsiveness confirmed
+   - [ ] Security review complete
+   - [ ] Analytics/monitoring configured
+   - [ ] Latest code deployed to production (flag OFF)
+
+2. **Go-Live Procedure (Afternoon)**
+   ```bash
+   # Connect to production database
+   psql $DATABASE_URL
+
+   # Enable public_site flag
+   INSERT INTO fun_with_flags_toggles (flag_name, gate_type, target, enabled)
+   VALUES ('public_site', 'boolean', NULL, true)
+   ON CONFLICT (flag_name, gate_type, target)
+   DO UPDATE SET enabled = true;
+
+   # Verify flag enabled
+   SELECT * FROM fun_with_flags_toggles WHERE flag_name = 'public_site';
+   ```
+
+3. **Post-Launch Monitoring (First Hour)**
+   - [ ] Smoke test all three pages (/, /pricing, /signup)
+   - [ ] Complete test signup end-to-end
+   - [ ] Monitor error rates (Sentry/logs)
+   - [ ] Verify analytics tracking
+   - [ ] Check funnel metrics
+   - [ ] Watch for spam signups
 
 ### Rollback Plan
-If issues arise:
-1. Feature flag to revert to early access flow
-2. OR: Quick fix and redeploy
-3. OR: Full rollback to previous version
+**Immediate Rollback (< 30 seconds):**
+```bash
+# Disable feature flag (instant rollback, no deployment)
+psql $DATABASE_URL -c "UPDATE fun_with_flags_toggles SET enabled = false WHERE flag_name = 'public_site';"
+```
+
+**If issues persist after flag disable:**
+1. Investigate logs/errors
+2. Quick fix and redeploy if simple
+3. Full rollback to previous image if complex
 
 ## Risk Mitigation
 
