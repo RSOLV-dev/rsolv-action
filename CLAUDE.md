@@ -63,7 +63,7 @@ mix setup
 mix phx.server
 ```
 
-**📚 Complete setup documentation:** [DEV_SETUP.md](DEV_SETUP.md) - troubleshooting, architecture, manual steps
+**📚 Complete setup documentation:** [docs/DEV_SETUP.md](docs/DEV_SETUP.md) - troubleshooting, architecture, manual steps
 
 ### What `mix setup` Does
 
@@ -160,7 +160,7 @@ mix deps.get
 mix compile
 ```
 
-See [DEV_SETUP.md](DEV_SETUP.md) for comprehensive troubleshooting.
+See [docs/DEV_SETUP.md](docs/DEV_SETUP.md) for comprehensive troubleshooting.
 
 ## Development Best Practices
 

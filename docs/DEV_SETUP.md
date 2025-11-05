@@ -169,6 +169,18 @@ mix setup --quiet
    http://localhost:4000/dev/feature-flags
    ```
 
+5. **Test Stripe webhooks locally:**
+   ```bash
+   # Method 1: Quick testing with Stripe CLI
+   stripe listen --forward-to http://localhost:4000/api/webhooks/stripe
+
+   # Method 2: Real webhook flow with Tailscale Funnel
+   tailscale funnel 4000
+   # Then create webhook at: https://dashboard.stripe.com/test/webhooks
+   # URL: https://your-machine.your-tailnet.ts.net/api/webhooks/stripe
+   ```
+   See [docs/STRIPE-WEBHOOK-TESTING.md](docs/STRIPE-WEBHOOK-TESTING.md) for complete guide.
+
 ## Development Workflow
 
 ```bash

@@ -1,6 +1,32 @@
 # Stripe Webhook Testing Guide
 
-This guide provides instructions for testing Stripe webhook processing using Stripe CLI.
+This guide provides instructions for testing Stripe webhook processing locally using either Stripe CLI or Tailscale Funnel.
+
+**Last Updated:** 2025-11-04
+
+## Testing Status
+
+✅ **Stripe CLI Method** - Fully tested and verified (see test scripts in `test/scripts/`)
+⚠️ **Tailscale Funnel Method** - Documented but not yet end-to-end tested
+
+**What's Verified:**
+- Tailscale is installed and functional on development machines
+- Webhook route exists: `POST /api/webhooks/stripe` (lib/rsolv_web/router.ex:251)
+- Controller implements HMAC-SHA256 signature verification
+- Environment configuration documented and validated
+- Docker Compose files exist (note: may need Dockerfile updates)
+
+**What Needs Testing:**
+1. Complete `mix setup` in a fresh worktree OR use Docker Compose
+2. Start Phoenix server with test database
+3. Configure Tailscale Funnel on port 4000 (or 4001 for Docker)
+4. Create test webhook in Stripe Dashboard
+5. Send test webhook and verify 200 OK response
+6. Verify webhook processing completes in Oban
+
+**VK Ticket:** Task 3dbfb652-6306-4728-b3d3-9c6b7842bb03 - "End-to-end test Tailscale Funnel for local Stripe webhook testing"
+
+**Next Steps:** See VK ticket for complete testing checklist and acceptance criteria.
 
 ## Overview
 
@@ -50,9 +76,29 @@ stripe login
 stripe config --list
 ```
 
+## Testing Methods
+
+There are two methods for testing Stripe webhooks locally:
+
+1. **Stripe CLI** (recommended for quick testing) - Forwards webhooks from Stripe to localhost
+2. **Tailscale Funnel** (recommended for testing real webhook flow) - Creates a public HTTPS endpoint
+
+### Method Comparison
+
+| Feature | Stripe CLI | Tailscale Funnel |
+|---------|------------|------------------|
+| Setup time | 5 minutes | 10 minutes |
+| Public URL | No | Yes (authenticated) |
+| Persistent URL | No | Yes |
+| Rate limits | None | None |
+| Security | Local only | Tailscale auth required |
+| Best for | Quick dev testing | Real webhook flow testing |
+
 ## Setup
 
-### 1. Create Test Customer
+### Method 1: Stripe CLI (Quick Testing)
+
+#### 1. Create Test Customer
 
 ```bash
 mix run --no-start test/scripts/setup_webhook_test_customer.exs
@@ -89,6 +135,240 @@ Then restart the Phoenix server for the environment variable to take effect.
 
 #### Terminal 3: Test Commands
 This is where you'll trigger events (see next section).
+
+---
+
+### Method 2: Tailscale Funnel (Real Webhook Flow)
+
+This method creates a real HTTPS endpoint that Stripe can reach, providing the most realistic testing environment.
+
+#### Quick Start with Docker Compose
+
+The fastest way to test Tailscale Funnel is using Docker Compose:
+
+```bash
+# 1. Start the application stack
+docker-compose up -d
+
+# 2. Wait for health checks (database ready)
+docker-compose ps
+
+# 3. Run migrations and seeds
+docker-compose exec rsolv-api mix ecto.migrate
+docker-compose exec rsolv-api mix run priv/repo/seeds.exs
+
+# 4. Verify server is running
+curl http://localhost:4001/api/health
+# Expected: {"status":"ok"}
+
+# 5. Configure Tailscale Funnel (from host machine)
+tailscale funnel 4001
+
+# 6. Get your Tailscale URL
+tailscale funnel status
+# Example: https://gaia.emperor-blues.ts.net
+
+# 7. Continue with "Create Stripe Webhook Endpoint" section below
+```
+
+**Why Docker Compose for Testing?**
+- ✅ Isolated environment (no conflicts with other projects)
+- ✅ Fresh database with known state
+- ✅ All dependencies pre-installed
+- ✅ Easy cleanup (`docker-compose down -v`)
+- ✅ Consistent across different machines
+
+#### Prerequisites
+
+```bash
+# Install Tailscale (if not already installed)
+# Visit https://tailscale.com/download
+
+# Authenticate
+tailscale login
+
+# Verify installation
+tailscale status
+```
+
+#### 1. Configure Tailscale Funnel
+
+```bash
+# Get your Tailscale DNS name
+tailscale status --json | jq -r '.Self.DNSName'
+# Example output: gaia.emperor-blues.ts.net.
+
+# Enable HTTPS certificate for your node
+tailscale cert $(tailscale status --json | jq -r '.Self.DNSName')
+
+# Start Phoenix server
+mix phx.server
+
+# In a separate terminal, start Tailscale Funnel for port 4000
+tailscale funnel 4000
+
+# Verify funnel is running
+tailscale funnel status
+```
+
+Your webhook URL will be: `https://your-machine.your-tailnet.ts.net/api/webhooks/stripe`
+
+Example: `https://gaia.emperor-blues.ts.net/api/webhooks/stripe`
+
+#### 2. Create Stripe Webhook Endpoint
+
+1. Navigate to Stripe Test Mode: https://dashboard.stripe.com/test/webhooks
+2. Click "Add endpoint"
+3. Configure:
+   - **URL**: `https://your-machine.your-tailnet.ts.net/api/webhooks/stripe`
+   - **Description**: "Local Dev Webhook - [Your Name]"
+   - **API Version**: Latest
+   - **Events to listen to**:
+     - `invoice.payment_succeeded`
+     - `invoice.payment_failed`
+     - `customer.subscription.created`
+     - `customer.subscription.updated`
+     - `customer.subscription.deleted`
+4. Click "Add endpoint"
+5. **Copy the signing secret** (starts with `whsec_`)
+
+#### 3. Configure Environment
+
+Add to your `.env` file:
+
+```bash
+# Stripe Test Mode Configuration (already in .env.example)
+STRIPE_API_KEY=sk_test_7upzEpVpOJlEJr4HwfSHObSe
+STRIPE_WEBHOOK_SECRET=whsec_YOUR_WEBHOOK_SIGNING_SECRET
+```
+
+**Restart Phoenix server**:
+```bash
+# Stop existing server (Ctrl+C in the Phoenix terminal)
+mix phx.server
+
+# Keep Tailscale Funnel running in the other terminal
+```
+
+#### 4. Test Webhook Delivery
+
+**Option A: Stripe Dashboard**
+
+1. Go to https://dashboard.stripe.com/test/webhooks
+2. Click on your webhook endpoint
+3. Click "Send test webhook"
+4. Select event type (e.g., `invoice.payment_succeeded`)
+5. Click "Send test webhook"
+6. Verify response is `200 OK`
+
+**Option B: Stripe CLI**
+
+```bash
+# Trigger test event (will be sent to Stripe, then back to your endpoint)
+stripe trigger invoice.payment_succeeded
+
+# Check Phoenix logs for webhook processing
+```
+
+#### 5. Create Test Customer (Same as CLI Method)
+
+```bash
+mix run --no-start test/scripts/setup_webhook_test_customer.exs
+```
+
+Save the Stripe customer ID from the output.
+
+#### 6. Test Full Subscription Flow
+
+**Create test Pro subscription**:
+
+1. Visit: http://localhost:4000
+2. Sign up for Pro subscription using test card:
+   - Card: `4242 4242 4242 4242`
+   - Expiry: Any future date (e.g., `12/25`)
+   - CVC: Any 3 digits (e.g., `123`)
+   - ZIP: Any 5 digits (e.g., `12345`)
+3. Complete checkout
+4. Webhook will be sent to your Tailscale URL automatically
+5. Verify in Phoenix logs that webhook was received and processed
+
+**Verify credits added**:
+
+```bash
+# In IEx console
+iex -S mix
+
+# Check user credits
+user = Rsolv.Accounts.get_user_by_email("your-test@email.com")
+Rsolv.Billing.get_credits(user.id)
+# Expected: 60 credits
+```
+
+#### Tailscale Funnel Troubleshooting
+
+**Issue**: Webhook receives 401 Unauthorized
+
+**Cause**: Signature verification failing
+
+**Fix**:
+```bash
+# Verify webhook secret in .env matches Stripe Dashboard
+cat .env | grep STRIPE_WEBHOOK_SECRET
+
+# Restart Phoenix server after .env changes
+mix phx.server
+```
+
+**Issue**: Tailscale URL not accessible
+
+**Cause**: Funnel not enabled or HTTPS cert missing
+
+**Fix**:
+```bash
+# Enable HTTPS certificate
+tailscale cert $(tailscale status --json | jq -r '.Self.DNSName')
+
+# Restart funnel
+tailscale funnel off
+tailscale funnel 4000
+```
+
+**Issue**: Connection refused in Stripe Dashboard
+
+**Cause**: Phoenix server not running or wrong port
+
+**Fix**:
+```bash
+# Verify Phoenix is running on port 4000
+lsof -i :4000
+
+# Restart if needed
+mix phx.server
+```
+
+#### Stopping Tailscale Funnel
+
+When done testing:
+
+```bash
+# Stop the funnel
+tailscale funnel off
+
+# Verify it's stopped
+tailscale funnel status
+# Should show: "No serve config"
+```
+
+#### Security Notes
+
+- ⚠️ **Never commit webhook secrets to git** (.env is in .gitignore)
+- ⚠️ Tailscale Funnel requires Tailscale authentication to access
+- ✅ Test mode webhooks are isolated from production
+- ✅ Signature verification prevents spoofing
+- ✅ Funnel URLs are stable (don't change on restart)
+- ✅ No rate limits or session timeouts
+
+---
 
 ## Testing Events
 

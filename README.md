@@ -64,7 +64,7 @@ The setup will automatically:
 - ✅ Load test data with credentials
 - ✅ Verify everything works
 
-**📚 For detailed setup instructions, troubleshooting, and advanced options, see [DEV_SETUP.md](DEV_SETUP.md)**
+**📚 For detailed setup instructions, troubleshooting, and advanced options, see [docs/DEV_SETUP.md](docs/DEV_SETUP.md)**
 
 ### Environment Variables
 
