@@ -71,7 +71,6 @@ defmodule Mix.Tasks.Stripe.GetPrice do
   end
 
   defp do_fetch_price(lookup_key, api_key) do
-
     case Stripe.Price.list(%{lookup_keys: [lookup_key]}, api_key: api_key) do
       {:ok, %Stripe.List{data: [price | _]}} ->
         {:ok, price.id}

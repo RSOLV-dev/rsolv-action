@@ -81,7 +81,9 @@ defmodule Rsolv.Billing.WebhookE2ETest do
 
       # Verify customer was credited
       updated_customer = Repo.get!(Customers.Customer, customer.id)
-      assert updated_customer.credit_balance == 60, "Expected credit_balance to be 60, got #{updated_customer.credit_balance}"
+
+      assert updated_customer.credit_balance == 60,
+             "Expected credit_balance to be 60, got #{updated_customer.credit_balance}"
 
       # Verify credit transaction was recorded
       transactions = CreditLedger.list_transactions(updated_customer)
@@ -103,7 +105,9 @@ defmodule Rsolv.Billing.WebhookE2ETest do
       assert {:ok, :duplicate} = WebhookProcessor.process_event(event_data)
 
       still_updated_customer = Repo.get!(Customers.Customer, customer.id)
-      assert still_updated_customer.credit_balance == 60, "Credit balance should still be 60 after duplicate event"
+
+      assert still_updated_customer.credit_balance == 60,
+             "Credit balance should still be 60 after duplicate event"
     end
 
     test "does not credit for non-Pro invoices", %{customer: customer} do
@@ -121,7 +125,8 @@ defmodule Rsolv.Billing.WebhookE2ETest do
                 %{
                   "pricing" => %{
                     "price_details" => %{
-                      "price" => "price_different",  # Not Pro price
+                      # Not Pro price
+                      "price" => "price_different",
                       "product" => "prod_different"
                     }
                   }
