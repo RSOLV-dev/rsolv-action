@@ -1,0 +1,71 @@
+<!-- RFC-078: Public Site Landing Page - Using Tailwind Plus Components -->
+
+<!-- Hero Section - Tailwind Plus Hero Component -->
+<HeroSimpleCentered.hero_simple_centered
+  heading="Automated Security Fixes for Your Codebase"
+  subheading="AI-powered vulnerability detection and remediation. Get 10 free credits to start - no credit card required."
+  primary_cta_text="Start Free Trial"
+  primary_cta_link="/signup"
+  secondary_cta_text="View Demo"
+  secondary_cta_link="https://github.com/RSOLV-dev/nodegoat-vulnerability-demo"
+  announcement_text="New: Lightning-fast fix generation with GPT-4"
+  announcement_link="/blog/gpt4-faster-fixes"
+  announcement_link_text="Learn more"
+/>
+
+<!-- Features Section - Tailwind Plus Features Grid Component -->
+<FeaturesGrid2x2.features_grid_2x2
+  eyebrow="Why RSOLV?"
+  heading="Automated Security at Scale"
+  subheading="AI-powered vulnerability detection and remediation for your entire codebase."
+  features={@features}
+/>
+
+<!-- Social Proof Section - Keep existing stats component -->
+<section class="py-20 px-4 sm:px-6 lg:px-8 bg-gray-50 dark:bg-gray-900">
+  <div class="container mx-auto max-w-4xl text-center">
+    <h2 class="text-3xl font-bold mb-8 text-gray-900 dark:text-gray-100">
+      Trusted by Development Teams
+    </h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <.stat number="1000+" label="Vulnerabilities Fixed" />
+      <.stat number="95%" label="Fix Success Rate" />
+      <.stat number="10+" label="Frameworks Supported" />
+    </div>
+  </div>
+</section>
+
+<!-- Pricing Teaser Section - Keep simple version for now -->
+<section class="py-20 px-4 sm:px-6 lg:px-8 bg-white dark:bg-gray-800">
+  <div class="container mx-auto max-w-4xl text-center">
+    <h2 class="text-3xl font-bold mb-4 text-gray-900 dark:text-gray-100">
+      Start with 10 Free Credits
+    </h2>
+    <p class="text-xl text-gray-600 dark:text-gray-400 mb-8">
+      Upgrade to Pro ($599/month, 60 fixes) or pay as you go ($29/fix)
+    </p>
+    <div class="flex flex-col sm:flex-row gap-4 justify-center">
+      <.cta_button
+        navigate="/pricing"
+        track_destination="/pricing"
+        variant="secondary"
+        size="small"
+      >
+        View Full Pricing
+      </.cta_button>
+      <.cta_button navigate="/signup" track_destination="/signup" size="small">
+        Get Started Free
+      </.cta_button>
+    </div>
+  </div>
+</section>
+
+<!-- Demo CTA Section - Tailwind Plus CTA Component -->
+<CtaSimpleCentered.cta_simple_centered
+  heading="See RSOLV in Action"
+  description="Check out our demo repository with real vulnerability fixes from our automated security system."
+  primary_cta_text="View Demo Repository"
+  primary_cta_link="https://github.com/RSOLV-dev/nodegoat-vulnerability-demo"
+  secondary_cta_text="Read the Docs"
+  secondary_cta_link="/docs"
+/>

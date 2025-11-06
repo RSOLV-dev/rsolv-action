@@ -68,6 +68,22 @@ defmodule RsolvWeb.Router do
       message: "Customer support documentation is currently unavailable."
   end
 
+  pipeline :require_public_site do
+    plug FeatureFlagPlug,
+      feature: :public_site,
+      fallback_url: "/",
+      message: "This page is not yet available."
+  end
+
+  # RFC-078: Public site pages (protected by :public_site feature flag)
+  scope "/", RsolvWeb do
+    pipe_through [:browser, :require_public_site]
+
+    live_session :public_site, on_mount: [{RsolvWeb.LiveHooks, :assign_current_path}] do
+      live "/landing", LandingLive, :index
+    end
+  end
+
   scope "/", RsolvWeb do
     pipe_through :browser
 
