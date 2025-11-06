@@ -9,6 +9,12 @@ import { AiClient, getAiClient } from './client.js';
 import { AIConfig } from './types.js';
 import { AiProviderConfig } from '../types/index.js';
 import { getTestGenerationTokenLimit } from './token-utils.js';
+import {
+  tryParseWithProgressiveCompletion,
+  isActuallyTruncatedString,
+  extractJsonFromText,
+  cleanJsonString,
+} from './json-repair.js';
 
 export interface AITestGenerationResult {
   success: boolean;
@@ -209,7 +215,7 @@ IMPORTANT:
 
       // 3. Try to extract raw JSON object using proper nested-aware extraction
       if (!jsonString) {
-        jsonString = this.extractJsonFromText(aiResponse);
+        jsonString = extractJsonFromText(aiResponse);
       }
 
       // 4. If response looks like pure JSON, use it directly
@@ -225,12 +231,8 @@ IMPORTANT:
       // Log extracted JSON length for debugging
       logger.debug(`Extracted JSON string length: ${jsonString.length} characters`);
 
-      // Clean up common issues
-      jsonString = jsonString
-        .replace(/^\s*```\s*json?\s*/gm, '') // Remove stray markdown markers
-        .replace(/\s*```\s*$/gm, '')
-        .replace(/,(\s*[}\]])/g, '$1') // Remove trailing commas before closing brackets/braces
-        .trim();
+      // Clean up common issues using extracted utility
+      jsonString = cleanJsonString(jsonString);
 
       // Attempt to fix common JSON issues before parsing
       // Handle truncated responses by closing unclosed structures
@@ -262,7 +264,7 @@ IMPORTANT:
       }
 
       // If the JSON appears truncated (ends mid-string), try to close it properly
-      if (!isValidJson && this.isActuallyTruncatedString(jsonString)) {
+      if (!isValidJson && isActuallyTruncatedString(jsonString)) {
         logger.warn('JSON appears truncated mid-string, attempting to close');
 
         // Count how many structures need closing
@@ -289,11 +291,13 @@ IMPORTANT:
 
       // Try progressive JSON completion strategies (inspired by Aider)
       // Attempt multiple completion suffixes to handle streaming truncation
-      const parsed = this.tryParseWithProgressiveCompletion(jsonString);
+      const parseResult = tryParseWithProgressiveCompletion(jsonString);
 
-      if (!parsed) {
+      if (!parseResult.success || !parseResult.data) {
         return null;
       }
+
+      const parsed = parseResult.data;
       
       // RFC-060: Validate RED-only test suite structure
       // Accept either single RED test or array of RED tests
@@ -501,180 +505,5 @@ defmodule SecurityVulnerabilityTest do
   use ExUnit.Case
 ${testBlocks}
 end`;
-  }
-
-  /**
-   * Try parsing JSON with progressive completion strategies.
-   * Inspired by Aider's parse_partial_args approach for handling streaming truncation.
-   * Attempts multiple completion suffixes to recover incomplete JSON.
-   */
-  private tryParseWithProgressiveCompletion(jsonString: string): any | null {
-    // Strategy 1: Try parsing as-is
-    try {
-      const result = JSON.parse(jsonString);
-      logger.debug('JSON parsed successfully without modifications');
-      return result;
-    } catch (error) {
-      logger.debug('Initial JSON parse failed, trying progressive completion strategies');
-    }
-
-    // Strategy 2: Try closing with ]{ - handles array of objects
-    try {
-      const result = JSON.parse(jsonString + ']}');
-      logger.info('JSON recovered using "]}" suffix (array + object closure)');
-      return result;
-    } catch (error) {
-      // Continue to next strategy
-    }
-
-    // Strategy 3: Try closing with }] - handles object containing array
-    try {
-      const result = JSON.parse(jsonString + '}]');
-      logger.info('JSON recovered using "}]" suffix (object + array closure)');
-      return result;
-    } catch (error) {
-      // Continue to next strategy
-    }
-
-    // Strategy 4: Try closing with }]} - handles nested structures
-    try {
-      const result = JSON.parse(jsonString + '}]}');
-      logger.info('JSON recovered using "}]}" suffix (object + array + object closure)');
-      return result;
-    } catch (error) {
-      // Continue to next strategy
-    }
-
-    // Strategy 5: Try closing with "]} - handles truncated string in array
-    try {
-      const result = JSON.parse(jsonString + '"}]');
-      logger.info('JSON recovered using ""}]" suffix (string + array + object closure)');
-      return result;
-    } catch (error) {
-      // Continue to next strategy
-    }
-
-    // Strategy 6: Try closing with "}]} - handles truncated string in nested array
-    try {
-      const result = JSON.parse(jsonString + '"}]}');
-      logger.info('JSON recovered using ""}]}" suffix (string + array + object closure)');
-      return result;
-    } catch (parseError) {
-      logger.error('Failed to parse JSON after all progressive completion attempts:', parseError);
-      // Log the full malformed JSON for debugging (truncate if very long)
-      const jsonPreview = jsonString.length > 1000
-        ? `${jsonString.substring(0, 500)}...[${jsonString.length - 1000} chars omitted]...${jsonString.substring(jsonString.length - 500)}`
-        : jsonString;
-      logger.error('Malformed JSON that failed to parse:', jsonPreview);
-      return null;
-    }
-  }
-
-  /**
-   * Detects if a JSON string is actually truncated (ends mid-string) vs just contains escaped quotes.
-   * This is more accurate than the regex /\"[^\"]*$/ which doesn't handle escaped quotes.
-   */
-  private isActuallyTruncatedString(jsonString: string): boolean {
-    // Simple heuristic: check if we're in an unterminated string by counting quote states
-    let inString = false;
-    let escape = false;
-
-    for (let i = 0; i < jsonString.length; i++) {
-      const char = jsonString[i];
-
-      if (escape) {
-        escape = false;
-        continue;
-      }
-
-      if (char === '\\' && inString) {
-        escape = true;
-        continue;
-      }
-
-      if (char === '"') {
-        inString = !inString;
-      }
-    }
-
-    // If we end while in a string state, and the string doesn't end with "},
-    // then it's likely actually truncated
-    return inString && !jsonString.trim().endsWith('"}');
-  }
-
-  /**
-   * Properly extracts JSON from text, handling nested objects correctly.
-   * This replaces the buggy regex /\{[\s\S]*\}/ that truncates at the first closing brace.
-   */
-  private extractJsonFromText(text: string): string | null {
-    // Find all potential JSON start/end positions
-    const positions: Array<{start: number, end: number}> = [];
-    let depth = 0;
-    let inString = false;
-    let escape = false;
-    let jsonStart = -1;
-
-    for (let i = 0; i < text.length; i++) {
-      const char = text[i];
-      const prevChar = i > 0 ? text[i - 1] : '';
-
-      // Handle escape sequences
-      if (escape) {
-        escape = false;
-        continue;
-      }
-
-      if (char === '\\' && inString) {
-        escape = true;
-        continue;
-      }
-
-      // Handle strings (quotes not escaped)
-      if (char === '"' && !escape) {
-        // Check if this quote is inside a string value by looking for : before it
-        // This is a simple heuristic but works for most JSON
-        inString = !inString;
-        continue;
-      }
-
-      // Only count braces outside of strings
-      if (!inString) {
-        if (char === '{') {
-          if (depth === 0) {
-            jsonStart = i;
-          }
-          depth++;
-        } else if (char === '}') {
-          depth--;
-          if (depth === 0 && jsonStart !== -1) {
-            positions.push({
-              start: jsonStart,
-              end: i + 1
-            });
-            jsonStart = -1;
-          }
-        }
-      }
-    }
-
-    // Try to parse each potential JSON object, return the largest valid one
-    let largestValid: string | null = null;
-    let largestSize = 0;
-
-    for (const pos of positions) {
-      const candidate = text.substring(pos.start, pos.end);
-      try {
-        // Validate it's actual JSON
-        JSON.parse(candidate);
-        if (candidate.length > largestSize) {
-          largestValid = candidate;
-          largestSize = candidate.length;
-        }
-      } catch {
-        // Invalid JSON, skip
-      }
-    }
-
-    return largestValid;
   }
 }
