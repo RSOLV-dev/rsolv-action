@@ -52,7 +52,7 @@ export async function createPullRequest(options: PullRequestOptions): Promise<Pu
     });
 
     // Create PR
-    console.log(`[PR] Creating pull request`);
+    console.log('[PR] Creating pull request');
     const pr = await octokit.rest.pulls.create({
       owner,
       repo,

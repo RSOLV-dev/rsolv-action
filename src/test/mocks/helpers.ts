@@ -97,7 +97,7 @@ export function createMockAnalyzeResponse(body: Record<string, any>) {
   const recommendations = candidateFiles.map((file: string, index: number) => ({
     path: file,
     score: 0.8 - (index * 0.1),
-    reason: `File path similarity and test framework match`
+    reason: 'File path similarity and test framework match'
   }));
 
   return {
