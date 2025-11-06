@@ -2851,15 +2851,15 @@ ${validation.falsePositive ?
     options: ExecuteOptions
   ): Promise<any> {
     const { createPullRequest } = await import('../../utils/github-client.js');
-    
+
     let body = `## Security Fix for Issue #${issue.number}\n\n`;
     body += `### ${issue.title}\n\n`;
-    
+
     if (options.includeBeforeAfter) {
       body += '### Before\n```javascript\n// Vulnerable code\n```\n\n';
       body += '### After\n```javascript\n// Fixed code\n```\n\n';
     }
-    
+
     if (options.prType === 'educational') {
       body += '### Security Education\n\n';
       body += `This vulnerability is a ${validation.analysisData?.issueType || 'security'} issue.\n\n`;
@@ -2867,11 +2867,13 @@ ${validation.falsePositive ?
       body += '### Test Results\n';
       body += '✅ All security tests pass\n\n';
     }
-    
+
     return createPullRequest({
+      repository: issue.repository.fullName,
+      commitSha: solution.commitHash,
+      issueNumber: issue.number,
       title: `Fix: ${issue.title}`,
       body,
-      head: `fix-${issue.number}`,
       base: issue.repository.defaultBranch
     });
   }
