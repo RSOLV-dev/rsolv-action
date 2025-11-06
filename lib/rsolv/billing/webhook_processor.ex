@@ -239,6 +239,8 @@ defmodule Rsolv.Billing.WebhookProcessor do
   defp extract_customer_id(_), do: nil
 
   # Extract amount for event recording
+  # Check amount_due first (for failed payments where amount_paid may be 0)
+  defp extract_amount(%{"object" => %{"amount_due" => amount}}) when amount > 0, do: amount
   defp extract_amount(%{"object" => %{"amount_paid" => amount}}), do: amount
   defp extract_amount(%{"object" => %{"amount_due" => amount}}), do: amount
   defp extract_amount(_), do: nil
