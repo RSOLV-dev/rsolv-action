@@ -11,9 +11,7 @@ defmodule Rsolv.Billing.WebhookCancellationTest do
   describe "customer.subscription.deleted webhook" do
     setup do
       # Create test customer with Pro subscription
-      stripe_customer_id =
-        "cus_test_cancel_#{System.system_time(:second)}_#{:rand.uniform(99999)}"
-
+      stripe_customer_id = "cus_test_cancel_#{System.system_time(:second)}_#{:rand.uniform(99999)}"
       stripe_subscription_id =
         "sub_test_cancel_#{System.system_time(:second)}_#{:rand.uniform(99999)}"
 
@@ -95,9 +93,7 @@ defmodule Rsolv.Billing.WebhookCancellationTest do
 
       # Verify credits preserved
       balance = CreditLedger.get_balance(customer)
-
-      assert balance == initial_credits,
-             "Credits should be preserved (expected #{initial_credits}, got #{balance})"
+      assert balance == initial_credits, "Credits should be preserved (expected #{initial_credits}, got #{balance})"
 
       IO.puts("\n✓ Credits preserved: #{balance}/#{initial_credits}")
 
@@ -131,8 +127,7 @@ defmodule Rsolv.Billing.WebhookCancellationTest do
       initial_credits: initial_credits
     } do
       webhook_event = %{
-        "stripe_event_id" =>
-          "evt_idempotent_#{System.system_time(:second)}_#{:rand.uniform(99999)}",
+        "stripe_event_id" => "evt_idempotent_#{System.system_time(:second)}_#{:rand.uniform(99999)}",
         "event_type" => "customer.subscription.deleted",
         "event_data" => %{
           "object" => %{
@@ -154,9 +149,7 @@ defmodule Rsolv.Billing.WebhookCancellationTest do
       # Verify credits still correct (not double-processed)
       customer = Repo.get!(Customer, customer.id)
       balance = CreditLedger.get_balance(customer)
-
-      assert balance == initial_credits,
-             "Credits should still be #{initial_credits} after duplicate webhook"
+      assert balance == initial_credits, "Credits should still be #{initial_credits} after duplicate webhook"
     end
   end
 end
