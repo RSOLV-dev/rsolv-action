@@ -13,9 +13,9 @@ defmodule Rsolv.Credentials do
   **IMPORTANT**: This module uses graceful fallback to mock keys when provider API keys
   are not configured in the environment:
 
-  - `ANTHROPIC_API_KEY` → falls back to `"sk-ant-mock-key"`
-  - `OPENAI_API_KEY` → falls back to `"sk-mock-key"`
-  - `OPENROUTER_API_KEY` → falls back to `"sk-or-mock-key"`
+  - `ANTHROPIC_API_KEY` → falls back to `"sk-ant-mock-key-0123456789abcdef0123"`
+  - `OPENAI_API_KEY` → falls back to `"sk-mock-key-0123456789abcdef01234567"`
+  - `OPENROUTER_API_KEY` → falls back to `"sk-or-mock-key-0123456789abcdef0123"`
 
   This design allows:
   - ✅ Application continues running without all provider keys configured
@@ -36,7 +36,9 @@ defmodule Rsolv.Credentials do
 
   # Get the appropriate storage key based on environment
   defp get_storage_key do
-    if Mix.env() == :test do
+    # In production releases, Mix is not available, so we check for test mode differently
+    # In tests, Application.get_env(:rsolv, :env) will be :test
+    if Application.get_env(:rsolv, :env) == :test do
       # Use process dictionary in tests for isolation
       {__MODULE__, :credentials, self()}
     else
@@ -50,21 +52,22 @@ defmodule Rsolv.Credentials do
       "anthropic" ->
         # Try both uppercase and lowercase with hyphens (Kubernetes style)
         System.get_env("ANTHROPIC_API_KEY") || System.get_env("anthropic-api-key") ||
-          "sk-ant-mock-key"
+          "sk-ant-mock-key-0123456789abcdef0123"
 
       "openai" ->
         # Try both uppercase and lowercase with hyphens (Kubernetes style)
-        System.get_env("OPENAI_API_KEY") || System.get_env("openai-api-key") || "sk-mock-key"
+        System.get_env("OPENAI_API_KEY") || System.get_env("openai-api-key") ||
+          "sk-mock-key-0123456789abcdef01234567"
 
       "openrouter" ->
         System.get_env("OPENROUTER_API_KEY") || System.get_env("openrouter-api-key") ||
-          "sk-or-mock-key"
+          "sk-or-mock-key-0123456789abcdef0123"
 
       "ollama" ->
         "local"
 
       _ ->
-        "mock_key_#{provider}"
+        "mock_key_#{provider}_0123456789abcdef0123456789"
     end
   end
 
