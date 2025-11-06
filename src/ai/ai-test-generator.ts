@@ -269,8 +269,8 @@ IMPORTANT:
       // Handle truncated responses by closing unclosed structures
       let openBraces = (jsonString.match(/\{/g) || []).length;
       let closeBraces = (jsonString.match(/\}/g) || []).length;
-      let openBrackets = (jsonString.match(/\[/g) || []).length;
-      let closeBrackets = (jsonString.match(/\]/g) || []).length;
+      const openBrackets = (jsonString.match(/\[/g) || []).length;
+      const closeBrackets = (jsonString.match(/\]/g) || []).length;
 
       if (openBraces > closeBraces || openBrackets > closeBrackets) {
         logger.warn(`Fixing unclosed JSON structure: ${openBraces} open braces, ${closeBraces} closed braces, ${openBrackets} open brackets, ${closeBrackets} closed brackets`);
