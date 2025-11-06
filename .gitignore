@@ -89,3 +89,8 @@ rsolv-demo-vulnerable/
 
 # Code quality tool output
 credo_output.txt
+
+# Sealed Secrets - NEVER commit private keys or backups
+backups/sealed-secrets-*.yaml
+.sealed-secrets/*.key
+.sealed-secrets/*backup*.yaml

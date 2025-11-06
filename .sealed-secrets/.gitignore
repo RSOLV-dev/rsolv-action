@@ -1,0 +1,4 @@
+# Only commit public certificates (.pem files)
+# NEVER commit private keys or backups
+*.key
+*backup*.yaml
