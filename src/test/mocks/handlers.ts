@@ -197,6 +197,61 @@ export const handlers = [
   }),
 
   // RSOLV.dev API handlers (production default URL)
+  // Test Integration - Analyze endpoint
+  http.post('https://api.rsolv.dev/api/v1/test-integration/analyze', async ({ request }) => {
+    const body = await request.json() as Record<string, any>;
+    const candidateFiles = body?.candidateTestFiles || [];
+
+    // Generate scored recommendations based on file paths
+    const recommendations = candidateFiles.map((file: string, index: number) => ({
+      path: file,
+      score: 0.8 - (index * 0.1), // Descending scores
+      reason: `File path similarity and test framework match`
+    }));
+
+    return HttpResponse.json({
+      recommendations,
+      fallback: {
+        path: `spec/security/${body?.vulnerableFile?.split('/').pop()?.replace('.rb', '')}_security_spec.rb`,
+        reason: 'No existing test found - suggest creating new security test file'
+      }
+    });
+  }),
+
+  // Test Integration - Generate endpoint
+  http.post('https://api.rsolv.dev/api/v1/test-integration/generate', async ({ request }) => {
+    const body = await request.json() as Record<string, any>;
+    const targetContent = body?.targetFileContent || '';
+    const redTests = body?.testSuite?.redTests || [];
+
+    // Generate integrated content by appending security tests
+    const securityTests = redTests.map((test: any) => {
+      const framework = body?.framework || 'rspec';
+      const language = body?.language || 'ruby';
+
+      // Format test based on framework/language
+      if (framework === 'rspec' || language === 'ruby') {
+        return `  it '${test.testName}' do\n    ${test.testCode}\n  end`;
+      } else if (framework === 'vitest' || framework === 'jest' || language === 'javascript' || language === 'typescript') {
+        return `  it('${test.testName}', () => {\n    ${test.testCode}\n  });`;
+      } else if (framework === 'pytest' || language === 'python') {
+        return `def ${test.testName}():\n    ${test.testCode}`;
+      }
+      return test.testCode;
+    }).join('\n\n');
+
+    const integratedContent = targetContent + '\n\n' + securityTests;
+
+    return HttpResponse.json({
+      integratedContent,
+      method: 'ast',
+      insertionPoint: {
+        line: targetContent.split('\n').length,
+        strategy: 'append_to_describe_block'
+      }
+    });
+  }),
+
   http.get('https://api.rsolv.dev/api/v1/patterns', ({ request }) => {
     const url = new URL(request.url);
     const language = url.searchParams.get('language') || 'javascript';
@@ -292,6 +347,61 @@ export const handlers = [
       usage: {
         remaining_fixes: 999999,
         reset_at: new Date(Date.now() + 86400000).toISOString()
+      }
+    });
+  }),
+
+  // RSOLV Staging Test Integration - Analyze endpoint
+  http.post('https://api.rsolv-staging.com/api/v1/test-integration/analyze', async ({ request }) => {
+    const body = await request.json() as Record<string, any>;
+    const candidateFiles = body?.candidateTestFiles || [];
+
+    // Generate scored recommendations based on file paths
+    const recommendations = candidateFiles.map((file: string, index: number) => ({
+      path: file,
+      score: 0.8 - (index * 0.1), // Descending scores
+      reason: `File path similarity and test framework match`
+    }));
+
+    return HttpResponse.json({
+      recommendations,
+      fallback: {
+        path: `spec/security/${body?.vulnerableFile?.split('/').pop()?.replace('.rb', '')}_security_spec.rb`,
+        reason: 'No existing test found - suggest creating new security test file'
+      }
+    });
+  }),
+
+  // RSOLV Staging Test Integration - Generate endpoint
+  http.post('https://api.rsolv-staging.com/api/v1/test-integration/generate', async ({ request }) => {
+    const body = await request.json() as Record<string, any>;
+    const targetContent = body?.targetFileContent || '';
+    const redTests = body?.testSuite?.redTests || [];
+
+    // Generate integrated content by appending security tests
+    const securityTests = redTests.map((test: any) => {
+      const framework = body?.framework || 'rspec';
+      const language = body?.language || 'ruby';
+
+      // Format test based on framework/language
+      if (framework === 'rspec' || language === 'ruby') {
+        return `  it '${test.testName}' do\n    ${test.testCode}\n  end`;
+      } else if (framework === 'vitest' || framework === 'jest' || language === 'javascript' || language === 'typescript') {
+        return `  it('${test.testName}', () => {\n    ${test.testCode}\n  });`;
+      } else if (framework === 'pytest' || language === 'python') {
+        return `def ${test.testName}():\n    ${test.testCode}`;
+      }
+      return test.testCode;
+    }).join('\n\n');
+
+    const integratedContent = targetContent + '\n\n' + securityTests;
+
+    return HttpResponse.json({
+      integratedContent,
+      method: 'ast',
+      insertionPoint: {
+        line: targetContent.split('\n').length,
+        strategy: 'append_to_describe_block'
       }
     });
   }),
