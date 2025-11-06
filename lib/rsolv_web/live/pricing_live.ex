@@ -43,8 +43,8 @@ defmodule RsolvWeb.PricingLive do
         description="Start with 10 free credits. Upgrade to Pro or contact us for Enterprise pricing."
         tiers={PricingData.tiers()}
       />
-
-      <!-- FAQ Section -->
+      
+    <!-- FAQ Section -->
       <FaqSection.faq_section
         faqs={PricingData.faqs()}
         cta_text="Contact Us"
