@@ -379,6 +379,10 @@ Remember: Edit files FIRST, then provide JSON. Do not provide JSON without editi
       guidance += '3. **REPLACE eval() using Edit tool**:\n\n';
       guidance += '✅ **FOR NUMBERS (most common)**:\n';
       guidance += '```javascript\n';
+      guidance += '// GENERIC PATTERN:\n';
+      guidance += '// BEFORE: eval(value)\n';
+      guidance += '// AFTER:  parseInt(value, 10)\n\n';
+
       guidance += '// BEFORE (VULNERABLE):\n';
       guidance += 'const preTax = eval(req.body.preTax);\n';
       guidance += 'const afterTax = eval(req.body.afterTax);\n';
