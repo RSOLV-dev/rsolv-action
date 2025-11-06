@@ -19,7 +19,16 @@ Results from automated test execution on 2025-11-06. Documents:
 - Idempotency testing results
 - Production readiness assessment
 
+## Running the Tests
+
+```bash
+# Run webhook cancellation tests
+mix test test/rsolv/billing/webhook_cancellation_test.exs
+
+# Run with verbose output (shows IO.puts statements)
+mix test test/rsolv/billing/webhook_cancellation_test.exs --trace
+```
+
 ## Related Files
 
-- **Automated Test Suite:** `test/rsolv/billing/webhook_cancellation_test.exs`
-- **Quick IEx Test:** `scripts/test_webhook_iex.exs` - Copy-paste into IEx for quick manual verification
+- **Automated Test Suite:** `test/rsolv/billing/webhook_cancellation_test.exs` - Complete ExUnit tests with assertions and detailed output
