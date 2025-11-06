@@ -99,7 +99,8 @@ defmodule RsolvWeb.PricingLiveTest do
       assert html =~ "Frequently Asked Questions"
 
       # Key FAQ questions from RFC-066
-      assert html =~ "What counts as a 'fix'?"
+      # Note: Single quotes are HTML-encoded as &#39;
+      assert html =~ "What counts as a &#39;fix&#39;?"
       assert html =~ "When does billing start?"
       assert html =~ "How do credits work?"
       assert html =~ "What if I exceed 60 fixes on the Pro plan?"
