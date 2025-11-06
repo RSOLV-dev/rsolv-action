@@ -87,7 +87,7 @@ defmodule RsolvWeb.Components.Marketing.HeroSimpleCentered do
               </div>
             </div>
           <% end %>
-
+          
     <!-- Hero content -->
           <div class="text-center">
             <h1 class="text-5xl font-semibold tracking-tight text-balance text-gray-900 sm:text-7xl dark:text-white">
@@ -96,7 +96,7 @@ defmodule RsolvWeb.Components.Marketing.HeroSimpleCentered do
             <p class="mt-8 text-lg font-medium text-pretty text-gray-500 sm:text-xl/8 dark:text-gray-400">
               {@subheading}
             </p>
-
+            
     <!-- CTA buttons -->
             <div class="mt-10 flex items-center justify-center gap-x-6">
               <a
@@ -116,7 +116,7 @@ defmodule RsolvWeb.Components.Marketing.HeroSimpleCentered do
             </div>
           </div>
         </div>
-
+        
     <!-- Bottom decorative gradient blur -->
         <GradientDecoration.gradient_blur position={:bottom} />
       </div>
