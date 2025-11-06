@@ -66,38 +66,28 @@ defmodule Rsolv.AST.PortSupervisorTest do
       parser_config = %{
         language: "python",
         command: "python3",
-        args: ["-u", Path.join(__DIR__, "fixtures/crash_parser.py")],
-        max_restarts: 3
+        args: ["-u", Path.join(__DIR__, "fixtures/crash_parser.py")]
+        # No max_restarts - we want transient restart (no automatic restart)
+        # This prevents race between automatic restart and manual recovery test
       }
 
       {:ok, port_id} = PortSupervisor.start_port(supervisor, parser_config)
       original_pid = PortSupervisor.get_port_pid(supervisor, port_id)
 
-      # Monitor the original process
+      # Monitor the original process for deterministic crash detection
       ref = Process.monitor(original_pid)
 
-      # Simulate crash by sending invalid data
+      # Trigger crash
       PortSupervisor.send_to_port(supervisor, port_id, "CRASH_NOW")
 
-      # Wait for the process to actually die using monitor
-      receive do
-        {:DOWN, ^ref, :process, ^original_pid, _reason} ->
-          :ok
-      after
-        5000 ->
-          flunk("Port process did not crash within timeout")
-      end
+      # Wait for :DOWN message - cleanup happens synchronously in terminate/2 before :DOWN
+      # No need for long timeout or polling - OTP guarantees :DOWN after terminate completes
+      assert_receive {:DOWN, ^ref, :process, ^original_pid, _reason}, 500
 
-      # Wait for port to be cleaned up
-      assert wait_for_condition(
-               fn ->
-                 PortSupervisor.get_port_pid(supervisor, port_id) == nil
-               end,
-               1000,
-               "Port was not cleaned up after crash"
-             )
+      # Verify cleanup completed (terminate/2 already did this before :DOWN was sent)
+      assert PortSupervisor.get_port_pid(supervisor, port_id) == nil
 
-      # For now, manually restart to test recovery
+      # Verify recovery: manually start new port
       {:ok, new_port_id} = PortSupervisor.start_port(supervisor, parser_config)
       new_pid = PortSupervisor.get_port_pid(supervisor, new_port_id)
       assert new_pid != nil
@@ -413,19 +403,16 @@ defmodule Rsolv.AST.PortSupervisorTest do
       {:ok, port_id} = PortSupervisor.start_port(supervisor, parser_config)
       port_pid = PortSupervisor.get_port_pid(supervisor, port_id)
 
-      # Force termination
+      # Monitor process for deterministic termination detection
+      ref = Process.monitor(port_pid)
+
+      # Force termination (synchronous call)
       PortSupervisor.terminate_port(supervisor, port_id)
 
-      # Process should be dead (using polling instead of fixed wait)
-      assert wait_for_condition(
-               fn ->
-                 not Process.alive?(port_pid)
-               end,
-               100,
-               "Port process did not terminate"
-             )
+      # Wait for :DOWN - confirms process terminated and cleanup completed
+      assert_receive {:DOWN, ^ref, :process, ^port_pid, _reason}, 200
 
-      # Port should be removed from tracking
+      # Port should be removed from tracking (cleanup happens in terminate/2)
       assert PortSupervisor.get_port(supervisor, port_id) == nil
     end
   end
