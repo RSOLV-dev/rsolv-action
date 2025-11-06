@@ -22,6 +22,7 @@ defmodule RsolvWeb.PricingLiveTest do
 
       :ok
     end
+
     test "displays all three pricing tiers", %{conn: conn} do
       {:ok, view, html} = live(conn, ~p"/pricing")
 
@@ -112,9 +113,12 @@ defmodule RsolvWeb.PricingLiveTest do
 
       # Check that FAQ content matches RFC-066 pricing
       assert html =~ "10 free credits"
-      assert html =~ "$29 per fix"  # PAYG rate
-      assert html =~ "$15 per additional fix"  # Pro overage rate
-      assert html =~ "60 credits each month"  # Pro included
+      # PAYG rate
+      assert html =~ "$29 per fix"
+      # Pro overage rate
+      assert html =~ "$15 per additional fix"
+      # Pro included
+      assert html =~ "60 credits each month"
     end
 
     test "includes 'Contact Us' CTA at bottom of FAQ", %{conn: conn} do
@@ -184,8 +188,10 @@ defmodule RsolvWeb.PricingLiveTest do
       {:ok, _view, html} = live(conn, ~p"/pricing")
 
       # FAQ uses responsive padding
-      assert html =~ "px-6"  # Mobile padding
-      assert html =~ "lg:px-8"  # Desktop padding
+      # Mobile padding
+      assert html =~ "px-6"
+      # Desktop padding
+      assert html =~ "lg:px-8"
     end
   end
 

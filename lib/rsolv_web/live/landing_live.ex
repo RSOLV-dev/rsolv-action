@@ -12,7 +12,12 @@ defmodule RsolvWeb.LandingLive do
   import RsolvWeb.MarketingComponents
   import RsolvWeb.Live.Concerns.PageTracking
 
-  alias RsolvWeb.Components.Marketing.{HeroSimpleCentered, FeaturesGrid2x2, CtaSimpleCentered, Icons}
+  alias RsolvWeb.Components.Marketing.{
+    HeroSimpleCentered,
+    FeaturesGrid2x2,
+    CtaSimpleCentered,
+    Icons
+  }
 
   @impl true
   def mount(params, _session, socket) do

@@ -174,11 +174,12 @@ defmodule RsolvWeb.Components.Marketing.PricingTwoTier do
   defp standard_tier(assigns) do
     # For 3-tier layouts, don't add special rounded corners
     # For 2-tier layouts, keep the original special styling for first tier
-    rounded_classes = if assigns.total_tiers == 2 && assigns.index == 0 do
-      "rounded-t-3xl sm:mx-8 sm:rounded-b-none lg:mx-0 lg:rounded-bl-3xl lg:rounded-tr-none"
-    else
-      ""
-    end
+    rounded_classes =
+      if assigns.total_tiers == 2 && assigns.index == 0 do
+        "rounded-t-3xl sm:mx-8 sm:rounded-b-none lg:mx-0 lg:rounded-bl-3xl lg:rounded-tr-none"
+      else
+        ""
+      end
 
     assigns = assign(assigns, :rounded_classes, rounded_classes)
 
