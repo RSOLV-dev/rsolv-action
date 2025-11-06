@@ -59,6 +59,7 @@ defmodule RsolvWeb.Components.Marketing.PricingTwoTier do
   use Phoenix.Component
 
   alias RsolvWeb.Components.Marketing.GradientDecoration
+  alias RsolvWeb.Components.Marketing.Icons
 
   @doc """
   Renders a two-tier pricing section.
@@ -115,18 +116,7 @@ defmodule RsolvWeb.Components.Marketing.PricingTwoTier do
               <ul role="list" class="mt-8 space-y-3 text-sm/6 text-gray-300 sm:mt-10">
                 <%= for feature <- tier.features do %>
                   <li class="flex gap-x-3">
-                    <svg
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                      aria-hidden="true"
-                      class="h-6 w-5 flex-none text-blue-400"
-                    >
-                      <path
-                        d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z"
-                        clip-rule="evenodd"
-                        fill-rule="evenodd"
-                      />
-                    </svg>
+                    {Phoenix.HTML.raw(Icons.checkmark(color: "text-blue-400"))}
                     {feature}
                   </li>
                 <% end %>
@@ -159,18 +149,7 @@ defmodule RsolvWeb.Components.Marketing.PricingTwoTier do
               <ul role="list" class="mt-8 space-y-3 text-sm/6 text-gray-600 dark:text-gray-400 sm:mt-10">
                 <%= for feature <- tier.features do %>
                   <li class="flex gap-x-3">
-                    <svg
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                      aria-hidden="true"
-                      class="h-6 w-5 flex-none text-blue-600 dark:text-blue-400"
-                    >
-                      <path
-                        d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z"
-                        clip-rule="evenodd"
-                        fill-rule="evenodd"
-                      />
-                    </svg>
+                    {Phoenix.HTML.raw(Icons.checkmark(color: "text-blue-600 dark:text-blue-400"))}
                     {feature}
                   </li>
                 <% end %>
