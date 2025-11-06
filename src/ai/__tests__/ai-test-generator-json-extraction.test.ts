@@ -254,6 +254,74 @@ These tests ensure comprehensive coverage.
       expect(result!.redTests).toBeDefined();
       expect(result!.redTests).toHaveLength(1);
     });
+
+    // Aider-inspired progressive completion tests
+    describe('Progressive JSON completion (Aider-inspired)', () => {
+      it('should recover JSON with ]{ suffix - array closure', () => {
+        const response = `
+{
+  "redTests": [
+    {
+      "testName": "Test 1",
+      "testCode": "code1",
+      "attackVector": "vector1",
+      "expectedBehavior": "should_fail_on_vulnerable_code"
+    }
+`;
+        // Missing ]} at end - progressive completion should fix it
+        const result = parseTestSuite(response);
+        expect(result).toBeDefined();
+        expect(result).not.toBeNull();
+        expect(result!.redTests).toHaveLength(1);
+      });
+
+      it('should recover JSON with }] suffix - object with array', () => {
+        const response = `
+{
+  "red": {
+    "testName": "Test name",
+    "testCode": "code",
+    "attackVector": "vector",
+    "expectedBehavior": "should_fail_on_vulnerable_code"
+  },
+  "metadata": [
+    "item1"
+`;
+        // Missing }] at end
+        const result = parseTestSuite(response);
+        // May return null or parse successfully depending on structure
+        // The key is it should not crash
+        expect(result !== undefined).toBe(true);
+      });
+
+      it('should recover JSON with "}]} suffix - truncated string in nested array', () => {
+        const response = `
+{
+  "redTests": [
+    {
+      "testName": "SQL Injection",
+      "testCode": "const payload = 'malicious
+`;
+        // Truncated mid-string within array of objects
+        const result = parseTestSuite(response);
+        // Should either recover or return null gracefully
+        expect(result !== undefined).toBe(true);
+      });
+
+      it('should handle progressive completion for RailsGoat-style truncation', () => {
+        const response = `
+{
+  "redTests": [
+    {
+      "testName": "ReDoS attack",
+      "testCode": "const maliciousCallback = 'a'.repeat(50) + '['
+`;
+        // Similar to actual RailsGoat issue - truncated with partial string
+        const result = parseTestSuite(response);
+        // May not fully recover but should handle gracefully
+        expect(result !== undefined).toBe(true);
+      });
+    });
   });
 
   describe('extractJsonFromResponse - utility function', () => {

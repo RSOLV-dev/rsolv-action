@@ -287,16 +287,11 @@ IMPORTANT:
         }
       }
 
-      let parsed;
-      try {
-        parsed = JSON.parse(jsonString);
-      } catch (parseError) {
-        logger.error('Failed to parse JSON after cleanup attempts:', parseError);
-        // Log the full malformed JSON for debugging (truncate if very long)
-        const jsonPreview = jsonString.length > 1000
-          ? `${jsonString.substring(0, 500)}...[${jsonString.length - 1000} chars omitted]...${jsonString.substring(jsonString.length - 500)}`
-          : jsonString;
-        logger.error('Malformed JSON that failed to parse:', jsonPreview);
+      // Try progressive JSON completion strategies (inspired by Aider)
+      // Attempt multiple completion suffixes to handle streaming truncation
+      const parsed = this.tryParseWithProgressiveCompletion(jsonString);
+
+      if (!parsed) {
         return null;
       }
       
@@ -506,6 +501,73 @@ defmodule SecurityVulnerabilityTest do
   use ExUnit.Case
 ${testBlocks}
 end`;
+  }
+
+  /**
+   * Try parsing JSON with progressive completion strategies.
+   * Inspired by Aider's parse_partial_args approach for handling streaming truncation.
+   * Attempts multiple completion suffixes to recover incomplete JSON.
+   */
+  private tryParseWithProgressiveCompletion(jsonString: string): any | null {
+    // Strategy 1: Try parsing as-is
+    try {
+      const result = JSON.parse(jsonString);
+      logger.debug('JSON parsed successfully without modifications');
+      return result;
+    } catch (error) {
+      logger.debug('Initial JSON parse failed, trying progressive completion strategies');
+    }
+
+    // Strategy 2: Try closing with ]{ - handles array of objects
+    try {
+      const result = JSON.parse(jsonString + ']}');
+      logger.info('JSON recovered using "]}" suffix (array + object closure)');
+      return result;
+    } catch (error) {
+      // Continue to next strategy
+    }
+
+    // Strategy 3: Try closing with }] - handles object containing array
+    try {
+      const result = JSON.parse(jsonString + '}]');
+      logger.info('JSON recovered using "}]" suffix (object + array closure)');
+      return result;
+    } catch (error) {
+      // Continue to next strategy
+    }
+
+    // Strategy 4: Try closing with }]} - handles nested structures
+    try {
+      const result = JSON.parse(jsonString + '}]}');
+      logger.info('JSON recovered using "}]}" suffix (object + array + object closure)');
+      return result;
+    } catch (error) {
+      // Continue to next strategy
+    }
+
+    // Strategy 5: Try closing with "]} - handles truncated string in array
+    try {
+      const result = JSON.parse(jsonString + '"}]');
+      logger.info('JSON recovered using ""}]" suffix (string + array + object closure)');
+      return result;
+    } catch (error) {
+      // Continue to next strategy
+    }
+
+    // Strategy 6: Try closing with "}]} - handles truncated string in nested array
+    try {
+      const result = JSON.parse(jsonString + '"}]}');
+      logger.info('JSON recovered using ""}]}" suffix (string + array + object closure)');
+      return result;
+    } catch (parseError) {
+      logger.error('Failed to parse JSON after all progressive completion attempts:', parseError);
+      // Log the full malformed JSON for debugging (truncate if very long)
+      const jsonPreview = jsonString.length > 1000
+        ? `${jsonString.substring(0, 500)}...[${jsonString.length - 1000} chars omitted]...${jsonString.substring(jsonString.length - 500)}`
+        : jsonString;
+      logger.error('Malformed JSON that failed to parse:', jsonPreview);
+      return null;
+    }
   }
 
   /**
