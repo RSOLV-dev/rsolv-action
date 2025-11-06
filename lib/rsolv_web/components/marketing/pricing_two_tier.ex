@@ -84,10 +84,10 @@ defmodule RsolvWeb.Components.Marketing.PricingTwoTier do
       <!-- Gradient decoration -->
       <GradientDecoration.gradient_blur position={:top} from_color="blue-500" to_color="emerald-500" />
 
-      <!-- Header -->
+    <!-- Header -->
       <.section_header eyebrow={@eyebrow} heading={@heading} description={@description} />
 
-      <!-- Pricing tiers -->
+    <!-- Pricing tiers -->
       <div class="mx-auto mt-16 grid max-w-lg grid-cols-1 items-center gap-y-6 sm:mt-20 sm:gap-y-0 lg:max-w-4xl lg:grid-cols-2">
         <%= for {tier, index} <- Enum.with_index(@tiers) do %>
           <.pricing_tier_card tier={tier} index={index} />
@@ -197,10 +197,17 @@ defmodule RsolvWeb.Components.Marketing.PricingTwoTier do
 
   defp feature_list(assigns) do
     ~H"""
-    <ul role="list" class={"mt-8 space-y-3 text-sm/6 sm:mt-10 #{if @highlighted, do: "text-gray-300", else: "text-gray-600 dark:text-gray-400"}"}>
+    <ul
+      role="list"
+      class={"mt-8 space-y-3 text-sm/6 sm:mt-10 #{if @highlighted, do: "text-gray-300", else: "text-gray-600 dark:text-gray-400"}"}
+    >
       <%= for feature <- @features do %>
         <li class="flex gap-x-3">
-          {Phoenix.HTML.raw(Icons.checkmark(color: (if @highlighted, do: "text-blue-400", else: "text-blue-600 dark:text-blue-400")))}
+          {Phoenix.HTML.raw(
+            Icons.checkmark(
+              color: if(@highlighted, do: "text-blue-400", else: "text-blue-600 dark:text-blue-400")
+            )
+          )}
           {feature}
         </li>
       <% end %>

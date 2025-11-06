@@ -69,7 +69,7 @@ defmodule RsolvWeb.Components.Marketing.CtaSimpleCentered do
           <!-- Gradient decoration -->
           <GradientDecoration.gradient_blur variant={:radial} />
 
-          <!-- Content -->
+    <!-- Content -->
           <div class={"mx-auto max-w-md text-center lg:mx-0 lg:flex-auto lg:py-32 #{if @image_url, do: "lg:text-left", else: ""}"}>
             <h2 class="text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl">
               {@heading}
@@ -96,7 +96,7 @@ defmodule RsolvWeb.Components.Marketing.CtaSimpleCentered do
             </div>
           </div>
 
-          <!-- Optional image -->
+    <!-- Optional image -->
           <%= if @image_url do %>
             <div class="relative mt-16 h-80 lg:mt-8">
               <img

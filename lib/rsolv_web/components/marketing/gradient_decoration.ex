@@ -57,8 +57,7 @@ defmodule RsolvWeb.Components.Marketing.GradientDecoration do
     <%= if @variant == :polygon do %>
       <!-- Polygon gradient decoration with clip-path -->
       <div aria-hidden="true" class={@wrapper_class}>
-        <div style={"clip-path: #{@clip_path}"} class={@gradient_class}>
-        </div>
+        <div style={"clip-path: #{@clip_path}"} class={@gradient_class}></div>
       </div>
     <% else %>
       <!-- Radial gradient decoration (SVG) -->

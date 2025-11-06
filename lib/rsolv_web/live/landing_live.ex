@@ -83,8 +83,7 @@ defmodule RsolvWeb.LandingLive do
       %{
         icon: Icons.chart_up(),
         title: "Continuous Security",
-        description:
-          "Automated scanning and fixing integrated into your development workflow."
+        description: "Automated scanning and fixing integrated into your development workflow."
       }
     ]
   end

@@ -150,9 +150,10 @@ defmodule RsolvWeb.LandingLiveTest do
     end
 
     @tag :skip
-    test "tracks CTA clicks when phx-click event is triggered (TODO: update for Tailwind Plus components)", %{
-      conn: conn
-    } do
+    test "tracks CTA clicks when phx-click event is triggered (TODO: update for Tailwind Plus components)",
+         %{
+           conn: conn
+         } do
       # NOTE: Tailwind Plus components use regular <a> tags for progressive enhancement
       # We need to implement client-side tracking via JavaScript or LiveView hooks
       # Skipping this test until we implement the new tracking approach
