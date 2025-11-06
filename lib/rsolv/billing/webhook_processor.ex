@@ -9,6 +9,7 @@ defmodule Rsolv.Billing.WebhookProcessor do
   alias Rsolv.Repo
   alias Rsolv.Billing.{BillingEvent, CreditLedger}
   alias Rsolv.Customers
+  alias Rsolv.Workers.EmailWorker
 
   @doc """
   Process a Stripe webhook event.
@@ -96,25 +97,25 @@ defmodule Rsolv.Billing.WebhookProcessor do
     Customers.update_customer(customer, %{subscription_state: "past_due"})
 
     # Queue dunning email notification
-    with {:ok, _job} <-
-           %{
-             type: "payment_failed",
-             customer_id: customer.id,
-             invoice_id: invoice["id"],
-             amount_due: invoice["amount_due"],
-             attempt_count: invoice["attempt_count"],
-             next_payment_attempt: invoice["next_payment_attempt"]
-           }
-           |> Rsolv.Workers.EmailWorker.new()
-           |> Oban.insert() do
-      Logger.warning("Payment failed for customer",
-        customer_id: customer.id,
-        stripe_invoice_id: invoice["id"],
-        amount: invoice["amount_due"]
-      )
+    case %{
+           type: "payment_failed",
+           customer_id: customer.id,
+           invoice_id: invoice["id"],
+           amount_due: invoice["amount_due"],
+           attempt_count: invoice["attempt_count"],
+           next_payment_attempt: invoice["next_payment_attempt"]
+         }
+         |> EmailWorker.new()
+         |> Oban.insert() do
+      {:ok, _job} ->
+        Logger.warning("Payment failed for customer",
+          customer_id: customer.id,
+          stripe_invoice_id: invoice["id"],
+          amount: invoice["amount_due"]
+        )
 
-      {:ok, :processed}
-    else
+        {:ok, :processed}
+
       {:error, changeset} ->
         Logger.error("Failed to enqueue payment failed email",
           customer_id: customer.id,
@@ -239,6 +240,8 @@ defmodule Rsolv.Billing.WebhookProcessor do
   defp extract_customer_id(_), do: nil
 
   # Extract amount for event recording
+  # Check amount_due first (for failed payments where amount_paid may be 0)
+  defp extract_amount(%{"object" => %{"amount_due" => amount}}) when amount > 0, do: amount
   defp extract_amount(%{"object" => %{"amount_paid" => amount}}), do: amount
   defp extract_amount(%{"object" => %{"amount_due" => amount}}), do: amount
   defp extract_amount(_), do: nil
