@@ -83,11 +83,9 @@ defmodule RsolvWeb.Components.Marketing.PricingTwoTier do
     <div class={"relative isolate bg-white dark:bg-gray-900 px-6 py-24 sm:py-32 lg:px-8 #{@class}"}>
       <!-- Gradient decoration -->
       <GradientDecoration.gradient_blur position={:top} from_color="blue-500" to_color="emerald-500" />
-
-    <!-- Header -->
+      <!-- Header -->
       <.section_header eyebrow={@eyebrow} heading={@heading} description={@description} />
-
-    <!-- Pricing tiers -->
+      <!-- Pricing tiers -->
       <div class="mx-auto mt-16 grid max-w-lg grid-cols-1 items-center gap-y-6 sm:mt-20 sm:gap-y-0 lg:max-w-4xl lg:grid-cols-2">
         <%= for {tier, index} <- Enum.with_index(@tiers) do %>
           <.pricing_tier_card tier={tier} index={index} />
