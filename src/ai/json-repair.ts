@@ -40,7 +40,7 @@ export interface ParseResult<T> {
  * @param jsonString - The potentially incomplete JSON string
  * @returns ParseResult with parsed data or error information
  */
-export function tryParseWithProgressiveCompletion<T = any>(jsonString: string): ParseResult<T> {
+export function tryParseWithProgressiveCompletion<T = unknown>(jsonString: string): ParseResult<T> {
   for (const strategy of PROGRESSIVE_COMPLETION_STRATEGIES) {
     try {
       const completedJson = jsonString + strategy.suffix;

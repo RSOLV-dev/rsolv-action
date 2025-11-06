@@ -1,12 +1,19 @@
 import { describe, it, expect } from 'vitest';
 import { AITestGenerator } from '../ai-test-generator.js';
+import type { AIConfig } from '../types.js';
+import type { VulnerabilityTestSuite } from '../test-generator.js';
 
 describe('AITestGenerator - JSON Extraction', () => {
   describe('parseTestSuite', () => {
     // Access the private method via prototype for testing
-    const generator = new AITestGenerator({} as any);
+    const minimalConfig: AIConfig = {
+      provider: 'anthropic',
+      apiKey: 'test-key',
+    };
+    const generator = new AITestGenerator(minimalConfig);
     const parseTestSuite = (response: string) => {
-      return (generator as any).parseTestSuite(response);
+      // Use type assertion only to access private method for testing
+      return (generator as unknown as { parseTestSuite: (response: string) => VulnerabilityTestSuite | null }).parseTestSuite(response);
     };
 
     it('should extract JSON from markdown code blocks', () => {

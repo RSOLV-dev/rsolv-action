@@ -323,12 +323,15 @@ IMPORTANT:
 
       if (parsed.redTests && Array.isArray(parsed.redTests)) {
         // Multiple RED tests for complex vulnerability
-        result.redTests = parsed.redTests.map((test: any) => ({
-          testName: test.testName || 'RED Test',
-          testCode: test.testCode || '// Test code truncated',
-          attackVector: test.attackVector || 'Unknown',
-          expectedBehavior: 'should_fail_on_vulnerable_code' as const
-        }));
+        result.redTests = parsed.redTests.map((test: unknown) => {
+          const testObj = test as Record<string, unknown>;
+          return {
+            testName: (testObj.testName as string) || 'RED Test',
+            testCode: (testObj.testCode as string) || '// Test code truncated',
+            attackVector: (testObj.attackVector as string) || 'Unknown',
+            expectedBehavior: 'should_fail_on_vulnerable_code' as const
+          };
+        });
       } else if (parsed.red) {
         // Single RED test
         result.red = {
