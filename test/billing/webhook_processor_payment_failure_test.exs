@@ -1,8 +1,8 @@
 defmodule Rsolv.Billing.WebhookProcessorPaymentFailureTest do
   use Rsolv.DataCase, async: false
 
+  alias Rsolv.Billing.{BillingEvent, WebhookProcessor}
   alias Rsolv.Customers
-  alias Rsolv.Billing.{WebhookProcessor, BillingEvent}
   alias Rsolv.Repo
   import Ecto.Query
 
