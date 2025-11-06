@@ -143,8 +143,15 @@ ${vulnerability.remediation ? `- Remediation: ${vulnerability.remediation}` : ''
 ${fileContent ? `## Vulnerable Code:\n\`\`\`${options.language}\n${fileContent}\n\`\`\`` : ''}
 
 ## Response Format:
-IMPORTANT: Return ONLY valid JSON. Keep test code CONCISE (max 10-15 lines per test).
-Focus on the core vulnerability check, not elaborate setup.
+CRITICAL: Return ONLY complete, valid JSON. The JSON MUST be syntactically complete with all braces, brackets, and quotes properly closed.
+Keep test code CONCISE (max 10-15 lines per test). Focus on the core vulnerability check, not elaborate setup.
+
+VALIDATION CHECKLIST before returning:
+- [ ] All opening braces { have matching closing braces }
+- [ ] All opening brackets [ have matching closing brackets ]
+- [ ] All string quotes are properly escaped and closed
+- [ ] No trailing commas before closing braces/brackets
+- [ ] The entire JSON object is complete and parseable
 
 For a single RED test, return:
 {
@@ -174,8 +181,11 @@ For multiple RED tests (complex vulnerabilities), return:
   ]
 }
 
-Keep ALL strings properly escaped. Avoid long test code.
-Return ONLY the JSON, no explanations.`;
+IMPORTANT:
+- Keep ALL strings properly escaped (use \\" for quotes inside strings)
+- Avoid long test code to prevent truncation
+- Ensure the JSON is COMPLETE with all closing braces/brackets
+- Return ONLY the JSON, no explanations before or after`;
   }
 
   private parseTestSuite(aiResponse: string): VulnerabilityTestSuite | null {
@@ -219,16 +229,26 @@ Return ONLY the JSON, no explanations.`;
       jsonString = jsonString
         .replace(/^\s*```\s*json?\s*/gm, '') // Remove stray markdown markers
         .replace(/\s*```\s*$/gm, '')
+        .replace(/,(\s*[}\]])/g, '$1') // Remove trailing commas before closing brackets/braces
         .trim();
 
       // Attempt to fix common JSON issues before parsing
       // Handle truncated responses by closing unclosed structures
       let openBraces = (jsonString.match(/\{/g) || []).length;
       let closeBraces = (jsonString.match(/\}/g) || []).length;
-      if (openBraces > closeBraces) {
-        logger.warn(`Fixing unclosed JSON structure: ${openBraces} open, ${closeBraces} closed`);
-        // Add missing closing braces
-        jsonString += '}'.repeat(openBraces - closeBraces);
+      let openBrackets = (jsonString.match(/\[/g) || []).length;
+      let closeBrackets = (jsonString.match(/\]/g) || []).length;
+
+      if (openBraces > closeBraces || openBrackets > closeBrackets) {
+        logger.warn(`Fixing unclosed JSON structure: ${openBraces} open braces, ${closeBraces} closed braces, ${openBrackets} open brackets, ${closeBrackets} closed brackets`);
+        // Add missing closing brackets first (arrays inside objects)
+        if (openBrackets > closeBrackets) {
+          jsonString += ']'.repeat(openBrackets - closeBrackets);
+        }
+        // Then add missing closing braces
+        if (openBraces > closeBraces) {
+          jsonString += '}'.repeat(openBraces - closeBraces);
+        }
       }
 
       // Only attempt JSON repair if it actually appears truncated
@@ -272,7 +292,11 @@ Return ONLY the JSON, no explanations.`;
         parsed = JSON.parse(jsonString);
       } catch (parseError) {
         logger.error('Failed to parse JSON after cleanup attempts:', parseError);
-        logger.debug('Attempted to parse:', jsonString.substring(0, 500));
+        // Log the full malformed JSON for debugging (truncate if very long)
+        const jsonPreview = jsonString.length > 1000
+          ? `${jsonString.substring(0, 500)}...[${jsonString.length - 1000} chars omitted]...${jsonString.substring(jsonString.length - 500)}`
+          : jsonString;
+        logger.error('Malformed JSON that failed to parse:', jsonPreview);
         return null;
       }
       

@@ -145,6 +145,115 @@ These tests ensure comprehensive coverage.
       expect(result.green).toBeUndefined();
       expect(result.refactor).toBeUndefined();
     });
+
+    it('should handle trailing commas in JSON', () => {
+      const response = `
+\`\`\`json
+{
+  "red": {
+    "testName": "Test with trailing comma",
+    "testCode": "const test = 'code';",
+    "attackVector": "malicious input",
+  }
+}
+\`\`\`
+`;
+      const result = parseTestSuite(response);
+      expect(result).toBeDefined();
+      expect(result).not.toBeNull();
+      expect(result!.red).toBeDefined();
+      expect(result!.red.testName).toBe('Test with trailing comma');
+    });
+
+    it('should handle missing closing brace - simulating RailsGoat issue', () => {
+      // This simulates the exact issue from the RailsGoat VALIDATE phase
+      const response = `
+{
+  "redTests": [
+    {
+      "testName": "ReDoS attack on callback validation regex",
+      "testCode": "const maliciousCallback = 'a'.repeat(50) + '[';",
+      "attackVector": "a".repeat(50)
+`;
+      const result = parseTestSuite(response);
+      // Should attempt to fix by adding missing closing structures
+      // The parser should detect: 2 open braces {, 1 open bracket [, 0 closed
+      // and attempt recovery by adding }, ], }
+      // However, the string is also truncated, so it's likely to return null
+      // which is acceptable - the key is it shouldn't crash
+      expect(result).toBeNull(); // Graceful handling expected
+    });
+
+    it('should fix missing closing braces in array of tests', () => {
+      const response = `
+{
+  "redTests": [
+    {
+      "testName": "Test 1",
+      "testCode": "code1",
+      "attackVector": "vector1",
+      "expectedBehavior": "should_fail_on_vulnerable_code"
+    },
+    {
+      "testName": "Test 2",
+      "testCode": "code2",
+      "attackVector": "vector2",
+      "expectedBehavior": "should_fail_on_vulnerable_code"
+    }
+  ]
+`;
+      // Missing the final closing brace
+      const result = parseTestSuite(response);
+      expect(result).toBeDefined();
+      expect(result).not.toBeNull();
+      expect(result!.redTests).toBeDefined();
+      expect(result!.redTests).toHaveLength(2);
+      expect(result!.redTests![0].testName).toBe('Test 1');
+      expect(result!.redTests![1].testName).toBe('Test 2');
+    });
+
+    it('should fix missing closing bracket in array', () => {
+      const response = `
+{
+  "redTests": [
+    {
+      "testName": "Test 1",
+      "testCode": "code1",
+      "attackVector": "vector1",
+      "expectedBehavior": "should_fail_on_vulnerable_code"
+    }
+`;
+      // Missing closing bracket and brace
+      const result = parseTestSuite(response);
+      expect(result).toBeDefined();
+      expect(result).not.toBeNull();
+      expect(result!.redTests).toBeDefined();
+      expect(result!.redTests).toHaveLength(1);
+      expect(result!.redTests![0].testName).toBe('Test 1');
+    });
+
+    it('should handle complex nested JSON with multiple issues', () => {
+      const response = `
+\`\`\`json
+{
+  "redTests": [
+    {
+      "testName": "Complex test",
+      "testCode": "const obj = { nested: { deep: 'value' } };",
+      "attackVector": "complex",
+      "expectedBehavior": "should_fail_on_vulnerable_code",
+    }
+  ],
+}
+\`\`\`
+`;
+      // Has trailing commas that should be fixed
+      const result = parseTestSuite(response);
+      expect(result).toBeDefined();
+      expect(result).not.toBeNull();
+      expect(result!.redTests).toBeDefined();
+      expect(result!.redTests).toHaveLength(1);
+    });
   });
 
   describe('extractJsonFromResponse - utility function', () => {
