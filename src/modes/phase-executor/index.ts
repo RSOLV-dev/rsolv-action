@@ -2728,7 +2728,24 @@ ${validation.falsePositive ?
     options: ExecuteOptions
   ): Promise<any> {
     const { GitBasedClaudeCodeAdapter } = await import('../../ai/adapters/claude-code-git.js');
-    const adapter = new GitBasedClaudeCodeAdapter(this.config as any);
+
+    // Initialize credential manager if using vended credentials
+    // Fix for RFC-067: mitigateIssue was creating adapter without credential manager,
+    // causing Claude Code CLI to skip execution with "No credential manager available"
+    let credentialManager;
+    if (this.config.aiProvider?.useVendedCredentials && this.config.rsolvApiKey) {
+      logger.info('[MITIGATE] Initializing credential manager for vended credentials');
+      const { CredentialManagerSingleton } = await import('../../credentials/singleton.js');
+      try {
+        credentialManager = await CredentialManagerSingleton.getInstance(this.config.rsolvApiKey);
+        logger.info('[MITIGATE] Credential manager initialized successfully');
+      } catch (error) {
+        logger.error('[MITIGATE] Failed to initialize credential manager:', error);
+        throw new Error(`Credential initialization failed: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+
+    const adapter = new GitBasedClaudeCodeAdapter(this.config as any, process.cwd(), credentialManager);
     
     // Apply fix with retries
     let attempts = 0;
