@@ -34,9 +34,11 @@ defmodule Rsolv.Billing.WebhookProcessorPaymentFailureTest do
           }
         })
 
-      stripe_event_id = "evt_test_payment_failure_#{:rand.uniform(99999999)}"
+      stripe_event_id = "evt_test_payment_failure_#{:rand.uniform(99_999_999)}"
       stripe_invoice_id = "in_test_payment_failure_#{:rand.uniform(99999)}"
-      next_attempt_unix = DateTime.utc_now() |> DateTime.add(23 * 3600, :second) |> DateTime.to_unix()
+
+      next_attempt_unix =
+        DateTime.utc_now() |> DateTime.add(23 * 3600, :second) |> DateTime.to_unix()
 
       webhook_payload = %{
         "stripe_event_id" => stripe_event_id,
@@ -63,7 +65,10 @@ defmodule Rsolv.Billing.WebhookProcessorPaymentFailureTest do
       }
     end
 
-    test "updates customer subscription_state to past_due", %{customer: customer, webhook_payload: payload} do
+    test "updates customer subscription_state to past_due", %{
+      customer: customer,
+      webhook_payload: payload
+    } do
       # Process webhook
       assert {:ok, :processed} = WebhookProcessor.process_event(payload)
 
