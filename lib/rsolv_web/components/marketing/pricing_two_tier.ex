@@ -85,87 +85,153 @@ defmodule RsolvWeb.Components.Marketing.PricingTwoTier do
       <GradientDecoration.gradient_blur position={:top} from_color="blue-500" to_color="emerald-500" />
 
       <!-- Header -->
-      <div class="mx-auto max-w-4xl text-center">
-        <h2 class="text-base/7 font-semibold text-blue-600 dark:text-blue-400">
-          {@eyebrow}
-        </h2>
-        <p class="mt-2 text-5xl font-semibold tracking-tight text-balance text-gray-900 sm:text-6xl dark:text-white">
-          {@heading}
-        </p>
-      </div>
-      <p class="mx-auto mt-6 max-w-2xl text-center text-lg font-medium text-pretty text-gray-600 sm:text-xl/8 dark:text-gray-400">
-        {@description}
-      </p>
+      <.section_header eyebrow={@eyebrow} heading={@heading} description={@description} />
 
       <!-- Pricing tiers -->
       <div class="mx-auto mt-16 grid max-w-lg grid-cols-1 items-center gap-y-6 sm:mt-20 sm:gap-y-0 lg:max-w-4xl lg:grid-cols-2">
         <%= for {tier, index} <- Enum.with_index(@tiers) do %>
-          <%= if tier.highlighted do %>
-            <!-- Highlighted tier (dark) -->
-            <div class="relative rounded-3xl bg-gray-900 p-8 shadow-2xl ring-1 ring-gray-900/10 sm:p-10">
-              <h3 id={tier.id} class="text-base/7 font-semibold text-blue-400">
-                {tier.name}
-              </h3>
-              <p class="mt-4 flex items-baseline gap-x-2">
-                <span class="text-5xl font-semibold tracking-tight text-white">
-                  {tier.price}
-                </span>
-                <span class="text-base text-gray-400">{tier.period}</span>
-              </p>
-              <p class="mt-6 text-base/7 text-gray-300">{tier.description}</p>
-              <ul role="list" class="mt-8 space-y-3 text-sm/6 text-gray-300 sm:mt-10">
-                <%= for feature <- tier.features do %>
-                  <li class="flex gap-x-3">
-                    {Phoenix.HTML.raw(Icons.checkmark(color: "text-blue-400"))}
-                    {feature}
-                  </li>
-                <% end %>
-              </ul>
-              <a
-                href={tier.cta_link}
-                aria-describedby={tier.id}
-                class="mt-8 block rounded-md bg-blue-500 px-3.5 py-2.5 text-center text-sm font-semibold text-white shadow-xs hover:bg-blue-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 sm:mt-10"
-              >
-                {tier.cta_text}
-              </a>
-            </div>
-          <% else %>
-            <!-- Standard tier (light) -->
-            <div class={"rounded-3xl bg-white/60 dark:bg-gray-800/60 p-8 ring-1 ring-gray-900/10 dark:ring-white/10 sm:p-10 #{if index == 0, do: "rounded-t-3xl sm:mx-8 sm:rounded-b-none lg:mx-0 lg:rounded-bl-3xl lg:rounded-tr-none", else: ""}"}>
-              <h3 id={tier.id} class="text-base/7 font-semibold text-blue-600 dark:text-blue-400">
-                {tier.name}
-              </h3>
-              <p class="mt-4 flex items-baseline gap-x-2">
-                <span class="text-5xl font-semibold tracking-tight text-gray-900 dark:text-white">
-                  {tier.price}
-                </span>
-                <span class="text-base text-gray-500 dark:text-gray-400">
-                  {tier.period}
-                </span>
-              </p>
-              <p class="mt-6 text-base/7 text-gray-600 dark:text-gray-400">
-                {tier.description}
-              </p>
-              <ul role="list" class="mt-8 space-y-3 text-sm/6 text-gray-600 dark:text-gray-400 sm:mt-10">
-                <%= for feature <- tier.features do %>
-                  <li class="flex gap-x-3">
-                    {Phoenix.HTML.raw(Icons.checkmark(color: "text-blue-600 dark:text-blue-400"))}
-                    {feature}
-                  </li>
-                <% end %>
-              </ul>
-              <a
-                href={tier.cta_link}
-                aria-describedby={tier.id}
-                class="mt-8 block rounded-md px-3.5 py-2.5 text-center text-sm font-semibold text-blue-600 dark:text-blue-400 ring-1 ring-inset ring-blue-200 dark:ring-blue-800 hover:ring-blue-300 dark:hover:ring-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:focus-visible:outline-blue-400 sm:mt-10"
-              >
-                {tier.cta_text}
-              </a>
-            </div>
-          <% end %>
+          <.pricing_tier_card tier={tier} index={index} />
         <% end %>
       </div>
     </div>
+    """
+  end
+
+  # Private function components
+
+  attr :eyebrow, :string, required: true
+  attr :heading, :string, required: true
+  attr :description, :string, required: true
+
+  defp section_header(assigns) do
+    ~H"""
+    <div class="mx-auto max-w-4xl text-center">
+      <h2 class="text-base/7 font-semibold text-blue-600 dark:text-blue-400">
+        {@eyebrow}
+      </h2>
+      <p class="mt-2 text-5xl font-semibold tracking-tight text-balance text-gray-900 sm:text-6xl dark:text-white">
+        {@heading}
+      </p>
+    </div>
+    <p class="mx-auto mt-6 max-w-2xl text-center text-lg font-medium text-pretty text-gray-600 sm:text-xl/8 dark:text-gray-400">
+      {@description}
+    </p>
+    """
+  end
+
+  attr :tier, :map, required: true
+  attr :index, :integer, required: true
+
+  defp pricing_tier_card(assigns) do
+    ~H"""
+    <%= if @tier.highlighted do %>
+      <.highlighted_tier tier={@tier} />
+    <% else %>
+      <.standard_tier tier={@tier} index={@index} />
+    <% end %>
+    """
+  end
+
+  attr :tier, :map, required: true
+
+  defp highlighted_tier(assigns) do
+    ~H"""
+    <div class="relative rounded-3xl bg-gray-900 p-8 shadow-2xl ring-1 ring-gray-900/10 sm:p-10">
+      <h3 id={@tier.id} class="text-base/7 font-semibold text-blue-400">
+        {@tier.name}
+      </h3>
+      <.tier_pricing price={@tier.price} period={@tier.period} highlighted={true} />
+      <p class="mt-6 text-base/7 text-gray-300">{@tier.description}</p>
+      <.feature_list features={@tier.features} highlighted={true} />
+      <.tier_cta
+        tier_id={@tier.id}
+        cta_link={@tier.cta_link}
+        cta_text={@tier.cta_text}
+        highlighted={true}
+      />
+    </div>
+    """
+  end
+
+  attr :tier, :map, required: true
+  attr :index, :integer, required: true
+
+  defp standard_tier(assigns) do
+    ~H"""
+    <div class={"rounded-3xl bg-white/60 dark:bg-gray-800/60 p-8 ring-1 ring-gray-900/10 dark:ring-white/10 sm:p-10 #{if @index == 0, do: "rounded-t-3xl sm:mx-8 sm:rounded-b-none lg:mx-0 lg:rounded-bl-3xl lg:rounded-tr-none", else: ""}"}>
+      <h3 id={@tier.id} class="text-base/7 font-semibold text-blue-600 dark:text-blue-400">
+        {@tier.name}
+      </h3>
+      <.tier_pricing price={@tier.price} period={@tier.period} highlighted={false} />
+      <p class="mt-6 text-base/7 text-gray-600 dark:text-gray-400">{@tier.description}</p>
+      <.feature_list features={@tier.features} highlighted={false} />
+      <.tier_cta
+        tier_id={@tier.id}
+        cta_link={@tier.cta_link}
+        cta_text={@tier.cta_text}
+        highlighted={false}
+      />
+    </div>
+    """
+  end
+
+  attr :price, :string, required: true
+  attr :period, :string, required: true
+  attr :highlighted, :boolean, required: true
+
+  defp tier_pricing(assigns) do
+    ~H"""
+    <p class="mt-4 flex items-baseline gap-x-2">
+      <span class={"text-5xl font-semibold tracking-tight #{if @highlighted, do: "text-white", else: "text-gray-900 dark:text-white"}"}>
+        {@price}
+      </span>
+      <span class={"text-base #{if @highlighted, do: "text-gray-400", else: "text-gray-500 dark:text-gray-400"}"}>
+        {@period}
+      </span>
+    </p>
+    """
+  end
+
+  attr :features, :list, required: true
+  attr :highlighted, :boolean, required: true
+
+  defp feature_list(assigns) do
+    ~H"""
+    <ul role="list" class={"mt-8 space-y-3 text-sm/6 sm:mt-10 #{if @highlighted, do: "text-gray-300", else: "text-gray-600 dark:text-gray-400"}"}>
+      <%= for feature <- @features do %>
+        <li class="flex gap-x-3">
+          {Phoenix.HTML.raw(Icons.checkmark(color: (if @highlighted, do: "text-blue-400", else: "text-blue-600 dark:text-blue-400")))}
+          {feature}
+        </li>
+      <% end %>
+    </ul>
+    """
+  end
+
+  attr :tier_id, :string, required: true
+  attr :cta_link, :string, required: true
+  attr :cta_text, :string, required: true
+  attr :highlighted, :boolean, required: true
+
+  defp tier_cta(assigns) do
+    ~H"""
+    <%= if @highlighted do %>
+      <a
+        href={@cta_link}
+        aria-describedby={@tier_id}
+        class="mt-8 block rounded-md bg-blue-500 px-3.5 py-2.5 text-center text-sm font-semibold text-white shadow-xs hover:bg-blue-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 sm:mt-10"
+      >
+        {@cta_text}
+      </a>
+    <% else %>
+      <a
+        href={@cta_link}
+        aria-describedby={@tier_id}
+        class="mt-8 block rounded-md px-3.5 py-2.5 text-center text-sm font-semibold text-blue-600 dark:text-blue-400 ring-1 ring-inset ring-blue-200 dark:ring-blue-800 hover:ring-blue-300 dark:hover:ring-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:focus-visible:outline-blue-400 sm:mt-10"
+      >
+        {@cta_text}
+      </a>
+    <% end %>
     """
   end
 end
