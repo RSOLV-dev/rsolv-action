@@ -14,7 +14,7 @@ defmodule RsolvWeb.PricingLive do
   import RsolvWeb.Live.Concerns.PageTracking
 
   alias Rsolv.PricingData
-  alias RsolvWeb.Components.Marketing.{PricingTwoTier, FaqSection}
+  alias RsolvWeb.Components.Marketing.{FaqSection, PricingTwoTier}
 
   @impl true
   def mount(params, _session, socket) do

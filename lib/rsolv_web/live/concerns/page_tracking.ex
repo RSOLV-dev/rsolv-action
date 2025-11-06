@@ -25,8 +25,8 @@ defmodule RsolvWeb.Live.Concerns.PageTracking do
       end
   """
 
-  alias RsolvWeb.Services.Analytics
   alias RsolvWeb.Helpers.TrackingHelper
+  alias RsolvWeb.Services.Analytics
 
   @doc """
   Assigns UTM parameters and tracks page view.
