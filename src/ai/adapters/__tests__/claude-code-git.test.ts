@@ -316,26 +316,89 @@ describe.skip('GitBasedClaudeCodeAdapter', () => {
   
   test('should extract solution from various response formats', () => {
     const adapter = new GitBasedClaudeCodeAdapter(config, '/test/repo');
-    
+
     // Test JSON in code block
     const codeBlockResponse = `Here's the fix:
 \`\`\`json
 {"title":"Fix","description":"Fixed","files":[{"path":"test.js","changes":"fixed"}],"tests":[]}
 \`\`\``;
-    
+
     const solution = (adapter as any).extractSolutionFromText(codeBlockResponse);
     expect(solution).not.toBeNull();
     expect(solution.title).toBe('Fix');
-    
+
     // Test direct JSON
     const directJson = '{"title":"Direct","description":"JSON","files":[],"tests":[]}';
     const directSolution = (adapter as any).extractSolutionFromText(directJson);
     expect(directSolution).not.toBeNull();
     expect(directSolution.title).toBe('Direct');
-    
+
     // Test invalid response
     const invalidResponse = 'This is not JSON';
     const invalidSolution = (adapter as any).extractSolutionFromText(invalidResponse);
     expect(invalidSolution).toBeNull();
+  });
+
+  test('should return commitHash in solution result', async () => {
+    // Mock successful file modification and git operations
+    mockExecSync.mockImplementation((command: string) => {
+      if (command === 'git diff --name-only') {
+        return 'src/test-file.js\n';
+      }
+      if (command === 'git diff --stat') {
+        return '1 file changed, 3 insertions(+), 1 deletion(-)';
+      }
+      if (command === 'git rev-parse HEAD') {
+        return '0155ecaa2e1e30a68a0cc945aa80794ac1f8f17e';
+      }
+      if (command.includes('git config user.email')) {
+        return 'test@example.com';
+      }
+      if (command.includes('git add')) {
+        return '';
+      }
+      if (command.includes('git commit')) {
+        return '';
+      }
+      return '';
+    });
+
+    const cliAdapter = {
+      generateSolution: vi.fn(async () => ({
+        success: true,
+        message: 'Solution generated',
+        changes: {
+          'src/test-file.js': 'Fixed vulnerability'
+        }
+      }))
+    };
+
+    (adapter as any).cliAdapter = cliAdapter;
+
+    const issue = {
+      id: 'test-commit-hash',
+      number: 45,
+      title: 'Test vulnerability',
+      body: 'Test vulnerability description',
+      repository: {
+        owner: 'test',
+        name: 'repo',
+        fullName: 'test/repo'
+      }
+    };
+
+    const analysis = {
+      complexity: 'medium',
+      estimatedTime: 20,
+      filesToModify: ['src/test-file.js']
+    };
+
+    const result = await adapter.generateSolutionWithGit(issue as any, analysis as any);
+
+    // Assert commitHash is defined and matches SHA-1 format
+    expect(result.success).toBe(true);
+    expect(result.commitHash).toBeDefined();
+    expect(result.commitHash).toMatch(/^[0-9a-f]{40}$/);
+    expect(result.commitHash).toBe('0155ecaa2e1e30a68a0cc945aa80794ac1f8f17e');
   });
 });

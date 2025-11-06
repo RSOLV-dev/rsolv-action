@@ -845,7 +845,8 @@ ${this.getVulnerabilitySpecificGuidance(issueContext)}
       );
       
       const commitHash = this.createCommit(modifiedFiles, commitMessage);
-      
+      logger.info(`[GIT-ADAPTER] Created commit: ${commitHash}`);
+
       return {
         success: true,
         message: `Successfully fixed vulnerabilities in ${modifiedFiles.length} file(s)`,

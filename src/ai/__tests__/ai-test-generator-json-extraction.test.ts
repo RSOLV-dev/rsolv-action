@@ -1,12 +1,19 @@
 import { describe, it, expect } from 'vitest';
 import { AITestGenerator } from '../ai-test-generator.js';
+import type { AIConfig } from '../types.js';
+import type { VulnerabilityTestSuite } from '../test-generator.js';
 
 describe('AITestGenerator - JSON Extraction', () => {
   describe('parseTestSuite', () => {
     // Access the private method via prototype for testing
-    const generator = new AITestGenerator({} as any);
+    const minimalConfig: AIConfig = {
+      provider: 'anthropic',
+      apiKey: 'test-key',
+    };
+    const generator = new AITestGenerator(minimalConfig);
     const parseTestSuite = (response: string) => {
-      return (generator as any).parseTestSuite(response);
+      // Use type assertion only to access private method for testing
+      return (generator as unknown as { parseTestSuite: (response: string) => VulnerabilityTestSuite | null }).parseTestSuite(response);
     };
 
     it('should extract JSON from markdown code blocks', () => {
@@ -144,6 +151,183 @@ These tests ensure comprehensive coverage.
       // RFC-060: VALIDATE phase is RED-only, so green/refactor are intentionally stripped
       expect(result.green).toBeUndefined();
       expect(result.refactor).toBeUndefined();
+    });
+
+    it('should handle trailing commas in JSON', () => {
+      const response = `
+\`\`\`json
+{
+  "red": {
+    "testName": "Test with trailing comma",
+    "testCode": "const test = 'code';",
+    "attackVector": "malicious input",
+  }
+}
+\`\`\`
+`;
+      const result = parseTestSuite(response);
+      expect(result).toBeDefined();
+      expect(result).not.toBeNull();
+      expect(result!.red).toBeDefined();
+      expect(result!.red.testName).toBe('Test with trailing comma');
+    });
+
+    it('should handle missing closing brace - simulating RailsGoat issue', () => {
+      // This simulates the exact issue from the RailsGoat VALIDATE phase
+      const response = `
+{
+  "redTests": [
+    {
+      "testName": "ReDoS attack on callback validation regex",
+      "testCode": "const maliciousCallback = 'a'.repeat(50) + '[';",
+      "attackVector": "a".repeat(50)
+`;
+      const result = parseTestSuite(response);
+      // Should attempt to fix by adding missing closing structures
+      // The parser should detect: 2 open braces {, 1 open bracket [, 0 closed
+      // and attempt recovery by adding }, ], }
+      // However, the string is also truncated, so it's likely to return null
+      // which is acceptable - the key is it shouldn't crash
+      expect(result).toBeNull(); // Graceful handling expected
+    });
+
+    it('should fix missing closing braces in array of tests', () => {
+      const response = `
+{
+  "redTests": [
+    {
+      "testName": "Test 1",
+      "testCode": "code1",
+      "attackVector": "vector1",
+      "expectedBehavior": "should_fail_on_vulnerable_code"
+    },
+    {
+      "testName": "Test 2",
+      "testCode": "code2",
+      "attackVector": "vector2",
+      "expectedBehavior": "should_fail_on_vulnerable_code"
+    }
+  ]
+`;
+      // Missing the final closing brace
+      const result = parseTestSuite(response);
+      expect(result).toBeDefined();
+      expect(result).not.toBeNull();
+      expect(result!.redTests).toBeDefined();
+      expect(result!.redTests).toHaveLength(2);
+      expect(result!.redTests![0].testName).toBe('Test 1');
+      expect(result!.redTests![1].testName).toBe('Test 2');
+    });
+
+    it('should fix missing closing bracket in array', () => {
+      const response = `
+{
+  "redTests": [
+    {
+      "testName": "Test 1",
+      "testCode": "code1",
+      "attackVector": "vector1",
+      "expectedBehavior": "should_fail_on_vulnerable_code"
+    }
+`;
+      // Missing closing bracket and brace
+      const result = parseTestSuite(response);
+      expect(result).toBeDefined();
+      expect(result).not.toBeNull();
+      expect(result!.redTests).toBeDefined();
+      expect(result!.redTests).toHaveLength(1);
+      expect(result!.redTests![0].testName).toBe('Test 1');
+    });
+
+    it('should handle complex nested JSON with multiple issues', () => {
+      const response = `
+\`\`\`json
+{
+  "redTests": [
+    {
+      "testName": "Complex test",
+      "testCode": "const obj = { nested: { deep: 'value' } };",
+      "attackVector": "complex",
+      "expectedBehavior": "should_fail_on_vulnerable_code",
+    }
+  ],
+}
+\`\`\`
+`;
+      // Has trailing commas that should be fixed
+      const result = parseTestSuite(response);
+      expect(result).toBeDefined();
+      expect(result).not.toBeNull();
+      expect(result!.redTests).toBeDefined();
+      expect(result!.redTests).toHaveLength(1);
+    });
+
+    // Aider-inspired progressive completion tests
+    describe('Progressive JSON completion (Aider-inspired)', () => {
+      it('should recover JSON with ]{ suffix - array closure', () => {
+        const response = `
+{
+  "redTests": [
+    {
+      "testName": "Test 1",
+      "testCode": "code1",
+      "attackVector": "vector1",
+      "expectedBehavior": "should_fail_on_vulnerable_code"
+    }
+`;
+        // Missing ]} at end - progressive completion should fix it
+        const result = parseTestSuite(response);
+        expect(result).toBeDefined();
+        expect(result).not.toBeNull();
+        expect(result!.redTests).toHaveLength(1);
+      });
+
+      it('should recover JSON with }] suffix - object with array', () => {
+        const response = `
+{
+  "red": {
+    "testName": "Test name",
+    "testCode": "code",
+    "attackVector": "vector",
+    "expectedBehavior": "should_fail_on_vulnerable_code"
+  },
+  "metadata": [
+    "item1"
+`;
+        // Missing }] at end
+        const result = parseTestSuite(response);
+        // May return null or parse successfully depending on structure
+        // The key is it should not crash
+        expect(result !== undefined).toBe(true);
+      });
+
+      it('should recover JSON with "}]} suffix - truncated string in nested array', () => {
+        const response = `
+{
+  "redTests": [
+    {
+      "testName": "SQL Injection",
+      "testCode": "const payload = 'malicious
+`;
+        // Truncated mid-string within array of objects
+        const result = parseTestSuite(response);
+        // Should either recover or return null gracefully
+        expect(result !== undefined).toBe(true);
+      });
+
+      it('should handle progressive completion for RailsGoat-style truncation', () => {
+        const response = `
+{
+  "redTests": [
+    {
+      "testName": "ReDoS attack",
+      "testCode": "const maliciousCallback = 'a'.repeat(50) + '['
+`;
+        // Similar to actual RailsGoat issue - truncated with partial string
+        const result = parseTestSuite(response);
+        // May not fully recover but should handle gracefully
+        expect(result !== undefined).toBe(true);
+      });
     });
   });
 

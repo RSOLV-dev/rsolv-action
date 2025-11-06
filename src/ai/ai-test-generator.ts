@@ -9,6 +9,12 @@ import { AiClient, getAiClient } from './client.js';
 import { AIConfig } from './types.js';
 import { AiProviderConfig } from '../types/index.js';
 import { getTestGenerationTokenLimit } from './token-utils.js';
+import {
+  tryParseWithProgressiveCompletion,
+  isActuallyTruncatedString,
+  extractJsonFromText,
+  cleanJsonString,
+} from './json-repair.js';
 
 export interface AITestGenerationResult {
   success: boolean;
@@ -143,8 +149,15 @@ ${vulnerability.remediation ? `- Remediation: ${vulnerability.remediation}` : ''
 ${fileContent ? `## Vulnerable Code:\n\`\`\`${options.language}\n${fileContent}\n\`\`\`` : ''}
 
 ## Response Format:
-IMPORTANT: Return ONLY valid JSON. Keep test code CONCISE (max 10-15 lines per test).
-Focus on the core vulnerability check, not elaborate setup.
+CRITICAL: Return ONLY complete, valid JSON. The JSON MUST be syntactically complete with all braces, brackets, and quotes properly closed.
+Keep test code CONCISE (max 10-15 lines per test). Focus on the core vulnerability check, not elaborate setup.
+
+VALIDATION CHECKLIST before returning:
+- [ ] All opening braces { have matching closing braces }
+- [ ] All opening brackets [ have matching closing brackets ]
+- [ ] All string quotes are properly escaped and closed
+- [ ] No trailing commas before closing braces/brackets
+- [ ] The entire JSON object is complete and parseable
 
 For a single RED test, return:
 {
@@ -174,8 +187,11 @@ For multiple RED tests (complex vulnerabilities), return:
   ]
 }
 
-Keep ALL strings properly escaped. Avoid long test code.
-Return ONLY the JSON, no explanations.`;
+IMPORTANT:
+- Keep ALL strings properly escaped (use \\" for quotes inside strings)
+- Avoid long test code to prevent truncation
+- Ensure the JSON is COMPLETE with all closing braces/brackets
+- Return ONLY the JSON, no explanations before or after`;
   }
 
   private parseTestSuite(aiResponse: string): VulnerabilityTestSuite | null {
@@ -199,7 +215,7 @@ Return ONLY the JSON, no explanations.`;
 
       // 3. Try to extract raw JSON object using proper nested-aware extraction
       if (!jsonString) {
-        jsonString = this.extractJsonFromText(aiResponse);
+        jsonString = extractJsonFromText(aiResponse);
       }
 
       // 4. If response looks like pure JSON, use it directly
@@ -215,20 +231,26 @@ Return ONLY the JSON, no explanations.`;
       // Log extracted JSON length for debugging
       logger.debug(`Extracted JSON string length: ${jsonString.length} characters`);
 
-      // Clean up common issues
-      jsonString = jsonString
-        .replace(/^\s*```\s*json?\s*/gm, '') // Remove stray markdown markers
-        .replace(/\s*```\s*$/gm, '')
-        .trim();
+      // Clean up common issues using extracted utility
+      jsonString = cleanJsonString(jsonString);
 
       // Attempt to fix common JSON issues before parsing
       // Handle truncated responses by closing unclosed structures
       let openBraces = (jsonString.match(/\{/g) || []).length;
       let closeBraces = (jsonString.match(/\}/g) || []).length;
-      if (openBraces > closeBraces) {
-        logger.warn(`Fixing unclosed JSON structure: ${openBraces} open, ${closeBraces} closed`);
-        // Add missing closing braces
-        jsonString += '}'.repeat(openBraces - closeBraces);
+      let openBrackets = (jsonString.match(/\[/g) || []).length;
+      let closeBrackets = (jsonString.match(/\]/g) || []).length;
+
+      if (openBraces > closeBraces || openBrackets > closeBrackets) {
+        logger.warn(`Fixing unclosed JSON structure: ${openBraces} open braces, ${closeBraces} closed braces, ${openBrackets} open brackets, ${closeBrackets} closed brackets`);
+        // Add missing closing brackets first (arrays inside objects)
+        if (openBrackets > closeBrackets) {
+          jsonString += ']'.repeat(openBrackets - closeBrackets);
+        }
+        // Then add missing closing braces
+        if (openBraces > closeBraces) {
+          jsonString += '}'.repeat(openBraces - closeBraces);
+        }
       }
 
       // Only attempt JSON repair if it actually appears truncated
@@ -242,7 +264,7 @@ Return ONLY the JSON, no explanations.`;
       }
 
       // If the JSON appears truncated (ends mid-string), try to close it properly
-      if (!isValidJson && this.isActuallyTruncatedString(jsonString)) {
+      if (!isValidJson && isActuallyTruncatedString(jsonString)) {
         logger.warn('JSON appears truncated mid-string, attempting to close');
 
         // Count how many structures need closing
@@ -267,14 +289,15 @@ Return ONLY the JSON, no explanations.`;
         }
       }
 
-      let parsed;
-      try {
-        parsed = JSON.parse(jsonString);
-      } catch (parseError) {
-        logger.error('Failed to parse JSON after cleanup attempts:', parseError);
-        logger.debug('Attempted to parse:', jsonString.substring(0, 500));
+      // Try progressive JSON completion strategies (inspired by Aider)
+      // Attempt multiple completion suffixes to handle streaming truncation
+      const parseResult = tryParseWithProgressiveCompletion(jsonString);
+
+      if (!parseResult.success || !parseResult.data) {
         return null;
       }
+
+      const parsed = parseResult.data;
       
       // RFC-060: Validate RED-only test suite structure
       // Accept either single RED test or array of RED tests
@@ -300,12 +323,15 @@ Return ONLY the JSON, no explanations.`;
 
       if (parsed.redTests && Array.isArray(parsed.redTests)) {
         // Multiple RED tests for complex vulnerability
-        result.redTests = parsed.redTests.map((test: any) => ({
-          testName: test.testName || 'RED Test',
-          testCode: test.testCode || '// Test code truncated',
-          attackVector: test.attackVector || 'Unknown',
-          expectedBehavior: 'should_fail_on_vulnerable_code' as const
-        }));
+        result.redTests = parsed.redTests.map((test: unknown) => {
+          const testObj = test as Record<string, unknown>;
+          return {
+            testName: (testObj.testName as string) || 'RED Test',
+            testCode: (testObj.testCode as string) || '// Test code truncated',
+            attackVector: (testObj.attackVector as string) || 'Unknown',
+            expectedBehavior: 'should_fail_on_vulnerable_code' as const
+          };
+        });
       } else if (parsed.red) {
         // Single RED test
         result.red = {
@@ -482,113 +508,5 @@ defmodule SecurityVulnerabilityTest do
   use ExUnit.Case
 ${testBlocks}
 end`;
-  }
-
-  /**
-   * Detects if a JSON string is actually truncated (ends mid-string) vs just contains escaped quotes.
-   * This is more accurate than the regex /\"[^\"]*$/ which doesn't handle escaped quotes.
-   */
-  private isActuallyTruncatedString(jsonString: string): boolean {
-    // Simple heuristic: check if we're in an unterminated string by counting quote states
-    let inString = false;
-    let escape = false;
-
-    for (let i = 0; i < jsonString.length; i++) {
-      const char = jsonString[i];
-
-      if (escape) {
-        escape = false;
-        continue;
-      }
-
-      if (char === '\\' && inString) {
-        escape = true;
-        continue;
-      }
-
-      if (char === '"') {
-        inString = !inString;
-      }
-    }
-
-    // If we end while in a string state, and the string doesn't end with "},
-    // then it's likely actually truncated
-    return inString && !jsonString.trim().endsWith('"}');
-  }
-
-  /**
-   * Properly extracts JSON from text, handling nested objects correctly.
-   * This replaces the buggy regex /\{[\s\S]*\}/ that truncates at the first closing brace.
-   */
-  private extractJsonFromText(text: string): string | null {
-    // Find all potential JSON start/end positions
-    const positions: Array<{start: number, end: number}> = [];
-    let depth = 0;
-    let inString = false;
-    let escape = false;
-    let jsonStart = -1;
-
-    for (let i = 0; i < text.length; i++) {
-      const char = text[i];
-      const prevChar = i > 0 ? text[i - 1] : '';
-
-      // Handle escape sequences
-      if (escape) {
-        escape = false;
-        continue;
-      }
-
-      if (char === '\\' && inString) {
-        escape = true;
-        continue;
-      }
-
-      // Handle strings (quotes not escaped)
-      if (char === '"' && !escape) {
-        // Check if this quote is inside a string value by looking for : before it
-        // This is a simple heuristic but works for most JSON
-        inString = !inString;
-        continue;
-      }
-
-      // Only count braces outside of strings
-      if (!inString) {
-        if (char === '{') {
-          if (depth === 0) {
-            jsonStart = i;
-          }
-          depth++;
-        } else if (char === '}') {
-          depth--;
-          if (depth === 0 && jsonStart !== -1) {
-            positions.push({
-              start: jsonStart,
-              end: i + 1
-            });
-            jsonStart = -1;
-          }
-        }
-      }
-    }
-
-    // Try to parse each potential JSON object, return the largest valid one
-    let largestValid: string | null = null;
-    let largestSize = 0;
-
-    for (const pos of positions) {
-      const candidate = text.substring(pos.start, pos.end);
-      try {
-        // Validate it's actual JSON
-        JSON.parse(candidate);
-        if (candidate.length > largestSize) {
-          largestValid = candidate;
-          largestSize = candidate.length;
-        }
-      } catch {
-        // Invalid JSON, skip
-      }
-    }
-
-    return largestValid;
   }
 }

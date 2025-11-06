@@ -2759,7 +2759,7 @@ ${validation.falsePositive ?
         // Generate fix
         const solution = await adapter.generateSolutionWithGit(
           issue,
-          { 
+          {
             summary: 'Security issue fix',
             complexity: 'medium' as const,
             estimatedTime: 30,
@@ -2769,7 +2769,10 @@ ${validation.falsePositive ?
           undefined,
           validation.generatedTests
         );
-        
+
+        // Log solution commitHash for debugging
+        logger.info(`[MITIGATE] Solution generated with commitHash: ${solution.commitHash || 'UNDEFINED'}`);
+
         // Run tests if requested
         if (options.runTests) {
           const { runTests } = await import('../../utils/test-runner.js');
