@@ -291,7 +291,7 @@ IMPORTANT:
 
       // Try progressive JSON completion strategies (inspired by Aider)
       // Attempt multiple completion suffixes to handle streaming truncation
-      const parseResult = tryParseWithProgressiveCompletion(jsonString);
+      const parseResult = tryParseWithProgressiveCompletion<VulnerabilityTestSuite>(jsonString);
 
       if (!parseResult.success || !parseResult.data) {
         return null;
