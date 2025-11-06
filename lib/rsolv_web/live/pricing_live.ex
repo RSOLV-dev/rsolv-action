@@ -14,11 +14,35 @@ defmodule RsolvWeb.PricingLive do
   use RsolvWeb, :live_view
 
   alias RsolvWeb.Components.Marketing.PricingTwoTier
+  alias RsolvWeb.Components.Marketing.Icons
+  alias RsolvWeb.Services.Analytics
+  alias RsolvWeb.Helpers.TrackingHelper
 
   @impl true
-  def mount(_params, _session, socket) do
+  def mount(params, _session, socket) do
     # Feature flag check handled by router pipeline
-    {:ok, assign(socket, page_title: "Pricing")}
+    socket =
+      socket
+      |> assign(:page_title, "Pricing")
+      |> TrackingHelper.assign_utm_params(params)
+
+    # Track page view
+    referrer = socket.assigns[:referrer]
+    tracking_data = TrackingHelper.extract_tracking_data(socket)
+    Analytics.track_page_view("/pricing", referrer, tracking_data)
+
+    {:ok, socket}
+  end
+
+  @impl true
+  def handle_event("track_cta_click", %{"destination" => destination, "plan" => plan}, socket) do
+    tracking_data =
+      socket
+      |> TrackingHelper.extract_tracking_data()
+      |> Map.merge(%{destination: destination, plan: plan, cta_type: "pricing"})
+
+    Analytics.track("cta_click", tracking_data)
+    {:noreply, socket}
   end
 
   @impl true
@@ -184,13 +208,18 @@ defmodule RsolvWeb.PricingLive do
 
   defp faq_item(assigns) do
     ~H"""
-    <div>
-      <dt class="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-        {@question}
-      </dt>
-      <dd class="text-base text-gray-600 dark:text-gray-400">
-        {@answer}
-      </dd>
+    <div class="flex gap-4">
+      <div class="flex-shrink-0 text-blue-600 dark:text-blue-400 mt-1">
+        {Phoenix.HTML.raw(Icons.checkmark_circle(color: "text-blue-600 dark:text-blue-400"))}
+      </div>
+      <div class="flex-1">
+        <dt class="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+          {@question}
+        </dt>
+        <dd class="text-base text-gray-600 dark:text-gray-400">
+          {@answer}
+        </dd>
+      </div>
     </div>
     """
   end
