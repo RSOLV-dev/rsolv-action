@@ -5,8 +5,8 @@ defmodule RsolvWeb.PricingLiveTest do
   alias RsolvWeb.FunWithFlagsHelper
 
   setup do
-    # Setup sandbox for FunWithFlags queries
-    :ok = Ecto.Adapters.SQL.Sandbox.checkout(Rsolv.Repo)
+    # ConnCase already checks out the sandbox, just set to shared mode
+    # so FunWithFlags queries can access the same transaction
     Ecto.Adapters.SQL.Sandbox.mode(Rsolv.Repo, {:shared, self()})
     :ok
   end
