@@ -22,11 +22,6 @@ defmodule RsolvWeb.FunWithFlagsHelper do
     :ok = Ecto.Adapters.SQL.Sandbox.checkout(Rsolv.Repo)
     Ecto.Adapters.SQL.Sandbox.mode(Rsolv.Repo, {:shared, self()})
 
-    # Clear any cached flags
-    if function_exported?(FunWithFlags.Store.Cache, :flush, 0) do
-      FunWithFlags.Store.Cache.flush()
-    end
-
     :ok
   end
 
@@ -38,12 +33,7 @@ defmodule RsolvWeb.FunWithFlagsHelper do
     Ecto.Adapters.SQL.Sandbox.mode(Rsolv.Repo, {:shared, self()})
 
     # Enable the flag
-    :ok = FunWithFlags.enable(flag)
-
-    # Clear cache to ensure the change is visible
-    if function_exported?(FunWithFlags.Store.Cache, :flush, 0) do
-      FunWithFlags.Store.Cache.flush()
-    end
+    {:ok, _} = FunWithFlags.enable(flag)
 
     :ok
   end
@@ -56,12 +46,7 @@ defmodule RsolvWeb.FunWithFlagsHelper do
     Ecto.Adapters.SQL.Sandbox.mode(Rsolv.Repo, {:shared, self()})
 
     # Disable the flag
-    :ok = FunWithFlags.disable(flag)
-
-    # Clear cache to ensure the change is visible
-    if function_exported?(FunWithFlags.Store.Cache, :flush, 0) do
-      FunWithFlags.Store.Cache.flush()
-    end
+    {:ok, _} = FunWithFlags.disable(flag)
 
     :ok
   end
@@ -74,15 +59,10 @@ defmodule RsolvWeb.FunWithFlagsHelper do
     Ecto.Adapters.SQL.Sandbox.mode(Rsolv.Repo, {:shared, self()})
 
     # First disable globally
-    :ok = FunWithFlags.disable(flag)
+    {:ok, _} = FunWithFlags.disable(flag)
 
     # Then enable for the group
-    :ok = FunWithFlags.enable(flag, for_group: group)
-
-    # Clear cache
-    if function_exported?(FunWithFlags.Store.Cache, :flush, 0) do
-      FunWithFlags.Store.Cache.flush()
-    end
+    {:ok, _} = FunWithFlags.enable(flag, for_group: group)
 
     :ok
   end
@@ -103,11 +83,6 @@ defmodule RsolvWeb.FunWithFlagsHelper do
 
       _ ->
         :ok
-    end
-
-    # Clear cache
-    if function_exported?(FunWithFlags.Store.Cache, :flush, 0) do
-      FunWithFlags.Store.Cache.flush()
     end
 
     :ok

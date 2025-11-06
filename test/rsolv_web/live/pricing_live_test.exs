@@ -2,14 +2,22 @@ defmodule RsolvWeb.PricingLiveTest do
   use RsolvWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
+  alias RsolvWeb.FunWithFlagsHelper
+
+  setup do
+    # Setup sandbox for FunWithFlags queries
+    :ok = Ecto.Adapters.SQL.Sandbox.checkout(Rsolv.Repo)
+    Ecto.Adapters.SQL.Sandbox.mode(Rsolv.Repo, {:shared, self()})
+    :ok
+  end
 
   describe "pricing page with feature flag ON" do
     setup do
-      # Enable feature flag for these tests
-      {:ok, _} = FunWithFlags.enable(:public_site)
+      # Enable feature flag for these tests using sandbox-safe helper
+      FunWithFlagsHelper.enable_flag(:public_site)
 
       on_exit(fn ->
-        FunWithFlags.disable(:public_site)
+        FunWithFlagsHelper.disable_flag(:public_site)
       end)
 
       :ok
@@ -138,8 +146,8 @@ defmodule RsolvWeb.PricingLiveTest do
 
   describe "pricing page with feature flag OFF" do
     setup do
-      # Disable flag for these tests
-      FunWithFlags.disable(:public_site)
+      # Disable flag for these tests using sandbox-safe helper
+      FunWithFlagsHelper.disable_flag(:public_site)
       :ok
     end
 
@@ -158,6 +166,11 @@ defmodule RsolvWeb.PricingLiveTest do
   end
 
   describe "mobile responsiveness" do
+    setup do
+      FunWithFlagsHelper.enable_flag(:public_site)
+      :ok
+    end
+
     test "uses responsive grid classes for 3 tiers", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/pricing")
 
@@ -176,6 +189,11 @@ defmodule RsolvWeb.PricingLiveTest do
   end
 
   describe "dark mode compatibility" do
+    setup do
+      FunWithFlagsHelper.enable_flag(:public_site)
+      :ok
+    end
+
     test "includes dark mode classes for background", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/pricing")
 
@@ -202,6 +220,11 @@ defmodule RsolvWeb.PricingLiveTest do
   end
 
   describe "accessibility" do
+    setup do
+      FunWithFlagsHelper.enable_flag(:public_site)
+      :ok
+    end
+
     test "pricing tiers have proper IDs for aria-describedby", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/pricing")
 
@@ -227,6 +250,11 @@ defmodule RsolvWeb.PricingLiveTest do
   end
 
   describe "integration with billing context" do
+    setup do
+      FunWithFlagsHelper.enable_flag(:public_site)
+      :ok
+    end
+
     test "pricing amounts match RFC-066 billing configuration", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/pricing")
 
