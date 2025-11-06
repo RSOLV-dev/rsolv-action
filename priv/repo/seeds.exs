@@ -6,7 +6,7 @@
 
 alias Rsolv.Repo
 alias Rsolv.Customers
-alias Rsolv.Customers.{Customer, ApiKey}
+alias Rsolv.Customers.{Customer, ApiKey, ForgeAccount}
 
 IO.puts("Creating seed customers with authentication...")
 
@@ -205,6 +205,75 @@ inactive_raw_key = inactive_result.raw_key
 IO.puts("  ✓ Inactive customer created: inactive@example.com (password: InactiveP@ssw0rd2025!)")
 IO.puts("    API Key (inactive): #{inactive_raw_key}")
 
+# ============================================================================
+# FORGE ACCOUNTS - Testing Configuration (RFC-067)
+# ============================================================================
+# For testing three-phase workflow on RSOLV-dev repositories.
+# In production, ForgeAccounts are created via GitHub OAuth verification.
+# See: projects/go-to-market-2025-10/RFC-067-FORGEACCOUNT-ANALYSIS.md
+# ============================================================================
+
+IO.puts("\nCreating ForgeAccounts for testing...")
+
+# Create ForgeAccount for test customer (RSOLV-dev organization)
+case Repo.get_by(ForgeAccount,
+       customer_id: test_customer.id,
+       forge_type: :github,
+       namespace: "RSOLV-dev"
+     ) do
+  nil ->
+    {:ok, _forge_account} =
+      %ForgeAccount{}
+      |> ForgeAccount.changeset(%{
+        customer_id: test_customer.id,
+        forge_type: :github,
+        namespace: "RSOLV-dev",
+        # For testing: mark as verified to bypass authorization checks
+        # In production: OAuth flow sets this after GitHub verification
+        verified_at: DateTime.utc_now(),
+        metadata: %{
+          "verified_method" => "test_seeding",
+          "account_type" => "organization",
+          "note" => "Testing account for RSOLV-dev organization repositories",
+          "created_for" => "RFC-067 marketplace testing"
+        }
+      })
+      |> Repo.insert()
+
+    IO.puts("  ✓ Created ForgeAccount for RSOLV-dev (test customer)")
+
+  _existing ->
+    IO.puts("  ✓ ForgeAccount for RSOLV-dev (test customer) already exists")
+end
+
+# Create ForgeAccount for demo customer (RSOLV-dev organization)
+case Repo.get_by(ForgeAccount,
+       customer_id: demo_customer.id,
+       forge_type: :github,
+       namespace: "RSOLV-dev"
+     ) do
+  nil ->
+    {:ok, _forge_account} =
+      %ForgeAccount{}
+      |> ForgeAccount.changeset(%{
+        customer_id: demo_customer.id,
+        forge_type: :github,
+        namespace: "RSOLV-dev",
+        verified_at: DateTime.utc_now(),
+        metadata: %{
+          "verified_method" => "test_seeding",
+          "account_type" => "organization",
+          "note" => "Testing account for demos"
+        }
+      })
+      |> Repo.insert()
+
+    IO.puts("  ✓ Created ForgeAccount for RSOLV-dev (demo customer)")
+
+  _existing ->
+    IO.puts("  ✓ ForgeAccount for RSOLV-dev (demo customer) already exists")
+end
+
 IO.puts("\n✅ Seeds complete!")
 IO.puts("\nQuick reference:")
 IO.puts("  Admin:      admin@rsolv.dev / AdminP@ssw0rd2025!")
@@ -213,3 +282,4 @@ IO.puts("  Test:       test@example.com / TestP@ssw0rd2025!")
 IO.puts("  Demo:       demo@example.com / DemoP@ssw0rd2025!")
 IO.puts("  Enterprise: enterprise@bigcorp.com / EnterpriseP@ssw0rd2025!")
 IO.puts("\nNote: All passwords follow RFC-049 security requirements")
+IO.puts("ForgeAccounts: Test and Demo customers can access RSOLV-dev repositories")
