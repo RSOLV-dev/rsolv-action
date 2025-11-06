@@ -79,9 +79,6 @@ defmodule RsolvWeb.Components.Header do
           <!-- Mobile menu button -->
           <div class="md:hidden flex items-center gap-2">
             <.theme_toggle variant={if @is_homepage, do: "homepage", else: "default"} />
-            <a href="/#early-access" class={"#{@button_class} text-sm px-3 py-1.5"}>
-              Get Early Access
-            </a>
             <button
               type="button"
               phx-click={@socket && "toggle_mobile_menu"}

@@ -220,9 +220,9 @@ defmodule RsolvWeb.Components.Marketing.CtaSimpleCenteredTest do
 
       html = render_component(&CtaSimpleCentered.cta_simple_centered/1, assigns)
 
-      # Responsive padding
-      assert html =~ "py-24"
-      assert html =~ "sm:py-32"
+      # Responsive padding (normalized for better visual balance)
+      assert html =~ "py-16"
+      assert html =~ "sm:py-24"
 
       # Responsive flex layout
       assert html =~ "lg:flex"

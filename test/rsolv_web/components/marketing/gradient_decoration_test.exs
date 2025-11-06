@@ -125,7 +125,8 @@ defmodule RsolvWeb.Components.Marketing.GradientDecorationTest do
       assert html =~ "top-1/2"
       assert html =~ "left-1/2"
       assert html =~ "-z-10"
-      assert html =~ "size-256"
+      # Fixed: Reduced from size-256 (1024px) to size-96 (384px) to prevent overflow
+      assert html =~ "size-96"
       assert html =~ "-translate-y-1/2"
     end
 

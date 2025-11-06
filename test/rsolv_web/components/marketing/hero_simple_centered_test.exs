@@ -164,10 +164,28 @@ defmodule RsolvWeb.Components.Marketing.HeroSimpleCenteredTest do
       assert html =~ "text-5xl"
       assert html =~ "sm:text-7xl"
 
-      # Responsive spacing
-      assert html =~ "py-32"
-      assert html =~ "sm:py-48"
-      assert html =~ "lg:py-56"
+      # Responsive spacing (normalized for better visual balance)
+      assert html =~ "py-16"
+      assert html =~ "sm:py-24"
+      assert html =~ "lg:py-32"
+    end
+
+    test "CTA buttons have proper spacing for mobile wrap" do
+      assigns = %{
+        heading: "Main Heading",
+        subheading: "Subheading Text",
+        primary_cta_text: "Primary",
+        primary_cta_link: "/primary",
+        secondary_cta_text: "Secondary",
+        secondary_cta_link: "/secondary"
+      }
+
+      html = render_component(&HeroSimpleCentered.hero_simple_centered/1, assigns)
+
+      # Button container needs flex-wrap and gaps for proper mobile spacing
+      assert html =~ "flex-wrap"
+      assert html =~ "gap-x-6"
+      assert html =~ "gap-y-4"
     end
 
     test "uses semantic HTML structure" do

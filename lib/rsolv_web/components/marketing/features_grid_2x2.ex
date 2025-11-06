@@ -60,7 +60,7 @@ defmodule RsolvWeb.Components.Marketing.FeaturesGrid2x2 do
 
   def features_grid_2x2(assigns) do
     ~H"""
-    <div class={"bg-white dark:bg-gray-900 py-24 sm:py-32 #{@class}"}>
+    <div class={"bg-white dark:bg-gray-900 py-16 sm:py-24 #{@class}"}>
       <div class="mx-auto max-w-7xl px-6 lg:px-8">
         <div class="mx-auto max-w-2xl lg:text-center">
           <%= if @eyebrow do %>

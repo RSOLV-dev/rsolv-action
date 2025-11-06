@@ -107,7 +107,7 @@ defmodule RsolvWeb.Components.Marketing.GradientDecoration do
       end
 
     svg_class =
-      "absolute top-1/2 left-1/2 -z-10 size-256 -translate-y-1/2 [mask-image:radial-gradient(closest-side,white,transparent)] sm:left-full sm:-ml-80 lg:left-1/2 lg:ml-0 lg:-translate-x-1/2 lg:translate-y-0"
+      "absolute top-1/2 left-1/2 -z-10 size-96 -translate-y-1/2 [mask-image:radial-gradient(closest-side,white,transparent)] sm:left-full sm:-ml-80 lg:left-1/2 lg:ml-0 lg:-translate-x-1/2 lg:translate-y-0"
 
     assigns
     |> assign(:clip_path, clip_path)
