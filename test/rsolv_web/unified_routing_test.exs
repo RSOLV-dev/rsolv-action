@@ -18,6 +18,9 @@ defmodule RsolvWeb.UnifiedRoutingTest do
     end
 
     test "early access page is accessible", %{conn: conn} do
+      # Enable public_site feature flag for this test (RFC-078)
+      {:ok, _} = FunWithFlags.enable(:public_site)
+
       conn = get(conn, "/signup")
       assert html_response(conn, 200)
     end
