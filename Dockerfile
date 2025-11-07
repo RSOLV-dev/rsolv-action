@@ -38,8 +38,11 @@ COPY priv/templates priv/templates
 # Build assets (now lib/ exists so Tailwind can scan components)
 RUN rm -rf priv/static && mix assets.deploy
 
-# Copy the correct static files
-COPY priv/static priv/static
+# Copy non-asset static files (fonts, images, data, etc.) but NOT assets/
+# The assets/ directory was just built by mix assets.deploy and should not be overwritten
+COPY priv/static/fonts priv/static/fonts
+COPY priv/static/images priv/static/images
+COPY priv/static/data priv/static/data
 
 # Compile the application
 RUN mix compile
