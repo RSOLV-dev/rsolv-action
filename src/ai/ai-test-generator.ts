@@ -24,6 +24,37 @@ export interface AITestGenerationResult {
   error?: string;
 }
 
+/**
+ * Interface for the parsed JSON response from AI
+ * Represents the raw structure before validation
+ */
+interface ParsedAIResponse {
+  red?: {
+    testName?: string;
+    testCode?: string;
+    attackVector?: string;
+    expectedBehavior?: string;
+  };
+  redTests?: Array<{
+    testName?: string;
+    testCode?: string;
+    attackVector?: string;
+    expectedBehavior?: string;
+  }>;
+  green?: {
+    testName?: string;
+    testCode?: string;
+    validInput?: string;
+    expectedBehavior?: string;
+  };
+  refactor?: {
+    testName?: string;
+    testCode?: string;
+    functionalValidation?: string[];
+    expectedBehavior?: string;
+  };
+}
+
 export class AITestGenerator {
   private aiClient: AiClient | null = null;
   private aiConfig: AIConfig;
@@ -238,8 +269,8 @@ IMPORTANT:
       // Handle truncated responses by closing unclosed structures
       let openBraces = (jsonString.match(/\{/g) || []).length;
       let closeBraces = (jsonString.match(/\}/g) || []).length;
-      let openBrackets = (jsonString.match(/\[/g) || []).length;
-      let closeBrackets = (jsonString.match(/\]/g) || []).length;
+      const openBrackets = (jsonString.match(/\[/g) || []).length;
+      const closeBrackets = (jsonString.match(/\]/g) || []).length;
 
       if (openBraces > closeBraces || openBrackets > closeBrackets) {
         logger.warn(`Fixing unclosed JSON structure: ${openBraces} open braces, ${closeBraces} closed braces, ${openBrackets} open brackets, ${closeBrackets} closed brackets`);
@@ -297,7 +328,7 @@ IMPORTANT:
         return null;
       }
 
-      const parsed = parseResult.data;
+      const parsed = parseResult.data as ParsedAIResponse;
       
       // RFC-060: Validate RED-only test suite structure
       // Accept either single RED test or array of RED tests

@@ -62,8 +62,8 @@ end`;
       testSuite: {
         redTests: [{
           testName: 'rejects SQL injection',
-          testCode: `post :search, params: { q: "admin'; DROP TABLE users;--" }\nexpect(response.status).to eq(400)`,
-          attackVector: "admin'; DROP TABLE users;--"
+          testCode: 'post :search, params: { q: "admin\'; DROP TABLE users;--" }\nexpect(response.status).to eq(400)',
+          attackVector: 'admin\'; DROP TABLE users;--'
         }]
       },
       framework: 'rspec',
@@ -78,7 +78,7 @@ end`;
 
     // Verify the integrated content includes the security test
     expect(response.integratedContent).toContain('rejects SQL injection');
-    expect(response.integratedContent).toContain("admin'; DROP TABLE users;--");
+    expect(response.integratedContent).toContain('admin\'; DROP TABLE users;--');
 
     console.log(`[E2E] Generated ${response.integratedContent.split('\n').length} lines using ${response.method} method`);
     console.log(`[E2E] Insertion point: line ${response.insertionPoint.line} (${response.insertionPoint.strategy})`);
@@ -119,7 +119,7 @@ describe('UsersController', () => {
       testSuite: {
         redTests: [{
           testName: 'prevents XSS in user input',
-          testCode: `const maliciousInput = '<script>alert(\"xss\")</script>';\nconst result = createUser({ name: maliciousInput });\nexpect(result.name).not.toContain('<script>');`,
+          testCode: 'const maliciousInput = \'<script>alert(\"xss\")</script>\';\nconst result = createUser({ name: maliciousInput });\nexpect(result.name).not.toContain(\'<script>\');',
           attackVector: '<script>alert("xss")</script>'
         }]
       },
@@ -164,8 +164,8 @@ describe('UsersController', () => {
       testSuite: {
         redTests: [{
           testName: 'test_sql_injection_prevented',
-          testCode: `malicious_input = "'; DROP TABLE users;--"\nresult = search_users(malicious_input)\nassert result.status_code == 400`,
-          attackVector: "'; DROP TABLE users;--"
+          testCode: 'malicious_input = "\'; DROP TABLE users;--"\nresult = search_users(malicious_input)\nassert result.status_code == 400',
+          attackVector: '\'; DROP TABLE users;--'
         }]
       },
       framework: 'pytest',
