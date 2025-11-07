@@ -81,6 +81,7 @@ defmodule RsolvWeb.Router do
 
     live_session :public_site, on_mount: [{RsolvWeb.LiveHooks, :assign_current_path}] do
       live "/landing", LandingLive, :index
+      live "/pricing", PricingLive, :index
     end
   end
 

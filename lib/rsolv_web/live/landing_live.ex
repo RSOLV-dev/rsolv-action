@@ -10,15 +10,14 @@ defmodule RsolvWeb.LandingLive do
   use RsolvWeb, :live_view
 
   import RsolvWeb.MarketingComponents
+  import RsolvWeb.Live.Concerns.PageTracking
 
-  # Import new Tailwind Plus marketing components
-  alias RsolvWeb.Components.Marketing.HeroSimpleCentered
-  alias RsolvWeb.Components.Marketing.FeaturesGrid2x2
-  alias RsolvWeb.Components.Marketing.CtaSimpleCentered
-  alias RsolvWeb.Components.Marketing.Icons
-
-  alias RsolvWeb.Services.Analytics
-  alias RsolvWeb.Helpers.TrackingHelper
+  alias RsolvWeb.Components.Marketing.{
+    HeroSimpleCentered,
+    FeaturesGrid2x2,
+    CtaSimpleCentered,
+    Icons
+  }
 
   @impl true
   def mount(params, _session, socket) do
@@ -27,12 +26,7 @@ defmodule RsolvWeb.LandingLive do
       socket
       |> assign(:mobile_menu_open, false)
       |> assign(:features, features())
-      |> TrackingHelper.assign_utm_params(params)
-
-    # Track page view
-    referrer = socket.assigns[:referrer]
-    tracking_data = TrackingHelper.extract_tracking_data(socket)
-    Analytics.track_page_view("/landing", referrer, tracking_data)
+      |> track_page_view(params, "/landing")
 
     {:ok, socket}
   end
@@ -49,13 +43,7 @@ defmodule RsolvWeb.LandingLive do
 
   @impl true
   def handle_event("track_cta_click", %{"destination" => destination}, socket) do
-    tracking_data =
-      socket
-      |> TrackingHelper.extract_tracking_data()
-      |> Map.merge(%{destination: destination, cta_type: "primary"})
-
-    Analytics.track("cta_click", tracking_data)
-    {:noreply, socket}
+    track_cta_click(socket, destination, %{cta_type: "primary"})
   end
 
   # Private functions

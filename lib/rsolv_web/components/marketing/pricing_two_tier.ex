@@ -86,13 +86,28 @@ defmodule RsolvWeb.Components.Marketing.PricingTwoTier do
       <!-- Header -->
       <.section_header eyebrow={@eyebrow} heading={@heading} description={@description} />
       <!-- Pricing tiers -->
-      <div class="mx-auto mt-16 grid max-w-lg grid-cols-1 items-center gap-y-6 sm:mt-20 sm:gap-y-0 lg:max-w-4xl lg:grid-cols-2">
+      <div class={get_grid_classes(length(@tiers))}>
         <%= for {tier, index} <- Enum.with_index(@tiers) do %>
-          <.pricing_tier_card tier={tier} index={index} />
+          <.pricing_tier_card tier={tier} index={index} total_tiers={length(@tiers)} />
         <% end %>
       </div>
     </div>
     """
+  end
+
+  # Private helper functions
+
+  defp get_grid_classes(2) do
+    "mx-auto mt-16 grid max-w-lg grid-cols-1 items-center gap-y-6 sm:mt-20 sm:gap-y-0 lg:max-w-4xl lg:grid-cols-2"
+  end
+
+  defp get_grid_classes(3) do
+    "mx-auto mt-16 grid max-w-lg grid-cols-1 items-stretch gap-6 sm:mt-20 lg:max-w-6xl lg:grid-cols-3"
+  end
+
+  defp get_grid_classes(_) do
+    # Fallback for other counts
+    "mx-auto mt-16 grid max-w-lg grid-cols-1 items-stretch gap-6 sm:mt-20 lg:max-w-6xl lg:grid-cols-2"
   end
 
   # Private function components
@@ -119,13 +134,14 @@ defmodule RsolvWeb.Components.Marketing.PricingTwoTier do
 
   attr :tier, :map, required: true
   attr :index, :integer, required: true
+  attr :total_tiers, :integer, required: true
 
   defp pricing_tier_card(assigns) do
     ~H"""
     <%= if @tier.highlighted do %>
       <.highlighted_tier tier={@tier} />
     <% else %>
-      <.standard_tier tier={@tier} index={@index} />
+      <.standard_tier tier={@tier} index={@index} total_tiers={@total_tiers} />
     <% end %>
     """
   end
@@ -153,10 +169,22 @@ defmodule RsolvWeb.Components.Marketing.PricingTwoTier do
 
   attr :tier, :map, required: true
   attr :index, :integer, required: true
+  attr :total_tiers, :integer, required: true
 
   defp standard_tier(assigns) do
+    # For 3-tier layouts, don't add special rounded corners
+    # For 2-tier layouts, keep the original special styling for first tier
+    rounded_classes =
+      if assigns.total_tiers == 2 && assigns.index == 0 do
+        "rounded-t-3xl sm:mx-8 sm:rounded-b-none lg:mx-0 lg:rounded-bl-3xl lg:rounded-tr-none"
+      else
+        ""
+      end
+
+    assigns = assign(assigns, :rounded_classes, rounded_classes)
+
     ~H"""
-    <div class={"rounded-3xl bg-white/60 dark:bg-gray-800/60 p-8 ring-1 ring-gray-900/10 dark:ring-white/10 sm:p-10 #{if @index == 0, do: "rounded-t-3xl sm:mx-8 sm:rounded-b-none lg:mx-0 lg:rounded-bl-3xl lg:rounded-tr-none", else: ""}"}>
+    <div class={"rounded-3xl bg-white/60 dark:bg-gray-800/60 p-8 ring-1 ring-gray-900/10 dark:ring-white/10 sm:p-10 #{@rounded_classes}"}>
       <h3 id={@tier.id} class="text-base/7 font-semibold text-blue-600 dark:text-blue-400">
         {@tier.name}
       </h3>
