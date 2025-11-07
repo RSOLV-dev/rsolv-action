@@ -125,9 +125,14 @@ defmodule RsolvWeb.SignupLive do
                   Next Steps:
                 </h3>
                 <ul class="text-sm text-blue-700 dark:text-blue-300 space-y-1 list-disc list-inside">
-                  <li>Check your email (<span class="font-medium">{@customer_email}</span>) for setup instructions</li>
+                  <li>
+                    Check your email (<span class="font-medium">{@customer_email}</span>) for setup instructions
+                  </li>
                   <li>You have 5 free trial credits to get started</li>
-                  <li>Visit our <a href="/docs" class="underline hover:text-blue-800">documentation</a> to integrate RSOLV</li>
+                  <li>
+                    Visit our <a href="/docs" class="underline hover:text-blue-800">documentation</a>
+                    to integrate RSOLV
+                  </li>
                 </ul>
               </div>
             </div>
@@ -202,8 +207,7 @@ defmodule RsolvWeb.SignupLive do
                   </p>
                   <%= if @suggested_correction && @suggested_correction != @email do %>
                     <p class="mt-1 text-sm text-yellow-600 dark:text-yellow-400">
-                      Did you mean
-                      <a
+                      Did you mean <a
                         href="#"
                         phx-click="use_suggestion"
                         class="underline hover:text-yellow-700 dark:hover:text-yellow-300 font-medium"
@@ -251,7 +255,10 @@ defmodule RsolvWeb.SignupLive do
               <div class="text-center">
                 <p class="text-sm text-gray-600 dark:text-gray-400">
                   Already have an account?
-                  <a href="/signin" class="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium">
+                  <a
+                    href="/signin"
+                    class="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
+                  >
                     Sign in
                   </a>
                 </p>
@@ -262,8 +269,7 @@ defmodule RsolvWeb.SignupLive do
                 <a href="/terms" class="underline hover:text-gray-700 dark:hover:text-gray-300">
                   Terms of Service
                 </a>
-                and
-                <a href="/privacy" class="underline hover:text-gray-700 dark:hover:text-gray-300">
+                and <a href="/privacy" class="underline hover:text-gray-700 dark:hover:text-gray-300">
                   Privacy Policy
                 </a>.
               </p>
@@ -500,6 +506,12 @@ defmodule RsolvWeb.SignupLive do
   @impl true
   def handle_info(:reset_copied, socket) do
     {:noreply, assign(socket, copied: false)}
+  end
+
+  # Catch-all for messages we don't need to handle (e.g., Bamboo's :delivered_email)
+  @impl true
+  def handle_info(_msg, socket) do
+    {:noreply, socket}
   end
 
   # Format Ecto changeset errors into user-friendly message
