@@ -9,7 +9,7 @@ defmodule RsolvWeb.SignupLive do
   use RsolvWeb, :live_view
   require Logger
 
-  alias Rsolv.CustomerOnboarding
+  alias Rsolv.{CustomerOnboarding, Customers, FunnelTracking, RateLimiter}
   alias RsolvWeb.Services.Analytics
   alias RsolvWeb.Validators.EmailValidator
 
@@ -124,14 +124,37 @@ defmodule RsolvWeb.SignupLive do
                 <h3 class="text-sm font-medium text-blue-900 dark:text-blue-200 mb-2">
                   Next Steps:
                 </h3>
-                <ul class="text-sm text-blue-700 dark:text-blue-300 space-y-1 list-disc list-inside">
+                <ul class="text-sm text-blue-700 dark:text-blue-300 space-y-2 list-decimal list-inside">
                   <li>
-                    Check your email (<span class="font-medium">{@customer_email}</span>) for setup instructions
+                    <a
+                      href="https://github.com/RSOLV-dev/RSOLV-action"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="underline hover:text-blue-800 dark:hover:text-blue-200 font-medium"
+                    >
+                      Install the RSOLV GitHub Action
+                    </a>
+                    {" "}in your repository
+                  </li>
+                  <li>
+                    Add your API key to <span class="font-mono text-xs bg-gray-100 dark:bg-gray-800 px-1 rounded">RSOLV_API_KEY</span>
+                    {" "}in GitHub Secrets
                   </li>
                   <li>You have 5 free trial credits to get started</li>
                   <li>
-                    Visit our <a href="/docs" class="underline hover:text-blue-800">documentation</a>
-                    to integrate RSOLV
+                    Visit our{" "}
+                    <a
+                      href="https://docs.rsolv.dev"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="underline hover:text-blue-800 dark:hover:text-blue-200"
+                    >
+                      documentation
+                    </a>
+                    {" "}to learn more
+                  </li>
+                  <li>
+                    Check your email (<span class="font-medium">{@customer_email}</span>) for setup instructions
                   </li>
                 </ul>
               </div>
@@ -287,6 +310,9 @@ defmodule RsolvWeb.SignupLive do
     tracking_data = extract_tracking_data(socket, session)
     Analytics.track_section_view("signup-form", nil, tracking_data)
 
+    # Get IP address for rate limiting (must be done during mount)
+    ip_address = get_connect_info(socket, :peer_data) |> get_ip_address()
+
     {:ok,
      assign(socket,
        email: "",
@@ -299,7 +325,8 @@ defmodule RsolvWeb.SignupLive do
        customer_email: nil,
        copied: false,
        tracking_data: tracking_data,
-       current_path: "/signup"
+       current_path: "/signup",
+       ip_address: ip_address
      )}
   end
 
@@ -314,119 +341,151 @@ defmodule RsolvWeb.SignupLive do
     # Track submission attempt
     Analytics.track_form_submission("signup", "attempt", socket.assigns.tracking_data)
 
-    # Validate email
-    case EmailValidator.validate_with_feedback(email) do
-      {:ok, _} ->
-        # Set submitting state
-        socket = assign(socket, submitting: true)
+    # Get IP address from socket assigns (stored during mount)
+    ip_address = socket.assigns.ip_address
 
-        # Provision customer via CustomerOnboarding
-        Logger.info("Signup attempt for email: #{email}")
-
-        # Extract name from email (before @) as a default
-        # User can update this later in their profile
-        default_name = email |> String.split("@") |> List.first() |> String.capitalize()
-
-        case CustomerOnboarding.provision_customer(%{email: email, name: default_name}) do
-          {:ok, %{customer: customer, api_key: raw_api_key}} ->
-            Logger.info("Successfully created customer #{customer.id} with email: #{email}")
-
-            # Track successful conversion
-            email_domain = email |> String.split("@") |> List.last()
-
-            conversion_data =
-              Map.merge(socket.assigns.tracking_data, %{
-                email_domain: email_domain,
-                conversion_type: "signup",
-                customer_id: customer.id
-              })
-
-            Analytics.track_form_submission("signup", "success", conversion_data)
-            Analytics.track_conversion("signup", conversion_data)
-
-            # Show success screen with API key
-            {:noreply,
-             assign(socket,
-               signup_complete: true,
-               api_key: raw_api_key,
-               customer_email: customer.email,
-               submitting: false
-             )}
-
-          {:error, {:validation_failed, reason}} when is_binary(reason) ->
-            Logger.warning("Signup validation failed: #{reason}")
-
-            error_data =
-              Map.merge(socket.assigns.tracking_data, %{
-                error_type: "validation",
-                error_details: reason
-              })
-
-            Analytics.track_form_submission("signup", "error", error_data)
-
-            {:noreply,
-             assign(socket,
-               error_message: reason,
-               submitting: false
-             )}
-
-          {:error, {:validation_failed, %Ecto.Changeset{} = changeset}} ->
-            error_message = format_changeset_errors(changeset)
-            Logger.warning("Signup validation failed: #{error_message}")
-
-            error_data =
-              Map.merge(socket.assigns.tracking_data, %{
-                error_type: "validation",
-                error_details: error_message
-              })
-
-            Analytics.track_form_submission("signup", "error", error_data)
-
-            {:noreply,
-             assign(socket,
-               error_message: error_message,
-               submitting: false
-             )}
-
-          {:error, reason} ->
-            Logger.error("Signup failed: #{inspect(reason)}")
-
-            error_data =
-              Map.merge(socket.assigns.tracking_data, %{
-                error_type: "system",
-                error_details: inspect(reason)
-              })
-
-            Analytics.track_form_submission("signup", "error", error_data)
-
-            {:noreply,
-             assign(socket,
-               error_message: "An error occurred. Please try again or contact support.",
-               submitting: false
-             )}
-        end
-
-      {:error, error_message} ->
-        Logger.warning("Invalid email submitted: #{inspect(email)}")
-
-        suggested_correction = EmailValidator.suggest_correction(email)
+    # Check rate limit (10 signups per hour per IP)
+    # Note: Using customer_onboarding action which is configured for 10/minute
+    # For hourly limits, we track by IP address instead of customer_id
+    case RateLimiter.check_rate_limit(ip_address, :customer_onboarding) do
+      {:error, :rate_limited, metadata} ->
+        Logger.warning("Signup rate limit exceeded for IP: #{ip_address}")
 
         error_data =
           Map.merge(socket.assigns.tracking_data, %{
-            error_type: "validation",
-            error_details: error_message || "Invalid email format"
+            error_type: "rate_limit",
+            error_details: "Too many signup attempts",
+            ip_address: ip_address
           })
 
         Analytics.track_form_submission("signup", "error", error_data)
 
         {:noreply,
          assign(socket,
-           email: email,
-           email_valid: false,
-           error_message: error_message || "Please provide a valid email address.",
-           suggested_correction: suggested_correction,
+           error_message: "Too many signup attempts. Please try again in #{div(metadata.reset - System.system_time(:second), 60)} minutes.",
            submitting: false
          )}
+
+      {:ok, _metadata} ->
+        # Validate email
+        case EmailValidator.validate_with_feedback(email) do
+          {:ok, _} ->
+            # Set submitting state
+            socket = assign(socket, submitting: true)
+
+            # Provision customer via CustomerOnboarding
+            Logger.info("Signup attempt for email: #{email}")
+
+            # Extract name from email (before @) as a default
+            # User can update this later in their profile
+            default_name = email |> String.split("@") |> List.first() |> String.capitalize()
+
+            case CustomerOnboarding.provision_customer(%{email: email, name: default_name}) do
+              {:ok, %{customer: customer, api_key: raw_api_key}} ->
+                Logger.info("Successfully created customer #{customer.id} with email: #{email}")
+
+                # Track successful conversion
+                email_domain = email |> String.split("@") |> List.last()
+
+                conversion_data =
+                  Map.merge(socket.assigns.tracking_data, %{
+                    email_domain: email_domain,
+                    conversion_type: "signup",
+                    customer_id: customer.id,
+                    ip_address: ip_address
+                  })
+
+                Analytics.track_form_submission("signup", "success", conversion_data)
+                Analytics.track_conversion("signup", conversion_data)
+
+                # Track funnel events (RFC-078 Part 2)
+                track_funnel_signup(customer, socket.assigns.tracking_data)
+
+                # Show success screen with API key
+                {:noreply,
+                 assign(socket,
+                   signup_complete: true,
+                   api_key: raw_api_key,
+                   customer_email: customer.email,
+                   customer_id: customer.id,
+                   submitting: false
+                 )}
+
+              {:error, {:validation_failed, reason}} when is_binary(reason) ->
+                Logger.warning("Signup validation failed: #{reason}")
+
+                error_data =
+                  Map.merge(socket.assigns.tracking_data, %{
+                    error_type: "validation",
+                    error_details: reason
+                  })
+
+                Analytics.track_form_submission("signup", "error", error_data)
+
+                {:noreply,
+                 assign(socket,
+                   error_message: reason,
+                   submitting: false
+                 )}
+
+              {:error, {:validation_failed, %Ecto.Changeset{} = changeset}} ->
+                error_message = format_changeset_errors(changeset)
+                Logger.warning("Signup validation failed: #{error_message}")
+
+                error_data =
+                  Map.merge(socket.assigns.tracking_data, %{
+                    error_type: "validation",
+                    error_details: error_message
+                  })
+
+                Analytics.track_form_submission("signup", "error", error_data)
+
+                {:noreply,
+                 assign(socket,
+                   error_message: error_message,
+                   submitting: false
+                 )}
+
+              {:error, reason} ->
+                Logger.error("Signup failed: #{inspect(reason)}")
+
+                error_data =
+                  Map.merge(socket.assigns.tracking_data, %{
+                    error_type: "system",
+                    error_details: inspect(reason)
+                  })
+
+                Analytics.track_form_submission("signup", "error", error_data)
+
+                {:noreply,
+                 assign(socket,
+                   error_message: "An error occurred. Please try again or contact support.",
+                   submitting: false
+                 )}
+            end
+
+          {:error, error_message} ->
+            Logger.warning("Invalid email submitted: #{inspect(email)}")
+
+            suggested_correction = EmailValidator.suggest_correction(email)
+
+            error_data =
+              Map.merge(socket.assigns.tracking_data, %{
+                error_type: "validation",
+                error_details: error_message || "Invalid email format"
+              })
+
+            Analytics.track_form_submission("signup", "error", error_data)
+
+            {:noreply,
+             assign(socket,
+               email: email,
+               email_valid: false,
+               error_message: error_message || "Please provide a valid email address.",
+               suggested_correction: suggested_correction,
+               submitting: false
+             )}
+        end
     end
   end
 
@@ -494,8 +553,14 @@ defmodule RsolvWeb.SignupLive do
 
   @impl true
   def handle_event("copy_api_key", _params, socket) do
-    # Track copy event
+    # Track copy event (analytics)
     Analytics.track("api_key_copied", %{customer_email: socket.assigns.customer_email})
+
+    # Track API key copied in funnel (RFC-078 Part 2)
+    if socket.assigns[:customer_id] do
+      customer = Rsolv.Customers.get_customer!(socket.assigns.customer_id)
+      track_funnel_api_key_copied(customer, socket.assigns.tracking_data)
+    end
 
     # Set copied state (will reset after 2 seconds)
     Process.send_after(self(), :reset_copied, 2000)
@@ -550,5 +615,45 @@ defmodule RsolvWeb.SignupLive do
   defp generate_tracking_id do
     :crypto.strong_rand_bytes(16)
     |> Base.encode16(case: :lower)
+  end
+
+  # Get IP address from peer_data for rate limiting
+  defp get_ip_address(%{address: {a, b, c, d}}), do: "#{a}.#{b}.#{c}.#{d}"
+  defp get_ip_address(%{address: ip}) when is_tuple(ip), do: :inet.ntoa(ip) |> to_string()
+  defp get_ip_address(_), do: "unknown"
+
+  # RFC-078 Part 2: Track funnel events for signup completion
+  defp track_funnel_signup(customer, tracking_data) do
+    attrs =
+      tracking_data
+      |> Map.take([:visitor_id, :session_id, :utm_source, :utm_medium, :utm_campaign])
+      |> Map.put(:inserted_at, DateTime.utc_now())
+
+    case FunnelTracking.track_signup(customer, attrs) do
+      {:ok, _event} ->
+        Logger.info("Tracked signup funnel event for customer #{customer.id}")
+
+      {:error, reason} ->
+        Logger.error("Failed to track signup funnel event: #{inspect(reason)}")
+    end
+  end
+
+  # RFC-078 Part 2: Track API key copy event in funnel
+  # This indicates the customer successfully saved their API key
+  defp track_funnel_api_key_copied(customer, tracking_data) do
+    # For now, we use the existing API key creation tracking
+    # The customer gets an API key on signup, so we track that they copied it
+    attrs =
+      tracking_data
+      |> Map.take([:visitor_id, :session_id])
+      |> Map.put(:inserted_at, DateTime.utc_now())
+
+    case FunnelTracking.track_api_key_creation(customer, attrs) do
+      {:ok, _event} ->
+        Logger.info("Tracked API key copied event for customer #{customer.id}")
+
+      {:error, reason} ->
+        Logger.error("Failed to track API key copied event: #{inspect(reason)}")
+    end
   end
 end

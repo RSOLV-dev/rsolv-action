@@ -24,6 +24,9 @@ defmodule RsolvWeb.SignupLiveTest do
       Repo.delete_all(Customers.Customer)
     end)
 
+    # Reset rate limiter to avoid cross-test contamination
+    Rsolv.RateLimiter.reset()
+
     :ok
   end
 
@@ -138,7 +141,10 @@ defmodule RsolvWeb.SignupLiveTest do
 
   describe "customer provisioning" do
     test "creates customer account with valid email", %{conn: conn} do
-      with_mock Rsolv.FeatureFlags, enabled?: fn _ -> true end do
+      with_mocks([
+        {Rsolv.FeatureFlags, [], [enabled?: fn _ -> true end]},
+        {Rsolv.FunnelTracking, [], [track_signup: fn _customer, _attrs -> {:ok, %{}} end]}
+      ]) do
         {:ok, view, _html} = live(conn, "/signup")
         email = test_email("newcustomer")
 
@@ -157,7 +163,10 @@ defmodule RsolvWeb.SignupLiveTest do
     end
 
     test "displays API key on successful signup", %{conn: conn} do
-      with_mock Rsolv.FeatureFlags, enabled?: fn _ -> true end do
+      with_mocks([
+        {Rsolv.FeatureFlags, [], [enabled?: fn _ -> true end]},
+        {Rsolv.FunnelTracking, [], [track_signup: fn _customer, _attrs -> {:ok, %{}} end]}
+      ]) do
         {:ok, view, _html} = live(conn, "/signup")
         email = test_email("apitest")
 
@@ -175,7 +184,10 @@ defmodule RsolvWeb.SignupLiveTest do
     end
 
     test "shows copy button for API key", %{conn: conn} do
-      with_mock Rsolv.FeatureFlags, enabled?: fn _ -> true end do
+      with_mocks([
+        {Rsolv.FeatureFlags, [], [enabled?: fn _ -> true end]},
+        {Rsolv.FunnelTracking, [], [track_signup: fn _customer, _attrs -> {:ok, %{}} end]}
+      ]) do
         {:ok, view, _html} = live(conn, "/signup")
         email = test_email("copytest")
 
@@ -192,7 +204,10 @@ defmodule RsolvWeb.SignupLiveTest do
     end
 
     test "displays next steps after signup", %{conn: conn} do
-      with_mock Rsolv.FeatureFlags, enabled?: fn _ -> true end do
+      with_mocks([
+        {Rsolv.FeatureFlags, [], [enabled?: fn _ -> true end]},
+        {Rsolv.FunnelTracking, [], [track_signup: fn _customer, _attrs -> {:ok, %{}} end]}
+      ]) do
         {:ok, view, _html} = live(conn, "/signup")
         email = test_email("nextsteps")
 
@@ -211,7 +226,10 @@ defmodule RsolvWeb.SignupLiveTest do
     end
 
     test "allocates 5 initial credits to new customer", %{conn: conn} do
-      with_mock Rsolv.FeatureFlags, enabled?: fn _ -> true end do
+      with_mocks([
+        {Rsolv.FeatureFlags, [], [enabled?: fn _ -> true end]},
+        {Rsolv.FunnelTracking, [], [track_signup: fn _customer, _attrs -> {:ok, %{}} end]}
+      ]) do
         {:ok, view, _html} = live(conn, "/signup")
         email = test_email("credits")
 
@@ -347,6 +365,7 @@ defmodule RsolvWeb.SignupLiveTest do
     test "tracks successful conversion", %{conn: conn} do
       with_mocks([
         {Rsolv.FeatureFlags, [], [enabled?: fn _ -> true end]},
+        {Rsolv.FunnelTracking, [], [track_signup: fn _customer, _attrs -> {:ok, %{}} end]},
         {RsolvWeb.Services.Analytics, [],
          [
            track_section_view: fn _, _, _ -> :ok end,
@@ -444,6 +463,207 @@ defmodule RsolvWeb.SignupLiveTest do
         html = render(view)
         # Should show some error - either about format or validity
         assert html =~ "email" or html =~ "valid" or html =~ "address"
+      end
+    end
+  end
+
+  describe "funnel tracking (RFC-078 Part 2)" do
+    test "tracks signup event in funnel on successful signup", %{conn: conn} do
+      with_mocks([
+        {Rsolv.FeatureFlags, [], [enabled?: fn _ -> true end]},
+        {Rsolv.FunnelTracking, [],
+         [
+           track_signup: fn customer, attrs ->
+             assert customer.email != nil
+             assert is_map(attrs)
+             {:ok, %{}}
+           end,
+           track_api_key_creation: fn _customer, _attrs -> {:ok, %{}} end
+         ]}
+      ]) do
+        {:ok, view, _html} = live(conn, "/signup")
+        email = test_email("funnel")
+
+        mock_stripe_customer_create("cus_test_#{:rand.uniform(10000)}", email)
+
+        view
+        |> form("form", %{email: email})
+        |> render_submit()
+
+        # Verify funnel tracking was called
+        assert_called(Rsolv.FunnelTracking.track_signup(:_, :_))
+      end
+    end
+
+    test "tracks API key copied event when user clicks copy button", %{conn: conn} do
+      with_mocks([
+        {Rsolv.FeatureFlags, [], [enabled?: fn _ -> true end]},
+        {Rsolv.FunnelTracking, [],
+         [
+           track_signup: fn _customer, _attrs -> {:ok, %{}} end,
+           track_api_key_creation: fn customer, attrs ->
+             assert customer.email != nil
+             assert is_map(attrs)
+             {:ok, %{}}
+           end
+         ]}
+      ]) do
+        {:ok, view, _html} = live(conn, "/signup")
+        email = test_email("funnel_copy")
+
+        mock_stripe_customer_create("cus_test_#{:rand.uniform(10000)}", email)
+
+        view
+        |> form("form", %{email: email})
+        |> render_submit()
+
+        # Now trigger the copy event
+        view
+        |> element("button#copy-api-key-button")
+        |> render_hook("copy_api_key", %{})
+
+        # Verify API key copied tracking was called
+        assert_called(Rsolv.FunnelTracking.track_api_key_creation(:_, :_))
+      end
+    end
+  end
+
+  describe "rate limiting (RFC-078 Part 2)" do
+    test "allows signup within rate limit", %{conn: conn} do
+      with_mocks([
+        {Rsolv.FeatureFlags, [], [enabled?: fn _ -> true end]},
+        {Rsolv.RateLimiter, [],
+         [
+           check_rate_limit: fn _ip, :customer_onboarding ->
+             {:ok, %{limit: 10, remaining: 9, reset: System.system_time(:second) + 60}}
+           end
+         ]}
+      ]) do
+        {:ok, view, _html} = live(conn, "/signup")
+        email = test_email("ratelimit_ok")
+
+        mock_stripe_customer_create("cus_test_#{:rand.uniform(10000)}", email)
+
+        view
+        |> form("form", %{email: email})
+        |> render_submit()
+
+        html = render(view)
+        assert html =~ "Welcome to RSOLV!"
+      end
+    end
+
+    test "blocks signup when rate limit exceeded", %{conn: conn} do
+      with_mocks([
+        {Rsolv.FeatureFlags, [], [enabled?: fn _ -> true end]},
+        {Rsolv.RateLimiter, [],
+         [
+           check_rate_limit: fn _ip, :customer_onboarding ->
+             {:error, :rate_limited,
+              %{limit: 10, remaining: 0, reset: System.system_time(:second) + 3600}}
+           end
+         ]}
+      ]) do
+        {:ok, view, _html} = live(conn, "/signup")
+
+        view
+        |> form("form", %{email: test_email("ratelimit_blocked")})
+        |> render_submit()
+
+        html = render(view)
+        assert html =~ "Too many signup attempts"
+        assert html =~ "try again"
+        refute html =~ "Welcome to RSOLV!"
+      end
+    end
+
+    test "rate limiter is called with IP address", %{conn: conn} do
+      with_mocks([
+        {Rsolv.FeatureFlags, [], [enabled?: fn _ -> true end]},
+        {Rsolv.RateLimiter, [],
+         [
+           check_rate_limit: fn ip, action ->
+             # Verify IP address is passed (not nil or empty)
+             assert ip != nil
+             assert ip != ""
+             assert action == :customer_onboarding
+             {:ok, %{limit: 10, remaining: 9, reset: System.system_time(:second) + 60}}
+           end
+         ]}
+      ]) do
+        {:ok, view, _html} = live(conn, "/signup")
+        email = test_email("ratelimit_ip")
+
+        mock_stripe_customer_create("cus_test_#{:rand.uniform(10000)}", email)
+
+        view
+        |> form("form", %{email: email})
+        |> render_submit()
+
+        # Verify rate limiter was called with proper args
+        assert_called(Rsolv.RateLimiter.check_rate_limit(:_, :customer_onboarding))
+      end
+    end
+  end
+
+  describe "next steps content (RFC-078 Part 2)" do
+    test "displays GitHub Action installation link", %{conn: conn} do
+      with_mocks([
+        {Rsolv.FeatureFlags, [], [enabled?: fn _ -> true end]},
+        {Rsolv.FunnelTracking, [], [track_signup: fn _customer, _attrs -> {:ok, %{}} end]}
+      ]) do
+        {:ok, view, _html} = live(conn, "/signup")
+        email = test_email("nextsteps_action")
+
+        mock_stripe_customer_create("cus_test_#{:rand.uniform(10000)}", email)
+
+        view
+        |> form("form", %{email: email})
+        |> render_submit()
+
+        html = render(view)
+        assert html =~ "Install the RSOLV GitHub Action"
+        assert html =~ "https://github.com/RSOLV-dev/RSOLV-action"
+      end
+    end
+
+    test "displays API key setup instructions", %{conn: conn} do
+      with_mocks([
+        {Rsolv.FeatureFlags, [], [enabled?: fn _ -> true end]},
+        {Rsolv.FunnelTracking, [], [track_signup: fn _customer, _attrs -> {:ok, %{}} end]}
+      ]) do
+        {:ok, view, _html} = live(conn, "/signup")
+        email = test_email("nextsteps_apikey")
+
+        mock_stripe_customer_create("cus_test_#{:rand.uniform(10000)}", email)
+
+        view
+        |> form("form", %{email: email})
+        |> render_submit()
+
+        html = render(view)
+        assert html =~ "RSOLV_API_KEY"
+        assert html =~ "GitHub Secrets"
+      end
+    end
+
+    test "displays documentation link", %{conn: conn} do
+      with_mocks([
+        {Rsolv.FeatureFlags, [], [enabled?: fn _ -> true end]},
+        {Rsolv.FunnelTracking, [], [track_signup: fn _customer, _attrs -> {:ok, %{}} end]}
+      ]) do
+        {:ok, view, _html} = live(conn, "/signup")
+        email = test_email("nextsteps_docs")
+
+        mock_stripe_customer_create("cus_test_#{:rand.uniform(10000)}", email)
+
+        view
+        |> form("form", %{email: email})
+        |> render_submit()
+
+        html = render(view)
+        assert html =~ "https://docs.rsolv.dev"
+        assert html =~ "documentation"
       end
     end
   end
