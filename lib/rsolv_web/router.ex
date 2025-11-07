@@ -82,6 +82,7 @@ defmodule RsolvWeb.Router do
     live_session :public_site, on_mount: [{RsolvWeb.LiveHooks, :assign_current_path}] do
       live "/landing", LandingLive, :index
       live "/pricing", PricingLive, :index
+      live "/signup", SignupLive, :index
     end
   end
 
@@ -91,7 +92,7 @@ defmodule RsolvWeb.Router do
     # LiveView routes with current path hook
     live_session :default, on_mount: [{RsolvWeb.LiveHooks, :assign_current_path}] do
       live "/", HomeLive, :index
-      live "/signup", EarlyAccessLive, :index
+      # /signup moved to public_site scope (RFC-078)
       live "/contact", ContactLive, :index
     end
 

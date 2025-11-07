@@ -64,17 +64,17 @@ const Hooks = {
       // Create a completely unmanaged input that lives separately from Phoenix LiveView
       const inputEl = this.el;
       const formId = "early-access-form";
-      
+
       // Create a standalone plain JS input element to replace the LiveView one
       const standaloneInput = document.createElement("input");
-      
+
       // Copy all the attributes
       Array.from(inputEl.attributes).forEach(attr => {
         if (attr.name !== 'phx-hook' && attr.name !== 'id' && attr.name !== 'name') {
           standaloneInput.setAttribute(attr.name, attr.value);
         }
       });
-      
+
       // Set additional properties
       standaloneInput.id = inputEl.id + "-js";
       standaloneInput.name = "email";
@@ -82,22 +82,22 @@ const Hooks = {
       standaloneInput.placeholder = "you@company.com";
       standaloneInput.required = true;
       standaloneInput.className = "email-input";
-      
-      // When user types, we'll forward the value to LiveView without 
+
+      // When user types, we'll forward the value to LiveView without
       // letting LiveView actually control the input
       standaloneInput.addEventListener("input", e => {
         this.pushEvent("input-change", { value: e.target.value });
       });
-      
+
       // When focus leaves, validate the input
       standaloneInput.addEventListener("blur", e => {
         this.pushEvent("validate", { email: e.target.value });
       });
-      
+
       // Replace the original input
       inputEl.style.display = "none";
       inputEl.insertAdjacentElement("afterend", standaloneInput);
-      
+
       // Add an event listener to the form for submission
       const form = document.getElementById(formId);
       if (form) {
@@ -107,6 +107,38 @@ const Hooks = {
           this.pushEvent("submit", { email: standaloneInput.value });
         });
       }
+    }
+  },
+
+  // Hook for signup form email input (simpler than FocusInput, just for validation)
+  EmailInput: {
+    mounted() {
+      // Auto-focus on mount
+      this.el.focus();
+    }
+  },
+
+  // Hook for copying API key to clipboard
+  CopyButton: {
+    mounted() {
+      this.el.addEventListener("click", () => {
+        const targetId = this.el.getAttribute("data-copy-target");
+        const targetEl = document.getElementById(targetId);
+
+        if (targetEl) {
+          // Use Clipboard API
+          navigator.clipboard.writeText(targetEl.value).then(() => {
+            // Send event to LiveView to update UI
+            this.pushEvent("copy_api_key", {});
+          }).catch(err => {
+            console.error('Failed to copy text: ', err);
+            // Fallback: select and copy
+            targetEl.select();
+            document.execCommand('copy');
+            this.pushEvent("copy_api_key", {});
+          });
+        }
+      });
     }
   }
 };
