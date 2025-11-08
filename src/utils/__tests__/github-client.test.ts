@@ -1,10 +1,19 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createPullRequest, PullRequestOptions } from '../github-client.js';
 import { Octokit } from '@octokit/rest';
+import * as gitOps from '../git-operations.js';
 
 // Mock Octokit
 vi.mock('@octokit/rest', () => ({
   Octokit: vi.fn()
+}));
+
+// Mock git-operations module
+vi.mock('../git-operations.js', () => ({
+  getCurrentBranch: vi.fn(),
+  createBranchFromCommit: vi.fn(),
+  pushBranch: vi.fn(),
+  safeCheckout: vi.fn()
 }));
 
 describe('github-client', () => {
@@ -33,6 +42,12 @@ describe('github-client', () => {
 
     // Make Octokit constructor return our mock
     (Octokit as any).mockImplementation(() => mockOctokit);
+
+    // Mock git operations to simulate successful git commands
+    vi.mocked(gitOps.getCurrentBranch).mockReturnValue('main');
+    vi.mocked(gitOps.createBranchFromCommit).mockReturnValue(undefined);
+    vi.mocked(gitOps.pushBranch).mockReturnValue(undefined);
+    vi.mocked(gitOps.safeCheckout).mockReturnValue(true);
 
     // Set GitHub token
     process.env.GITHUB_TOKEN = 'test-token';
@@ -82,13 +97,11 @@ describe('github-client', () => {
       // Verify Octokit was initialized with token
       expect(Octokit).toHaveBeenCalledWith({ auth: 'test-token' });
 
-      // Verify branch creation
-      expect(mockOctokit.rest.git.createRef).toHaveBeenCalledWith({
-        owner: 'owner',
-        repo: 'repo',
-        ref: 'refs/heads/rsolv/fix/issue-5',
-        sha: 'abc123'
-      });
+      // Verify git operations were performed
+      expect(gitOps.getCurrentBranch).toHaveBeenCalled();
+      expect(gitOps.createBranchFromCommit).toHaveBeenCalledWith('rsolv/fix/issue-5', 'abc123');
+      expect(gitOps.pushBranch).toHaveBeenCalledWith('rsolv/fix/issue-5', true);
+      expect(gitOps.safeCheckout).toHaveBeenCalledWith('main', 'rsolv/fix/issue-5');
 
       // Verify PR creation
       expect(mockOctokit.rest.pulls.create).toHaveBeenCalledWith({
@@ -117,12 +130,13 @@ describe('github-client', () => {
     });
 
     it('should handle branch creation failure', async () => {
-      mockOctokit.rest.git.createRef.mockRejectedValue(
-        new Error('Reference already exists')
-      );
+      // Mock git operations to fail (simulating branch creation failure)
+      vi.mocked(gitOps.pushBranch).mockImplementation(() => {
+        throw new Error('fatal: unable to push branch');
+      });
 
       await expect(createPullRequest(mockOptions)).rejects.toThrow(
-        'PR creation failed: Reference already exists'
+        'PR creation failed: Failed to push commit to remote'
       );
     });
 
@@ -197,7 +211,8 @@ describe('github-client', () => {
         repository: 'test-org/my-repo'
       });
 
-      expect(mockOctokit.rest.git.createRef).toHaveBeenCalledWith(
+      // Verify PR was created with correct owner/repo
+      expect(mockOctokit.rest.pulls.create).toHaveBeenCalledWith(
         expect.objectContaining({
           owner: 'test-org',
           repo: 'my-repo'
@@ -227,12 +242,7 @@ describe('github-client', () => {
         issueNumber: 123
       });
 
-      expect(mockOctokit.rest.git.createRef).toHaveBeenCalledWith(
-        expect.objectContaining({
-          ref: 'refs/heads/rsolv/fix/issue-123'
-        })
-      );
-
+      // Verify PR was created with correct branch naming pattern
       expect(mockOctokit.rest.pulls.create).toHaveBeenCalledWith(
         expect.objectContaining({
           head: 'rsolv/fix/issue-123'

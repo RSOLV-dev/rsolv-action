@@ -3,7 +3,12 @@
  */
 
 import { Octokit } from '@octokit/rest';
-import { execSync } from 'child_process';
+import {
+  getCurrentBranch,
+  createBranchFromCommit,
+  pushBranch,
+  safeCheckout
+} from './git-operations.js';
 
 export interface PullRequestOptions {
   repository: string; // format: "owner/repo"
@@ -49,31 +54,28 @@ export async function createPullRequest(options: PullRequestOptions): Promise<Pu
     // Push the commit to remote by creating and pushing a branch
     // The commit was created locally by Claude Code and needs to be pushed to GitHub
     console.log(`[PR] Creating and pushing branch ${branchName} from commit ${options.commitSha.substring(0, 8)}`);
+
+    // Save current branch to return to it later (more reliable than 'git checkout -')
+    const originalBranch = getCurrentBranch();
+    if (!originalBranch) {
+      console.log('[PR] Warning: Could not determine current branch, will not return to original branch');
+    }
+
     try {
-      // Try to create branch from the commit
-      try {
-        execSync(`git checkout -b ${branchName} ${options.commitSha}`, { encoding: 'utf-8', stdio: 'pipe' });
-      } catch (checkoutError) {
-        // Branch might already exist locally, try to switch to it
-        console.log(`[PR] Branch ${branchName} may exist, attempting to switch to it`);
-        execSync(`git checkout ${branchName}`, { encoding: 'utf-8', stdio: 'pipe' });
-        // Reset to the correct commit
-        execSync(`git reset --hard ${options.commitSha}`, { encoding: 'utf-8', stdio: 'pipe' });
+      createBranchFromCommit(branchName, options.commitSha);
+      // Force push because we may have reset an existing branch
+      pushBranch(branchName, true);
+
+      // Return to original branch if we saved it and it's different from the branch we just created
+      if (originalBranch && originalBranch !== branchName) {
+        safeCheckout(originalBranch, branchName);
       }
-
-      // Push the branch to remote (force push in case branch exists remotely)
-      execSync(`git push -f origin ${branchName}`, { encoding: 'utf-8', stdio: 'pipe' });
-
-      // Return to previous branch
-      execSync('git checkout -', { encoding: 'utf-8', stdio: 'pipe' });
 
       console.log(`[PR] Successfully pushed branch ${branchName}`);
     } catch (pushError) {
-      // Clean up: try to return to previous branch
-      try {
-        execSync('git checkout -', { encoding: 'utf-8', stdio: 'pipe' });
-      } catch {
-        // Ignore checkout errors during cleanup
+      // Clean up: try to return to original branch
+      if (originalBranch && originalBranch !== branchName) {
+        safeCheckout(originalBranch, branchName);
       }
 
       const errorMessage = pushError instanceof Error ? pushError.message : String(pushError);
