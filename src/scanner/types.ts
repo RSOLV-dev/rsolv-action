@@ -27,6 +27,8 @@ export interface ScanResult {
   vulnerabilities: Vulnerability[];
   groupedVulnerabilities: VulnerabilityGroup[];
   createdIssues: CreatedIssue[];
+  skippedValidated?: number;
+  skippedFalsePositive?: number;
 }
 
 export interface VulnerabilityGroup {

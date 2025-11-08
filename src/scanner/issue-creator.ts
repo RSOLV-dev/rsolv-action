@@ -12,12 +12,14 @@ export class IssueCreator {
   async createIssuesFromGroups(
     groups: VulnerabilityGroup[],
     config: ScanConfig
-  ): Promise<CreatedIssue[]> {
+  ): Promise<{issues: CreatedIssue[], skippedValidated: number, skippedFalsePositive: number}> {
     const createdIssues: CreatedIssue[] = [];
+    let skippedValidated = 0;
+    let skippedFalsePositive = 0;
 
     if (!config.createIssues) {
       logger.info('Issue creation disabled, skipping');
-      return createdIssues;
+      return {issues: createdIssues, skippedValidated, skippedFalsePositive};
     }
 
     // Separate vendor and application vulnerability groups
@@ -54,6 +56,16 @@ export class IssueCreator {
         // Check for existing issue with duplicate detection enabled
         const existingIssue = await this.findExistingIssue(group, config);
 
+        if (existingIssue === 'skip:validated') {
+          skippedValidated++;
+          continue;
+        }
+
+        if (existingIssue === 'skip:false-positive') {
+          skippedFalsePositive++;
+          continue;
+        }
+
         if (existingIssue) {
           logger.info(`Found existing issue #${existingIssue.number} for ${group.type} vulnerabilities`);
           const updatedIssue = await this.updateExistingIssue(existingIssue, group, config);
@@ -68,7 +80,7 @@ export class IssueCreator {
       }
     }
 
-    return createdIssues;
+    return {issues: createdIssues, skippedValidated, skippedFalsePositive};
   }
 
   private async findExistingIssue(
@@ -91,8 +103,31 @@ export class IssueCreator {
         state: 'open'
       });
 
-      // Return the first matching issue (there should only be one per type)
-      return issues.length > 0 ? issues[0] : null;
+      if (issues.length === 0) {
+        return null;
+      }
+
+      const existingIssue = issues[0];
+
+      // Extract labels from the issue
+      const labels = existingIssue.labels.map((label: any) =>
+        typeof label === 'string' ? label : label.name || ''
+      );
+
+      // Skip issues that have already been validated
+      if (labels.includes('rsolv:validated')) {
+        logger.info(`Skipping validated issue #${existingIssue.number} for ${group.type}`);
+        return 'skip:validated';
+      }
+
+      // Skip issues that have been marked as false positives
+      if (labels.includes('rsolv:false-positive')) {
+        logger.info(`Skipping false positive issue #${existingIssue.number} for ${group.type}`);
+        return 'skip:false-positive';
+      }
+
+      // Only rsolv:detected - safe to update
+      return existingIssue;
     } catch (error) {
       logger.warn(`Failed to check for existing issues: ${error}`);
       return null;
