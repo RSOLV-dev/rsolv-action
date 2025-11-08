@@ -40,8 +40,15 @@ describe('github-client', () => {
     // Make Octokit constructor return our mock
     (Octokit as any).mockImplementation(() => mockOctokit);
 
-    // Mock execSync to return empty strings (simulating successful git commands)
-    vi.mocked(execSync).mockReturnValue(Buffer.from('vk/2b33-fix-flaky-github'));
+    // Mock execSync to simulate successful git commands
+    vi.mocked(execSync).mockImplementation((command: string) => {
+      // Return current branch name for rev-parse command
+      if (command.includes('rev-parse --abbrev-ref HEAD')) {
+        return Buffer.from('main');
+      }
+      // For all other git commands, return empty buffer (success)
+      return Buffer.from('');
+    });
 
     // Set GitHub token
     process.env.GITHUB_TOKEN = 'test-token';
@@ -91,13 +98,9 @@ describe('github-client', () => {
       // Verify Octokit was initialized with token
       expect(Octokit).toHaveBeenCalledWith({ auth: 'test-token' });
 
-      // Verify branch creation
-      expect(mockOctokit.rest.git.createRef).toHaveBeenCalledWith({
-        owner: 'owner',
-        repo: 'repo',
-        ref: 'refs/heads/rsolv/fix/issue-5',
-        sha: 'abc123'
-      });
+      // Note: Branch creation is now done via git commands (not Octokit API)
+      // Verify execSync was called for git operations
+      expect(execSync).toHaveBeenCalled();
 
       // Verify PR creation
       expect(mockOctokit.rest.pulls.create).toHaveBeenCalledWith({
@@ -126,12 +129,19 @@ describe('github-client', () => {
     });
 
     it('should handle branch creation failure', async () => {
-      mockOctokit.rest.git.createRef.mockRejectedValue(
-        new Error('Reference already exists')
-      );
+      // Mock git checkout to fail (simulating branch creation failure)
+      vi.mocked(execSync).mockImplementation((command: string) => {
+        if (command.includes('rev-parse --abbrev-ref HEAD')) {
+          return Buffer.from('main');
+        }
+        if (command.includes('git checkout') || command.includes('git push')) {
+          throw new Error('fatal: unable to create branch');
+        }
+        return Buffer.from('');
+      });
 
       await expect(createPullRequest(mockOptions)).rejects.toThrow(
-        'PR creation failed: Reference already exists'
+        'PR creation failed: Failed to push commit to remote'
       );
     });
 
@@ -206,7 +216,8 @@ describe('github-client', () => {
         repository: 'test-org/my-repo'
       });
 
-      expect(mockOctokit.rest.git.createRef).toHaveBeenCalledWith(
+      // Verify PR was created with correct owner/repo
+      expect(mockOctokit.rest.pulls.create).toHaveBeenCalledWith(
         expect.objectContaining({
           owner: 'test-org',
           repo: 'my-repo'
@@ -236,12 +247,7 @@ describe('github-client', () => {
         issueNumber: 123
       });
 
-      expect(mockOctokit.rest.git.createRef).toHaveBeenCalledWith(
-        expect.objectContaining({
-          ref: 'refs/heads/rsolv/fix/issue-123'
-        })
-      );
-
+      // Verify PR was created with correct branch naming pattern
       expect(mockOctokit.rest.pulls.create).toHaveBeenCalledWith(
         expect.objectContaining({
           head: 'rsolv/fix/issue-123'
