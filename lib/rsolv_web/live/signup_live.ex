@@ -9,7 +9,8 @@ defmodule RsolvWeb.SignupLive do
   use RsolvWeb, :live_view
   require Logger
 
-  alias Rsolv.{CustomerOnboarding, Customers, FunnelTracking, RateLimiter}
+  alias Rsolv.{CustomerOnboarding, Customers, FunnelTracking}
+  alias RsolvWeb.Helpers.{ChangesetHelper, IpHelper, RateLimitHelper}
   alias RsolvWeb.Services.Analytics
   alias RsolvWeb.Validators.EmailValidator
 
@@ -311,7 +312,7 @@ defmodule RsolvWeb.SignupLive do
     Analytics.track_section_view("signup-form", nil, tracking_data)
 
     # Get IP address for rate limiting (must be done during mount)
-    ip_address = get_connect_info(socket, :peer_data) |> get_ip_address()
+    ip_address = get_connect_info(socket, :peer_data) |> IpHelper.format_peer_data()
 
     {:ok,
      assign(socket,
@@ -344,17 +345,16 @@ defmodule RsolvWeb.SignupLive do
     # Get IP address from socket assigns (stored during mount)
     ip_address = socket.assigns.ip_address
 
-    # Check rate limit (10 signups per hour per IP)
+    # Check rate limit (10 signups per minute per IP)
     # Note: Using customer_onboarding action which is configured for 10/minute
-    # For hourly limits, we track by IP address instead of customer_id
-    case RateLimiter.check_rate_limit(ip_address, :customer_onboarding) do
-      {:error, :rate_limited, metadata} ->
+    case RateLimitHelper.check_and_format(ip_address, :customer_onboarding) do
+      {:error, :rate_limited, error_message, _metadata} ->
         Logger.warning("Signup rate limit exceeded for IP: #{ip_address}")
 
         error_data =
           Map.merge(socket.assigns.tracking_data, %{
             error_type: "rate_limit",
-            error_details: "Too many signup attempts",
+            error_details: error_message,
             ip_address: ip_address
           })
 
@@ -362,7 +362,7 @@ defmodule RsolvWeb.SignupLive do
 
         {:noreply,
          assign(socket,
-           error_message: "Too many signup attempts. Please try again in #{div(metadata.reset - System.system_time(:second), 60)} minutes.",
+           error_message: error_message,
            submitting: false
          )}
 
@@ -429,7 +429,7 @@ defmodule RsolvWeb.SignupLive do
                  )}
 
               {:error, {:validation_failed, %Ecto.Changeset{} = changeset}} ->
-                error_message = format_changeset_errors(changeset)
+                error_message = ChangesetHelper.format_errors(changeset)
                 Logger.warning("Signup validation failed: #{error_message}")
 
                 error_data =
@@ -579,18 +579,6 @@ defmodule RsolvWeb.SignupLive do
     {:noreply, socket}
   end
 
-  # Format Ecto changeset errors into user-friendly message
-  defp format_changeset_errors(%Ecto.Changeset{errors: errors}) do
-    errors
-    |> Enum.map(fn {field, {message, _}} ->
-      "#{humanize_field(field)} #{message}"
-    end)
-    |> Enum.join(", ")
-  end
-
-  defp humanize_field(:email), do: "Email"
-  defp humanize_field(field), do: field |> to_string() |> String.capitalize()
-
   # Extract tracking data from LiveView socket and session
   defp extract_tracking_data(socket, session) do
     user_id = Map.get(session, "tracking_id") || generate_tracking_id()
@@ -616,11 +604,6 @@ defmodule RsolvWeb.SignupLive do
     :crypto.strong_rand_bytes(16)
     |> Base.encode16(case: :lower)
   end
-
-  # Get IP address from peer_data for rate limiting
-  defp get_ip_address(%{address: {a, b, c, d}}), do: "#{a}.#{b}.#{c}.#{d}"
-  defp get_ip_address(%{address: ip}) when is_tuple(ip), do: :inet.ntoa(ip) |> to_string()
-  defp get_ip_address(_), do: "unknown"
 
   # RFC-078 Part 2: Track funnel events for signup completion
   defp track_funnel_signup(customer, tracking_data) do
