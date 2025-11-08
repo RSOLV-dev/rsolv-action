@@ -51,6 +51,11 @@ node_modules/
 !.env.example
 .envrc
 
+# Kubernetes secrets (use .template files instead)
+k8s/secrets.yaml
+**/secrets.yaml
+!**/secrets.yaml.template
+
 # Editor and OS files
 .DS_Store
 Thumbs.db
