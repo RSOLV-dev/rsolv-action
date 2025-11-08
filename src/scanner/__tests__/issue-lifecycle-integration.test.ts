@@ -163,9 +163,9 @@ describe('RFC-081: Issue Lifecycle Integration Test', () => {
     }
 
     console.log(`✅ Created ${firstScanResult.issues.length} issues`);
-    console.log(`   Issue #1: SQL Injection (rsolv:detected)`);
-    console.log(`   Issue #2: XSS (rsolv:detected)`);
-    console.log(`   Issue #3: Command Injection (rsolv:detected)`);
+    console.log('   Issue #1: SQL Injection (rsolv:detected)');
+    console.log('   Issue #2: XSS (rsolv:detected)');
+    console.log('   Issue #3: Command Injection (rsolv:detected)');
 
     // ===== PHASE 2: VALIDATE Phase =====
     console.log('\n🔍 PHASE 2: VALIDATE (simulated)');
@@ -183,9 +183,9 @@ describe('RFC-081: Issue Lifecycle Integration Test', () => {
     expect(issue2.labels.some(l => (typeof l === 'string' ? l : l.name) === 'rsolv:validated')).toBe(true);
     expect(issue3.labels.some(l => (typeof l === 'string' ? l : l.name) === 'rsolv:false-positive')).toBe(true);
 
-    console.log(`✅ Issue #1: SQL Injection → rsolv:validated`);
-    console.log(`✅ Issue #2: XSS → rsolv:validated`);
-    console.log(`✅ Issue #3: Command Injection → rsolv:false-positive`);
+    console.log('✅ Issue #1: SQL Injection → rsolv:validated');
+    console.log('✅ Issue #2: XSS → rsolv:validated');
+    console.log('✅ Issue #3: Command Injection → rsolv:false-positive');
 
     // ===== PHASE 3: Second SCAN (with same vulnerabilities) =====
     console.log('\n🔄 PHASE 3: Second SCAN (re-run on same codebase)');
@@ -206,7 +206,7 @@ describe('RFC-081: Issue Lifecycle Integration Test', () => {
 
     console.log(`✅ Skipped ${secondScanResult.skippedValidated} validated issues`);
     console.log(`✅ Skipped ${secondScanResult.skippedFalsePositive} false positive issues`);
-    console.log(`✅ No duplicate issues created`);
+    console.log('✅ No duplicate issues created');
 
     // Verify: Issue count unchanged
     expect(issueDatabase.size).toBe(3);
