@@ -603,7 +603,14 @@ export class PhaseExecutor {
       // Check for validation data with timeout
       logger.info('[MITIGATE] Step 2: Retrieving validation data...');
       const commitSha = options.commitSha || this.getCurrentCommitSha();
-      
+
+      logger.info('[MITIGATE] Retrieval parameters:', {
+        repo: `${options.repository.owner}/${options.repository.name}`,
+        issueNumber: options.issueNumber,
+        commitSha: commitSha.substring(0, 8),
+        commitShaFull: commitSha
+      });
+
       let validationData;
       try {
         const dataPromise = this.phaseDataClient.retrievePhaseResults(
@@ -611,18 +618,25 @@ export class PhaseExecutor {
           options.issueNumber,
           commitSha
         );
-        
-        const dataTimeoutPromise = new Promise((_, reject) => 
+
+        const dataTimeoutPromise = new Promise((_, reject) =>
           setTimeout(() => reject(new Error('Phase data retrieval timeout after 15s')), 15000)
         );
-        
+
         validationData = await Promise.race([dataPromise, dataTimeoutPromise]) as any;
         logger.info('[MITIGATE] Step 2 complete: Retrieved validation data', {
           hasData: !!validationData,
-          keys: validationData ? Object.keys(validationData) : []
+          keys: validationData ? Object.keys(validationData) : [],
+          hasValidation: !!validationData?.validation,
+          hasValidate: !!validationData?.validate,
+          validationKeys: validationData?.validation ? Object.keys(validationData.validation) : [],
+          validateKeys: validationData?.validate ? Object.keys(validationData.validate) : []
         });
       } catch (error) {
-        logger.warn('[MITIGATE] Step 2 warning: Failed to retrieve validation data:', error);
+        logger.warn('[MITIGATE] Step 2 warning: Failed to retrieve validation data:', {
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        });
         // Continue without validation data, will check labels
         validationData = null;
       }
@@ -1543,7 +1557,15 @@ export class PhaseExecutor {
 
       // Store validation results
       const commitSha = this.getCurrentCommitSha();
-      await this.phaseDataClient.storePhaseResults(
+      logger.info('[VALIDATE] Storing validation results to Platform API', {
+        repo: `${issue.repository.owner}/${issue.repository.name}`,
+        issueNumber: issue.number,
+        commitSha: commitSha.substring(0, 8),
+        hasData: !!validationResult,
+        dataKeys: validationResult ? Object.keys(validationResult) : []
+      });
+
+      const storeResult = await this.phaseDataClient.storePhaseResults(
         'validate',
         { validate: validationResult },
         {
@@ -1552,6 +1574,13 @@ export class PhaseExecutor {
           commitSha
         }
       );
+
+      logger.info('[VALIDATE] Validation storage result:', {
+        success: storeResult.success,
+        storage: storeResult.storage,
+        warning: storeResult.warning,
+        message: storeResult.message
+      });
 
       return {
         success: true,

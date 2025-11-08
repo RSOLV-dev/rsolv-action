@@ -191,14 +191,21 @@ export class PhaseDataClient {
           headers,
           errorBody: errorText
         });
-        throw new Error(`Platform storage failed: ${response.statusText}`);
+        throw new Error(`Platform storage failed: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
       const result = await response.json();
+      console.log('[PhaseDataClient] Platform storage succeeded:', { storage: 'platform', id: result.id });
       return { ...result, storage: 'platform' as const };
     } catch (error) {
       // Fallback to local storage on platform errors
-      console.warn('Platform storage failed, falling back to local:', error);
+      console.error('[PhaseDataClient] Platform storage error, falling back to local:', {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        phase,
+        repo: metadata.repo,
+        issueNumber: metadata.issueNumber
+      });
       return this.storeLocally(phase, data, metadata);
     }
   }
@@ -214,30 +221,46 @@ export class PhaseDataClient {
     }
     
     try {
-      const response = await fetch(
-        `${this.baseUrl}/api/v1/phases/retrieve?` +
-        `repo=${encodeURIComponent(repo)}&issue=${issueNumber}&commit=${encodeURIComponent(commitSha)}`,
-        { headers: this.headers }
-      );
-      
+      const url = `${this.baseUrl}/api/v1/phases/retrieve?` +
+        `repo=${encodeURIComponent(repo)}&issue=${issueNumber}&commit=${encodeURIComponent(commitSha)}`;
+
+      console.log('[PhaseDataClient] Retrieving phase data from platform:', {
+        url,
+        repo,
+        issueNumber,
+        commitSha: commitSha.substring(0, 8)
+      });
+
+      const response = await fetch(url, { headers: this.headers });
+
       if (response.status === 404) {
-        // Fallback to local storage immediately on 404
+        console.log('[PhaseDataClient] Platform returned 404 (not found), falling back to local');
         return this.retrieveLocally(repo, issueNumber, commitSha);
       }
-      
+
       if (!response.ok) {
-        throw new Error(`Platform retrieval failed: ${response.statusText}`);
+        const errorText = await response.text().catch(() => 'Unable to read error response');
+        console.error('[PhaseDataClient] Platform retrieval failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorBody: errorText
+        });
+        throw new Error(`Platform retrieval failed: ${response.status} ${response.statusText} - ${errorText}`);
       }
-      
+
       const data = await response.json();
-      
+
       // Log what we got from platform for debugging
       console.log('[PhaseDataClient] Retrieved from platform:', {
         hasValidation: !!data?.validation,
         hasValidate: !!data?.validate,
-        keys: Object.keys(data || {})
+        hasScan: !!data?.scan,
+        hasMitigation: !!data?.mitigation,
+        keys: Object.keys(data || {}),
+        validationKeys: data?.validation ? Object.keys(data.validation) : [],
+        validateKeys: data?.validate ? Object.keys(data.validate) : []
       });
-      
+
       // Map platform phase names back to client phase names if needed
       if (data && data.validation && !data.validate) {
         console.log('[PhaseDataClient] Mapping validation -> validate');
@@ -249,12 +272,18 @@ export class PhaseDataClient {
         data.mitigate = data.mitigation;
         delete data.mitigation;
       }
-      
+
       console.log('[PhaseDataClient] Returning data with keys:', Object.keys(data || {}));
       return data;
     } catch (error) {
       // Fallback to local storage
-      console.warn('Platform retrieval failed, falling back to local:', error);
+      console.error('[PhaseDataClient] Platform retrieval error, falling back to local:', {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        repo,
+        issueNumber,
+        commitSha: commitSha.substring(0, 8)
+      });
       return this.retrieveLocally(repo, issueNumber, commitSha);
     }
   }
@@ -316,28 +345,62 @@ export class PhaseDataClient {
   ): Promise<PhaseData | null> {
     const fs = await import('fs/promises');
     const path = await import('path');
-    
+
     const dir = '.rsolv/phase-data';
     const repoName = repo.replace('/', '-');
     const pattern = `${repoName}-${issueNumber}-`;
-    
+
+    console.log('[PhaseDataClient] Retrieving from local storage:', {
+      dir,
+      pattern,
+      repo,
+      issueNumber,
+      commitSha: commitSha.substring(0, 8)
+    });
+
     try {
       const files = await fs.readdir(dir);
       const matches = files.filter(f => f.startsWith(pattern));
-      
+
+      console.log('[PhaseDataClient] Local storage files found:', {
+        totalFiles: files.length,
+        matchingFiles: matches,
+        pattern
+      });
+
       const allData: PhaseData = {};
       for (const file of matches) {
         const content = await fs.readFile(path.join(dir, file), 'utf-8');
         const parsed = JSON.parse(content);
-        
+
+        console.log('[PhaseDataClient] Checking local file:', {
+          file,
+          storedCommitSha: parsed.metadata.commitSha?.substring(0, 8),
+          requestedCommitSha: commitSha.substring(0, 8),
+          matches: parsed.metadata.commitSha === commitSha,
+          phase: parsed.phase,
+          hasData: !!parsed.data
+        });
+
         // Only use if commit matches
         if (parsed.metadata.commitSha === commitSha) {
           Object.assign(allData, parsed.data);
         }
       }
-      
-      return Object.keys(allData).length > 0 ? allData : null;
-    } catch {
+
+      const result = Object.keys(allData).length > 0 ? allData : null;
+      console.log('[PhaseDataClient] Local retrieval result:', {
+        found: !!result,
+        keys: result ? Object.keys(result) : []
+      });
+
+      return result;
+    } catch (error) {
+      console.error('[PhaseDataClient] Local retrieval error:', {
+        error: error instanceof Error ? error.message : String(error),
+        dir,
+        pattern
+      });
       return null;
     }
   }
