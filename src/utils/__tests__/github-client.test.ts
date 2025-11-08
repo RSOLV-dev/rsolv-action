@@ -1,16 +1,19 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createPullRequest, PullRequestOptions } from '../github-client.js';
 import { Octokit } from '@octokit/rest';
-import { execSync } from 'child_process';
+import * as gitOps from '../git-operations.js';
 
 // Mock Octokit
 vi.mock('@octokit/rest', () => ({
   Octokit: vi.fn()
 }));
 
-// Mock child_process execSync
-vi.mock('child_process', () => ({
-  execSync: vi.fn()
+// Mock git-operations module
+vi.mock('../git-operations.js', () => ({
+  getCurrentBranch: vi.fn(),
+  createBranchFromCommit: vi.fn(),
+  pushBranch: vi.fn(),
+  safeCheckout: vi.fn()
 }));
 
 describe('github-client', () => {
@@ -40,15 +43,11 @@ describe('github-client', () => {
     // Make Octokit constructor return our mock
     (Octokit as any).mockImplementation(() => mockOctokit);
 
-    // Mock execSync to simulate successful git commands
-    vi.mocked(execSync).mockImplementation((command: string) => {
-      // Return current branch name for rev-parse command
-      if (command.includes('rev-parse --abbrev-ref HEAD')) {
-        return Buffer.from('main');
-      }
-      // For all other git commands, return empty buffer (success)
-      return Buffer.from('');
-    });
+    // Mock git operations to simulate successful git commands
+    vi.mocked(gitOps.getCurrentBranch).mockReturnValue('main');
+    vi.mocked(gitOps.createBranchFromCommit).mockReturnValue(undefined);
+    vi.mocked(gitOps.pushBranch).mockReturnValue(undefined);
+    vi.mocked(gitOps.safeCheckout).mockReturnValue(true);
 
     // Set GitHub token
     process.env.GITHUB_TOKEN = 'test-token';
@@ -98,9 +97,11 @@ describe('github-client', () => {
       // Verify Octokit was initialized with token
       expect(Octokit).toHaveBeenCalledWith({ auth: 'test-token' });
 
-      // Note: Branch creation is now done via git commands (not Octokit API)
-      // Verify execSync was called for git operations
-      expect(execSync).toHaveBeenCalled();
+      // Verify git operations were performed
+      expect(gitOps.getCurrentBranch).toHaveBeenCalled();
+      expect(gitOps.createBranchFromCommit).toHaveBeenCalledWith('rsolv/fix/issue-5', 'abc123');
+      expect(gitOps.pushBranch).toHaveBeenCalledWith('rsolv/fix/issue-5');
+      expect(gitOps.safeCheckout).toHaveBeenCalledWith('main', 'rsolv/fix/issue-5');
 
       // Verify PR creation
       expect(mockOctokit.rest.pulls.create).toHaveBeenCalledWith({
@@ -129,15 +130,9 @@ describe('github-client', () => {
     });
 
     it('should handle branch creation failure', async () => {
-      // Mock git checkout to fail (simulating branch creation failure)
-      vi.mocked(execSync).mockImplementation((command: string) => {
-        if (command.includes('rev-parse --abbrev-ref HEAD')) {
-          return Buffer.from('main');
-        }
-        if (command.includes('git checkout') || command.includes('git push')) {
-          throw new Error('fatal: unable to create branch');
-        }
-        return Buffer.from('');
+      // Mock git operations to fail (simulating branch creation failure)
+      vi.mocked(gitOps.pushBranch).mockImplementation(() => {
+        throw new Error('fatal: unable to push branch');
       });
 
       await expect(createPullRequest(mockOptions)).rejects.toThrow(
