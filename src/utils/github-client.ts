@@ -63,7 +63,8 @@ export async function createPullRequest(options: PullRequestOptions): Promise<Pu
 
     try {
       createBranchFromCommit(branchName, options.commitSha);
-      pushBranch(branchName);
+      // Force push because we may have reset an existing branch
+      pushBranch(branchName, true);
 
       // Return to original branch if we saved it and it's different from the branch we just created
       if (originalBranch && originalBranch !== branchName) {

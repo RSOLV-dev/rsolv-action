@@ -40,11 +40,13 @@ export function createBranchFromCommit(branchName: string, commitSha: string): v
 }
 
 /**
- * Push a branch to remote (with force flag)
+ * Push a branch to remote
  * @param branchName - Name of the branch to push
+ * @param force - Whether to force push (default: false)
  */
-export function pushBranch(branchName: string): void {
-  execSync(`git push -f origin ${branchName}`, {
+export function pushBranch(branchName: string, force: boolean = false): void {
+  const forceFlag = force ? '-f ' : '';
+  execSync(`git push ${forceFlag}origin ${branchName}`, {
     encoding: 'utf-8',
     stdio: 'pipe'
   });

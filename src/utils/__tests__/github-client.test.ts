@@ -100,7 +100,7 @@ describe('github-client', () => {
       // Verify git operations were performed
       expect(gitOps.getCurrentBranch).toHaveBeenCalled();
       expect(gitOps.createBranchFromCommit).toHaveBeenCalledWith('rsolv/fix/issue-5', 'abc123');
-      expect(gitOps.pushBranch).toHaveBeenCalledWith('rsolv/fix/issue-5');
+      expect(gitOps.pushBranch).toHaveBeenCalledWith('rsolv/fix/issue-5', true);
       expect(gitOps.safeCheckout).toHaveBeenCalledWith('main', 'rsolv/fix/issue-5');
 
       // Verify PR creation
