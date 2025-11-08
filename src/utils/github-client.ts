@@ -3,6 +3,7 @@
  */
 
 import { Octokit } from '@octokit/rest';
+import { execSync } from 'child_process';
 
 export interface PullRequestOptions {
   repository: string; // format: "owner/repo"
@@ -23,11 +24,14 @@ export interface PullRequestResult {
  * Create a pull request with actual GitHub API integration
  *
  * This function:
- * 1. Creates a branch with pattern `rsolv/fix/issue-{number}`
- * 2. Pushes commit to remote branch
- * 3. Creates actual PR using GitHub API
- * 4. Applies `rsolv:mitigated` label to issue
- * 5. Returns real PR URL and number
+ * 1. Creates a local branch from the commit SHA
+ * 2. Pushes the branch to GitHub (the commit must exist locally)
+ * 3. Creates a pull request using GitHub API
+ * 4. Applies `rsolv:mitigated` label to the issue
+ * 5. Returns PR URL and number
+ *
+ * Note: The commit SHA must reference a commit that exists in the local Git repository.
+ * This is typically created by Claude Code CLI during the mitigation phase.
  */
 export async function createPullRequest(options: PullRequestOptions): Promise<PullRequestResult> {
   // Validate that GITHUB_TOKEN is available
@@ -42,25 +46,76 @@ export async function createPullRequest(options: PullRequestOptions): Promise<Pu
     const [owner, repo] = options.repository.split('/');
     const branchName = `rsolv/fix/issue-${options.issueNumber}`;
 
-    // Create branch from the commit SHA
-    console.log(`[PR] Creating branch ${branchName} from commit ${options.commitSha}`);
-    await octokit.rest.git.createRef({
-      owner,
-      repo,
-      ref: `refs/heads/${branchName}`,
-      sha: options.commitSha
-    });
+    // Push the commit to remote by creating and pushing a branch
+    // The commit was created locally by Claude Code and needs to be pushed to GitHub
+    console.log(`[PR] Creating and pushing branch ${branchName} from commit ${options.commitSha.substring(0, 8)}`);
+    try {
+      // Try to create branch from the commit
+      try {
+        execSync(`git checkout -b ${branchName} ${options.commitSha}`, { encoding: 'utf-8', stdio: 'pipe' });
+      } catch (checkoutError) {
+        // Branch might already exist locally, try to switch to it
+        console.log(`[PR] Branch ${branchName} may exist, attempting to switch to it`);
+        execSync(`git checkout ${branchName}`, { encoding: 'utf-8', stdio: 'pipe' });
+        // Reset to the correct commit
+        execSync(`git reset --hard ${options.commitSha}`, { encoding: 'utf-8', stdio: 'pipe' });
+      }
+
+      // Push the branch to remote (force push in case branch exists remotely)
+      execSync(`git push -f origin ${branchName}`, { encoding: 'utf-8', stdio: 'pipe' });
+
+      // Return to previous branch
+      execSync('git checkout -', { encoding: 'utf-8', stdio: 'pipe' });
+
+      console.log(`[PR] Successfully pushed branch ${branchName}`);
+    } catch (pushError) {
+      // Clean up: try to return to previous branch
+      try {
+        execSync('git checkout -', { encoding: 'utf-8', stdio: 'pipe' });
+      } catch {
+        // Ignore checkout errors during cleanup
+      }
+
+      const errorMessage = pushError instanceof Error ? pushError.message : String(pushError);
+      console.error(`[PR] Failed to push branch: ${errorMessage}`);
+      throw new Error(`Failed to push commit to remote: ${errorMessage}`);
+    }
 
     // Create PR
     console.log('[PR] Creating pull request');
-    const pr = await octokit.rest.pulls.create({
-      owner,
-      repo,
-      title: options.title,
-      body: options.body,
-      head: branchName,
-      base: options.base
-    });
+    let pr;
+    try {
+      pr = await octokit.rest.pulls.create({
+        owner,
+        repo,
+        title: options.title,
+        body: options.body,
+        head: branchName,
+        base: options.base
+      });
+    } catch (prError: any) {
+      // Check if PR already exists
+      if (prError.status === 422 && prError.message?.includes('pull request already exists')) {
+        console.log('[PR] Pull request already exists, fetching existing PR');
+
+        // Find the existing PR
+        const { data: existingPrs } = await octokit.rest.pulls.list({
+          owner,
+          repo,
+          head: `${owner}:${branchName}`,
+          state: 'open'
+        });
+
+        if (existingPrs.length > 0) {
+          pr = { data: existingPrs[0] };
+          console.log(`[PR] Using existing PR #${pr.data.number}`);
+        } else {
+          throw new Error('Pull request already exists but could not be found');
+        }
+      } else {
+        throw prError;
+      }
+    }
 
     // Apply rsolv:mitigated label to issue
     console.log(`[PR] Applying rsolv:mitigated label to issue #${options.issueNumber}`);
