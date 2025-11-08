@@ -176,16 +176,18 @@ describe('IssueCreator - Duplicate Detection', () => {
       };
 
       const config: ScanConfig = {
-        repository: { owner: 'test', name: 'repo' },
-        branch: 'main',
+        repository: { owner: 'test', name: 'repo', defaultBranch: 'main' },
         createIssues: true,
-        updateExisting: true  // New config option
+        issueLabel: 'rsolv:detected',
+        batchSimilar: true
       };
 
       const result = await issueCreator.createIssuesFromGroups([group], config);
 
-      expect(result).toHaveLength(1);
-      expect(result[0].number).toBe(123);
+      expect(result.issues).toHaveLength(1);
+      expect(result.issues[0].number).toBe(123);
+      expect(result.skippedValidated).toBe(0);
+      expect(result.skippedFalsePositive).toBe(0);
       expect(mockGitHub.issues.create).not.toHaveBeenCalled();
       expect(mockGitHub.issues.update).toHaveBeenCalled();
     });
@@ -211,18 +213,252 @@ describe('IssueCreator - Duplicate Detection', () => {
       };
 
       const config: ScanConfig = {
-        repository: { owner: 'test', name: 'repo' },
-        branch: 'main',
+        repository: { owner: 'test', name: 'repo', defaultBranch: 'main' },
         createIssues: true,
-        updateExisting: true
+        issueLabel: 'rsolv:detected',
+        batchSimilar: true
       };
 
       const result = await issueCreator.createIssuesFromGroups([group], config);
 
-      expect(result).toHaveLength(1);
-      expect(result[0].number).toBe(456);
+      expect(result.issues).toHaveLength(1);
+      expect(result.issues[0].number).toBe(456);
+      expect(result.skippedValidated).toBe(0);
+      expect(result.skippedFalsePositive).toBe(0);
       expect(mockGitHub.issues.create).toHaveBeenCalled();
       expect(mockGitHub.issues.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('RFC-081: Issue Lifecycle State Management', () => {
+    it('should skip issues with rsolv:validated label', async () => {
+      const validatedIssue = {
+        number: 100,
+        title: '🔒 SQL Injection vulnerabilities found in 1 file',
+        labels: [
+          { name: 'rsolv:validated' },
+          { name: 'rsolv:vuln-sql-injection' },
+          { name: 'security' }
+        ],
+        html_url: 'https://github.com/test/repo/issues/100'
+      };
+
+      mockGitHub.issues.listForRepo.mockResolvedValue({
+        data: [validatedIssue]
+      });
+
+      const group: VulnerabilityGroup = {
+        type: 'sql-injection',
+        severity: 'critical',
+        count: 1,
+        files: ['db.js'],
+        vulnerabilities: []
+      };
+
+      const config: ScanConfig = {
+        repository: { owner: 'test', name: 'repo', defaultBranch: 'main' },
+        createIssues: true,
+        issueLabel: 'rsolv:detected',
+        batchSimilar: true
+      };
+
+      const result = await issueCreator.createIssuesFromGroups([group], config);
+
+      expect(result.issues).toHaveLength(0);
+      expect(result.skippedValidated).toBe(1);
+      expect(result.skippedFalsePositive).toBe(0);
+      expect(mockGitHub.issues.create).not.toHaveBeenCalled();
+      expect(mockGitHub.issues.update).not.toHaveBeenCalled();
+    });
+
+    it('should skip issues with rsolv:false-positive label', async () => {
+      const falsePositiveIssue = {
+        number: 101,
+        title: '🔒 XSS vulnerabilities found in 2 files',
+        labels: [
+          { name: 'rsolv:false-positive' },
+          { name: 'rsolv:vuln-xss' },
+          { name: 'security' }
+        ],
+        html_url: 'https://github.com/test/repo/issues/101'
+      };
+
+      mockGitHub.issues.listForRepo.mockResolvedValue({
+        data: [falsePositiveIssue]
+      });
+
+      const group: VulnerabilityGroup = {
+        type: 'xss',
+        severity: 'high',
+        count: 2,
+        files: ['page1.js', 'page2.js'],
+        vulnerabilities: []
+      };
+
+      const config: ScanConfig = {
+        repository: { owner: 'test', name: 'repo', defaultBranch: 'main' },
+        createIssues: true,
+        issueLabel: 'rsolv:detected',
+        batchSimilar: true
+      };
+
+      const result = await issueCreator.createIssuesFromGroups([group], config);
+
+      expect(result.issues).toHaveLength(0);
+      expect(result.skippedValidated).toBe(0);
+      expect(result.skippedFalsePositive).toBe(1);
+      expect(mockGitHub.issues.create).not.toHaveBeenCalled();
+      expect(mockGitHub.issues.update).not.toHaveBeenCalled();
+    });
+
+    it('should update issues with only rsolv:detected label', async () => {
+      const detectedIssue = {
+        number: 102,
+        title: '🔒 Command Injection vulnerabilities found in 1 file',
+        labels: [
+          { name: 'rsolv:detected' },
+          { name: 'rsolv:vuln-command-injection' },
+          { name: 'security' }
+        ],
+        html_url: 'https://github.com/test/repo/issues/102'
+      };
+
+      mockGitHub.issues.listForRepo.mockResolvedValue({
+        data: [detectedIssue]
+      });
+      mockGitHub.issues.update.mockResolvedValue({
+        data: { ...detectedIssue }
+      });
+      mockGitHub.issues.createComment.mockResolvedValue({ data: {} });
+
+      const group: VulnerabilityGroup = {
+        type: 'command-injection',
+        severity: 'critical',
+        count: 2,
+        files: ['exec.js', 'shell.js'],
+        vulnerabilities: []
+      };
+
+      const config: ScanConfig = {
+        repository: { owner: 'test', name: 'repo', defaultBranch: 'main' },
+        createIssues: true,
+        issueLabel: 'rsolv:detected',
+        batchSimilar: true
+      };
+
+      const result = await issueCreator.createIssuesFromGroups([group], config);
+
+      expect(result.issues).toHaveLength(1);
+      expect(result.issues[0].number).toBe(102);
+      expect(result.skippedValidated).toBe(0);
+      expect(result.skippedFalsePositive).toBe(0);
+      expect(mockGitHub.issues.create).not.toHaveBeenCalled();
+      expect(mockGitHub.issues.update).toHaveBeenCalled();
+    });
+
+    it('should handle mixed state transitions correctly', async () => {
+      // First group: validated (skip)
+      const validatedIssue = {
+        number: 200,
+        labels: [
+          { name: 'rsolv:validated' },
+          { name: 'rsolv:vuln-sql-injection' }
+        ]
+      };
+
+      // Second group: false-positive (skip)
+      const falsePositiveIssue = {
+        number: 201,
+        labels: [
+          { name: 'rsolv:false-positive' },
+          { name: 'rsolv:vuln-xss' }
+        ]
+      };
+
+      // Third group: detected (update)
+      const detectedIssue = {
+        number: 202,
+        labels: [
+          { name: 'rsolv:detected' },
+          { name: 'rsolv:vuln-command-injection' }
+        ],
+        html_url: 'https://github.com/test/repo/issues/202'
+      };
+
+      // Fourth group: no existing issue (create new)
+      mockGitHub.issues.listForRepo.mockImplementation(({ labels }: any) => {
+        if (labels === 'rsolv:vuln-sql-injection') {
+          return Promise.resolve({ data: [validatedIssue] });
+        }
+        if (labels === 'rsolv:vuln-xss') {
+          return Promise.resolve({ data: [falsePositiveIssue] });
+        }
+        if (labels === 'rsolv:vuln-command-injection') {
+          return Promise.resolve({ data: [detectedIssue] });
+        }
+        if (labels === 'rsolv:vuln-path-traversal') {
+          return Promise.resolve({ data: [] });
+        }
+        return Promise.resolve({ data: [] });
+      });
+
+      mockGitHub.issues.update.mockResolvedValue({
+        data: { ...detectedIssue }
+      });
+      mockGitHub.issues.createComment.mockResolvedValue({ data: {} });
+      mockGitHub.issues.create.mockResolvedValue({
+        data: {
+          number: 203,
+          title: '🔒 Path Traversal vulnerabilities found in 1 file',
+          html_url: 'https://github.com/test/repo/issues/203'
+        }
+      });
+
+      const groups: VulnerabilityGroup[] = [
+        {
+          type: 'sql-injection',
+          severity: 'critical',
+          count: 1,
+          files: ['db.js'],
+          vulnerabilities: []
+        },
+        {
+          type: 'xss',
+          severity: 'high',
+          count: 1,
+          files: ['page.js'],
+          vulnerabilities: []
+        },
+        {
+          type: 'command-injection',
+          severity: 'critical',
+          count: 1,
+          files: ['exec.js'],
+          vulnerabilities: []
+        },
+        {
+          type: 'path-traversal',
+          severity: 'high',
+          count: 1,
+          files: ['file.js'],
+          vulnerabilities: []
+        }
+      ];
+
+      const config: ScanConfig = {
+        repository: { owner: 'test', name: 'repo', defaultBranch: 'main' },
+        createIssues: true,
+        issueLabel: 'rsolv:detected',
+        batchSimilar: true
+      };
+
+      const result = await issueCreator.createIssuesFromGroups(groups, config);
+
+      expect(result.issues).toHaveLength(2);
+      expect(result.skippedValidated).toBe(1);
+      expect(result.skippedFalsePositive).toBe(1);
+      expect(mockGitHub.issues.update).toHaveBeenCalledTimes(1);
+      expect(mockGitHub.issues.create).toHaveBeenCalledTimes(1);
     });
   });
 });

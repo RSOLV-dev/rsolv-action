@@ -1,6 +1,14 @@
 import { getGitHubClient } from '../github/api.js';
 import { logger } from '../utils/logger.js';
-import type { VulnerabilityGroup, CreatedIssue, ScanConfig } from './types.js';
+import type {
+  VulnerabilityGroup,
+  CreatedIssue,
+  ScanConfig,
+  GitHubIssue,
+  ExistingIssueResult,
+  IssueCreationResult,
+  IssueLabel
+} from './types.js';
 
 export class IssueCreator {
   private github: ReturnType<typeof getGitHubClient>;
@@ -9,15 +17,40 @@ export class IssueCreator {
     this.github = getGitHubClient();
   }
 
+  /**
+   * Extract label names from GitHub issue labels
+   */
+  private extractLabelNames(labels: IssueLabel[]): string[] {
+    return labels.map(label =>
+      typeof label === 'string' ? label : label.name || ''
+    );
+  }
+
+  /**
+   * Check if issue should be skipped based on its labels
+   * Returns skip reason or null if issue should be processed
+   */
+  private checkSkipStatus(labels: string[]): 'skip:validated' | 'skip:false-positive' | null {
+    if (labels.includes('rsolv:validated')) {
+      return 'skip:validated';
+    }
+    if (labels.includes('rsolv:false-positive')) {
+      return 'skip:false-positive';
+    }
+    return null;
+  }
+
   async createIssuesFromGroups(
     groups: VulnerabilityGroup[],
     config: ScanConfig
-  ): Promise<CreatedIssue[]> {
+  ): Promise<IssueCreationResult> {
     const createdIssues: CreatedIssue[] = [];
+    let skippedValidated = 0;
+    let skippedFalsePositive = 0;
 
     if (!config.createIssues) {
       logger.info('Issue creation disabled, skipping');
-      return createdIssues;
+      return {issues: createdIssues, skippedValidated, skippedFalsePositive};
     }
 
     // Separate vendor and application vulnerability groups
@@ -54,6 +87,16 @@ export class IssueCreator {
         // Check for existing issue with duplicate detection enabled
         const existingIssue = await this.findExistingIssue(group, config);
 
+        if (existingIssue === 'skip:validated') {
+          skippedValidated++;
+          continue;
+        }
+
+        if (existingIssue === 'skip:false-positive') {
+          skippedFalsePositive++;
+          continue;
+        }
+
         if (existingIssue) {
           logger.info(`Found existing issue #${existingIssue.number} for ${group.type} vulnerabilities`);
           const updatedIssue = await this.updateExistingIssue(existingIssue, group, config);
@@ -68,13 +111,13 @@ export class IssueCreator {
       }
     }
 
-    return createdIssues;
+    return {issues: createdIssues, skippedValidated, skippedFalsePositive};
   }
 
   private async findExistingIssue(
     group: VulnerabilityGroup,
     config: ScanConfig
-  ): Promise<any> {
+  ): Promise<ExistingIssueResult> {
     try {
       // In test mode with fresh issues flag, always create new issues
       if (process.env.RSOLV_TESTING_MODE === 'true' && process.env.RSOLV_FORCE_FRESH_ISSUES === 'true') {
@@ -91,8 +134,22 @@ export class IssueCreator {
         state: 'open'
       });
 
-      // Return the first matching issue (there should only be one per type)
-      return issues.length > 0 ? issues[0] : null;
+      if (issues.length === 0) {
+        return null;
+      }
+
+      const existingIssue = issues[0] as GitHubIssue;
+      const labelNames = this.extractLabelNames(existingIssue.labels);
+      const skipStatus = this.checkSkipStatus(labelNames);
+
+      if (skipStatus) {
+        const reason = skipStatus === 'skip:validated' ? 'validated' : 'false positive';
+        logger.info(`Skipping ${reason} issue #${existingIssue.number} for ${group.type}`);
+        return skipStatus;
+      }
+
+      // Only rsolv:detected - safe to update
+      return existingIssue;
     } catch (error) {
       logger.warn(`Failed to check for existing issues: ${error}`);
       return null;
@@ -100,7 +157,7 @@ export class IssueCreator {
   }
 
   private async updateExistingIssue(
-    existingIssue: any,
+    existingIssue: GitHubIssue,
     group: VulnerabilityGroup,
     config: ScanConfig
   ): Promise<CreatedIssue> {
@@ -134,12 +191,18 @@ export class IssueCreator {
     };
   }
 
-  private generateUpdateComment(group: VulnerabilityGroup, existingIssue: any): string {
+  private generateUpdateComment(group: VulnerabilityGroup, _existingIssue: GitHubIssue): string {
     const timestamp = new Date().toISOString();
-    return `## 📊 Scan Update - ${timestamp}\n\n` +
-           `**Updated vulnerability count**: ${group.count} instances in ${group.files.length} files\n\n` +
-           'This issue has been updated with the latest scan results. ' +
-           'The vulnerability details above reflect the current state of the codebase.';
+    const fileText = group.files.length === 1 ? 'file' : 'files';
+
+    return [
+      `## 📊 Scan Update - ${timestamp}`,
+      '',
+      `**Updated vulnerability count**: ${group.count} instances in ${group.files.length} ${fileText}`,
+      '',
+      'This issue has been updated with the latest scan results.',
+      'The vulnerability details above reflect the current state of the codebase.'
+    ].join('\n');
   }
 
   private async createIssueForGroup(

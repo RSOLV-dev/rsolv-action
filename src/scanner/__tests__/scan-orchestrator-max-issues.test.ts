@@ -81,10 +81,14 @@ describe('ScanOrchestrator - max_issues bug', () => {
 
       // Spy on createIssuesFromGroups to see what it's called with
       const createIssuesSpy = vi.spyOn(orchestrator['issueCreator'], 'createIssuesFromGroups')
-        .mockResolvedValue([
-          { number: 1, title: 'Issue 1', url: 'url1' },
-          { number: 2, title: 'Issue 2', url: 'url2' }
-        ]);
+        .mockResolvedValue({
+          issues: [
+            { number: 1, title: 'Issue 1', url: 'url1', vulnerabilityType: 'vuln-type-0', fileCount: 1 },
+            { number: 2, title: 'Issue 2', url: 'url2', vulnerabilityType: 'vuln-type-1', fileCount: 1 }
+          ],
+          skippedValidated: 0,
+          skippedFalsePositive: 0
+        });
 
       await orchestrator.performScan(config);
 
@@ -145,10 +149,14 @@ describe('ScanOrchestrator - max_issues bug', () => {
 
       // Spy on createIssuesFromGroups to verify it's called with limited groups
       const createIssuesSpy = vi.spyOn(orchestrator['issueCreator'], 'createIssuesFromGroups')
-        .mockResolvedValue([
-          { number: 1, title: 'Issue 1', url: 'url1' },
-          { number: 2, title: 'Issue 2', url: 'url2' }
-        ]);
+        .mockResolvedValue({
+          issues: [
+            { number: 1, title: 'Issue 1', url: 'url1', vulnerabilityType: 'vuln-type-0', fileCount: 1 },
+            { number: 2, title: 'Issue 2', url: 'url2', vulnerabilityType: 'vuln-type-1', fileCount: 1 }
+          ],
+          skippedValidated: 0,
+          skippedFalsePositive: 0
+        });
 
       await orchestrator.performScan(config);
 

@@ -44,13 +44,22 @@ export class ScanOrchestrator {
         // Slice the groups to respect max_issues limit
         const groupsToCreate = scanResult.groupedVulnerabilities.slice(0, groupsToProcess);
 
-        const createdIssues = await this.issueCreator.createIssuesFromGroups(
+        const result = await this.issueCreator.createIssuesFromGroups(
           groupsToCreate,
           config
         );
 
-        scanResult.createdIssues = createdIssues;
-        logger.info(`Created ${createdIssues.length} issues`);
+        scanResult.createdIssues = result.issues;
+        scanResult.skippedValidated = result.skippedValidated;
+        scanResult.skippedFalsePositive = result.skippedFalsePositive;
+
+        logger.info(`Created ${result.issues.length} issues`);
+        if (result.skippedValidated > 0) {
+          logger.info(`Skipped ${result.skippedValidated} already validated issues`);
+        }
+        if (result.skippedFalsePositive > 0) {
+          logger.info(`Skipped ${result.skippedFalsePositive} false positive issues`);
+        }
       }
       
       // Output summary
@@ -71,7 +80,7 @@ export class ScanOrchestrator {
     logger.info(`Files scanned: ${result.scannedFiles}/${result.totalFiles}`);
     logger.info(`Total vulnerabilities: ${result.vulnerabilities.length}`);
     logger.info('');
-    
+
     if (result.groupedVulnerabilities.length > 0) {
       logger.info('Vulnerabilities by type:');
       for (const group of result.groupedVulnerabilities) {
@@ -79,7 +88,7 @@ export class ScanOrchestrator {
       }
       logger.info('');
     }
-    
+
     if (result.createdIssues.length > 0) {
       logger.info('Created issues:');
       for (const issue of result.createdIssues) {
@@ -88,7 +97,18 @@ export class ScanOrchestrator {
       }
       logger.info('');
     }
-    
+
+    if (result.skippedValidated || result.skippedFalsePositive) {
+      logger.info('Skipped issues:');
+      if (result.skippedValidated) {
+        logger.info(`  - ${result.skippedValidated} validated issues`);
+      }
+      if (result.skippedFalsePositive) {
+        logger.info(`  - ${result.skippedFalsePositive} false positive issues`);
+      }
+      logger.info('');
+    }
+
     logger.info('=============================');
   }
 }
