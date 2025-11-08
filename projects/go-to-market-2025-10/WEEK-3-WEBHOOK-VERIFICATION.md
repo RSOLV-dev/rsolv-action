@@ -4,6 +4,8 @@
 **Status**: ✅ Implementation Complete - Ready for Stripe CLI Testing
 **Branch**: vk/9d6b-rfc-066-verifica
 
+**⚠️ NOTE**: This is a historical implementation record. API keys shown below are examples from the original implementation and should NOT be reused. Get your current keys from https://dashboard.stripe.com/test/apikeys
+
 ## Summary
 
 Implemented complete Stripe webhook processing infrastructure to handle all 5 critical billing events. The system uses async processing via Oban workers with idempotency guarantees.

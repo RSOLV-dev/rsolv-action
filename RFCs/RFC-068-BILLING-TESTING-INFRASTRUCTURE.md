@@ -9,13 +9,13 @@
 
 **⚠️ CRITICAL: Production Credentials**
 - NEVER commit production credentials to git
-- Test credentials below are safe to commit
+- Get your test credentials from: https://dashboard.stripe.com/test/apikeys
 - Store production keys in `.env` (gitignored)
 - Rotate immediately if accidentally exposed
 
 **Stripe Test Credentials**:
-- API Key: `sk_test_7upzEpVpOJlEJr4HwfSHObSe`
-- Publishable: `pk_Prw2ZQauqnSEnJNq7BR7ZsbychP2t`
+- API Key: `sk_test_...` (get from Stripe dashboard)
+- Publishable: `pk_test_...` (get from Stripe dashboard)
 
 **Test Cards**:
 - Success: `4242 4242 4242 4242`

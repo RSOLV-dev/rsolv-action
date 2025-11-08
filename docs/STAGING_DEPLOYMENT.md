@@ -57,8 +57,9 @@ MIX_ENV=staging
 RELEASE_ENV=staging
 
 # Stripe (TEST MODE ONLY)
-STRIPE_API_KEY=sk_test_7upzEpVpOJlEJr4HwfSHObSe
-STRIPE_PUBLISHABLE_KEY=pk_test_Prw2ZQauqnSEnJNq7BR7ZsbychP2t
+# Get your test keys from: https://dashboard.stripe.com/test/apikeys
+STRIPE_API_KEY=your_stripe_test_secret_key_here
+STRIPE_PUBLISHABLE_KEY=your_stripe_test_publishable_key_here
 STRIPE_WEBHOOK_SECRET=whsec_test_<get from Stripe dashboard>
 
 # Monitoring

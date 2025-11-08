@@ -5,6 +5,8 @@
 **Version**: week-2-complete (commit 26603507)
 **Environment**: staging (rsolv-staging namespace)
 
+**⚠️ NOTE**: This is a historical deployment record. API keys shown below are examples from the original deployment and should NOT be reused. Get your current keys from https://dashboard.stripe.com/test/apikeys
+
 ## Deployment Overview
 
 Successfully deployed Week 2 billing features (RFC-065, RFC-066, RFC-067, RFC-068) to staging environment. All migrations applied, secrets configured, and health checks passing.

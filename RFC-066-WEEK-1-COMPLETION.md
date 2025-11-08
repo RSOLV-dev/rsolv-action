@@ -193,8 +193,8 @@ RFC-066 Week 2 will implement:
 
 ## Test Credentials
 
-From RFC-066 specification:
-- **Stripe Test API Key:** `sk_test_7upzEpVpOJlEJr4HwfSHObSe` (safe to commit)
+**Note**: This document contains historical implementation notes. For current setup:
+- Get your Stripe test API key from: https://dashboard.stripe.com/test/apikeys
 - **Test Card:** 4242 4242 4242 4242 (any future date, any CVC)
 
 ## Documentation References

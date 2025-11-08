@@ -22,9 +22,10 @@
 
 ## Quick Start
 
-**Stripe Test Keys** (ready to use):
-- Publishable: `pk_Prw2ZQauqnSEnJNq7BR7ZsbychP2t`
-- Secret: `sk_test_7upzEpVpOJlEJr4HwfSHObSe`
+**Stripe Test Keys**:
+- Get your test keys from: https://dashboard.stripe.com/test/apikeys
+- Publishable: `pk_test_...` (starts with pk_test_)
+- Secret: `sk_test_...` (starts with sk_test_)
 
 **⚠️ CRITICAL: Production Keys**
 - NEVER commit production keys to git

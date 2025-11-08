@@ -6,6 +6,8 @@
 **Duration**: ~45 minutes
 **Status**: ✅ PASSED (Core functionality verified)
 
+**⚠️ NOTE**: This is a historical test record. API keys shown below are examples from the original testing and should NOT be reused. Get your current keys from https://dashboard.stripe.com/test/apikeys
+
 ## Test Summary
 
 | Category | Tests | Passed | Failed | Status |

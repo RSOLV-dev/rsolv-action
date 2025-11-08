@@ -16,7 +16,7 @@ services:
     image: stripe/stripe-cli
     command: listen --forward-to host.docker.internal:4000/webhooks/stripe
     environment:
-      STRIPE_API_KEY: sk_test_7upzEpVpOJlEJr4HwfSHObSe
+      STRIPE_API_KEY: ${STRIPE_API_KEY:-your_stripe_test_key_here}
 
   test-runner:
     build:
@@ -35,7 +35,7 @@ services:
       OPENAI_API_KEY: "test-key"
       OPENROUTER_API_KEY: "test-key"
       SENDGRID_API_KEY: "test-key"
-      STRIPE_API_KEY: "sk_test_7upzEpVpOJlEJr4HwfSHObSe"
+      STRIPE_API_KEY: "${STRIPE_API_KEY:-your_stripe_test_key_here}"
       LIVE_VIEW_SALT: "test-live-view-salt"
     volumes:
       - .:/app

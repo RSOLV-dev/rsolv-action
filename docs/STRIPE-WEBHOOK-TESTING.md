@@ -252,8 +252,9 @@ Example: `https://gaia.emperor-blues.ts.net/api/webhooks/stripe`
 Add to your `.env` file:
 
 ```bash
-# Stripe Test Mode Configuration (already in .env.example)
-STRIPE_API_KEY=sk_test_7upzEpVpOJlEJr4HwfSHObSe
+# Stripe Test Mode Configuration
+# Get your test API key from: https://dashboard.stripe.com/test/apikeys
+STRIPE_API_KEY=your_stripe_test_secret_key_here
 STRIPE_WEBHOOK_SECRET=whsec_YOUR_WEBHOOK_SIGNING_SECRET
 ```
 
