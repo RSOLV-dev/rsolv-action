@@ -1,10 +1,16 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createPullRequest, PullRequestOptions } from '../github-client.js';
 import { Octokit } from '@octokit/rest';
+import { execSync } from 'child_process';
 
 // Mock Octokit
 vi.mock('@octokit/rest', () => ({
   Octokit: vi.fn()
+}));
+
+// Mock child_process execSync
+vi.mock('child_process', () => ({
+  execSync: vi.fn()
 }));
 
 describe('github-client', () => {
@@ -33,6 +39,9 @@ describe('github-client', () => {
 
     // Make Octokit constructor return our mock
     (Octokit as any).mockImplementation(() => mockOctokit);
+
+    // Mock execSync to return empty strings (simulating successful git commands)
+    vi.mocked(execSync).mockReturnValue(Buffer.from('vk/2b33-fix-flaky-github'));
 
     // Set GitHub token
     process.env.GITHUB_TOKEN = 'test-token';
