@@ -48,6 +48,23 @@ export interface CreatedIssue {
   fileCount: number;
 }
 
+export type IssueLabel = string | { name?: string };
+
+export interface GitHubIssue {
+  number: number;
+  title: string;
+  html_url: string;
+  labels: IssueLabel[];
+}
+
+export type ExistingIssueResult = GitHubIssue | 'skip:validated' | 'skip:false-positive' | null;
+
+export interface IssueCreationResult {
+  issues: CreatedIssue[];
+  skippedValidated: number;
+  skippedFalsePositive: number;
+}
+
 export interface FileToScan {
   path: string;
   content: string;
