@@ -17,6 +17,7 @@ import * as path from 'path';
 import { getGitHubClient } from '../github/api.js';
 import { PhaseDataClient } from './phase-data-client/index.js';
 import { TestIntegrationClient } from './test-integration-client.js';
+import { extractVulnerabilitiesFromIssue } from '../utils/vulnerability-extraction.js';
 
 export class ValidationMode {
   private config: ActionConfig;
@@ -65,12 +66,22 @@ export class ValidationMode {
       logger.info('[VALIDATION MODE] 🧪 TESTING MODE ENABLED - Will not filter based on test results');
     }
 
+    // Extract vulnerabilities from issue body (shared across all code paths)
+    const vulnerabilities = extractVulnerabilitiesFromIssue(issue);
+
+    logger.info('[VALIDATION MODE] Extracted vulnerabilities from issue', {
+      issueNumber: issue.number,
+      vulnerabilitiesCount: vulnerabilities.length,
+      files: vulnerabilities.map(v => v.file)
+    });
+
     // RFC-060 Phase 5.1: Feature flag check - skip validation if disabled
     if (!executableTestsEnabled) {
       logger.info('[VALIDATION MODE] Executable tests disabled - skipping validation');
       return {
         issueId: issue.number,
         validated: true, // Mark as validated to allow mitigation phase to proceed
+        vulnerabilities,
         timestamp: new Date().toISOString(),
         commitHash: this.getCurrentCommitHash()
       };
@@ -90,6 +101,7 @@ export class ValidationMode {
           vendoredFile: true,
           falsePositiveReason: 'Vulnerability in vendor file - requires library update',
           affectedVendorFiles: vendorFiles.files,
+          vulnerabilities,
           timestamp: new Date().toISOString(),
           commitHash: this.getCurrentCommitHash()
         };
@@ -103,6 +115,7 @@ export class ValidationMode {
           issueId: issue.number,
           validated: false,
           falsePositiveReason: 'Previously identified as false positive',
+          vulnerabilities,
           timestamp: new Date().toISOString(),
           commitHash: this.getCurrentCommitHash()
         };
@@ -118,6 +131,7 @@ export class ValidationMode {
           issueId: issue.number,
           validated: false,
           falsePositiveReason: analysisData.cannotFixReason || 'Analysis determined issue cannot be fixed',
+          vulnerabilities,
           timestamp: new Date().toISOString(),
           commitHash: this.getCurrentCommitHash()
         };
@@ -133,6 +147,7 @@ export class ValidationMode {
           issueId: issue.number,
           validated: false,
           falsePositiveReason: 'Unable to generate validation tests',
+          vulnerabilities,
           timestamp: new Date().toISOString(),
           commitHash: this.getCurrentCommitHash()
         };
@@ -215,7 +230,7 @@ export class ValidationMode {
         await this.addGitHubLabel(issue, 'rsolv:validated');
 
         // RFC-060 Phase 2.2 & 3.1: Store via PhaseDataClient
-        await this.storeTestExecutionInPhaseData(issue, testExecutionResult, true, branchName || undefined);
+        await this.storeTestExecutionInPhaseData(issue, testExecutionResult, true, branchName || undefined, vulnerabilities);
 
         return {
           issueId: issue.number,
@@ -224,6 +239,7 @@ export class ValidationMode {
           redTests: testResults.generatedTests.testSuite,
           testResults: validationResult,
           testExecutionResult,
+          vulnerabilities,
           timestamp: new Date().toISOString(),
           commitHash: this.getCurrentCommitHash()
         };
@@ -242,7 +258,7 @@ export class ValidationMode {
           }
 
           // RFC-060 Phase 2.2 & 3.1: Store via PhaseDataClient
-          await this.storeTestExecutionInPhaseData(issue, testExecutionResult, true, branchName || undefined);
+          await this.storeTestExecutionInPhaseData(issue, testExecutionResult, true, branchName || undefined, vulnerabilities);
 
           // In testing mode, still mark as validated to allow full workflow testing
           return {
@@ -252,6 +268,7 @@ export class ValidationMode {
             redTests: testResults.generatedTests.testSuite,
             testResults: validationResult,
             testExecutionResult,
+            vulnerabilities,
             testingMode: true,
             testingModeNote: 'Tests passed but proceeding due to RSOLV_TESTING_MODE',
             timestamp: new Date().toISOString(),
@@ -265,7 +282,7 @@ export class ValidationMode {
           await this.addGitHubLabel(issue, 'rsolv:false-positive');
 
           // RFC-060 Phase 2.2 & 3.1: Store via PhaseDataClient
-          await this.storeTestExecutionInPhaseData(issue, testExecutionResult, false, branchName || undefined);
+          await this.storeTestExecutionInPhaseData(issue, testExecutionResult, false, branchName || undefined, vulnerabilities);
 
           return {
             issueId: issue.number,
@@ -273,6 +290,7 @@ export class ValidationMode {
             falsePositiveReason: 'Tests passed on allegedly vulnerable code',
             testResults: validationResult,
             testExecutionResult,
+            vulnerabilities,
             timestamp: new Date().toISOString(),
             commitHash: this.getCurrentCommitHash()
           };
@@ -285,6 +303,7 @@ export class ValidationMode {
         issueId: issue.number,
         validated: false,
         falsePositiveReason: `Validation error: ${error}`,
+        vulnerabilities,
         timestamp: new Date().toISOString(),
         commitHash: this.getCurrentCommitHash()
       };
@@ -841,7 +860,8 @@ export class ValidationMode {
     issue: IssueContext,
     testExecution: TestExecutionResult,
     validated: boolean,
-    branchName?: string
+    branchName?: string,
+    vulnerabilities?: Array<{ file: string; line: number; type: string; description?: string; confidence?: number | string }>
   ): Promise<void> {
     if (!this.phaseDataClient) {
       logger.debug('PhaseDataClient not available, skipping phase data storage');
@@ -858,6 +878,7 @@ export class ValidationMode {
               branchName,
               testPath: testExecution.testFile,
               testExecutionResult: testExecution,
+              vulnerabilities,
               timestamp: new Date().toISOString()
             }
           }

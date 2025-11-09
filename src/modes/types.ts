@@ -3,6 +3,8 @@
  * RFC-041: Scan, Validate, Mitigate
  */
 
+import type { ValidationVulnerability } from '../utils/vulnerability-extraction.js';
+
 export type OperationMode = 
   | 'scan'      // Detect vulnerabilities (batch)
   | 'validate'  // Prove vulnerabilities exist with RED tests
@@ -27,6 +29,7 @@ export interface ValidationResult {
   redTests?: any; // VulnerabilityTestSuite
   testResults?: any; // TestResults
   testExecutionResult?: TestExecutionResult; // RFC-060 Phase 2.2: Test execution metadata
+  vulnerabilities?: ValidationVulnerability[]; // Extracted vulnerabilities from issue body
   falsePositiveReason?: string;
   testingMode?: boolean; // RFC-059: Indicates testing mode is enabled
   testingModeNote?: string; // RFC-059: Explanation when testing mode overrides validation
