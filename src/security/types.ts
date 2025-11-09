@@ -96,17 +96,17 @@ export interface SecurityPattern {
   // AST Enhancement fields
   astRules?: {
     nodeType?: string;
-    [key: string]: any;
+    [key: string]: unknown;
   };
   contextRules?: {
     excludePaths?: RegExp[];
     safeIfWrapped?: string[];
-    [key: string]: any;
+    [key: string]: unknown;
   };
   confidenceRules?: {
     base?: number;
     adjustments?: Record<string, number>;
-    [key: string]: any;
+    [key: string]: unknown;
   };
   minConfidence?: number;
 }
