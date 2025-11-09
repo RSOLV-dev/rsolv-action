@@ -91,7 +91,7 @@ export function getMinimalPatterns(): SecurityPattern[] {
     {
       id: 'js-eval',
       name: 'JavaScript Eval Usage',
-      type: VulnerabilityType.COMMAND_INJECTION,
+      type: VulnerabilityType.CODE_INJECTION,
       severity: 'critical',
       description: 'Use of eval() function',
       patterns: {
@@ -133,7 +133,7 @@ export function getMinimalPatterns(): SecurityPattern[] {
     {
       id: 'python-eval',
       name: 'Python Eval Usage',
-      type: VulnerabilityType.COMMAND_INJECTION,
+      type: VulnerabilityType.CODE_INJECTION,
       severity: 'critical',
       description: 'Use of eval() with user input',
       patterns: {
@@ -192,7 +192,7 @@ export function getMinimalPatterns(): SecurityPattern[] {
     {
       id: 'ruby-eval',
       name: 'Ruby Eval Usage',
-      type: VulnerabilityType.COMMAND_INJECTION,
+      type: VulnerabilityType.CODE_INJECTION,
       severity: 'critical',
       description: 'Use of eval with user input',
       patterns: {
@@ -315,7 +315,7 @@ export function getMinimalPatterns(): SecurityPattern[] {
     {
       id: 'php-eval',
       name: 'PHP Eval Usage',
-      type: VulnerabilityType.COMMAND_INJECTION,
+      type: VulnerabilityType.CODE_INJECTION,
       severity: 'critical',
       description: 'Use of eval() function',
       patterns: {
@@ -354,7 +354,7 @@ export function getMinimalPatterns(): SecurityPattern[] {
     {
       id: 'elixir-code-eval',
       name: 'Elixir Code Evaluation',
-      type: VulnerabilityType.COMMAND_INJECTION,
+      type: VulnerabilityType.CODE_INJECTION,
       severity: 'critical',
       description: 'Dynamic code evaluation',
       patterns: {
@@ -565,6 +565,37 @@ export function getMinimalPatterns(): SecurityPattern[] {
       examples: {
         vulnerable: 'res.setHeader("X-User", req.query.username)',
         secure: 'res.setHeader("X-User", sanitizeHeaderValue(req.query.username))'
+      }
+    },
+
+    // Prototype Pollution
+    {
+      id: 'prototype-pollution',
+      name: 'Prototype Pollution',
+      type: VulnerabilityType.PROTOTYPE_POLLUTION,
+      severity: 'high',
+      description: 'Unsafe assignment to object properties that can pollute the prototype chain',
+      patterns: {
+        regex: [
+          // Direct __proto__ assignment
+          /__proto__\s*[=:]/gi,
+          // constructor.prototype assignment
+          /constructor\s*\.\s*prototype\s*[=:]/gi,
+          // Dynamic property assignment with bracket notation (common in merge/extend functions)
+          /\[\s*['"](__proto__|constructor|prototype)['"]\s*\]\s*=/gi,
+          // Object.assign with user input
+          /Object\.assign\s*\([^,)]*,\s*[^)]*\b(req|request|params|query|body)\b/gi,
+          // Lodash merge/extend with user input
+          /(_\.merge|_\.extend|_\.defaults|_\.assign)\s*\([^,)]*,\s*[^)]*\b(req|request|params|query|body)\b/gi
+        ]
+      },
+      languages: ['javascript', 'typescript'],
+      cweId: 'CWE-1321',
+      owaspCategory: 'A08:2021',
+      remediation: 'Use Object.create(null) for objects, validate keys against a whitelist, or use Map instead of plain objects',
+      examples: {
+        vulnerable: 'Object.assign(target, req.body)',
+        secure: 'const safeKeys = Object.keys(req.body).filter(key => !["__proto__", "constructor", "prototype"].includes(key)); Object.assign(target, ...)'
       }
     }
   ];
