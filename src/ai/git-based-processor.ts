@@ -595,6 +595,7 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
     logger.info(`Creating PR from commit ${commitHash?.substring(0, 8) || 'HEAD'}`);
     
     // Use educational PR creation for better user engagement
+    // Educational PRs include validation data (validation branch, test results, etc.)
     const useEducationalPR = process.env.RSOLV_EDUCATIONAL_PR !== 'false';
 
     // Extract test mode flags from solution if present
@@ -621,6 +622,10 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
           validationData  // RFC-041: Pass validation data for educational content
       )
       : isGitSolutionResult(solution!) ? await createPullRequestFromGit(
+        // NOTE: Non-educational PR path does not include validation data
+        // This is intentional - validation data (branch links, test results, etc.)
+        // is only available in educational PRs (the default and recommended mode).
+        // To enable educational PRs, ensure RSOLV_EDUCATIONAL_PR !== 'false'
         issue,
           solution!.commitHash!,
           {

@@ -1,5 +1,6 @@
 import { IssueContext, IssueProcessingResult, ActionConfig } from '../types/index.js';
 import { logger } from '../utils/logger.js';
+import { extractValidationData, summarizeValidationData } from '../utils/validation-helpers.js';
 import { analyzeIssue } from './analyzer.js';
 import { SecurityAwareAnalyzer } from './security-analyzer.js';
 import { generateSolution } from './solution.js';
@@ -101,13 +102,11 @@ async function processIssue(
 
       try {
         // RFC-041: Extract validation data for educational PR generation
-        const validationData = issue.validationData ? {
-          branchName: issue.validationData.branchName,
-          redTests: issue.validationData.redTests,
-          testResults: issue.validationData.testResults,
-          vulnerabilities: issue.validationData.vulnerabilities,
-          timestamp: issue.validationData.timestamp
-        } : undefined;
+        const validationData = extractValidationData(issue);
+
+        if (validationData) {
+          logger.info(`[UnifiedProcessor] Using validation data: ${summarizeValidationData(validationData)}`);
+        }
 
         const gitResult = await processIssueWithGit(issue, config, validationData);
         return {

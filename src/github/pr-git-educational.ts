@@ -4,6 +4,7 @@
  */
 
 import { IssueContext, ActionConfig } from '../types/index.js';
+import { ValidationData } from '../types/validation.js';
 import { logger } from '../utils/logger.js';
 import { getGitHubClient } from './api.js';
 import { execSync } from 'child_process';
@@ -23,27 +24,24 @@ export interface EducationalPrResult {
   error?: string;
 }
 
+// Re-export ValidationData for backward compatibility
+export type { ValidationData } from '../types/validation.js';
+
 /**
- * Validation data from VALIDATE phase (RFC-041, RFC-058, RFC-060)
+ * PR section titles - extracted as constants for maintainability
  */
-export interface ValidationData {
-  branchName?: string;  // RFC-058: rsolv/validate/issue-N branch
-  redTests?: any;       // Generated RED tests
-  testResults?: {       // Test execution results
-    passed?: number;
-    failed?: number;
-    total?: number;
-    output?: string;
-  };
-  vulnerabilities?: Array<{
-    type?: string;
-    file?: string;
-    line?: number;
-    description?: string;
-    cwe?: string;
-  }>;
-  timestamp?: string;
-}
+const PR_SECTIONS = {
+  VALIDATION_TESTS: '## 🧪 Validation Tests',
+  TEST_RESULTS: '## ✅ Test Results',
+  ATTACK_EXAMPLE: '## 🎯 Attack Example',
+  LEARNING_RESOURCES: '## 📖 Learning Resources',
+  CHANGES_MADE: '## 📊 Changes Made',
+  UNDERSTANDING_FIX: '## 📚 Understanding This Fix',
+  TESTING_INSTRUCTIONS: '## 🧪 Testing Instructions',
+  REVIEW_CHECKLIST: '## ✔️ Review Checklist',
+  ABOUT_RSOLV: '## 🤖 About RSOLV',
+  SUMMARY: '## 📝 Summary'
+} as const;
 
 /**
  * Vulnerability education database
@@ -326,6 +324,101 @@ function generateEducationalContent(
 }
 
 /**
+ * Generate validation tests section (RFC-058)
+ */
+function generateValidationSection(validationData?: ValidationData): string[] {
+  if (!validationData?.branchName) return [];
+
+  return [
+    PR_SECTIONS.VALIDATION_TESTS,
+    '',
+    'This fix was validated using RED tests from the VALIDATE phase:',
+    '',
+    `**Validation Branch:** [\`${validationData.branchName}\`](../../tree/${validationData.branchName})`,
+    '',
+    'The validation branch contains RED tests that:',
+    '- ❌ **Failed** on the vulnerable code (proving the vulnerability exists)',
+    '- ✅ **Pass** after this fix is applied (proving the fix works)',
+    '',
+    'This test-driven approach ensures the fix addresses the actual vulnerability.',
+    ''
+  ];
+}
+
+/**
+ * Generate test results section (RFC-041)
+ */
+function generateTestResultsSection(validationData?: ValidationData): string[] {
+  if (!validationData?.testResults) return [];
+
+  const { passed = 0, failed = 0, total = 0 } = validationData.testResults;
+
+  return [
+    PR_SECTIONS.TEST_RESULTS,
+    '',
+    '### Before Fix (RED Tests)',
+    '```',
+    `Tests: ${failed} failed, ${passed} passed, ${total} total`,
+    'Status: ❌ FAILING (vulnerability present)',
+    '```',
+    '',
+    '### After Fix (GREEN Tests)',
+    '```',
+    `Tests: 0 failed, ${total} passed, ${total} total`,
+    'Status: ✅ PASSING (vulnerability fixed)',
+    '```',
+    ''
+  ];
+}
+
+/**
+ * Generate attack example section (RFC-041)
+ */
+function generateAttackExampleSection(
+  education: { title: string; description: string; prevention: string; example?: string }
+): string[] {
+  if (!education.example) return [];
+
+  return [
+    PR_SECTIONS.ATTACK_EXAMPLE,
+    '',
+    '**How this vulnerability could be exploited:**',
+    '',
+    '```',
+    education.example,
+    '```',
+    '',
+    'This fix prevents such attacks by applying proper input validation and sanitization.',
+    ''
+  ];
+}
+
+/**
+ * Generate learning resources section
+ */
+function generateLearningResourcesSection(
+  summary: { cwe?: string },
+  education: { title: string }
+): string[] {
+  const resources = [
+    PR_SECTIONS.LEARNING_RESOURCES,
+    '',
+    'To learn more about this vulnerability type:',
+    ''
+  ];
+
+  if (summary.cwe) {
+    resources.push(`- [CWE-${summary.cwe}](https://cwe.mitre.org/data/definitions/${summary.cwe}.html) - Common Weakness Enumeration`);
+  }
+
+  resources.push(`- [OWASP: ${education.title}](https://owasp.org) - Security best practices`);
+  resources.push('- [RSOLV Security Patterns](https://rsolv.dev/patterns) - Comprehensive vulnerability database');
+  resources.push('');
+
+  return resources;
+}
+
+/**
  * Generate educational PR body with all components (RFC-041)
  * Includes validation branch link, test results, and educational content
  */
@@ -377,73 +470,25 @@ function generateEducationalPrBody(
   sections.push('');
   
   // Summary
-  sections.push('## 📝 Summary');
+  sections.push(PR_SECTIONS.SUMMARY);
   sections.push(summary.description);
   sections.push('');
 
-  // RFC-058: Validation Branch Link (rsolv/validate/issue-N)
-  if (validationData?.branchName) {
-    sections.push('## 🧪 Validation Tests');
-    sections.push('');
-    sections.push('This fix was validated using RED tests from the VALIDATE phase:');
-    sections.push('');
-    sections.push(`**Validation Branch:** [\`${validationData.branchName}\`](../../tree/${validationData.branchName})`);
-    sections.push('');
-    sections.push('The validation branch contains RED tests that:');
-    sections.push('- ❌ **Failed** on the vulnerable code (proving the vulnerability exists)');
-    sections.push('- ✅ **Pass** after this fix is applied (proving the fix works)');
-    sections.push('');
-    sections.push('This test-driven approach ensures the fix addresses the actual vulnerability.');
-    sections.push('');
-  }
-
-  // RFC-041: Test Results (RED → GREEN)
-  if (validationData?.testResults) {
-    const { passed = 0, failed = 0, total = 0 } = validationData.testResults;
-    sections.push('## ✅ Test Results');
-    sections.push('');
-    sections.push('### Before Fix (RED Tests)');
-    sections.push('```');
-    sections.push(`Tests: ${failed} failed, ${passed} passed, ${total} total`);
-    sections.push('Status: ❌ FAILING (vulnerability present)');
-    sections.push('```');
-    sections.push('');
-    sections.push('### After Fix (GREEN Tests)');
-    sections.push('```');
-    sections.push(`Tests: 0 failed, ${total} passed, ${total} total`);
-    sections.push('Status: ✅ PASSING (vulnerability fixed)');
-    sections.push('```');
-    sections.push('');
-  }
-
-  // RFC-041: Attack Examples and Learning Resources
+  // Get vulnerability education for later sections
   const vulnTypeForEducation = summary.vulnerabilityType?.toUpperCase() || 'SECURITY';
   const education = VULNERABILITY_EDUCATION[vulnTypeForEducation] || VULNERABILITY_EDUCATION.XSS;
 
-  if (education.example) {
-    sections.push('## 🎯 Attack Example');
-    sections.push('');
-    sections.push('**How this vulnerability could be exploited:**');
-    sections.push('');
-    sections.push('```');
-    sections.push(education.example);
-    sections.push('```');
-    sections.push('');
-    sections.push('This fix prevents such attacks by applying proper input validation and sanitization.');
-    sections.push('');
-  }
+  // RFC-058: Validation Branch Link (rsolv/validate/issue-N)
+  sections.push(...generateValidationSection(validationData));
+
+  // RFC-041: Test Results (RED → GREEN)
+  sections.push(...generateTestResultsSection(validationData));
+
+  // RFC-041: Attack Examples
+  sections.push(...generateAttackExampleSection(education));
 
   // Learning Resources
-  sections.push('## 📖 Learning Resources');
-  sections.push('');
-  sections.push('To learn more about this vulnerability type:');
-  sections.push('');
-  if (summary.cwe) {
-    sections.push(`- [CWE-${summary.cwe}](https://cwe.mitre.org/data/definitions/${summary.cwe}.html) - Common Weakness Enumeration`);
-  }
-  sections.push(`- [OWASP: ${education.title}](https://owasp.org) - Security best practices`);
-  sections.push('- [RSOLV Security Patterns](https://rsolv.dev/patterns) - Comprehensive vulnerability database');
-  sections.push('');
+  sections.push(...generateLearningResourcesSection(summary, education));
 
   // Changes Made
   if (diffStats && diffStats.filesChanged > 0) {
@@ -457,9 +502,8 @@ function generateEducationalPrBody(
   // Educational Content
   sections.push('## 📚 Understanding This Fix');
   sections.push('');
-  const vulnType = summary.vulnerabilityType?.toUpperCase() || 'SECURITY';
-  const education = VULNERABILITY_EDUCATION[vulnType] || VULNERABILITY_EDUCATION.XSS;
-  
+  // education variable already declared earlier in function
+
   sections.push(`### 🛡️ What is ${education.title}?`);
   sections.push(education.description);
   sections.push('');
