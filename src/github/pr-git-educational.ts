@@ -24,6 +24,28 @@ export interface EducationalPrResult {
 }
 
 /**
+ * Validation data from VALIDATE phase (RFC-041, RFC-058, RFC-060)
+ */
+export interface ValidationData {
+  branchName?: string;  // RFC-058: rsolv/validate/issue-N branch
+  redTests?: any;       // Generated RED tests
+  testResults?: {       // Test execution results
+    passed?: number;
+    failed?: number;
+    total?: number;
+    output?: string;
+  };
+  vulnerabilities?: Array<{
+    type?: string;
+    file?: string;
+    line?: number;
+    description?: string;
+    cwe?: string;
+  }>;
+  timestamp?: string;
+}
+
+/**
  * Vulnerability education database
  */
 const VULNERABILITY_EDUCATION: Record<string, {
@@ -85,7 +107,8 @@ export async function createEducationalPullRequest(
     insertions: number;
     deletions: number;
     filesChanged: number;
-  }
+  },
+  validationData?: ValidationData  // RFC-041: Validation phase data
 ): Promise<EducationalPrResult> {
   try {
     logger.info(`Creating educational PR from commit ${commitHash.substring(0, 8)} for issue #${issue.number}`);
@@ -151,9 +174,9 @@ export async function createEducationalPullRequest(
     
     // Generate educational content
     const educationalContent = generateEducationalContent(summary, issue);
-    
-    // Generate comprehensive PR body
-    const prBody = generateEducationalPrBody(issue, summary, educationalContent, diffStats);
+
+    // Generate comprehensive PR body with validation data (RFC-041, RFC-058)
+    const prBody = generateEducationalPrBody(issue, summary, educationalContent, diffStats, validationData);
     
     // Create the pull request
     const github = getGitHubClient();
@@ -303,7 +326,8 @@ function generateEducationalContent(
 }
 
 /**
- * Generate educational PR body with all components
+ * Generate educational PR body with all components (RFC-041)
+ * Includes validation branch link, test results, and educational content
  */
 function generateEducationalPrBody(
   issue: IssueContext,
@@ -323,7 +347,8 @@ function generateEducationalPrBody(
     insertions: number;
     deletions: number;
     filesChanged: number;
-  }
+  },
+  validationData?: ValidationData
 ): string {
   const sections: string[] = [];
   
@@ -355,7 +380,71 @@ function generateEducationalPrBody(
   sections.push('## 📝 Summary');
   sections.push(summary.description);
   sections.push('');
-  
+
+  // RFC-058: Validation Branch Link (rsolv/validate/issue-N)
+  if (validationData?.branchName) {
+    sections.push('## 🧪 Validation Tests');
+    sections.push('');
+    sections.push('This fix was validated using RED tests from the VALIDATE phase:');
+    sections.push('');
+    sections.push(`**Validation Branch:** [\`${validationData.branchName}\`](../../tree/${validationData.branchName})`);
+    sections.push('');
+    sections.push('The validation branch contains RED tests that:');
+    sections.push('- ❌ **Failed** on the vulnerable code (proving the vulnerability exists)');
+    sections.push('- ✅ **Pass** after this fix is applied (proving the fix works)');
+    sections.push('');
+    sections.push('This test-driven approach ensures the fix addresses the actual vulnerability.');
+    sections.push('');
+  }
+
+  // RFC-041: Test Results (RED → GREEN)
+  if (validationData?.testResults) {
+    const { passed = 0, failed = 0, total = 0 } = validationData.testResults;
+    sections.push('## ✅ Test Results');
+    sections.push('');
+    sections.push('### Before Fix (RED Tests)');
+    sections.push('```');
+    sections.push(`Tests: ${failed} failed, ${passed} passed, ${total} total`);
+    sections.push('Status: ❌ FAILING (vulnerability present)');
+    sections.push('```');
+    sections.push('');
+    sections.push('### After Fix (GREEN Tests)');
+    sections.push('```');
+    sections.push(`Tests: 0 failed, ${total} passed, ${total} total`);
+    sections.push('Status: ✅ PASSING (vulnerability fixed)');
+    sections.push('```');
+    sections.push('');
+  }
+
+  // RFC-041: Attack Examples and Learning Resources
+  const vulnTypeForEducation = summary.vulnerabilityType?.toUpperCase() || 'SECURITY';
+  const education = VULNERABILITY_EDUCATION[vulnTypeForEducation] || VULNERABILITY_EDUCATION.XSS;
+
+  if (education.example) {
+    sections.push('## 🎯 Attack Example');
+    sections.push('');
+    sections.push('**How this vulnerability could be exploited:**');
+    sections.push('');
+    sections.push('```');
+    sections.push(education.example);
+    sections.push('```');
+    sections.push('');
+    sections.push('This fix prevents such attacks by applying proper input validation and sanitization.');
+    sections.push('');
+  }
+
+  // Learning Resources
+  sections.push('## 📖 Learning Resources');
+  sections.push('');
+  sections.push('To learn more about this vulnerability type:');
+  sections.push('');
+  if (summary.cwe) {
+    sections.push(`- [CWE-${summary.cwe}](https://cwe.mitre.org/data/definitions/${summary.cwe}.html) - Common Weakness Enumeration`);
+  }
+  sections.push(`- [OWASP: ${education.title}](https://owasp.org) - Security best practices`);
+  sections.push('- [RSOLV Security Patterns](https://rsolv.dev/patterns) - Comprehensive vulnerability database');
+  sections.push('');
+
   // Changes Made
   if (diffStats && diffStats.filesChanged > 0) {
     sections.push('## 📊 Changes Made');

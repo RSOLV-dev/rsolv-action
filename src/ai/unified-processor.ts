@@ -98,9 +98,18 @@ async function processIssue(
     // Use git-based processing if enabled (ADR-012)
     if (config.useGitBasedEditing) {
       logger.info(`Using git-based in-place editing for issue #${issue.number}`);
-      
+
       try {
-        const gitResult = await processIssueWithGit(issue, config);
+        // RFC-041: Extract validation data for educational PR generation
+        const validationData = issue.validationData ? {
+          branchName: issue.validationData.branchName,
+          redTests: issue.validationData.redTests,
+          testResults: issue.validationData.testResults,
+          vulnerabilities: issue.validationData.vulnerabilities,
+          timestamp: issue.validationData.timestamp
+        } : undefined;
+
+        const gitResult = await processIssueWithGit(issue, config, validationData);
         return {
           issueId: issue.id,
           success: gitResult.success,

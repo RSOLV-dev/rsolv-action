@@ -76,6 +76,7 @@ export interface IssueContext {
     severity: string;
     description: string;
   }>;
+  validationData?: any; // RFC-041: Validation phase data for MITIGATE phase
 }
 
 export interface IssueProcessingResult {

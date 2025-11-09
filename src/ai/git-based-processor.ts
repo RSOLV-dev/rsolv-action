@@ -1,6 +1,7 @@
 /**
  * Enhanced Git-based issue processor with fix validation
  * Implements RFC-020: Fix Validation Integration
+ * Implements RFC-041: Three-Phase Architecture
  */
 import { IssueContext, ActionConfig } from '../types/index.js';
 import { logger } from '../utils/logger.js';
@@ -9,7 +10,7 @@ import { GitBasedClaudeCodeAdapter } from './adapters/claude-code-git.js';
 import { ClaudeCodeMaxAdapter } from './adapters/claude-code-cli-dev.js';
 import { isClaudeMaxAvailable } from './adapters/claude-code-cli-dev.js';
 import { createPullRequestFromGit } from '../github/pr-git.js';
-import { createEducationalPullRequest } from '../github/pr-git-educational.js';
+import { createEducationalPullRequest, ValidationData } from '../github/pr-git-educational.js';
 import { AIConfig, IssueAnalysis } from './types.js';
 import { execSync } from 'child_process';
 import { TestGeneratingSecurityAnalyzer, AnalysisWithTestsResult } from './test-generating-security-analyzer.js';
@@ -186,7 +187,8 @@ export interface GitProcessingResult {
  */
 export async function processIssueWithGit(
   issue: IssueContext,
-  config: ActionConfig
+  config: ActionConfig,
+  validationData?: ValidationData  // RFC-041: Pass validation data for educational PRs
 ): Promise<GitProcessingResult> {
   const startTime = Date.now();
   const beforeFixCommit = getLastCommitBeforeFix();
@@ -615,7 +617,8 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
             ...testModeFlags
           },
           config,
-          solution!.diffStats
+          solution!.diffStats,
+          validationData  // RFC-041: Pass validation data for educational content
       )
       : isGitSolutionResult(solution!) ? await createPullRequestFromGit(
         issue,
