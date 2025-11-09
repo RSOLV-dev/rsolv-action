@@ -3,7 +3,7 @@
  * Implements RFC-041 three-phase architecture
  */
 
-import { PhaseDataClient, PhaseData, ValidationPhaseData as PhaseDataClientValidationPhaseData } from '../phase-data-client/index.js';
+import { PhaseDataClient, PhaseData, ValidationPhaseData as PhaseDataClientValidationPhaseData, ValidationVulnerability } from '../phase-data-client/index.js';
 import { ScanOrchestrator } from '../../scanner/index.js';
 import { analyzeIssue } from '../../ai/analyzer.js';
 import { TestGeneratingSecurityAnalyzer, AnalysisWithTestsResult } from '../../ai/test-generating-security-analyzer.js';
@@ -13,6 +13,7 @@ import { createEducationalPullRequest } from '../../github/pr-git-educational.js
 import { createPullRequestFromGit } from '../../github/pr-git.js';
 import { AIConfig, IssueAnalysis } from '../../ai/types.js';
 import { TestRunner, TestRunResult } from '../../ai/test-runner.js';
+import { parseIssueBody } from './utils/issue-body-parser.js';
 // import { getIssue } from '../../github/api.js'; // Not needed yet
 import type { ActionConfig, IssueContext } from '../../types/index.js';
 import type { Vulnerability } from '../../security/types.js';
@@ -1545,12 +1546,49 @@ export class PhaseExecutor {
         }
       }
 
+      // Parse issue body to extract vulnerability information
+      const parsedIssueBody = parseIssueBody(issue.body);
+      const vulnerabilities: ValidationVulnerability[] = [];
+
+      // Extract vulnerabilities from parsed issue body
+      for (const fileMapping of parsedIssueBody.files) {
+        for (const vuln of fileMapping.vulnerabilities) {
+          vulnerabilities.push({
+            file: fileMapping.path,
+            line: vuln.line,
+            type: parsedIssueBody.type || scanData.analysisData.vulnerabilityType || 'unknown',
+            description: vuln.message,
+            confidence: scanData.analysisData.severity || parsedIssueBody.severity || 'medium'
+          });
+        }
+      }
+
+      // If no vulnerabilities found in issue body, create from scan data
+      if (vulnerabilities.length === 0 && scanData.analysisData.filesToModify) {
+        for (const file of scanData.analysisData.filesToModify) {
+          vulnerabilities.push({
+            file,
+            line: 0, // Line number not available from scan data
+            type: scanData.analysisData.vulnerabilityType || 'unknown',
+            description: scanData.analysisData.reason || 'Vulnerability detected',
+            confidence: scanData.analysisData.severity || 'medium'
+          });
+        }
+      }
+
+      logger.info('[VALIDATE] Extracted vulnerabilities from issue', {
+        issueNumber: issue.number,
+        vulnerabilitiesCount: vulnerabilities.length,
+        files: vulnerabilities.map(v => v.file)
+      });
+
       const validationResult: { [issueId: number]: PhaseDataClientValidationPhaseData } = {
         [issueKey]: {
           validated: testResults?.generatedTests?.success || false,
           redTests: testResults?.generatedTests?.testSuite,
           testResults: testExecutionResult as any,
           falsePositiveReason: undefined,
+          vulnerabilities,
           timestamp: new Date().toISOString()
         }
       };

@@ -29,6 +29,17 @@ export interface ScanVulnerability {
 }
 
 /**
+ * Vulnerability information extracted from issue body
+ */
+export interface ValidationVulnerability {
+  file: string;
+  line: number;
+  type: string;
+  description?: string;
+  confidence?: number | string;
+}
+
+/**
  * Validation phase data for a single issue
  */
 export interface ValidationPhaseData {
@@ -39,6 +50,7 @@ export interface ValidationPhaseData {
   testResults?: GitValidationResult;
   testExecutionResult?: TestExecutionResult;
   falsePositiveReason?: string;
+  vulnerabilities?: ValidationVulnerability[];
   timestamp: string;
 }
 
