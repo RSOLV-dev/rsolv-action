@@ -10,6 +10,7 @@ export enum VulnerabilityType {
   VULNERABLE_COMPONENTS = 'vulnerable_components',
   INSUFFICIENT_LOGGING = 'insufficient_logging',
   COMMAND_INJECTION = 'command_injection',
+  CODE_INJECTION = 'code_injection',
   PATH_TRAVERSAL = 'path_traversal',
   WEAK_CRYPTOGRAPHY = 'weak_cryptography',
   DEBUG_MODE = 'debug_mode',
