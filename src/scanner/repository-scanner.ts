@@ -251,7 +251,7 @@ export class RepositoryScanner {
 
     // Sort groups by severity and count
     return Array.from(groups.values()).sort((a, b) => {
-      const severityOrder = { high: 0, medium: 1, low: 2 };
+      const severityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
       const severityDiff = severityOrder[a.severity as keyof typeof severityOrder] -
                            severityOrder[b.severity as keyof typeof severityOrder];
 
