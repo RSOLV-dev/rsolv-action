@@ -59,7 +59,7 @@ export function createCodeInjectionPattern(
     name: config.name,
     type: VulnerabilityType.CODE_INJECTION,
     severity: 'critical',
-    description: config.description || `Use of eval() or dynamic code execution with user input`,
+    description: config.description || 'Use of eval() or dynamic code execution with user input',
     patterns: {
       regex: config.patterns
     },
