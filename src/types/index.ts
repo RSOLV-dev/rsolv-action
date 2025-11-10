@@ -76,6 +76,16 @@ export interface IssueContext {
     severity: string;
     description: string;
   }>;
+
+  /**
+   * RFC-041: Validation phase data for MITIGATE phase
+   *
+   * Contains test results, validation branch info, and vulnerability details
+   * from the VALIDATE phase. Used to generate educational PR content.
+   *
+   * @see {@link ../types/validation.ts ValidationData}
+   */
+  validationData?: import('./validation.js').ValidationData;
 }
 
 export interface IssueProcessingResult {

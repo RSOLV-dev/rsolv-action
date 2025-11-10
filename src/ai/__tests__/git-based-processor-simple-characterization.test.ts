@@ -11,7 +11,7 @@ import { IssueContext, ActionConfig } from '../../types/index.js';
 describe('processIssueWithGit - Simple Characterization', () => {
   test('processIssueWithGit function exists and has correct signature', () => {
     expect(typeof processIssueWithGit).toBe('function');
-    expect(processIssueWithGit.length).toBe(2); // Takes 2 parameters
+    expect(processIssueWithGit.length).toBe(3); // Takes 3 parameters (issue, config, validationData)
   });
 
   test('getMaxIterations function exists and returns expected defaults', () => {
