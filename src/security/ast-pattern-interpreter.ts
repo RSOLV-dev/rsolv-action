@@ -13,6 +13,7 @@ import type { Node, File } from '@babel/types';
 import type { NodePath, Scope, Binding } from '@babel/traverse';
 
 import { SecurityPattern } from './types.js';
+import { SafeRegexMatcher } from './safe-regex-matcher.js';
 
 // Type for AST rules structure
 interface ASTRules {
@@ -642,45 +643,37 @@ export class ASTPatternInterpreter {
   }
   
   private applyRegexPattern(
-    content: string, 
-    pattern: SecurityPattern, 
+    content: string,
+    pattern: SecurityPattern,
     filePath: string
   ): Finding[] {
     // Traditional regex matching for patterns without AST rules
     const findings: Finding[] = [];
-    const lines = content.split('\n');
-    
+
     if (!pattern.patterns?.regex) {
       return findings;
     }
-    
-    // Test each regex pattern
+
+    // Use SafeRegexMatcher for all safety guarantees
     for (const regex of pattern.patterns.regex) {
-      let match;
-      regex.lastIndex = 0; // Reset regex state
-      
-      while ((match = regex.exec(content)) !== null) {
-        // Calculate line number
-        const lineNumber = content.substring(0, match.index).split('\n').length;
-        const line = lines[lineNumber - 1];
-        const column = match.index - content.lastIndexOf('\n', match.index - 1) - 1;
-        
+      const result = SafeRegexMatcher.match(regex, content, {
+        patternId: pattern.id,
+        filePath
+      });
+
+      // Convert matches to findings
+      for (const { match, lineNumber, column } of result.matches) {
         findings.push({
           pattern,
           file: filePath,
           line: lineNumber,
-          column: column,
+          column,
           code: match[0],
           confidence: pattern.confidenceRules?.base || 0.8
         });
-        
-        // Prevent infinite loop on zero-width matches
-        if (match.index === regex.lastIndex) {
-          regex.lastIndex++;
-        }
       }
     }
-    
+
     return findings;
   }
 }
