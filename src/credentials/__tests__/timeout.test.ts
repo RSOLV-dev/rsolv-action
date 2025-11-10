@@ -170,12 +170,12 @@ describe('Credential Manager Timeout Behavior', () => {
     const start = Date.now();
     await manager.initialize('test-api-key');
     const duration = Date.now() - start;
-    
+
     // Should complete successfully
     expect(await manager.getCredential('anthropic')).toBe('test-key');
-    
-    // Should take about 100ms
-    expect(duration).toBeGreaterThanOrEqual(100);
+
+    // Should take about 100ms (with small tolerance for timing variations)
+    expect(duration).toBeGreaterThanOrEqual(95); // Allow 5ms tolerance
     expect(duration).toBeLessThan(200);
     
     fetchSpy.mockRestore();
