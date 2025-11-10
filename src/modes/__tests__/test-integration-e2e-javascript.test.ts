@@ -93,7 +93,7 @@ describe('E2E: JavaScript/TypeScript Test Integration', () => {
   });
 
   describe('Backend API: JavaScript/TypeScript AST Support', () => {
-    it('should analyze JavaScript/Vitest test files and return scored recommendations', async () => {
+    it.skipIf(!API_KEY)('should analyze JavaScript/Vitest test files and return scored recommendations', async () => {
       // Arrange - NoSQL injection vulnerability from NodeGoat
       const request: AnalyzeRequest = {
         vulnerableFile: 'app/routes/session.js',
@@ -124,7 +124,7 @@ describe('E2E: JavaScript/TypeScript Test Integration', () => {
       expect(result.fallback.path).toContain('session');
     }, 10000);
 
-    it('should generate AST-integrated test for Vitest with realistic NoSQL injection', async () => {
+    it.skipIf(!API_KEY)('should generate AST-integrated test for Vitest with realistic NoSQL injection', async () => {
       // Arrange - Minimal Vitest test file
       const targetFileContent = `import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
@@ -219,7 +219,7 @@ describe('Session Routes', () => {
       expect(result.insertionPoint.strategy).toBe('after_last_it_block');
     }, 10000);
 
-    it('should generate AST-integrated test for Mocha with realistic XSS', async () => {
+    it.skipIf(!API_KEY)('should generate AST-integrated test for Mocha with realistic XSS', async () => {
       // Arrange - Minimal Mocha test file
       const targetFileContent = `const { expect } = require('chai');
 const request = require('supertest');
@@ -311,18 +311,7 @@ describe('User Profile Routes', function() {
   });
 
   describe('E2E: Vitest Test Integration Workflow', () => {
-    it('should complete full workflow: scan → validate → mitigate', async function() {
-      if (SKIP_REAL_REPOS) {
-        console.log('⏭️  Skipping real repository test (SKIP_REAL_REPO_TESTS=true)');
-        this.skip();
-        return;
-      }
-
-      if (!API_KEY) {
-        console.log('⏭️  Skipping E2E test (no RSOLV_API_KEY)');
-        this.skip();
-        return;
-      }
+    it.skipIf(SKIP_REAL_REPOS || !API_KEY)('should complete full workflow: scan → validate → mitigate', async () => {
 
       // This is a comprehensive E2E test that would:
       // 1. Clone nodegoat-vitest repo
@@ -338,7 +327,7 @@ describe('User Profile Routes', function() {
       console.log('📝 Full E2E workflow test - Implementation pending');
     }, 60000);
 
-    it('should integrate test into existing Vitest file (not create new file)', async () => {
+    it.skipIf(!API_KEY)('should integrate test into existing Vitest file (not create new file)', async () => {
       // Arrange - Simulate existing test file
       const existingTestPath = 'test/routes/session.test.js';
       const existingContent = `import { describe, it, expect } from 'vitest';
@@ -379,7 +368,7 @@ describe('Session', () => {
       expect(describeCount).toBeGreaterThanOrEqual(2); // Original + security wrapper
     }, 10000);
 
-    it('should use existing test setup (beforeEach hooks)', async () => {
+    it.skipIf(!API_KEY)('should use existing test setup (beforeEach hooks)', async () => {
       // Arrange - Test file with setup
       const targetFileContent = `import { describe, it, expect, beforeEach } from 'vitest';
 import { db } from '../db.js';
@@ -432,7 +421,7 @@ describe('Users', () => {
   });
 
   describe('E2E: Mocha Test Integration Workflow', () => {
-    it('should integrate test using Mocha conventions (function syntax)', async () => {
+    it.skipIf(!API_KEY)('should integrate test using Mocha conventions (function syntax)', async () => {
       // Arrange - Mocha uses function() for 'this' context
       const targetFileContent = `const { expect } = require('chai');
 
