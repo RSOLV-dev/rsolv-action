@@ -234,7 +234,9 @@ export class PatternAPIClient {
           if (match) {
             return new RegExp(match[1], match[2]);
           }
-          return new RegExp(item);
+          // Default to 'im' flags to match Elixir pattern behavior (~r/.../im)
+          // i = case-insensitive, m = multiline (^ and $ match line boundaries)
+          return new RegExp(item, 'im');
         }
         
         logger.warn(`Unexpected pattern type for ${reconstructedPattern.id}:`, item);
@@ -284,6 +286,7 @@ export class PatternAPIClient {
       'sql_injection': VulnerabilityType.SQL_INJECTION,
       'xss': VulnerabilityType.XSS,
       'command_injection': VulnerabilityType.COMMAND_INJECTION,
+      'code_injection': VulnerabilityType.CODE_INJECTION,
       'path_traversal': VulnerabilityType.PATH_TRAVERSAL,
       'xxe': VulnerabilityType.XML_EXTERNAL_ENTITIES,
       'ssrf': VulnerabilityType.SSRF,
