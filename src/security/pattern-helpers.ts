@@ -39,7 +39,7 @@ export const OWASP_CATEGORIES = {
 interface CodeInjectionPatternConfig {
   id: string;
   name: string;
-  language: string;
+  language: string | string[];
   patterns: RegExp[];
   description?: string;
   remediation?: string;
@@ -52,6 +52,8 @@ interface CodeInjectionPatternConfig {
 export function createCodeInjectionPattern(
   config: CodeInjectionPatternConfig
 ): SecurityPattern {
+  const languages = Array.isArray(config.language) ? config.language : [config.language];
+
   return {
     id: config.id,
     name: config.name,
@@ -61,7 +63,7 @@ export function createCodeInjectionPattern(
     patterns: {
       regex: config.patterns
     },
-    languages: [config.language],
+    languages,
     cweId: CWE_IDS.CODE_INJECTION,
     owaspCategory: OWASP_CATEGORIES.INJECTION,
     remediation: config.remediation || 'Avoid eval(), use safe alternatives',
