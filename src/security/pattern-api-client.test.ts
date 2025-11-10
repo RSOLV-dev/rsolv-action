@@ -2,6 +2,11 @@ import { describe, test, expect, beforeEach, afterEach, mock, vi } from 'vitest'
 import { PatternAPIClient } from './pattern-api-client.js';
 import { VulnerabilityType } from './types.js';
 import { getTestApiConfig } from '../../test/test-env-config.js';
+import {
+  mockPatternFetch,
+  LANGUAGE_PATTERNS,
+  createRailsGoatPattern
+} from './__tests__/test-helpers/pattern-mocks.js';
 
 describe('PatternAPIClient', () => {
   let client: PatternAPIClient;
@@ -445,40 +450,67 @@ describe('PatternAPIClient', () => {
   });
 
   describe('Type mapping from API to VulnerabilityType', () => {
-    test('should map code_injection type correctly', async () => {
+    beforeEach(() => {
       client = new PatternAPIClient({ apiKey: 'test-key' });
+    });
 
-      const mockResponse = {
-        count: 1,
-        language: 'javascript',
-        patterns: [
-          {
-            id: 'js-eval-user-input',
-            name: 'JavaScript eval() with user input',
-            type: 'code_injection',
-            description: 'eval() can execute arbitrary code',
-            severity: 'critical',
-            patterns: ['eval\\s*\\('],
-            languages: ['javascript'],
-            recommendation: 'Avoid eval with user input',
-            cwe_id: 'CWE-94',
-            owasp_category: 'A03:2021',
-            test_cases: { vulnerable: ['eval(request.responseText)'], safe: [] }
-          }
-        ]
-      };
+    test.each([
+      { language: 'javascript', patternFn: LANGUAGE_PATTERNS.javascript },
+      { language: 'python', patternFn: LANGUAGE_PATTERNS.python },
+      { language: 'ruby', patternFn: LANGUAGE_PATTERNS.ruby },
+      { language: 'php', patternFn: LANGUAGE_PATTERNS.php }
+    ])('should map code_injection type correctly for $language', async ({ language, patternFn }) => {
+      mockPatternFetch(fetchMock, [patternFn()], language);
 
-      fetchMock.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse
-      });
+      const result = await client.fetchPatterns(language);
+
+      expect(result.patterns[0].type).toBe(VulnerabilityType.CODE_INJECTION);
+      expect(result.patterns[0].cweId).toBe('CWE-94');
+      expect(result.patterns[0].severity).toBe('critical');
+      expect(result.fromCache).toBe(false);
+    });
+
+    test.each([
+      { wrongType: VulnerabilityType.COMMAND_INJECTION, name: 'COMMAND_INJECTION' },
+      { wrongType: VulnerabilityType.IMPROPER_INPUT_VALIDATION, name: 'IMPROPER_INPUT_VALIDATION (regression)' }
+    ])('should NOT map code_injection to $name', async ({ wrongType }) => {
+      mockPatternFetch(fetchMock, [LANGUAGE_PATTERNS.javascript()]);
 
       const result = await client.fetchPatterns('javascript');
 
-      expect(result.patterns).toHaveLength(1);
+      // This test would have caught the bug - without the mapping,
+      // code_injection falls back to IMPROPER_INPUT_VALIDATION
       expect(result.patterns[0].type).toBe(VulnerabilityType.CODE_INJECTION);
-      expect(result.patterns[0].id).toBe('js-eval-user-input');
-      expect(result.fromCache).toBe(false);
+      expect(result.patterns[0].type).not.toBe(wrongType);
+    });
+
+    test('should preserve all metadata through type mapping', async () => {
+      const pattern = LANGUAGE_PATTERNS.ruby();
+      mockPatternFetch(fetchMock, [pattern], 'ruby');
+
+      const result = await client.fetchPatterns('ruby');
+
+      expect(result.patterns[0]).toMatchObject({
+        type: VulnerabilityType.CODE_INJECTION,
+        severity: 'critical',
+        cweId: 'CWE-94'
+      });
+      expect(result.patterns[0].remediation).toContain('safer alternatives');
+    });
+
+    test('should compile regex patterns and validate against RailsGoat code', async () => {
+      const pattern = createRailsGoatPattern();
+      mockPatternFetch(fetchMock, [pattern]);
+
+      const result = await client.fetchPatterns('javascript');
+      const compiledPattern = result.patterns[0];
+
+      expect(compiledPattern.type).toBe(VulnerabilityType.CODE_INJECTION);
+      expect(compiledPattern.patterns.regex).toHaveLength(1);
+      expect(compiledPattern.patterns.regex[0]).toBeInstanceOf(RegExp);
+
+      // Validate against actual RailsGoat code
+      expect(compiledPattern.patterns.regex[0].test('eval(request.responseText);')).toBe(true);
     });
   });
 

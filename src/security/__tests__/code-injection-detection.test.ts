@@ -16,386 +16,131 @@ import { describe, test, expect, beforeEach, vi } from 'vitest';
 import { PatternAPIClient } from '../pattern-api-client.js';
 import { VulnerabilityType } from '../types.js';
 import type { SecurityPattern } from '../types.js';
+import {
+  mockPatternFetch,
+  LANGUAGE_PATTERNS,
+  createRailsGoatPattern
+} from './test-helpers/pattern-mocks.js';
 
 describe('Code Injection Detection - Integration Tests', () => {
   let fetchMock: any;
+  let client: PatternAPIClient;
 
   beforeEach(() => {
     fetchMock = vi.fn();
     global.fetch = fetchMock;
+    client = new PatternAPIClient({ apiKey: 'test-key' });
   });
 
   describe('API to Detection Flow', () => {
     test('should detect eval(request.responseText) as CODE_INJECTION with CWE-94', async () => {
-      const client = new PatternAPIClient({ apiKey: 'test-key' });
+      const pattern = createRailsGoatPattern();
+      mockPatternFetch(fetchMock, [pattern]);
 
-      // Mock API response with code_injection type
-      const mockResponse = {
-        count: 1,
-        language: 'javascript',
-        patterns: [
-          {
-            id: 'js-eval-user-input',
-            name: 'JavaScript eval() with user input',
-            type: 'code_injection',
-            description: 'eval() can execute arbitrary code when passed user input',
-            severity: 'critical',
-            patterns: ['^(?!.*\\/\\/).*eval\\s*\\(.*?(?:req\\.|request\\.|params\\.|query\\.|body\\.|user|input|data|Code)'],
-            languages: ['javascript'],
-            recommendation: 'Avoid eval(). Use JSON.parse() for JSON data or find safer alternatives.',
-            cwe_id: 'CWE-94',
-            owasp_category: 'A03:2021',
-            test_cases: {
-              vulnerable: ['eval(request.responseText)'],
-              safe: ['// eval(request.responseText)']
-            }
-          }
-        ]
-      };
-
-      fetchMock.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse
-      });
-
-      // Fetch patterns
       const result = await client.fetchPatterns('javascript');
-
-      // Verify pattern conversion
-      expect(result.patterns).toHaveLength(1);
-      const pattern = result.patterns[0];
+      const detectedPattern = result.patterns[0];
 
       // Critical assertions that would have caught the bug
-      expect(pattern.type).toBe(VulnerabilityType.CODE_INJECTION);
-      expect(pattern.type).not.toBe(VulnerabilityType.COMMAND_INJECTION);
-      expect(pattern.type).not.toBe(VulnerabilityType.IMPROPER_INPUT_VALIDATION);
-
-      // Verify CWE-94 is preserved
-      expect(pattern.cweId).toBe('CWE-94');
-
-      // Verify severity is critical
-      expect(pattern.severity).toBe('critical');
+      expect(detectedPattern).toMatchObject({
+        type: VulnerabilityType.CODE_INJECTION,
+        cweId: 'CWE-94',
+        severity: 'critical'
+      });
+      expect(detectedPattern.type).not.toBe(VulnerabilityType.COMMAND_INJECTION);
+      expect(detectedPattern.type).not.toBe(VulnerabilityType.IMPROPER_INPUT_VALIDATION);
 
       // Verify the pattern works on the actual RailsGoat code
-      const railsGoatCode = 'eval(request.responseText);';
-      expect(pattern.patterns.regex).toBeDefined();
-      expect(pattern.patterns.regex!.length).toBeGreaterThan(0);
-
-      const matches = pattern.patterns.regex![0].test(railsGoatCode);
-      expect(matches).toBe(true);
+      const regex = detectedPattern.patterns.regex![0];
+      expect(regex.test('eval(request.responseText);')).toBe(true);
     });
 
-    test('should not detect commented eval as vulnerability', async () => {
-      const client = new PatternAPIClient({ apiKey: 'test-key' });
-
-      const mockResponse = {
-        count: 1,
-        language: 'javascript',
-        patterns: [
-          {
-            id: 'js-eval-user-input',
-            name: 'JavaScript eval() with user input',
-            type: 'code_injection',
-            description: 'eval() can execute arbitrary code',
-            severity: 'critical',
-            patterns: ['^(?!.*\\/\\/).*eval\\s*\\(.*?(?:req\\.|request\\.|params\\.|query\\.|body\\.|user|input|data|Code)'],
-            languages: ['javascript'],
-            recommendation: 'Avoid eval',
-            cwe_id: 'CWE-94',
-            owasp_category: 'A03:2021',
-            test_cases: { vulnerable: [], safe: [] }
-          }
-        ]
-      };
-
-      fetchMock.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse
-      });
+    test.each([
+      { code: '// eval(request.responseText);', description: 'commented eval' },
+      { code: 'evaluate(request.responseText);', description: 'evaluate function' },
+      { code: 'const evalFunc = myCustomEval;', description: 'eval in variable name' }
+    ])('should NOT detect $description as vulnerability', async ({ code }) => {
+      const pattern = createRailsGoatPattern();
+      mockPatternFetch(fetchMock, [pattern]);
 
       const result = await client.fetchPatterns('javascript');
-      const pattern = result.patterns[0];
+      const regex = result.patterns[0].patterns.regex![0];
 
-      // Test that commented code does NOT match
-      const commentedCode = '// eval(request.responseText);';
-      const matches = pattern.patterns.regex![0].test(commentedCode);
-      expect(matches).toBe(false);
+      expect(regex.test(code)).toBe(false);
     });
 
-    test('should detect various forms of dangerous eval usage', async () => {
-      const client = new PatternAPIClient({ apiKey: 'test-key' });
-
-      const mockResponse = {
-        count: 1,
-        language: 'javascript',
-        patterns: [
-          {
-            id: 'js-eval-user-input',
-            name: 'JavaScript eval() with user input',
-            type: 'code_injection',
-            description: 'eval() can execute arbitrary code',
-            severity: 'critical',
-            patterns: ['^(?!.*\\/\\/).*eval\\s*\\(.*?(?:req\\.|request\\.|params\\.|query\\.|body\\.|user|input|data|Code)'],
-            languages: ['javascript'],
-            recommendation: 'Avoid eval',
-            cwe_id: 'CWE-94',
-            owasp_category: 'A03:2021',
-            test_cases: { vulnerable: [], safe: [] }
-          }
-        ]
-      };
-
-      fetchMock.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse
-      });
+    test.each([
+      'eval(request.responseText);',
+      'eval(req.body.code);',
+      'eval(params.script);',
+      'eval(query.expression);',
+      'const result = eval(userInput);',
+      '  eval(request.data);'
+    ])('should detect dangerous pattern: %s', async (dangerousCode) => {
+      const pattern = createRailsGoatPattern();
+      mockPatternFetch(fetchMock, [pattern]);
 
       const result = await client.fetchPatterns('javascript');
-      const pattern = result.patterns[0];
-      const regex = pattern.patterns.regex![0];
+      const regex = result.patterns[0].patterns.regex![0];
 
-      // Test various dangerous patterns
-      const dangerousCases = [
-        'eval(request.responseText);',
-        'eval(req.body.code);',
-        'eval(params.script);',
-        'eval(query.expression);',
-        'const result = eval(userInput);',
-        '  eval(request.data);'
-      ];
-
-      dangerousCases.forEach(code => {
-        regex.lastIndex = 0; // Reset regex
-        expect(regex.test(code)).toBe(true);
-      });
-
-      // Test safe patterns (should NOT match)
-      const safeCases = [
-        '// eval(request.responseText);',
-        'evaluate(request.responseText);',
-        'const evalFunc = myCustomEval;'
-      ];
-
-      safeCases.forEach(code => {
-        regex.lastIndex = 0; // Reset regex
-        expect(regex.test(code)).toBe(false);
-      });
+      expect(regex.test(dangerousCode)).toBe(true);
     });
   });
 
   describe('Pattern Type Consistency', () => {
     test('all code_injection patterns should map to CODE_INJECTION type', async () => {
-      const client = new PatternAPIClient({ apiKey: 'test-key' });
-
-      const mockResponse = {
-        count: 4,
-        language: 'multiple',
-        patterns: [
-          {
-            id: 'js-eval-user-input',
-            name: 'JavaScript eval()',
-            type: 'code_injection',
-            description: 'eval() injection',
-            severity: 'critical',
-            patterns: ['eval\\s*\\('],
-            languages: ['javascript'],
-            recommendation: 'Avoid eval',
-            cwe_id: 'CWE-94',
-            owasp_category: 'A03:2021',
-            test_cases: { vulnerable: [], safe: [] }
-          },
-          {
-            id: 'python-eval-user-input',
-            name: 'Python eval()',
-            type: 'code_injection',
-            description: 'eval() injection',
-            severity: 'critical',
-            patterns: ['eval\\s*\\('],
-            languages: ['python'],
-            recommendation: 'Avoid eval',
-            cwe_id: 'CWE-94',
-            owasp_category: 'A03:2021',
-            test_cases: { vulnerable: [], safe: [] }
-          },
-          {
-            id: 'ruby-eval-user-input',
-            name: 'Ruby eval()',
-            type: 'code_injection',
-            description: 'eval() injection',
-            severity: 'critical',
-            patterns: ['eval\\s*\\('],
-            languages: ['ruby'],
-            recommendation: 'Avoid eval',
-            cwe_id: 'CWE-94',
-            owasp_category: 'A03:2021',
-            test_cases: { vulnerable: [], safe: [] }
-          },
-          {
-            id: 'php-eval-user-input',
-            name: 'PHP eval()',
-            type: 'code_injection',
-            description: 'eval() injection',
-            severity: 'critical',
-            patterns: ['eval\\s*\\('],
-            languages: ['php'],
-            recommendation: 'Avoid eval',
-            cwe_id: 'CWE-94',
-            owasp_category: 'A03:2021',
-            test_cases: { vulnerable: [], safe: [] }
-          }
-        ]
-      };
-
-      fetchMock.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse
-      });
+      const patterns = Object.values(LANGUAGE_PATTERNS).map(fn => fn());
+      mockPatternFetch(fetchMock, patterns, 'multiple');
 
       const result = await client.fetchPatterns('multiple');
 
       // All code_injection patterns should be CODE_INJECTION type
+      expect(result.patterns).toHaveLength(4);
       result.patterns.forEach(pattern => {
-        expect(pattern.type).toBe(VulnerabilityType.CODE_INJECTION);
-        expect(pattern.cweId).toBe('CWE-94');
-        expect(pattern.severity).toBe('critical');
+        expect(pattern).toMatchObject({
+          type: VulnerabilityType.CODE_INJECTION,
+          cweId: 'CWE-94',
+          severity: 'critical'
+        });
       });
     });
   });
 
   describe('Regression Tests', () => {
-    test('code_injection with CWE-94 should NEVER be COMMAND_INJECTION (CWE-78)', async () => {
-      const client = new PatternAPIClient({ apiKey: 'test-key' });
-
-      const mockResponse = {
-        count: 1,
-        language: 'javascript',
-        patterns: [
-          {
-            id: 'js-eval-user-input',
-            name: 'JavaScript eval()',
-            type: 'code_injection',
-            description: 'eval() injection',
-            severity: 'critical',
-            patterns: ['eval\\s*\\('],
-            languages: ['javascript'],
-            recommendation: 'Avoid eval',
-            cwe_id: 'CWE-94',
-            owasp_category: 'A03:2021',
-            test_cases: { vulnerable: [], safe: [] }
-          }
-        ]
-      };
-
-      fetchMock.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse
-      });
-
-      const result = await client.fetchPatterns('javascript');
-      const pattern = result.patterns[0];
-
-      // Critical regression test
-      expect(pattern.cweId).toBe('CWE-94');
-      expect(pattern.type).toBe(VulnerabilityType.CODE_INJECTION);
-      expect(pattern.type).not.toBe(VulnerabilityType.COMMAND_INJECTION);
-    });
-
-    test('code_injection should NEVER fall back to IMPROPER_INPUT_VALIDATION', async () => {
-      const client = new PatternAPIClient({ apiKey: 'test-key' });
-
-      const mockResponse = {
-        count: 1,
-        language: 'javascript',
-        patterns: [
-          {
-            id: 'js-eval-user-input',
-            name: 'JavaScript eval()',
-            type: 'code_injection', // This is the key - without mapping, falls back
-            description: 'eval() injection',
-            severity: 'critical',
-            patterns: ['eval\\s*\\('],
-            languages: ['javascript'],
-            recommendation: 'Avoid eval',
-            cwe_id: 'CWE-94',
-            owasp_category: 'A03:2021',
-            test_cases: { vulnerable: [], safe: [] }
-          }
-        ]
-      };
-
-      fetchMock.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse
-      });
+    test.each([
+      { wrongType: VulnerabilityType.COMMAND_INJECTION, cwe: 'CWE-78', name: 'COMMAND_INJECTION' },
+      { wrongType: VulnerabilityType.IMPROPER_INPUT_VALIDATION, cwe: null, name: 'IMPROPER_INPUT_VALIDATION' }
+    ])('code_injection with CWE-94 should NEVER be $name', async ({ wrongType, name }) => {
+      mockPatternFetch(fetchMock, [LANGUAGE_PATTERNS.javascript()]);
 
       const result = await client.fetchPatterns('javascript');
       const pattern = result.patterns[0];
 
       // This is THE test that would have caught the original bug
+      expect(pattern.cweId).toBe('CWE-94');
       expect(pattern.type).toBe(VulnerabilityType.CODE_INJECTION);
-      expect(pattern.type).not.toBe(VulnerabilityType.IMPROPER_INPUT_VALIDATION);
+      expect(pattern.type).not.toBe(wrongType);
     });
   });
 
   describe('RailsGoat E2E Scenario', () => {
     test('should detect the exact RailsGoat jquery.snippet.js:737 eval usage', async () => {
-      const client = new PatternAPIClient({ apiKey: 'test-key' });
-
-      const mockResponse = {
-        count: 1,
-        language: 'javascript',
-        patterns: [
-          {
-            id: 'js-eval-user-input',
-            name: 'JavaScript eval() with user input',
-            type: 'code_injection',
-            description: 'eval() can execute arbitrary code when passed user input',
-            severity: 'critical',
-            // This is the actual pattern from the platform
-            patterns: ['^(?!.*\\/\\/).*eval\\s*\\(.*?(?:req\\.|request\\.|params\\.|query\\.|body\\.|user|input|data|Code)'],
-            languages: ['javascript'],
-            recommendation: 'Avoid eval(). Use JSON.parse() for JSON data or find safer alternatives.',
-            cwe_id: 'CWE-94',
-            owasp_category: 'A03:2021',
-            test_cases: {
-              vulnerable: ['eval(request.responseText)'],
-              safe: []
-            }
-          }
-        ]
-      };
-
-      fetchMock.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse
-      });
+      const pattern = createRailsGoatPattern();
+      mockPatternFetch(fetchMock, [pattern]);
 
       const result = await client.fetchPatterns('javascript');
-      const pattern = result.patterns[0];
-
-      // This is the actual line 737 from RailsGoat's jquery.snippet.js
-      const railsGoatLine737 = 'eval(request.responseText);';
+      const detectedPattern = result.patterns[0];
 
       // Verify all expected properties
-      expect(pattern.type).toBe(VulnerabilityType.CODE_INJECTION);
-      expect(pattern.cweId).toBe('CWE-94');
-      expect(pattern.severity).toBe('critical');
-      expect(pattern.id).toBe('js-eval-user-input');
-
-      // Verify the pattern matches
-      const regex = pattern.patterns.regex![0];
-      expect(regex.test(railsGoatLine737)).toBe(true);
-
-      // Verify it would create the correct issue
-      // In the real scanner, this would become:
-      // - type: code_injection (not improper_input_validation)
-      // - CWE: CWE-94
-      // - severity: critical
-      expect(pattern).toMatchObject({
+      expect(detectedPattern).toMatchObject({
         type: VulnerabilityType.CODE_INJECTION,
         cweId: 'CWE-94',
-        severity: 'critical'
+        severity: 'critical',
+        id: 'js-eval-user-input'
       });
+
+      // Verify the pattern matches the actual RailsGoat line 737
+      const regex = detectedPattern.patterns.regex![0];
+      expect(regex.test('eval(request.responseText);')).toBe(true);
     });
   });
 });
