@@ -642,45 +642,73 @@ export class ASTPatternInterpreter {
   }
   
   private applyRegexPattern(
-    content: string, 
-    pattern: SecurityPattern, 
+    content: string,
+    pattern: SecurityPattern,
     filePath: string
   ): Finding[] {
     // Traditional regex matching for patterns without AST rules
     const findings: Finding[] = [];
     const lines = content.split('\n');
-    
+
     if (!pattern.patterns?.regex) {
       return findings;
     }
-    
+
+    const PATTERN_TIMEOUT = 5000; // 5 seconds per regex pattern
+    const MAX_MATCHES = 1000; // Prevent pathological cases
+
     // Test each regex pattern
     for (const regex of pattern.patterns.regex) {
       let match;
+      let matchCount = 0;
+      const startTime = Date.now();
       regex.lastIndex = 0; // Reset regex state
-      
-      while ((match = regex.exec(content)) !== null) {
-        // Calculate line number
-        const lineNumber = content.substring(0, match.index).split('\n').length;
-        const line = lines[lineNumber - 1];
-        const column = match.index - content.lastIndexOf('\n', match.index - 1) - 1;
-        
-        findings.push({
-          pattern,
-          file: filePath,
-          line: lineNumber,
-          column: column,
-          code: match[0],
-          confidence: pattern.confidenceRules?.base || 0.8
-        });
-        
-        // Prevent infinite loop on zero-width matches
-        if (match.index === regex.lastIndex) {
-          regex.lastIndex++;
+
+      try {
+        while ((match = regex.exec(content)) !== null) {
+          matchCount++;
+
+          // Safety checks to prevent infinite loops
+          if (matchCount > MAX_MATCHES) {
+            console.warn(`[AST] Pattern ${pattern.id} exceeded max matches (${MAX_MATCHES}) in ${filePath}`);
+            break;
+          }
+
+          if (Date.now() - startTime > PATTERN_TIMEOUT) {
+            console.warn(`[AST] Pattern ${pattern.id} exceeded timeout (${PATTERN_TIMEOUT}ms) in ${filePath}`);
+            break;
+          }
+
+          // Calculate line number
+          const lineNumber = content.substring(0, match.index).split('\n').length;
+          const line = lines[lineNumber - 1];
+          const column = match.index - content.lastIndexOf('\n', match.index - 1) - 1;
+
+          findings.push({
+            pattern,
+            file: filePath,
+            line: lineNumber,
+            column: column,
+            code: match[0],
+            confidence: pattern.confidenceRules?.base || 0.8
+          });
+
+          // Exit early for non-global regex
+          if (!regex.global) {
+            break;
+          }
+
+          // Prevent infinite loop on zero-width matches
+          if (match.index === regex.lastIndex) {
+            regex.lastIndex++;
+          }
         }
+      } catch (error) {
+        console.error(`[AST] Error applying regex pattern ${pattern.id} in ${filePath}:`, error);
+        // Continue with next pattern
       }
     }
-    
+
     return findings;
   }
 }
