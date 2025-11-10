@@ -444,10 +444,48 @@ describe('PatternAPIClient', () => {
     });
   });
 
+  describe('Type mapping from API to VulnerabilityType', () => {
+    test('should map code_injection type correctly', async () => {
+      client = new PatternAPIClient({ apiKey: 'test-key' });
+
+      const mockResponse = {
+        count: 1,
+        language: 'javascript',
+        patterns: [
+          {
+            id: 'js-eval-user-input',
+            name: 'JavaScript eval() with user input',
+            type: 'code_injection',
+            description: 'eval() can execute arbitrary code',
+            severity: 'critical',
+            patterns: ['eval\\s*\\('],
+            languages: ['javascript'],
+            recommendation: 'Avoid eval with user input',
+            cwe_id: 'CWE-94',
+            owasp_category: 'A03:2021',
+            test_cases: { vulnerable: ['eval(request.responseText)'], safe: [] }
+          }
+        ]
+      };
+
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockResponse
+      });
+
+      const result = await client.fetchPatterns('javascript');
+
+      expect(result.patterns).toHaveLength(1);
+      expect(result.patterns[0].type).toBe(VulnerabilityType.CODE_INJECTION);
+      expect(result.patterns[0].id).toBe('js-eval-user-input');
+      expect(result.fromCache).toBe(false);
+    });
+  });
+
   describe('PatternAPIClient enhanced patterns', () => {
     test('should handle enhanced patterns with AST rules', async () => {
       client = new PatternAPIClient({ apiKey: 'test-key' });
-      
+
       const mockResponse = {
         count: 1,
         language: 'javascript',

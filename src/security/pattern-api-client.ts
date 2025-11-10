@@ -284,6 +284,7 @@ export class PatternAPIClient {
       'sql_injection': VulnerabilityType.SQL_INJECTION,
       'xss': VulnerabilityType.XSS,
       'command_injection': VulnerabilityType.COMMAND_INJECTION,
+      'code_injection': VulnerabilityType.CODE_INJECTION,
       'path_traversal': VulnerabilityType.PATH_TRAVERSAL,
       'xxe': VulnerabilityType.XML_EXTERNAL_ENTITIES,
       'ssrf': VulnerabilityType.SSRF,
@@ -311,7 +312,7 @@ export class PatternAPIClient {
       'session_management': VulnerabilityType.CSRF,
       'resource_exhaustion': VulnerabilityType.DENIAL_OF_SERVICE,
     };
-    
+
     return typeMap[type] || VulnerabilityType.IMPROPER_INPUT_VALIDATION;
   }
 
