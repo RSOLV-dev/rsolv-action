@@ -23,7 +23,7 @@ export class HardcodedSecretsHandler {
         files: [{
           path: vulnerability.file,
           lines: [vulnerability.line],
-          severity: 'CRITICAL'
+          severity: 'critical'
         }]
       },
       validationSteps: [

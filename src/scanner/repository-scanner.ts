@@ -6,6 +6,7 @@ import type { Vulnerability } from '../security/types.js';
 import { createPatternSource } from '../security/pattern-source.js';
 import { ASTValidator } from './ast-validator.js';
 import { VendorDetector } from '../vendor/vendor-detector.js';
+import { SEVERITY_PRIORITY } from '../security/severity.js';
 
 export class RepositoryScanner {
   private detector: SafeDetector;
@@ -249,12 +250,9 @@ export class RepositoryScanner {
       }
     }
 
-    // Sort groups by severity and count
+    // Sort groups by severity (highest priority first) and count
     return Array.from(groups.values()).sort((a, b) => {
-      const severityOrder = { high: 0, medium: 1, low: 2 };
-      const severityDiff = severityOrder[a.severity as keyof typeof severityOrder] -
-                           severityOrder[b.severity as keyof typeof severityOrder];
-
+      const severityDiff = SEVERITY_PRIORITY[a.severity] - SEVERITY_PRIORITY[b.severity];
       return severityDiff !== 0 ? severityDiff : b.count - a.count;
     });
   }

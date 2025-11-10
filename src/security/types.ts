@@ -34,9 +34,11 @@ export enum VulnerabilityType {
   CRLF_INJECTION = 'crlf_injection'
 }
 
+export type Severity = 'critical' | 'high' | 'medium' | 'low';
+
 export interface Vulnerability {
   type: VulnerabilityType;
-  severity: 'low' | 'medium' | 'high' | 'critical';
+  severity: Severity;
   line: number;
   column?: number;
   message: string;

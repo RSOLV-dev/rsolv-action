@@ -1,4 +1,4 @@
-import { Vulnerability } from '../security/types.js';
+import { Vulnerability, Severity } from '../security/types.js';
 
 export type ScanMode = 'fix' | 'scan';
 
@@ -33,7 +33,7 @@ export interface ScanResult {
 
 export interface VulnerabilityGroup {
   type: string;
-  severity: string;
+  severity: Severity;
   count: number;
   files: string[];
   vulnerabilities: Vulnerability[];
