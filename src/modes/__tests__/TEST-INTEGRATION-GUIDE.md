@@ -180,8 +180,50 @@ Future Enhancements 🔴 TODO
 4. **Pass context to LLM** - Include target file content in prompts
 5. **Handle retries gracefully** - LLM won't always generate perfect tests on first try
 
+## 🧪 Running E2E Integration Tests
+
+### Local Development
+
+E2E tests require a valid `RSOLV_API_KEY` to run. Without it, they will skip automatically:
+
+```bash
+# Tests will skip (no API key)
+bun test e2e
+
+# Run with API key
+RSOLV_API_KEY=your_key_here bun test e2e
+
+# Run specific E2E test file
+RSOLV_API_KEY=your_key_here bun test src/modes/__tests__/test-integration-e2e-javascript.test.ts
+```
+
+### CI/CD
+
+E2E integration tests are run automatically on a schedule and can be triggered manually:
+
+**Automated Schedule**: Weekly on Mondays at 9am UTC
+- Tests run with `RSOLV_API_KEY` from GitHub secrets
+- Results uploaded as artifacts for review
+
+**Manual Trigger**: Via GitHub Actions UI
+1. Go to Actions → Integration Tests workflow
+2. Click "Run workflow"
+3. Optionally specify test pattern (default: "e2e")
+4. Results available in workflow run artifacts
+
+**Required Secrets**:
+- `RSOLV_API_KEY`: Valid API key for backend
+- `RSOLV_API_URL` (optional): Custom API endpoint (defaults to https://api.rsolv.dev)
+
+### Test Status Indicators
+
+When running tests locally, you'll see:
+- ⏭️ **Skipped tests**: No API key provided (expected in normal development)
+- ✅ **Passing tests**: API integration working correctly
+- ❌ **Failing tests**: API issue or test needs updating
+
 ---
 
 **Questions?** Check the design docs in the RFCs directory or ping the team!
 
-**Last Updated**: October 2025
+**Last Updated**: November 2025

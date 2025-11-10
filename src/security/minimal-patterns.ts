@@ -1,4 +1,11 @@
 import { SecurityPattern, VulnerabilityType } from './types.js';
+import {
+  createCodeInjectionPattern,
+  createDeserializationPattern,
+  createPrototypePollutionPattern,
+  CWE_IDS,
+  OWASP_CATEGORIES
+} from './pattern-helpers.js';
 
 /**
  * Get minimal patterns with fresh RegExp objects
@@ -21,8 +28,8 @@ export function getMinimalPatterns(): SecurityPattern[] {
         ]
       },
       languages: ['javascript', 'typescript'],
-      cweId: 'CWE-89',
-      owaspCategory: 'A03:2021',
+      cweId: CWE_IDS.SQL_INJECTION,
+      owaspCategory: OWASP_CATEGORIES.INJECTION,
       remediation: 'Use parameterized queries or prepared statements',
       examples: { vulnerable: '', secure: '' }
     },
@@ -88,25 +95,17 @@ export function getMinimalPatterns(): SecurityPattern[] {
     },
   
     // JavaScript eval pattern
-    {
+    createCodeInjectionPattern({
       id: 'js-eval',
       name: 'JavaScript Eval Usage',
-      type: VulnerabilityType.COMMAND_INJECTION,
-      severity: 'critical',
-      description: 'Use of eval() function',
-      patterns: {
-        regex: [
-          /eval\s*\(/gi,
-          /Function\s*\(/gi,
-          /setTimeout\s*\([^,]*,[^,)]*\)/gi
-        ]
-      },
-      languages: ['javascript', 'typescript'],
-      cweId: 'CWE-94',
-      owaspCategory: 'A03:2021',
-      remediation: 'Avoid eval(), use JSON.parse() or safer alternatives',
-      examples: { vulnerable: '', secure: '' }
-    },
+      language: ['javascript', 'typescript'],
+      patterns: [
+        /eval\s*\(/gi,
+        /Function\s*\(/gi,
+        /setTimeout\s*\([^,]*,[^,)]*\)/gi
+      ],
+      remediation: 'Avoid eval(), use JSON.parse() or safer alternatives'
+    }),
   
     // Python patterns
     {
@@ -130,43 +129,29 @@ export function getMinimalPatterns(): SecurityPattern[] {
       examples: { vulnerable: '', secure: '' }
     },
   
-    {
+    createCodeInjectionPattern({
       id: 'python-eval',
       name: 'Python Eval Usage',
-      type: VulnerabilityType.COMMAND_INJECTION,
-      severity: 'critical',
+      language: 'python',
+      patterns: [
+        /eval\s*\(/gi,
+        /exec\s*\(/gi
+      ],
       description: 'Use of eval() with user input',
-      patterns: {
-        regex: [
-          /eval\s*\(/gi,
-          /exec\s*\(/gi
-        ]
-      },
-      languages: ['python'],
-      cweId: 'CWE-94',
-      owaspCategory: 'A03:2021',
-      remediation: 'Avoid eval(), use ast.literal_eval() for safe evaluation',
-      examples: { vulnerable: '', secure: '' }
-    },
+      remediation: 'Avoid eval(), use ast.literal_eval() for safe evaluation'
+    }),
   
-    {
+    createDeserializationPattern({
       id: 'python-pickle',
       name: 'Insecure Deserialization',
-      type: VulnerabilityType.INSECURE_DESERIALIZATION,
-      severity: 'high',
+      language: 'python',
+      patterns: [
+        /pickle\.loads?\s*\(/gi,
+        /cPickle\.loads?\s*\(/gi
+      ],
       description: 'Use of pickle with untrusted data',
-      patterns: {
-        regex: [
-          /pickle\.loads?\s*\(/gi,
-          /cPickle\.loads?\s*\(/gi
-        ]
-      },
-      languages: ['python'],
-      cweId: 'CWE-502',
-      owaspCategory: 'A08:2021',
-      remediation: 'Use JSON or other safe serialization formats',
-      examples: { vulnerable: '', secure: '' }
-    },
+      remediation: 'Use JSON or other safe serialization formats'
+    }),
   
     // Ruby patterns
     {
@@ -189,43 +174,29 @@ export function getMinimalPatterns(): SecurityPattern[] {
       examples: { vulnerable: '', secure: '' }
     },
   
-    {
+    createCodeInjectionPattern({
       id: 'ruby-eval',
       name: 'Ruby Eval Usage',
-      type: VulnerabilityType.COMMAND_INJECTION,
-      severity: 'critical',
+      language: 'ruby',
+      patterns: [
+        /eval\s*\(/gi,
+        /instance_eval\s*\(/gi
+      ],
       description: 'Use of eval with user input',
-      patterns: {
-        regex: [
-          /eval\s*\(/gi,
-          /instance_eval\s*\(/gi
-        ]
-      },
-      languages: ['ruby'],
-      cweId: 'CWE-94',
-      owaspCategory: 'A03:2021',
-      remediation: 'Avoid eval, use safe alternatives',
-      examples: { vulnerable: '', secure: '' }
-    },
+      remediation: 'Avoid eval, use safe alternatives'
+    }),
   
-    {
+    createDeserializationPattern({
       id: 'ruby-yaml',
       name: 'YAML Deserialization',
-      type: VulnerabilityType.INSECURE_DESERIALIZATION,
-      severity: 'high',
+      language: 'ruby',
+      patterns: [
+        /YAML\.load\s*\(/gi,
+        /Psych\.load\s*\(/gi
+      ],
       description: 'Unsafe YAML loading',
-      patterns: {
-        regex: [
-          /YAML\.load\s*\(/gi,
-          /Psych\.load\s*\(/gi
-        ]
-      },
-      languages: ['ruby'],
-      cweId: 'CWE-502',
-      owaspCategory: 'A08:2021',
-      remediation: 'Use YAML.safe_load instead',
-      examples: { vulnerable: '', secure: '' }
-    },
+      remediation: 'Use YAML.safe_load instead'
+    }),
   
     // Java patterns
     {
@@ -312,24 +283,16 @@ export function getMinimalPatterns(): SecurityPattern[] {
       examples: { vulnerable: '', secure: '' }
     },
   
-    {
+    createCodeInjectionPattern({
       id: 'php-eval',
       name: 'PHP Eval Usage',
-      type: VulnerabilityType.COMMAND_INJECTION,
-      severity: 'critical',
-      description: 'Use of eval() function',
-      patterns: {
-        regex: [
-          /eval\s*\(/gi,
-          /assert\s*\(/gi
-        ]
-      },
-      languages: ['php'],
-      cweId: 'CWE-94',
-      owaspCategory: 'A03:2021',
-      remediation: 'Avoid eval(), use safe alternatives',
-      examples: { vulnerable: '', secure: '' }
-    },
+      language: 'php',
+      patterns: [
+        /eval\s*\(/gi,
+        /assert\s*\(/gi
+      ],
+      remediation: 'Avoid eval(), use safe alternatives'
+    }),
   
     {
       id: 'php-file-inclusion',
@@ -351,24 +314,17 @@ export function getMinimalPatterns(): SecurityPattern[] {
     },
   
     // Elixir patterns
-    {
+    createCodeInjectionPattern({
       id: 'elixir-code-eval',
       name: 'Elixir Code Evaluation',
-      type: VulnerabilityType.COMMAND_INJECTION,
-      severity: 'critical',
+      language: 'elixir',
+      patterns: [
+        /Code\.eval_string\s*\(/gi,
+        /Code\.eval_quoted\s*\(/gi
+      ],
       description: 'Dynamic code evaluation',
-      patterns: {
-        regex: [
-          /Code\.eval_string\s*\(/gi,
-          /Code\.eval_quoted\s*\(/gi
-        ]
-      },
-      languages: ['elixir'],
-      cweId: 'CWE-94',
-      owaspCategory: 'A03:2021',
-      remediation: 'Avoid dynamic code evaluation',
-      examples: { vulnerable: '', secure: '' }
-    },
+      remediation: 'Avoid dynamic code evaluation'
+    }),
   
     {
       id: 'elixir-atom-dos',
@@ -566,7 +522,26 @@ export function getMinimalPatterns(): SecurityPattern[] {
         vulnerable: 'res.setHeader("X-User", req.query.username)',
         secure: 'res.setHeader("X-User", sanitizeHeaderValue(req.query.username))'
       }
-    }
+    },
+
+    // Prototype Pollution
+    createPrototypePollutionPattern({
+      id: 'prototype-pollution',
+      name: 'Prototype Pollution',
+      patterns: [
+        // Direct __proto__ assignment
+        /__proto__\s*[=:]/gi,
+        // constructor.prototype assignment
+        /constructor\s*\.\s*prototype\s*[=:]/gi,
+        // Dynamic property assignment with bracket notation (common in merge/extend functions)
+        /\[\s*['"](__proto__|constructor|prototype)['"]\s*\]\s*=/gi,
+        // Object.assign with user input
+        /Object\.assign\s*\([^,)]*,\s*[^)]*\b(req|request|params|query|body)\b/gi,
+        // Lodash merge/extend with user input
+        /(_\.merge|_\.extend|_\.defaults|_\.assign)\s*\([^,)]*,\s*[^)]*\b(req|request|params|query|body)\b/gi
+      ],
+      remediation: 'Use Object.create(null) for objects, validate keys against a whitelist, or use Map instead of plain objects'
+    })
   ];
 }
 

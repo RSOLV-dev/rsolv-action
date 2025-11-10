@@ -10,6 +10,7 @@ export enum VulnerabilityType {
   VULNERABLE_COMPONENTS = 'vulnerable_components',
   INSUFFICIENT_LOGGING = 'insufficient_logging',
   COMMAND_INJECTION = 'command_injection',
+  CODE_INJECTION = 'code_injection',
   PATH_TRAVERSAL = 'path_traversal',
   WEAK_CRYPTOGRAPHY = 'weak_cryptography',
   DEBUG_MODE = 'debug_mode',
@@ -95,17 +96,17 @@ export interface SecurityPattern {
   // AST Enhancement fields
   astRules?: {
     nodeType?: string;
-    [key: string]: any;
+    [key: string]: unknown;
   };
   contextRules?: {
     excludePaths?: RegExp[];
     safeIfWrapped?: string[];
-    [key: string]: any;
+    [key: string]: unknown;
   };
   confidenceRules?: {
     base?: number;
     adjustments?: Record<string, number>;
-    [key: string]: any;
+    [key: string]: unknown;
   };
   minConfidence?: number;
 }

@@ -75,7 +75,7 @@ describe('Server-Side AST Integration - Safe RED Phase Tests', () => {
       delete process.env.USE_LOCAL_PATTERNS;
 
       expect(results.length).toBeGreaterThan(0);
-      expect(results[0].type).toBe('command_injection');
+      expect(results[0].type).toBe('code_injection'); // v3.8.0: eval() is code_injection, not command_injection
     });
 
     it('should NOT attempt to parse non-JS languages with Babel', async () => {
