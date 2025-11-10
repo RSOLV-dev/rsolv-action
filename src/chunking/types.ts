@@ -2,6 +2,8 @@
  * RFC-046: Multi-file Vulnerability Chunking Types
  */
 
+import type { Severity } from '../security/types.js';
+
 export interface ChunkingConfig {
   enabled: boolean;
   maxFilesPerChunk: number;
@@ -17,7 +19,7 @@ export interface ChunkingConfig {
 export interface VulnerabilityFile {
   path: string;
   lines: number[];
-  severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  severity: Severity;
   imports?: string[];
   content?: string;
 }
