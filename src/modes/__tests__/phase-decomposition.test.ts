@@ -143,7 +143,11 @@ describe('Phase Decomposition - processIssueWithGit refactoring', () => {
     executor = new PhaseExecutor(mockConfig);
 
     // Mock phaseDataClient.storePhaseResults to avoid platform storage errors
-    executor.phaseDataClient.storePhaseResults = vi.fn(() => Promise.resolve());
+    executor.phaseDataClient.storePhaseResults = vi.fn(() => Promise.resolve({
+      success: true,
+      storage: 'platform',
+      message: 'Mock phase data stored successfully'
+    }));
   });
 
   afterEach(() => {
