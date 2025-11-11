@@ -609,12 +609,20 @@ export class PhaseExecutor {
         repo: `${options.repository.owner}/${options.repository.name}`,
         issueNumber: options.issueNumber,
         commitSha: commitSha.substring(0, 8),
-        commitShaFull: commitSha
+        commitShaFull: commitSha,
+        hasProvidedValidationData: !!options.validationData
       });
 
       let validationData;
-      try {
-        const dataPromise = this.phaseDataClient.retrievePhaseResults(
+
+      // Check if validation data was provided in options first
+      if (options.validationData) {
+        logger.info('[MITIGATE] Using validation data provided in options');
+        validationData = options.validationData;
+      } else {
+        // Retrieve from storage
+        try {
+          const dataPromise = this.phaseDataClient.retrievePhaseResults(
           `${options.repository.owner}/${options.repository.name}`,
           options.issueNumber,
           commitSha
@@ -634,12 +642,13 @@ export class PhaseExecutor {
           validateKeys: validationData?.validate ? Object.keys(validationData.validate) : []
         });
       } catch (error) {
-        logger.warn('[MITIGATE] Step 2 warning: Failed to retrieve validation data:', {
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        });
-        // Continue without validation data, will check labels
-        validationData = null;
+          logger.warn('[MITIGATE] Step 2 warning: Failed to retrieve validation data:', {
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined
+          });
+          // Continue without validation data, will check labels
+          validationData = null;
+        }
       }
 
       // If no validation data and issue has rsolv:automate but not rsolv:validated
@@ -2893,6 +2902,52 @@ ${validation.falsePositive ?
     validation: any,
     options: ExecuteOptions
   ): Promise<any> {
+    // Use educational PR when prType is 'educational'
+    if (options.prType === 'educational') {
+      logger.info('[MITIGATE] Creating educational PR with comprehensive security education');
+
+      // Prepare summary data for educational PR
+      const summary = {
+        title: `Fix: ${issue.title}`,
+        description: solution.summary?.description || issue.body || 'Security fix applied',
+        vulnerabilityType: validation.analysisData?.issueType || solution.summary?.vulnerabilityType || 'security',
+        severity: validation.analysisData?.severity || solution.summary?.severity || 'medium',
+        cwe: validation.analysisData?.cwe || solution.summary?.cwe,
+        tests: validation.tests || solution.summary?.tests,
+        isAiGenerated: true,
+        isTestMode: process.env.RSOLV_TESTING_MODE === 'true'
+      };
+
+      // Prepare diff stats if available
+      const diffStats = solution.diffStats || solution.summary?.diffStats;
+
+      // Call the rich educational PR function
+      const eduPrResult = await createEducationalPullRequest(
+        issue,
+        solution.commitHash,
+        summary,
+        this.config,
+        diffStats,
+        validation // Pass full validation data including branch info
+      );
+
+      if (!eduPrResult.success) {
+        throw new Error(`Educational PR creation failed: ${eduPrResult.error || eduPrResult.message}`);
+      }
+
+      logger.info('[MITIGATE] Educational PR created successfully', {
+        prUrl: eduPrResult.pullRequestUrl,
+        prNumber: eduPrResult.pullRequestNumber
+      });
+
+      return {
+        url: eduPrResult.pullRequestUrl,
+        number: eduPrResult.pullRequestNumber,
+        educationalContent: eduPrResult.educationalContent
+      };
+    }
+
+    // Fall back to standard PR creation for non-educational mode
     const { createPullRequest } = await import('../../utils/github-client.js');
 
     let body = `## Security Fix for Issue #${issue.number}\n\n`;
@@ -2901,14 +2956,6 @@ ${validation.falsePositive ?
     if (options.includeBeforeAfter) {
       body += '### Before\n```javascript\n// Vulnerable code\n```\n\n';
       body += '### After\n```javascript\n// Fixed code\n```\n\n';
-    }
-
-    if (options.prType === 'educational') {
-      body += '### Security Education\n\n';
-      body += `This vulnerability is a ${validation.analysisData?.issueType || 'security'} issue.\n\n`;
-      body += 'Learn more about this type of vulnerability and how to prevent it.\n\n';
-      body += '### Test Results\n';
-      body += '✅ All security tests pass\n\n';
     }
 
     return createPullRequest({
