@@ -292,6 +292,7 @@ export class PatternAPIClient {
       'ssrf': VulnerabilityType.SSRF,
       'insecure_deserialization': VulnerabilityType.INSECURE_DESERIALIZATION,
       'deserialization': VulnerabilityType.INSECURE_DESERIALIZATION,
+      'prototype_pollution': VulnerabilityType.PROTOTYPE_POLLUTION,
       'weak_crypto': VulnerabilityType.WEAK_CRYPTOGRAPHY,
       'hardcoded_secret': VulnerabilityType.HARDCODED_SECRETS,
       'insecure_random': VulnerabilityType.WEAK_CRYPTOGRAPHY,
@@ -314,7 +315,7 @@ export class PatternAPIClient {
       'session_management': VulnerabilityType.CSRF,
       'resource_exhaustion': VulnerabilityType.DENIAL_OF_SERVICE,
     };
-    
+
     return typeMap[type] || VulnerabilityType.IMPROPER_INPUT_VALIDATION;
   }
 
