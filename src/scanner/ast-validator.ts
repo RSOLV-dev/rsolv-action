@@ -92,24 +92,80 @@ export class ASTValidator {
     }
 
     logger.info(`Validating ${vulnerabilities.length} vulnerabilities with AST analysis`);
-    
-    try {
-      // Prepare request data
-      const request = this.prepareValidationRequest(vulnerabilities, fileContents);
-      
-      // Add the validateVulnerabilities method to the API client
-      const response = await this.callValidationAPI(request);
-      
-      // Process response and filter vulnerabilities
-      return this.processValidationResponse(vulnerabilities, response);
-    } catch (error) {
-      logger.warn('AST validation failed, using all vulnerabilities', {
-        error: error instanceof Error ? error.message : error,
-        stack: error instanceof Error ? error.stack : undefined
-      });
-      // Fail open - return all vulnerabilities if validation fails
-      return vulnerabilities;
+
+    // Batch vulnerabilities to avoid overwhelming the API with massive payloads
+    // Large codebases can generate hundreds of vulnerabilities across hundreds of files
+    // Sending all file contents at once can result in multi-megabyte requests that hang
+    const BATCH_SIZE = 50; // Process 50 vulnerabilities at a time
+    const batches: Vulnerability[][] = [];
+
+    for (let i = 0; i < vulnerabilities.length; i += BATCH_SIZE) {
+      batches.push(vulnerabilities.slice(i, i + BATCH_SIZE));
     }
+
+    logger.info(`Batching ${vulnerabilities.length} vulnerabilities into ${batches.length} batches of up to ${BATCH_SIZE}`);
+
+    const validatedResults: Vulnerability[] = [];
+
+    for (let i = 0; i < batches.length; i++) {
+      const batch = batches[i];
+      logger.info(`Validating batch ${i + 1}/${batches.length} (${batch.length} vulnerabilities)`);
+
+      try {
+        // Only send file contents for files referenced in this batch
+        const batchFileContents = this.getRelevantFileContents(batch, fileContents);
+
+        // Prepare request data for this batch
+        const request = this.prepareValidationRequest(batch, batchFileContents);
+
+        // Call validation API for this batch
+        const response = await this.callValidationAPI(request);
+
+        // Process response and collect validated vulnerabilities
+        const batchValidated = this.processValidationResponse(batch, response);
+        validatedResults.push(...batchValidated);
+
+        logger.info(`Batch ${i + 1}/${batches.length} validated: ${batchValidated.length}/${batch.length} confirmed`);
+      } catch (error) {
+        logger.warn(`Batch ${i + 1}/${batches.length} validation failed, including all ${batch.length} vulnerabilities`, {
+          error: error instanceof Error ? error.message : error
+        });
+        // Fail open for this batch - include all vulnerabilities from failed batch
+        validatedResults.push(...batch);
+      }
+    }
+
+    logger.info(`AST validation complete: ${validatedResults.length}/${vulnerabilities.length} vulnerabilities validated`);
+    return validatedResults;
+  }
+
+  /**
+   * Extract only the file contents needed for a batch of vulnerabilities
+   * This dramatically reduces payload size for large codebases
+   */
+  private getRelevantFileContents(
+    vulnerabilities: Vulnerability[],
+    allFileContents: Map<string, string>
+  ): Map<string, string> {
+    const relevantFiles = new Set<string>();
+
+    // Collect unique file paths from this batch
+    for (const vuln of vulnerabilities) {
+      if (vuln.filePath) {
+        relevantFiles.add(vuln.filePath);
+      }
+    }
+
+    // Build map with only relevant files
+    const relevantContents = new Map<string, string>();
+    for (const filePath of relevantFiles) {
+      const content = allFileContents.get(filePath);
+      if (content !== undefined) {
+        relevantContents.set(filePath, content);
+      }
+    }
+
+    return relevantContents;
   }
   
   private prepareValidationRequest(
