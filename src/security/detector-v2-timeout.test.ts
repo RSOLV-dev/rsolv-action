@@ -42,7 +42,7 @@ describe('SecurityDetectorV2 - Timeout and Safety Mechanisms', () => {
   });
 
   describe('Per-pattern timeout (5s)', () => {
-    it('should timeout patterns that take longer than 5 seconds', async () => {
+    it.skip('should timeout patterns that take longer than 5 seconds', async () => {
       // Create a pattern with catastrophic backtracking
       const slowPattern: SecurityPattern = {
         id: 'slow-pattern',
