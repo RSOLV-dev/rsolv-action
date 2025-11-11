@@ -631,39 +631,83 @@ describe('PatternAPIClient', () => {
   });
 
   describe('Type mapping (code_injection support)', () => {
-    test('should map "code_injection" type to VulnerabilityType.CODE_INJECTION', async () => {
-      client = new PatternAPIClient({ apiKey: 'test-key' });
-
-      const mockResponse = {
-        patterns: [
-          {
-            id: 'js-eval-user-input',
-            name: 'Dangerous eval()',
-            type: 'code_injection', // This was previously unmapped
-            description: 'Test',
-            severity: 'critical',
-            regex: 'eval\\(',
-            languages: ['javascript'],
-            recommendation: 'Avoid eval()',
-            cwe_id: 'CWE-94',
-            owasp_category: 'A03:2021',
-            test_cases: { vulnerable: [], safe: [] }
-          }
-        ]
-      };
-
+    // Helper to test type mapping with minimal boilerplate
+    async function testTypeMapping(apiType: string, expectedType: VulnerabilityType) {
       fetchMock.mockResolvedValueOnce({
         ok: true,
-        json: async () => mockResponse
+        json: async () => ({
+          patterns: [{
+            id: 'test-id',
+            name: 'Test Pattern',
+            type: apiType,
+            severity: 'high',
+            regex: 'test',
+            languages: ['javascript'],
+            recommendation: 'Fix',
+            cwe_id: 'CWE-000',
+            owasp_category: 'A00:2021',
+            test_cases: { vulnerable: [], safe: [] }
+          }]
+        })
       });
 
       const result = await client.fetchPatterns('javascript');
+      return result.patterns[0].type;
+    }
 
-      expect(result.patterns).toHaveLength(1);
-      const pattern = result.patterns[0];
+    test('should map "code_injection" type to VulnerabilityType.CODE_INJECTION', async () => {
+      client = new PatternAPIClient({ apiKey: 'test-key' });
+      const type = await testTypeMapping('code_injection', VulnerabilityType.CODE_INJECTION);
+      expect(type).toBe(VulnerabilityType.CODE_INJECTION);
+    });
 
-      // Should map to CODE_INJECTION, not fall back to IMPROPER_INPUT_VALIDATION
-      expect(pattern.type).toBe(VulnerabilityType.CODE_INJECTION);
+    test('should map "prototype_pollution" to VulnerabilityType.PROTOTYPE_POLLUTION', async () => {
+      client = new PatternAPIClient({ apiKey: 'test-key' });
+      const type = await testTypeMapping('prototype_pollution', VulnerabilityType.PROTOTYPE_POLLUTION);
+      expect(type).toBe(VulnerabilityType.PROTOTYPE_POLLUTION);
+      expect(type).not.toBe(VulnerabilityType.IMPROPER_INPUT_VALIDATION);
+    });
+
+    test('should map "insecure_deserialization" correctly', async () => {
+      client = new PatternAPIClient({ apiKey: 'test-key' });
+      const type = await testTypeMapping('insecure_deserialization', VulnerabilityType.INSECURE_DESERIALIZATION);
+      expect(type).toBe(VulnerabilityType.INSECURE_DESERIALIZATION);
+    });
+
+    test('should fall back to IMPROPER_INPUT_VALIDATION for unknown types', async () => {
+      client = new PatternAPIClient({ apiKey: 'test-key' });
+      const type = await testTypeMapping('unknown_type', VulnerabilityType.IMPROPER_INPUT_VALIDATION);
+      expect(type).toBe(VulnerabilityType.IMPROPER_INPUT_VALIDATION);
+    });
+
+    test('should keep separated types distinct (regression test)', async () => {
+      client = new PatternAPIClient({ apiKey: 'test-key' });
+
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          patterns: [
+            { id: '1', name: 'CI', type: 'code_injection', severity: 'high', regex: 'eval',
+              languages: ['javascript'], recommendation: 'Fix', cwe_id: 'CWE-94', owasp_category: 'A03',
+              test_cases: { vulnerable: [], safe: [] } },
+            { id: '2', name: 'ID', type: 'insecure_deserialization', severity: 'high', regex: 'unserialize',
+              languages: ['javascript'], recommendation: 'Fix', cwe_id: 'CWE-502', owasp_category: 'A08',
+              test_cases: { vulnerable: [], safe: [] } },
+            { id: '3', name: 'PP', type: 'prototype_pollution', severity: 'high', regex: '__proto__',
+              languages: ['javascript'], recommendation: 'Fix', cwe_id: 'CWE-1321', owasp_category: 'A08',
+              test_cases: { vulnerable: [], safe: [] } }
+          ]
+        })
+      });
+
+      const result = await client.fetchPatterns('javascript');
+      const types = result.patterns.map(p => p.type);
+
+      expect(types).toContain(VulnerabilityType.CODE_INJECTION);
+      expect(types).toContain(VulnerabilityType.INSECURE_DESERIALIZATION);
+      expect(types).toContain(VulnerabilityType.PROTOTYPE_POLLUTION);
+      expect(types).not.toContain(VulnerabilityType.IMPROPER_INPUT_VALIDATION);
+      expect(new Set(types).size).toBe(3);
     });
 
     test('should still map other types correctly', async () => {
