@@ -15,22 +15,23 @@ import type { SecurityPattern } from './types.js';
  * - Identify specific pattern/file causing hang
  */
 
+// Mock logger at the top level (hoisted) - use factory function
+vi.mock('../utils/logger.js', () => ({
+  logger: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn()
+  }
+}));
+
 describe('SecurityDetectorV2 - Timeout and Safety Mechanisms', () => {
   let detector: SecurityDetectorV2;
   let mockPatternSource: PatternSource;
-  let logSpy: any;
 
   beforeEach(() => {
-    // Mock logger to capture progress logs
-    logSpy = {
-      info: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
-      debug: vi.fn()
-    };
-    vi.mock('../utils/logger.js', () => ({
-      logger: logSpy
-    }));
+    // Reset mocks before each test
+    vi.clearAllMocks();
   });
 
   afterEach(() => {
