@@ -196,6 +196,8 @@ export class SafeDetector {
           resolve([]);
         }
 
+        // Set flag before terminating to prevent false error logs
+        this.lastWorkerTerminated = true;
         worker.terminate(); // Clean up worker
       });
 
