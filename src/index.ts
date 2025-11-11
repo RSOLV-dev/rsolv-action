@@ -45,7 +45,8 @@ async function run(): Promise<ActionStatus> {
           defaultBranch: repoDetails.defaultBranch || 'main'
         },
         issueNumber: process.env.RSOLV_ISSUE_NUMBER ? parseInt(process.env.RSOLV_ISSUE_NUMBER) : undefined,
-        createPR: config.createPR
+        createPR: config.createPR,
+        prType: process.env.RSOLV_EDUCATIONAL_PR !== 'false' ? 'educational' : 'standard'
       });
       
       // Set outputs for GitHub Actions
