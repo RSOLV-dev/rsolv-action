@@ -4,6 +4,10 @@
   "description": "GitHub Action for automating issue fixes with AI",
   "main": "src/index.ts",
   "type": "module",
+  "engines": {
+    "node": ">=22.0.0",
+    "bun": ">=1.2.0"
+  },
   "scripts": {
     "start": "bun run src/index.ts",
     "test": "./run-tests.sh",
