@@ -92,7 +92,6 @@ export class ClaudeCodeAdapter {
       // Try multiple locations for the Claude Code executable
       const possiblePaths = [
         this.claudeConfig.executablePath,
-        path.join(__dirname, '..', '..', '..', 'node_modules', '@anthropic-ai', 'claude-code', 'cli.js'),
         path.join(process.cwd(), 'node_modules', '@anthropic-ai', 'claude-code', 'cli.js'),
         '/home/dylan/dev/rsolv/RSOLV-action/node_modules/@anthropic-ai/claude-code/cli.js'
       ].filter(Boolean);
@@ -207,7 +206,6 @@ Installation instructions:
           pathToClaudeCodeExecutable: (() => {
             const possiblePaths = [
               this.claudeConfig.executablePath,
-              path.join(__dirname, '..', '..', '..', 'node_modules', '@anthropic-ai', 'claude-code', 'cli.js'),
               path.join(process.cwd(), 'node_modules', '@anthropic-ai', 'claude-code', 'cli.js'),
               '/home/dylan/dev/rsolv/RSOLV-action/node_modules/@anthropic-ai/claude-code/cli.js'
             ].filter(Boolean);
