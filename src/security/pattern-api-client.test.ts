@@ -615,4 +615,171 @@ describe('PatternAPIClient', () => {
       expect(result.fromCache).toBe(false);
     });
   });
+
+  describe('Regex flags preservation (eval detection fix)', () => {
+    test('should add "im" flags to regex patterns without explicit flags', async () => {
+      client = new PatternAPIClient({ apiKey: 'test-key' });
+
+      const mockResponse = {
+        patterns: [
+          {
+            id: 'js-eval-user-input',
+            name: 'Dangerous eval() with User Input',
+            type: 'code_injection',
+            description: 'Detects eval() with user input',
+            severity: 'critical',
+            // Plain string pattern without /pattern/flags format
+            regex: '^(?!.*\\/\\/).*eval\\s*\\(.*?(?:req\\.|request\\.|params\\.|query\\.|body\\.|user|input|data|Code)',
+            languages: ['javascript'],
+            recommendation: 'Avoid eval()',
+            cwe_id: 'CWE-94',
+            owasp_category: 'A03:2021',
+            test_cases: { vulnerable: [], safe: [] }
+          }
+        ]
+      };
+
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockResponse
+      });
+
+      const result = await client.fetchPatterns('javascript');
+
+      expect(result.patterns).toHaveLength(1);
+      const pattern = result.patterns[0];
+
+      // Verify the regex has 'im' flags
+      expect(pattern.patterns.regex).toHaveLength(1);
+      const regex = pattern.patterns.regex[0];
+      expect(regex).toBeInstanceOf(RegExp);
+      expect(regex.flags).toContain('i'); // case-insensitive
+      expect(regex.flags).toContain('m'); // multiline
+
+      // Verify it matches indented eval() calls (multiline mode)
+      const testCode = '      eval(request.responseText);';
+      expect(regex.test(testCode)).toBe(true);
+    });
+
+    test('should preserve explicit flags when pattern uses /pattern/flags format', async () => {
+      client = new PatternAPIClient({ apiKey: 'test-key' });
+
+      const mockResponse = {
+        patterns: [
+          {
+            id: 'test-pattern',
+            name: 'Test Pattern',
+            type: 'xss',
+            description: 'Test',
+            severity: 'high',
+            // Pattern with explicit flags in /pattern/flags format
+            regex: '/innerHTML.*=.*user/g',
+            languages: ['javascript'],
+            recommendation: 'Test',
+            cwe_id: 'CWE-79',
+            owasp_category: 'A03:2021',
+            test_cases: { vulnerable: [], safe: [] }
+          }
+        ]
+      };
+
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockResponse
+      });
+
+      const result = await client.fetchPatterns('javascript');
+
+      expect(result.patterns).toHaveLength(1);
+      const regex = result.patterns[0].patterns.regex[0];
+
+      // Should preserve the explicit 'g' flag
+      expect(regex.flags).toContain('g');
+      expect(regex.flags).not.toContain('i');
+      expect(regex.flags).not.toContain('m');
+    });
+  });
+
+  describe('Type mapping (code_injection support)', () => {
+    test('should map "code_injection" type to VulnerabilityType.CODE_INJECTION', async () => {
+      client = new PatternAPIClient({ apiKey: 'test-key' });
+
+      const mockResponse = {
+        patterns: [
+          {
+            id: 'js-eval-user-input',
+            name: 'Dangerous eval()',
+            type: 'code_injection', // This was previously unmapped
+            description: 'Test',
+            severity: 'critical',
+            regex: 'eval\\(',
+            languages: ['javascript'],
+            recommendation: 'Avoid eval()',
+            cwe_id: 'CWE-94',
+            owasp_category: 'A03:2021',
+            test_cases: { vulnerable: [], safe: [] }
+          }
+        ]
+      };
+
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockResponse
+      });
+
+      const result = await client.fetchPatterns('javascript');
+
+      expect(result.patterns).toHaveLength(1);
+      const pattern = result.patterns[0];
+
+      // Should map to CODE_INJECTION, not fall back to IMPROPER_INPUT_VALIDATION
+      expect(pattern.type).toBe(VulnerabilityType.CODE_INJECTION);
+    });
+
+    test('should still map other types correctly', async () => {
+      client = new PatternAPIClient({ apiKey: 'test-key' });
+
+      const mockResponse = {
+        patterns: [
+          {
+            id: 'test-sql',
+            name: 'SQL Injection',
+            type: 'sql_injection',
+            description: 'Test',
+            severity: 'critical',
+            regex: 'query.*',
+            languages: ['javascript'],
+            recommendation: 'Test',
+            cwe_id: 'CWE-89',
+            owasp_category: 'A03:2021',
+            test_cases: { vulnerable: [], safe: [] }
+          },
+          {
+            id: 'test-cmd',
+            name: 'Command Injection',
+            type: 'command_injection',
+            description: 'Test',
+            severity: 'critical',
+            regex: 'exec\\(',
+            languages: ['javascript'],
+            recommendation: 'Test',
+            cwe_id: 'CWE-78',
+            owasp_category: 'A03:2021',
+            test_cases: { vulnerable: [], safe: [] }
+          }
+        ]
+      };
+
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockResponse
+      });
+
+      const result = await client.fetchPatterns('javascript');
+
+      expect(result.patterns).toHaveLength(2);
+      expect(result.patterns[0].type).toBe(VulnerabilityType.SQL_INJECTION);
+      expect(result.patterns[1].type).toBe(VulnerabilityType.COMMAND_INJECTION);
+    });
+  });
 });

@@ -234,7 +234,9 @@ export class PatternAPIClient {
           if (match) {
             return new RegExp(match[1], match[2]);
           }
-          return new RegExp(item);
+          // Default to 'im' flags to match Elixir pattern behavior (~r/.../im)
+          // i = case-insensitive, m = multiline (^ and $ match line boundaries)
+          return new RegExp(item, 'im');
         }
         
         logger.warn(`Unexpected pattern type for ${reconstructedPattern.id}:`, item);
