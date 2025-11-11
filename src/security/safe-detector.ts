@@ -32,7 +32,7 @@ export class SafeDetector {
   private skippedPatterns: Set<string> = new Set();
   private lastError: Error | null = null;
   private activeWorkers: Set<Worker> = new Set();
-  private lastWorkerTerminated: boolean = false;
+  private terminatedWorkers: Set<Worker> = new Set();
   private defaultTimeout: number = 30000; // 30 seconds default
 
   constructor(patternSource?: PatternSource) {
@@ -174,47 +174,49 @@ export class SafeDetector {
       });
 
       this.activeWorkers.add(worker);
-      this.lastWorkerTerminated = false;
+      let resolved = false;
+
+      // Helper to clean up worker resources and resolve once
+      const cleanupAndResolve = (result: Vulnerability[]) => {
+        if (resolved) return;
+        resolved = true;
+
+        clearTimeout(timeoutId);
+        this.activeWorkers.delete(worker);
+        this.terminatedWorkers.add(worker);
+        worker.terminate();
+        resolve(result);
+      };
 
       const timeoutId = setTimeout(() => {
         logger.warn(`SafeDetector: Worker timeout after ${timeout}ms for ${filePath || 'unknown'}`);
-        this.lastWorkerTerminated = true;
-        worker.terminate();
-        this.activeWorkers.delete(worker);
-        resolve([]); // Return empty array on timeout
+        cleanupAndResolve([]);
       }, timeout);
 
       worker.on('message', (msg: WorkerMessage) => {
-        clearTimeout(timeoutId);
-        this.activeWorkers.delete(worker);
-
         if (msg.type === 'result') {
-          resolve(msg.data || []);
+          cleanupAndResolve(msg.data || []);
         } else {
           logger.error(`SafeDetector: Worker error: ${msg.error}`);
           this.lastError = new Error(msg.error);
-          resolve([]);
+          cleanupAndResolve([]);
         }
-
-        // Set flag before terminating to prevent false error logs
-        this.lastWorkerTerminated = true;
-        worker.terminate(); // Clean up worker
       });
 
       worker.on('error', (error) => {
-        clearTimeout(timeoutId);
-        this.activeWorkers.delete(worker);
         logger.error('SafeDetector: Worker error:', error);
         this.lastError = error;
-        resolve([]);
+        cleanupAndResolve([]);
       });
 
       worker.on('exit', (code) => {
-        clearTimeout(timeoutId);
-        this.activeWorkers.delete(worker);
-        if (code !== 0 && !this.lastWorkerTerminated) {
+        // Only log error if worker was NOT intentionally terminated
+        if (code !== 0 && !this.terminatedWorkers.has(worker)) {
           logger.error(`SafeDetector: Worker exited with code ${code}`);
         }
+
+        // Clean up tracking after worker exits
+        this.terminatedWorkers.delete(worker);
       });
     });
   }
@@ -241,10 +243,10 @@ export class SafeDetector {
   }
 
   /**
-   * Check if the last worker was terminated due to timeout
+   * Check if any workers are currently tracked as terminated
    */
-  getLastWorkerTerminated(): boolean {
-    return this.lastWorkerTerminated;
+  getTerminatedWorkerCount(): number {
+    return this.terminatedWorkers.size;
   }
 
   /**
