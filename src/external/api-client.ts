@@ -155,20 +155,38 @@ export class RsolvApiClient {
   async validateVulnerabilities(
     request: VulnerabilityValidationRequest
   ): Promise<VulnerabilityValidationResponse> {
-    const response = await fetch(`${this.baseUrl}/api/v1/vulnerabilities/validate`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': this.apiKey
-      },
-      body: JSON.stringify(request)
-    });
+    // Add timeout protection to prevent indefinite hangs during AST validation
+    // Large codebases can generate many vulnerabilities, and validation API calls
+    // can hang if the backend is slow or unresponsive
+    const VALIDATION_TIMEOUT_MS = 120000; // 2 minutes timeout for AST validation
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), VALIDATION_TIMEOUT_MS);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Validation API error: ${response.status} - ${errorText}`);
+    try {
+      const response = await fetch(`${this.baseUrl}/api/v1/vulnerabilities/validate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': this.apiKey
+        },
+        body: JSON.stringify(request),
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Validation API error: ${response.status} - ${errorText}`);
+      }
+
+      return response.json() as Promise<VulnerabilityValidationResponse>;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error(`AST validation timed out after ${VALIDATION_TIMEOUT_MS}ms`);
+      }
+      throw error;
     }
-
-    return response.json() as Promise<VulnerabilityValidationResponse>;
   }
 }
