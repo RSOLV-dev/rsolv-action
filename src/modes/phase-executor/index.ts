@@ -8,7 +8,7 @@ import { ScanOrchestrator } from '../../scanner/index.js';
 import { analyzeIssue } from '../../ai/analyzer.js';
 import { TestGeneratingSecurityAnalyzer, AnalysisWithTestsResult } from '../../ai/test-generating-security-analyzer.js';
 import { GitBasedTestValidator, ValidationResult as TestValidationResult } from '../../ai/git-based-test-validator.js';
-import { GitBasedClaudeCodeAdapter } from '../../ai/adapters/claude-code-git.js';
+import { GitBasedClaudeCodeAdapter, GitSolutionResult } from '../../ai/adapters/claude-code-git.js';
 import { createEducationalPullRequest } from '../../github/pr-git-educational.js';
 import { createPullRequestFromGit } from '../../github/pr-git.js';
 import { AIConfig, IssueAnalysis } from '../../ai/types.js';
@@ -2798,15 +2798,17 @@ ${validation.falsePositive ?
     }
 
     const adapter = new GitBasedClaudeCodeAdapter(this.config as any, process.cwd(), credentialManager);
-    
+
     // Apply fix with retries
     let attempts = 0;
     const maxRetries = options.maxRetries || 3;
     let lastError: Error | undefined;
-    
+    // Track successful solutions across retries to preserve commitHash
+    let lastSuccessfulSolution: GitSolutionResult | null = null;
+
     while (attempts < maxRetries) {
       attempts++;
-      
+
       try {
         // Generate fix
         const solution = await adapter.generateSolutionWithGit(
@@ -2824,6 +2826,26 @@ ${validation.falsePositive ?
 
         // Log solution commitHash for debugging
         logger.info(`[MITIGATE] Solution generated with commitHash: ${solution.commitHash || 'UNDEFINED'}`);
+
+        // Preserve commitHash from successful solution attempts
+        // This handles the case where retry attempts don't create new commits
+        // because files were already committed in a previous attempt
+        if (solution.success && solution.commitHash) {
+          lastSuccessfulSolution = solution;
+          logger.info(`[MITIGATE] Storing successful solution with commitHash: ${solution.commitHash}`);
+        } else if (!solution.commitHash && lastSuccessfulSolution?.commitHash) {
+          // If this solution has no commitHash but we have one from a previous attempt,
+          // merge the previous commitHash into this solution
+          logger.info(`[MITIGATE] Using previously stored commitHash: ${lastSuccessfulSolution.commitHash}`);
+          solution.commitHash = lastSuccessfulSolution.commitHash;
+          // Also preserve other solution details if missing
+          if (!solution.filesModified && lastSuccessfulSolution.filesModified) {
+            solution.filesModified = lastSuccessfulSolution.filesModified;
+          }
+          if (!solution.diffStats && lastSuccessfulSolution.diffStats) {
+            solution.diffStats = lastSuccessfulSolution.diffStats;
+          }
+        }
 
         // Run tests if requested
         if (options.runTests) {
