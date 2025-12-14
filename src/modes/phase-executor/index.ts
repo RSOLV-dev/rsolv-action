@@ -2782,6 +2782,7 @@ ${validation.falsePositive ?
     // Fix for RFC-067: mitigateIssue was creating adapter without credential manager,
     // causing Claude Code CLI to skip execution with "No credential manager available"
     let credentialManager;
+    logger.info(`[MITIGATE] Checking credential manager requirements: useVendedCredentials=${this.config.aiProvider?.useVendedCredentials}, rsolvApiKey=${this.config.rsolvApiKey ? 'present' : 'missing'}`);
     if (this.config.aiProvider?.useVendedCredentials && this.config.rsolvApiKey) {
       logger.info('[MITIGATE] Initializing credential manager for vended credentials');
       const { CredentialManagerSingleton } = await import('../../credentials/singleton.js');
@@ -2792,6 +2793,8 @@ ${validation.falsePositive ?
         logger.error('[MITIGATE] Failed to initialize credential manager:', error);
         throw new Error(`Credential initialization failed: ${error instanceof Error ? error.message : String(error)}`);
       }
+    } else {
+      logger.warn(`[MITIGATE] Skipping credential manager initialization - useVendedCredentials: ${this.config.aiProvider?.useVendedCredentials}, hasApiKey: ${!!this.config.rsolvApiKey}`);
     }
 
     const adapter = new GitBasedClaudeCodeAdapter(this.config as any, process.cwd(), credentialManager);
