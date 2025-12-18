@@ -114,7 +114,7 @@ describe('Claude Code Integration Tests', () => {
     config = {
       provider: 'anthropic',
       apiKey: process.env.ANTHROPIC_API_KEY || 'test-key',
-      model: 'claude-3-sonnet-20240229',
+      model: 'claude-sonnet-4-5-20250929',
       temperature: 0.1,
       maxTokens: 4096,
       useClaudeCode: true,
@@ -326,7 +326,7 @@ describe('Claude Code Integration Tests', () => {
     const aiConfig = {
       provider: 'anthropic' as const,
       apiKey: process.env.ANTHROPIC_API_KEY || 'test-key',
-      model: 'claude-3-sonnet-20240229',
+      model: 'claude-sonnet-4-5-20250929',
       useVendedCredentials: false
     };
     

@@ -67,7 +67,7 @@ describe.skip('GitBasedClaudeCodeAdapter Prompt Effectiveness', () => {
     adapter = new GitBasedClaudeCodeAdapter({
       provider: 'anthropic',
       apiKey: 'test-key',
-      model: 'claude-3-opus-20240229',
+      model: 'claude-opus-4-5-20251101',
       maxTokens: 4096,
       temperature: 0.1,
       claudeCodeConfig: {

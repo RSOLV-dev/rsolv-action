@@ -15,7 +15,7 @@ export const createTestConfig = (overrides?: Partial<ActionConfig>): ActionConfi
   aiProvider: {
     provider: 'anthropic',
     apiKey: 'test-api-key',
-    model: 'claude-3-sonnet',
+    model: 'claude-sonnet-4-5-20250929',
     temperature: 0.2,
     maxTokens: 2000
   },

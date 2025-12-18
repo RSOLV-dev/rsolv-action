@@ -132,7 +132,7 @@ function runCommand(userInput) {
   // Use Claude Code Max to fix it
   const config: AIConfig = {
     provider: 'anthropic',
-    model: 'claude-3-sonnet',
+    model: 'claude-sonnet-4-5-20250929',
     temperature: 0.2
   };
   

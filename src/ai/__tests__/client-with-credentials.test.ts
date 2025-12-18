@@ -77,7 +77,7 @@ describe('AI Client with Credential Vending', () => {
     // Create AI client with vended credentials
     const config: AiProviderConfig = {
       provider: 'anthropic',
-      model: 'claude-3-sonnet-20240229',
+      model: 'claude-sonnet-4-5-20250929',
       temperature: 0.2,
       maxTokens: 2000,
       useVendedCredentials: true
@@ -180,7 +180,7 @@ describe('AI Client with Credential Vending', () => {
 
     const config: AiProviderConfig = {
       provider: 'anthropic',
-      model: 'claude-3-sonnet-20240229',
+      model: 'claude-sonnet-4-5-20250929',
       useVendedCredentials: true
     };
 
@@ -215,7 +215,7 @@ describe('AI Client with Credential Vending', () => {
     const config: AiProviderConfig = {
       provider: 'anthropic',
       apiKey: 'direct_ant_key_123',
-      model: 'claude-3-sonnet-20240229',
+      model: 'claude-sonnet-4-5-20250929',
       useVendedCredentials: false
     };
 
@@ -235,7 +235,7 @@ describe('AI Client with Credential Vending', () => {
     
     const config: AiProviderConfig = {
       provider: 'anthropic',
-      model: 'claude-3-sonnet-20240229',
+      model: 'claude-sonnet-4-5-20250929',
       useVendedCredentials: true
     };
 

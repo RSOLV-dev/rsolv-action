@@ -54,7 +54,7 @@ describe('Claude Code CLI Vended Credentials', () => {
       const adapter = new RetryableClaudeCodeCLI(
         { 
           apiKey: '', // No direct API key
-          model: 'claude-3-sonnet-20240229',
+          model: 'claude-sonnet-4-5-20250929',
           baseUrl: 'https://api.anthropic.com'
         },
         '/test/repo',
@@ -107,7 +107,7 @@ describe('Claude Code CLI Vended Credentials', () => {
       const adapter = new RetryableClaudeCodeCLI(
         { 
           apiKey: '', // No direct API key
-          model: 'claude-3-sonnet-20240229',
+          model: 'claude-sonnet-4-5-20250929',
           baseUrl: 'https://api.anthropic.com'
         },
         '/test/repo',
@@ -152,7 +152,7 @@ describe('Claude Code CLI Vended Credentials', () => {
       const adapter = new RetryableClaudeCodeCLI(
         { 
           apiKey: '', // No direct API key
-          model: 'claude-3-sonnet-20240229',
+          model: 'claude-sonnet-4-5-20250929',
           baseUrl: 'https://api.anthropic.com'
         },
         '/test/repo'
@@ -224,7 +224,7 @@ describe('Claude Code CLI Vended Credentials', () => {
       const adapter = new RetryableClaudeCodeCLI(
         {
           apiKey: '',
-          model: 'claude-3-sonnet-20240229',
+          model: 'claude-sonnet-4-5-20250929',
           baseUrl: 'https://api.anthropic.com'
         },
         '/test/repo',
@@ -296,7 +296,7 @@ describe('Claude Code CLI Vended Credentials', () => {
       const adapter = new RetryableClaudeCodeCLI(
         {
           apiKey: '', // GitHub Action doesn't have direct key
-          model: 'claude-3-sonnet-20240229',
+          model: 'claude-sonnet-4-5-20250929',
           baseUrl: 'https://api.anthropic.com'
         },
         '/github/workspace', // GitHub workspace

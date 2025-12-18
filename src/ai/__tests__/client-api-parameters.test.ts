@@ -67,7 +67,7 @@ describe('API Parameter Bug Fix - temperature and top_p conflict', () => {
       const client: AiClient = await getAiClient({
         provider: 'anthropic',
         apiKey: 'test-key',
-        model: 'claude-3-sonnet-20240229'
+        model: 'claude-sonnet-4-5-20250929'
       });
 
       // Force real API call (not mock)
@@ -100,7 +100,7 @@ describe('API Parameter Bug Fix - temperature and top_p conflict', () => {
       const client: AiClient = await getAiClient({
         provider: 'anthropic',
         apiKey: 'test-key',
-        model: 'claude-3-sonnet-20240229'
+        model: 'claude-sonnet-4-5-20250929'
       });
 
       process.env.FORCE_REAL_AI = 'true';
@@ -127,7 +127,7 @@ describe('API Parameter Bug Fix - temperature and top_p conflict', () => {
       const client: AiClient = await getAiClient({
         provider: 'anthropic',
         apiKey: 'test-key',
-        model: 'claude-3-sonnet-20240229'
+        model: 'claude-sonnet-4-5-20250929'
       });
 
       process.env.FORCE_REAL_AI = 'true';

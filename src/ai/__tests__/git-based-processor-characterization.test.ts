@@ -268,7 +268,7 @@ describe.skip('processIssueWithGit - Characterization Tests', () => {
       aiProvider: {
         provider: 'anthropic',
         apiKey: 'test-api-key',
-        model: 'claude-3-opus-20240229',
+        model: 'claude-opus-4-5-20251101',
         maxTokens: 4096,
         useVendedCredentials: false
       },

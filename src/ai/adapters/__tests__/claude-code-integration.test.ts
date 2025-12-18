@@ -55,7 +55,7 @@ describe('Claude Code CLI Integration', () => {
   test.skipIf(skipTest)('should check if Claude CLI is available', async () => {
     const adapter = new ClaudeCodeAdapter({
       apiKey: process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY || 'test-key',
-      model: 'claude-3-sonnet-20240229',
+      model: 'claude-sonnet-4-5-20250929',
       baseUrl: 'https://api.anthropic.com'
     });
 
@@ -66,7 +66,7 @@ describe('Claude Code CLI Integration', () => {
   test.skipIf(skipTest)('should construct a proper prompt', () => {
     const adapter = new ClaudeCodeAdapter({
       apiKey: 'test-key',
-      model: 'claude-3-sonnet-20240229',
+      model: 'claude-sonnet-4-5-20250929',
       baseUrl: 'https://api.anthropic.com'
     });
 
@@ -100,7 +100,7 @@ describe('Claude Code CLI Integration', () => {
   test.skipIf(skipTest || !process.env.RUN_LIVE_TESTS)('should generate a real solution using Claude CLI', async () => {
     const adapter = new ClaudeCodeAdapter({
       apiKey: process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY || '',
-      model: 'claude-3-sonnet-20240229',
+      model: 'claude-sonnet-4-5-20250929',
       baseUrl: 'https://api.anthropic.com'
     });
 

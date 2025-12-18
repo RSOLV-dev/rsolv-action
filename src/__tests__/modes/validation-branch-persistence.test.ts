@@ -96,7 +96,7 @@ describe('Validation Branch Persistence', () => {
     validationMode = new ValidationMode({
       provider: 'anthropic',
       apiKey: 'test-key',
-      model: 'claude-3-5-sonnet-20241022',
+      model: 'claude-sonnet-4-5-20250929',
       useVendedCredentials: false
     }, testRepoPath);
 
@@ -105,7 +105,7 @@ describe('Validation Branch Persistence', () => {
     mitigationMode = new MitigationMode({
       provider: 'anthropic',
       apiKey: 'test-key',
-      model: 'claude-3-5-sonnet-20241022',
+      model: 'claude-sonnet-4-5-20250929',
       useVendedCredentials: false
     }, testRepoPath, mockPhaseDataClient);
   });

@@ -39,7 +39,7 @@ describe('Live LLM Adapter Tests', () => {
       const config: AiProviderConfig = {
         provider: 'anthropic',
         apiKey: process.env.ANTHROPIC_API_KEY,
-        model: 'claude-3-5-sonnet-20241022',
+        model: 'claude-sonnet-4-5-20250929',
         temperature: 0.2,
         maxTokens: 2000
       };
@@ -77,7 +77,7 @@ describe('Live LLM Adapter Tests', () => {
 
       const config: AiProviderConfig = {
         provider: 'anthropic',
-        model: 'claude-3-5-sonnet-20241022',
+        model: 'claude-sonnet-4-5-20250929',
         useVendedCredentials: true,
         temperature: 0.2,
         maxTokens: 1000
@@ -182,7 +182,7 @@ describe('Live LLM Adapter Tests', () => {
           config: {
             provider: 'anthropic',
             apiKey: process.env.ANTHROPIC_API_KEY,
-            model: 'claude-3-5-sonnet-20241022',
+            model: 'claude-sonnet-4-5-20250929',
             temperature: 0.2,
             maxTokens: 1000
           } as AiProviderConfig

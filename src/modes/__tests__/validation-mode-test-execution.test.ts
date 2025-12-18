@@ -119,7 +119,7 @@ describe('RFC-060 Phase 2.2: ValidationMode Test Execution Integration', () => {
       aiProvider: {
         provider: 'anthropic',
         apiKey: 'test-ai-key',
-        model: 'claude-3-5-sonnet-20241022',
+        model: 'claude-sonnet-4-5-20250929',
         maxTokens: 4000,
         useVendedCredentials: false
       },

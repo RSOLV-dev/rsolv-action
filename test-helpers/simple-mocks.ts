@@ -20,7 +20,7 @@ export function mockAIResponse(provider: string, content: string) {
     return {
       content: [{ type: 'text', text: content }],
       role: 'assistant',
-      model: 'claude-3-sonnet-20240229',
+      model: 'claude-sonnet-4-5-20250929',
       usage: { input_tokens: 100, output_tokens: 200 }
     };
   } else if (provider === 'openai') {

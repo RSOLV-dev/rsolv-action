@@ -22,7 +22,7 @@ describe.skip('Anthropic Client with Vended Credentials', () => {
     
     const config = {
       provider: 'anthropic',
-      model: 'claude-3-sonnet-20240229',
+      model: 'claude-sonnet-4-5-20250929',
       useVendedCredentials: true
       // No apiKey provided
     };
@@ -46,7 +46,7 @@ describe.skip('Anthropic Client with Vended Credentials', () => {
     
     const config = {
       provider: 'anthropic',
-      model: 'claude-3-sonnet-20240229',
+      model: 'claude-sonnet-4-5-20250929',
       useVendedCredentials: false
       // No apiKey provided
     };

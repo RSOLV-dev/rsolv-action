@@ -171,7 +171,7 @@ describe.skip('GitBasedClaudeCodeAdapter', () => {
     config = {
       provider: 'claude-code',
       apiKey: 'test-api-key',
-      model: 'claude-3-sonnet-20240229',
+      model: 'claude-sonnet-4-5-20250929',
       temperature: 0.1,
       maxTokens: 4096,
       claudeCodeConfig: {

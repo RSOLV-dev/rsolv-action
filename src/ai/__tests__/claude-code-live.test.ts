@@ -35,7 +35,7 @@ if (!shouldSkipLiveTests) {
 describe('Claude Code Live API Tests', () => {
   const config: AIConfig = {
     provider: 'claude-code',
-    model: 'claude-3-sonnet-20240229',
+    model: 'claude-sonnet-4-5-20250929',
     temperature: 0.2,
     maxTokens: 4000
   };
@@ -200,7 +200,7 @@ describe('Claude Code File System Integration', () => {
 
     const config: AIConfig = {
       provider: 'claude-code',
-      model: 'claude-3-sonnet-20240229',
+      model: 'claude-sonnet-4-5-20250929',
       temperature: 0.2,
       maxTokens: 4000,
       claudeCodeConfig: {

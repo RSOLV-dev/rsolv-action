@@ -87,7 +87,7 @@ describe('Error Sanitizer', () => {
 
     test('should sanitize model names', () => {
       const messages = [
-        'Model claude-3-opus-20240229 not available',
+        'Model claude-opus-4-5-20251101 not available',
         'Using gpt-4-turbo-preview',
         'Failed to load claude-instant-1.2',
         'text-davinci-003 is deprecated'
@@ -103,7 +103,7 @@ describe('Error Sanitizer', () => {
     });
 
     test('should handle complex error messages', () => {
-      const message = 'Failed to connect to https://api.anthropic.com/v1/messages with API key sk-ant-123456: Model claude-3-sonnet not available';
+      const message = 'Failed to connect to https://api.anthropic.com/v1/messages with API key sk-ant-123456: Model claude-sonnet-4-5-20250929 not available';
       const sanitized = sanitizeErrorMessage(message);
       
       expect(sanitized).toBe('Failed to connect to AI provider API credential: Model AI model not available');

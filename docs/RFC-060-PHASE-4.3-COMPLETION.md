@@ -293,7 +293,7 @@ await client.storeFailureDetails(repo, issueNumber, {
   retryCount: 2,
   metadata: {
     aiProvider: 'anthropic',
-    model: 'claude-3-opus',
+    model: 'claude-opus-4-5-20251101',
     timeout: 30000
   }
 });
@@ -330,7 +330,7 @@ cat .rsolv/observability/failures/owner-repo-123-failure-*.json
   "retryCount": 2,
   "metadata": {
     "aiProvider": "anthropic",
-    "model": "claude-3-opus"
+    "model": "claude-opus-4-5-20251101"
   }
 }
 ```

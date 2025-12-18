@@ -102,7 +102,7 @@ describe('Claude Code Prompts - Test Validation Context', () => {
   beforeEach(() => {
     mockAIConfig = {
       provider: 'anthropic',
-      model: 'claude-3-sonnet-20240229',
+      model: 'claude-sonnet-4-5-20250929',
       apiKey: 'test-key',
       temperature: 0.1,
       maxTokens: 4000

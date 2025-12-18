@@ -69,7 +69,7 @@ describe('SecurityAwareAnalyzer Integration', () => {
     aiProvider: {
       provider: 'anthropic',
       apiKey: 'test-key',
-      model: 'claude-3-sonnet',
+      model: 'claude-sonnet-4-5-20250929',
       temperature: 0.2,
       maxTokens: 4000
     },

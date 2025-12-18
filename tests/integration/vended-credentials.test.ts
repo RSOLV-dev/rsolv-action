@@ -151,7 +151,7 @@ describe('Vended Credentials Integration', () => {
         aiProvider: {
           provider: 'anthropic',
           apiKey: '',  // Empty when using vended credentials
-          model: 'claude-3-sonnet',
+          model: 'claude-sonnet-4-5-20250929',
           useVendedCredentials: true
         },
         dryRun: true
@@ -189,7 +189,7 @@ describe('Vended Credentials Integration', () => {
         aiProvider: {
           provider: 'claude-code',
           apiKey: '',
-          model: 'claude-3-sonnet',
+          model: 'claude-sonnet-4-5-20250929',
           useVendedCredentials: true
         },
         dryRun: true
@@ -212,7 +212,7 @@ describe('Vended Credentials Integration', () => {
         aiProvider: {
           provider: 'anthropic',
           apiKey: '',
-          model: 'claude-3-sonnet',
+          model: 'claude-sonnet-4-5-20250929',
           useVendedCredentials: true
         },
         dryRun: true
@@ -238,7 +238,7 @@ describe('Vended Credentials Integration', () => {
         aiProvider: {
           provider: 'anthropic',
           apiKey: '',  // No API key provided
-          model: 'claude-3-sonnet',
+          model: 'claude-sonnet-4-5-20250929',
           useVendedCredentials: true
         },
         dryRun: true
@@ -261,7 +261,7 @@ describe('Vended Credentials Integration', () => {
         aiProvider: {
           provider: 'anthropic',
           apiKey: '',  // No API key
-          model: 'claude-3-sonnet',
+          model: 'claude-sonnet-4-5-20250929',
           useVendedCredentials: true
         },
         dryRun: true
@@ -280,7 +280,7 @@ describe('Vended Credentials Integration', () => {
         aiProvider: {
           provider: 'anthropic',
           apiKey: 'direct-api-key',
-          model: 'claude-3-sonnet',
+          model: 'claude-sonnet-4-5-20250929',
           useVendedCredentials: false
         },
         dryRun: true
@@ -301,7 +301,7 @@ describe('Vended Credentials Integration', () => {
         aiProvider: {
           provider: 'anthropic',
           apiKey: '',
-          model: 'claude-3-sonnet',
+          model: 'claude-sonnet-4-5-20250929',
           useVendedCredentials: false  // No vended credentials and no API key
         },
         dryRun: true

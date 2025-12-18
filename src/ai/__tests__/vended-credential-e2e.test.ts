@@ -28,7 +28,7 @@ describe.skipIf(SKIP_TEST)('Vended Credential E2E Tests', () => {
   test('should make real LLM API call with vended Anthropic credentials', async () => {
     const config: AiProviderConfig = {
       provider: 'anthropic',
-      model: 'claude-3-5-sonnet-20241022',
+      model: 'claude-sonnet-4-5-20250929',
       temperature: 0.2,
       maxTokens: 1000,
       useVendedCredentials: true
@@ -52,7 +52,7 @@ describe.skipIf(SKIP_TEST)('Vended Credential E2E Tests', () => {
   test('should generate code solution with vended credentials', async () => {
     const config: AiProviderConfig = {
       provider: 'anthropic',
-      model: 'claude-3-5-sonnet-20241022',
+      model: 'claude-sonnet-4-5-20250929',
       temperature: 0.2,
       maxTokens: 2000,
       useVendedCredentials: true
@@ -87,7 +87,7 @@ Provide a secure solution using parameterized queries. Return only the fixed cod
   test('should handle credential refresh during long session', async () => {
     const config: AiProviderConfig = {
       provider: 'anthropic',
-      model: 'claude-3-5-sonnet-20241022',
+      model: 'claude-sonnet-4-5-20250929',
       temperature: 0.2,
       maxTokens: 500,
       useVendedCredentials: true
@@ -120,7 +120,7 @@ describe.skipIf(SKIP_TEST)('Claude Code with Vended Credentials E2E', () => {
   test('should generate issue solution using Claude Code with vended credentials', async () => {
     const config: AiProviderConfig = {
       provider: 'claude-code',
-      model: 'claude-3-sonnet-20240229',
+      model: 'claude-sonnet-4-5-20250929',
       temperature: 0.2,
       maxTokens: 4000,
       useVendedCredentials: true
@@ -142,7 +142,7 @@ describe.skipIf(SKIP_TEST)('Issue Resolution with Vended Credentials E2E', () =>
   test('should analyze and generate solution for security issue', async () => {
     const config: AiProviderConfig = {
       provider: 'anthropic',
-      model: 'claude-3-5-sonnet-20241022',
+      model: 'claude-sonnet-4-5-20250929',
       temperature: 0.2,
       maxTokens: 4000,
       useVendedCredentials: true

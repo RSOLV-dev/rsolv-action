@@ -67,7 +67,7 @@ describe.skip('AITestGenerator - maxTokens fix', () => {
       const lowTokensConfig: AIConfig = {
         provider: 'anthropic',
         apiKey: 'test-key',
-        model: 'claude-3-sonnet',
+        model: 'claude-sonnet-4-5-20250929',
         maxTokens: 4000  // This was causing truncated responses
       };
 
@@ -87,7 +87,7 @@ describe.skip('AITestGenerator - maxTokens fix', () => {
       const lowTokensConfig: AIConfig = {
         provider: 'anthropic',
         apiKey: 'test-key',
-        model: 'claude-3-sonnet',
+        model: 'claude-sonnet-4-5-20250929',
         maxTokens: 4000  // Original low value
       };
 
@@ -120,7 +120,7 @@ describe.skip('AITestGenerator - maxTokens fix', () => {
       const highTokensConfig: AIConfig = {
         provider: 'anthropic',
         apiKey: 'test-key',
-        model: 'claude-3-sonnet',
+        model: 'claude-sonnet-4-5-20250929',
         maxTokens: 15000  // Already high enough
       };
 
@@ -144,7 +144,7 @@ describe.skip('AITestGenerator - maxTokens fix', () => {
       const noTokensConfig: AIConfig = {
         provider: 'anthropic',
         apiKey: 'test-key',
-        model: 'claude-3-sonnet'
+        model: 'claude-sonnet-4-5-20250929'
         // No maxTokens specified
       };
 
@@ -169,7 +169,7 @@ describe.skip('AITestGenerator - maxTokens fix', () => {
       const config: AIConfig = {
         provider: 'anthropic',
         apiKey: 'test-key',
-        model: 'claude-3-sonnet',
+        model: 'claude-sonnet-4-5-20250929',
         maxTokens: 4000
       };
 
@@ -194,7 +194,7 @@ describe.skip('AITestGenerator - maxTokens fix', () => {
       const config: AIConfig = {
         provider: 'anthropic',
         apiKey: 'test-key',
-        model: 'claude-3-sonnet',
+        model: 'claude-sonnet-4-5-20250929',
         temperature: 0.5,
         maxTokens: 4000,
         useVendedCredentials: true
@@ -209,7 +209,7 @@ describe.skip('AITestGenerator - maxTokens fix', () => {
         expect.objectContaining({
           provider: 'anthropic',
           apiKey: 'test-key',
-          model: 'claude-3-sonnet',
+          model: 'claude-sonnet-4-5-20250929',
           temperature: 0.5,
           useVendedCredentials: true,
           maxTokens: 10000  // Only maxTokens should be changed

@@ -152,7 +152,7 @@ async function validateJavaApp() {
     enableSecurityAnalysis: true,
     aiProvider: {
       provider: 'anthropic',
-      model: 'claude-3-sonnet',
+      model: 'claude-sonnet-4-5-20250929',
       apiKey: 'test-key'
     }
   } as ActionConfig;
@@ -243,7 +243,7 @@ async function validatePHPApp() {
     enableSecurityAnalysis: true,
     aiProvider: {
       provider: 'anthropic',
-      model: 'claude-3-sonnet',
+      model: 'claude-sonnet-4-5-20250929',
       apiKey: 'test-key'
     }
   } as ActionConfig;

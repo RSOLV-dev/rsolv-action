@@ -70,7 +70,7 @@ async function runIntegrationTest() {
     // Configure AI client to use vended credentials
     const config: AiProviderConfig = {
       provider: 'anthropic',
-      model: 'claude-3-sonnet-20240229',
+      model: 'claude-sonnet-4-5-20250929',
       temperature: 0.2,
       maxTokens: 2000,
       useVendedCredentials: true

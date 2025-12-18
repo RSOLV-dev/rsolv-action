@@ -151,7 +151,7 @@ describe('Unified Processor Credential Manager Passing', () => {
       aiProvider: {
         provider: 'claude-code',
         apiKey: '',
-        model: 'claude-3-sonnet-20240229',
+        model: 'claude-sonnet-4-5-20250929',
         useVendedCredentials: true
       },
       rsolvApiKey: 'rsolv_test_key_123',

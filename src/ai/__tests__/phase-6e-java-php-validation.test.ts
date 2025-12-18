@@ -16,7 +16,7 @@ describe('Phase 6E: Java/PHP Fix Validation', () => {
       issueLabel: 'security',
       aiProvider: {
         provider: 'anthropic',
-        model: 'claude-3-sonnet',
+        model: 'claude-sonnet-4-5-20250929',
         apiKey: 'test-key'
       },
       containerConfig: {

@@ -6,7 +6,7 @@ describe('Claude Code Adapter Performance', () => {
   const mockConfig = {
     provider: 'claude-code' as const,
     apiKey: 'test-key',
-    model: 'claude-3-sonnet-20240229',
+    model: 'claude-sonnet-4-5-20250929',
     temperature: 0.1,
     maxTokens: 4096,
     claudeCodeConfig: {

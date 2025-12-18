@@ -53,7 +53,7 @@ describe('Claude Code CLI Credential Format Validation', () => {
       const adapter = new RetryableClaudeCodeCLI(
         {
           apiKey: '',
-          model: 'claude-3-sonnet-20240229',
+          model: 'claude-sonnet-4-5-20250929',
           baseUrl: 'https://api.anthropic.com'
         },
         '/test/repo',
@@ -112,7 +112,7 @@ describe('Claude Code CLI Credential Format Validation', () => {
         const adapter = new RetryableClaudeCodeCLI(
           {
             apiKey: '',
-            model: 'claude-3-sonnet-20240229',
+            model: 'claude-sonnet-4-5-20250929',
             baseUrl: 'https://api.anthropic.com'
           },
           '/test/repo',
@@ -166,7 +166,7 @@ describe('Claude Code CLI Credential Format Validation', () => {
       const adapter = new RetryableClaudeCodeCLI(
         {
           apiKey: '',
-          model: 'claude-3-sonnet-20240229',
+          model: 'claude-sonnet-4-5-20250929',
           baseUrl: 'https://api.anthropic.com'
         },
         '/test/repo',
@@ -222,7 +222,7 @@ describe('Claude Code CLI Credential Format Validation', () => {
       const adapter = new RetryableClaudeCodeCLI(
         {
           apiKey: '',
-          model: 'claude-3-sonnet-20240229',
+          model: 'claude-sonnet-4-5-20250929',
           baseUrl: 'https://api.anthropic.com'
         },
         '/test/repo',

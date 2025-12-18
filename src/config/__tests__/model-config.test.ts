@@ -78,13 +78,13 @@ describe.skip('Model Configuration', () => {
 
     it('should respect explicit model override', async () => {
       // GIVEN: Explicit model override
-      process.env.RSOLV_AI_MODEL = 'claude-3-opus-20240229';
+      process.env.RSOLV_AI_MODEL = 'claude-opus-4-5-20251101';
 
       // WHEN: Loading configuration
       const config = await loadConfig();
 
       // THEN: Should use the overridden model
-      expect(config.aiProvider.model).toBe('claude-3-opus-20240229');
+      expect(config.aiProvider.model).toBe('claude-opus-4-5-20251101');
     });
   });
 

@@ -5,7 +5,7 @@ import fetch from 'node-fetch';
 class AnthropicClient {
   constructor(apiKey) {
     this.apiKey = apiKey;
-    this.model = 'claude-3-sonnet-20240229';
+    this.model = 'claude-sonnet-4-5-20250929';
     console.log(`Initialized Anthropic client with model: ${this.model}`);
   }
   

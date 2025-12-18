@@ -95,7 +95,7 @@ export const testConfig = {
   githubToken: 'test-github-token',
   aiProvider: 'anthropic' as const,
   aiApiKey: 'test-anthropic-key',
-  aiModel: 'claude-3-opus-20240229',
+  aiModel: 'claude-opus-4-5-20251101',
   aiTemperature: 0.3,
   aiMaxTokens: 4000,
   dryRun: true,

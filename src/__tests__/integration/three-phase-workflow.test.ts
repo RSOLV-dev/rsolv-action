@@ -61,14 +61,14 @@ describe('Three-Phase Workflow Integration', () => {
     const validationMode = new ValidationMode({
       provider: 'anthropic',
       apiKey: 'test-key',
-      model: 'claude-3-5-sonnet-20241022',
+      model: 'claude-sonnet-4-5-20250929',
       useVendedCredentials: false
     }, testRepoPath);
 
     const mitigationMode = new MitigationMode({
       provider: 'anthropic',
       apiKey: 'test-key',
-      model: 'claude-3-5-sonnet-20241022',
+      model: 'claude-sonnet-4-5-20250929',
       useVendedCredentials: false
     }, testRepoPath);
 
@@ -132,7 +132,7 @@ describe('Three-Phase Workflow Integration', () => {
     const mitigationMode = new MitigationMode({
       provider: 'anthropic',
       apiKey: 'test-key',
-      model: 'claude-3-5-sonnet-20241022',
+      model: 'claude-sonnet-4-5-20250929',
       useVendedCredentials: false
     }, testRepoPath);
 

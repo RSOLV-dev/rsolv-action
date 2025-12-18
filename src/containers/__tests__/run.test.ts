@@ -18,7 +18,7 @@ describe('Container Run', () => {
       issueLabel: 'rsolv:automate',
       aiProvider: {
         provider: 'anthropic',
-        model: 'claude-3-sonnet-20240229'
+        model: 'claude-sonnet-4-5-20250929'
       },
       containerConfig: {
         enabled: true,

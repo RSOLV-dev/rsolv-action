@@ -50,7 +50,7 @@ describe('Issue Analyzer', () => {
       aiProvider: {
         type: 'anthropic',
         apiKey: 'test-api-key',
-        model: 'claude-3-opus-20240229',
+        model: 'claude-opus-4-5-20251101',
         temperature: 0.2,
         maxTokens: 2000,
         useVendedCredentials: false

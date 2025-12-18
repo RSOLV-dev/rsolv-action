@@ -234,7 +234,7 @@ class AnthropicClient implements AiClient {
   private async makeApiCall(prompt: string, options: CompletionOptions): Promise<string> {
     try {
       const baseUrl = this.config.baseUrl || 'https://api.anthropic.com';
-      const model = options.model || this.config.model || 'claude-3-sonnet-20240229';
+      const model = options.model || this.config.model || 'claude-sonnet-4-5-20250929';
       const temperature = options.temperature ?? this.config.temperature ?? 0.2;
       const maxTokens = resolveMaxTokens(options, this.config, 'STANDARD');
       

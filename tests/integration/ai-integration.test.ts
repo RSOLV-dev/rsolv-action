@@ -132,7 +132,7 @@ const mockConfig: ActionConfig = {
   issueLabel: 'rsolv:automate',
   aiProvider: {
     provider: 'anthropic',
-    model: 'claude-3-sonnet-20240229',
+    model: 'claude-sonnet-4-5-20250929',
     temperature: 0.2,
     maxTokens: 4000
   },

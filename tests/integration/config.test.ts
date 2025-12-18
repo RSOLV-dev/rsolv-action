@@ -85,7 +85,7 @@ describe('Configuration Loading', () => {
       configPath: .github/rsolv.yml
       aiProvider:
         provider: anthropic
-        model: claude-3-opus-20240229
+        model: claude-opus-4-5-20251101
       containerConfig:
         enabled: false
       securitySettings: {}

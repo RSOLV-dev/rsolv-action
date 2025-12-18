@@ -229,7 +229,7 @@ public class UserDAO {
         issueLabel: '',
         aiProvider: { 
           provider: 'claude',
-          model: 'claude-3-sonnet',
+          model: 'claude-sonnet-4-5-20250929',
           apiKey: ''
         },
         containerConfig: { 

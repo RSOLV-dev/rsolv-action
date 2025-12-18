@@ -99,7 +99,7 @@ describe('Security-Aware Processor Integration', () => {
       aiProvider: {
         provider: 'anthropic',
         apiKey: 'test-key',
-        model: 'claude-3-haiku-20240307',
+        model: 'claude-haiku-4-5-20251001',
         temperature: 0.2,
         maxTokens: 2000
       },

@@ -74,7 +74,7 @@ describe('Claude Code Adapter', () => {
 
   const config: AIConfig = {
     provider: 'claude-code',
-    model: 'claude-3-sonnet-20240229',
+    model: 'claude-sonnet-4-5-20250929',
     temperature: 0.2,
     maxTokens: 4000
   };

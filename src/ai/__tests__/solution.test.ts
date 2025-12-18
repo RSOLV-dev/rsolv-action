@@ -58,7 +58,7 @@ vi.mock('../../credentials/manager', () => ({
   exchangeForProviderCredentials: async () => ({
     provider: 'anthropic',
     apiKey: 'mock-api-key',
-    model: 'claude-3-5-sonnet-20241022'
+    model: 'claude-sonnet-4-5-20250929'
   })
 }));
 
@@ -109,7 +109,7 @@ describe('Solution Generator', () => {
       aiProvider: {
         provider: 'anthropic',
         apiKey: 'test-api-key',
-        model: 'claude-3-sonnet'
+        model: 'claude-sonnet-4-5-20250929'
       },
       containerConfig: {
         enabled: false
@@ -242,7 +242,7 @@ describe('Solution Generator', () => {
       rsolvApiKey: 'test-key',
       aiProvider: {
         provider: 'anthropic',  // Standard Anthropic provider, not claude-code
-        model: 'claude-3-sonnet-20240229',
+        model: 'claude-sonnet-4-5-20250929',
         temperature: 0.2,
         maxTokens: 4000,
         contextLimit: 100000,

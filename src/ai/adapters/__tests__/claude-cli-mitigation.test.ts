@@ -12,7 +12,7 @@ describe.skip('Claude CLI Usage in Mitigation', () => {
   const mockConfig: AIConfig = {
     provider: 'anthropic',
     apiKey: 'test-key',
-    model: 'claude-3-5-sonnet-20241022',
+    model: 'claude-sonnet-4-5-20250929',
     temperature: 0.1,
     maxTokens: 4000,
     useVendedCredentials: true, // This should force CLI usage

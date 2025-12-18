@@ -61,7 +61,7 @@ describe('PhaseExecutor ValidationMode Integration', () => {
       aiProvider: {
         provider: 'anthropic',
         apiKey: 'test-anthropic-key',
-        model: 'claude-3-5-sonnet-20241022',
+        model: 'claude-sonnet-4-5-20250929',
         maxTokens: 8192,
         temperature: 0.1,
         useVendedCredentials: false
@@ -109,7 +109,7 @@ describe('PhaseExecutor ValidationMode Integration', () => {
           rsolvApiKey: 'test-key',
           aiProvider: expect.objectContaining({
             provider: 'anthropic',
-            model: 'claude-3-5-sonnet-20241022'
+            model: 'claude-sonnet-4-5-20250929'
           })
         }),
         expect.any(String) // repoPath
@@ -153,7 +153,7 @@ describe('PhaseExecutor ValidationMode Integration', () => {
           aiProvider: expect.objectContaining({
             provider: 'anthropic',
             apiKey: 'test-anthropic-key',
-            model: 'claude-3-5-sonnet-20241022',
+            model: 'claude-sonnet-4-5-20250929',
             maxTokens: 8192,
             temperature: 0.1,
             useVendedCredentials: false

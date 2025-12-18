@@ -197,7 +197,7 @@ describe('PhaseDataClient - Observability Features', () => {
       error: 'Test generation failed',
       timestamp: new Date().toISOString(),
       retryCount: 0,
-      metadata: { aiProvider: 'anthropic', model: 'claude-3-opus' }
+      metadata: { aiProvider: 'anthropic', model: 'claude-opus-4-5-20251101' }
     };
 
     await client.storeFailureDetails(testRepo, testIssueNumber, failureDetails);

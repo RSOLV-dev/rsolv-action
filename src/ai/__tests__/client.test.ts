@@ -76,7 +76,7 @@ describe('AI Client Factory', () => {
       const client = await getAiClient({
         provider: 'anthropic',
         apiKey: 'test-key',
-        model: 'claude-3-sonnet'
+        model: 'claude-sonnet-4-5-20250929'
       });
       
       expect(client).toBeDefined();
@@ -88,7 +88,7 @@ describe('AI Client Factory', () => {
       const client = await getAiClient({
         provider: 'claude-code',
         apiKey: 'test-key',
-        model: 'claude-3-sonnet'
+        model: 'claude-sonnet-4-5-20250929'
       });
       
       expect(client).toBeDefined();
@@ -171,7 +171,7 @@ describe('AI Client Factory', () => {
       const client = await getAiClient({
         provider: 'anthropic',
         apiKey: 'test-key',
-        model: 'claude-3-opus',
+        model: 'claude-opus-4-5-20251101',
         temperature: 0.7,
         maxTokens: 4000
       });

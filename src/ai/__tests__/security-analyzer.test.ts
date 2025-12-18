@@ -81,7 +81,7 @@ describe('SecurityAwareAnalyzer', () => {
     aiProvider: {
       provider: 'anthropic',
       apiKey: 'fake-key',
-      model: 'claude-3-sonnet',
+      model: 'claude-sonnet-4-5-20250929',
       temperature: 0.2,
       maxTokens: 2000
     },

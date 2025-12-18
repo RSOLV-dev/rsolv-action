@@ -135,7 +135,7 @@ describe('Git-based Processor Prompt Integration', () => {
     mockConfig = {
       aiProvider: {
         provider: 'anthropic',
-        model: 'claude-3-sonnet',
+        model: 'claude-sonnet-4-5-20250929',
         apiKey: 'test-key',
         maxTokens: 4000
       },

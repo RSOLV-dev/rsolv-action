@@ -49,7 +49,7 @@ async function main() {
     repoToken: GITHUB_TOKEN,
     aiProvider: {
       provider: 'anthropic',
-      model: 'claude-3-sonnet-20240229',
+      model: 'claude-sonnet-4-5-20250929',
       apiKey: process.env.ANTHROPIC_API_KEY
     },
     containerConfig: {
@@ -116,7 +116,7 @@ async function main() {
       break;
     case 'openrouter':
       apiKey = process.env.OPENROUTER_API_KEY || '';
-      modelName = 'anthropic/claude-3-opus';
+      modelName = 'anthropic/claude-opus-4-5-20251101';
       break;
     case 'ollama':
       apiKey = process.env.OLLAMA_API_KEY || ''; // Can be URL:TOKEN format

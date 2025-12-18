@@ -144,7 +144,7 @@ security:
 # AI provider settings  
 aiProvider:
   provider: anthropic  # or openai, ollama
-  model: claude-3-sonnet-20240229
+  model: claude-sonnet-4-5-20250929
   temperature: 0.2
   
 # Issue creation settings

@@ -117,7 +117,7 @@ describe('Two-Phase Claude Code Conversation', () => {
       provider: 'claude-code',
       apiKey: process.env.ANTHROPIC_API_KEY || 'test-key',
       baseUrl: 'https://api.anthropic.com',
-      model: 'claude-3-opus-20240229',
+      model: 'claude-opus-4-5-20251101',
       maxTokens: 4096,
       temperature: 0.1,
       claudeCodeConfig: {
@@ -178,7 +178,7 @@ describe('Two-Phase Claude Code Conversation', () => {
         provider: 'claude-code',
         apiKey: process.env.ANTHROPIC_API_KEY || 'test-key',
         baseUrl: 'https://api.anthropic.com',
-        model: 'claude-3-opus-20240229',
+        model: 'claude-opus-4-5-20251101',
         maxTokens: 4096,
         temperature: 0.1,
         claudeCodeConfig: {

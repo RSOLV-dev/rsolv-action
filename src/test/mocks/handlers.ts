@@ -127,7 +127,7 @@ export const handlers = [
         type: 'text',
         text: 'I have fixed the issue by updating the code.'
       }],
-      model: body?.model || 'claude-3-sonnet-20240229',
+      model: body?.model || 'claude-sonnet-4-5-20250929',
       usage: {
         input_tokens: 100,
         output_tokens: 50
@@ -142,7 +142,7 @@ export const handlers = [
       id: 'chatcmpl-test',
       object: 'chat.completion',
       created: Date.now(),
-      model: body?.model || 'anthropic/claude-3-sonnet',
+      model: body?.model || 'anthropic/claude-sonnet-4-5-20250929',
       choices: [{
         index: 0,
         message: {

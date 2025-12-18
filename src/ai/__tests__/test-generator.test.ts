@@ -384,7 +384,7 @@ This is a high severity issue that requires parameterized queries.`
       issueLabel: 'security',
       aiProvider: {
         provider: 'anthropic',
-        model: 'claude-3-sonnet-20240229',
+        model: 'claude-sonnet-4-5-20250929',
         apiKey: 'test-key',
         useVendedCredentials: false
       },

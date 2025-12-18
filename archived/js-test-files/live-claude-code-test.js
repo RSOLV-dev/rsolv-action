@@ -117,7 +117,7 @@ async function runLiveTest() {
     const config = {
       provider: 'anthropic',
       apiKey,
-      modelName: 'claude-3-opus-20240229',
+      modelName: 'claude-opus-4-5-20251101',
       useClaudeCode: true
     };
     

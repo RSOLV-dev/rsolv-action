@@ -99,8 +99,8 @@ export async function generateSolution(
     
     // Use injected client for testing or get standard AI client
     // If we're falling back from claude-code, use anthropic provider with latest Sonnet model
-    const providerConfig = config.aiProvider.provider === 'claude-code' ? 
-      { ...config.aiProvider, provider: 'anthropic', model: 'claude-3-5-sonnet-20241022' } : 
+    const providerConfig = config.aiProvider.provider === 'claude-code' ?
+      { ...config.aiProvider, provider: 'anthropic', model: 'claude-sonnet-4-5-20250929' } :
       config.aiProvider;
     const aiClient = injectedClient || await getAiClient(providerConfig);
     
@@ -155,7 +155,7 @@ Please ensure your solution addresses these security issues as a priority.`;
     const response = await aiClient.complete(prompt, {
       temperature: 0.2,
       // maxTokens omitted - let client use resolveMaxTokens with FIX_GENERATION use case
-      model: config.aiProvider.model || 'claude-3-sonnet-20240229'
+      model: config.aiProvider.model || 'claude-sonnet-4-5-20250929'
     });
     
     // Debug: Log the raw response to see what we're getting
