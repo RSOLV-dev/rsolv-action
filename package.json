@@ -36,7 +36,7 @@
     "test:integration": "vitest run src/modes/__tests__/test-integration-client.test.ts src/modes/__tests__/validation-mode-test-integration.test.ts"
   },
   "dependencies": {
-    "@anthropic-ai/claude-code": "^1.0.67",
+    "@anthropic-ai/claude-code": "^2.0.31",
     "@babel/parser": "^7.27.5",
     "@babel/traverse": "^7.27.4",
     "@babel/types": "^7.27.6",
