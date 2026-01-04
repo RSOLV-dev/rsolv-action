@@ -2,15 +2,14 @@
 
 [![GitHub Marketplace](https://img.shields.io/badge/Marketplace-RSOLV-blue.svg?colorA=24292e&colorB=0366d6&style=flat&longCache=true&logo=github)](https://github.com/marketplace/actions/rsolv-test-first-ai-security-fixes)
 
-> Ship secure code faster. Test-first AI security that validates vulnerabilities with executable RED tests before fixing them. No guesswork—every fix is proven.
+> Ship secure code faster. Every vulnerability proven with a failing test. Every fix validated by making it pass.
 
 ## Why RSOLV?
 
-- **🔍 Real Vulnerabilities Only** - Built by test-driven engineers who hate false positives as much as you do. AST validation catches real issues, not regex noise
-- **✅ Proof, Not Guesses** - Generates RED tests that prove vulnerabilities before fixing
-- **🔧 Production-Ready Fixes** - AI-generated fixes that pass your existing test suite
-- **📊 Framework-Native Tests** - Integrates with RSpec, Jest, pytest—your tools, your style
-- **🚀 Complete Automation** - From detection to PR, fully automated in GitHub Actions
+- **🔍 Proof, Not Warnings** — We generate a failing test that exploits each vulnerability. Run it yourself—if it fails, it's real. No more investigating scanner maybes.
+- **✅ Fixes That Actually Work** — Our AI writes fixes that make the exploit test pass. Not "this should fix it"—proof the vulnerability is gone.
+- **🛡️ Regression Protection Built In** — That exploit test stays in your codebase forever. The vulnerability can never return silently.
+- **🔧 Your Tools, Your Framework** — Tests run in Jest, pytest, RSpec—whatever you already use. No new tooling to learn.
 
 ## Quick Start
 
@@ -160,13 +159,16 @@ Enterprise-grade vulnerability detection across 7 languages with OWASP Top 10 co
 - **Vulnerable Components**: Outdated dependencies, dangerous functions
 - **SSRF**: Server-side request forgery with DNS rebinding protection
 
-### AST-Based Validation
+### Two-Layer Validation
 
-Reduces false positives by 70-90% through:
+**Layer 1: AST Analysis** filters the noise before you see it:
 - Comment detection (filters out documentation)
 - String literal analysis (ignores example code)
-- User input flow analysis (validates reachability)
-- Multi-language support (JavaScript, TypeScript, Python, Ruby, Java, PHP, Elixir)
+- Data flow analysis (validates reachability)
+
+**Layer 2: Executable Proof** — every vulnerability that passes AST validation gets a generated exploit test. If the test doesn't fail, we don't report it.
+
+Supported: JavaScript, TypeScript, Python, Ruby, Java, PHP, Elixir
 
 ## Pricing
 
