@@ -228,4 +228,4 @@ This software is proprietary. See [LICENSE](LICENSE) for terms.
 
 ---
 
-**Built with ❤️ by developers who hate false positives**
+**Built by test-first engineers.** We write the failing test before the fix—in our own code, and now in yours.
