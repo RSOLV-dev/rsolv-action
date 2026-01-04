@@ -222,7 +222,7 @@ For more help, see [Documentation](https://docs.rsolv.dev) or [open an issue](ht
 
 ## License
 
-Copyright © 2025 RSOLV. All rights reserved.
+Copyright © 2026 RSOLV. All rights reserved.
 
 This software is proprietary. See [LICENSE](LICENSE) for terms.
 
