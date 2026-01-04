@@ -26,26 +26,6 @@ inputs:
     description: 'RSOLV API URL (defaults to production)'
     required: false
     default: 'https://api.rsolv.dev'
-  jira_host:
-    description: 'Jira instance hostname (e.g., your-domain.atlassian.net)'
-    required: false
-  jira_email:
-    description: 'Jira account email for API authentication'
-    required: false
-  jira_api_token:
-    description: 'Jira API token for authentication'
-    required: false
-  jira_autofix_label:
-    description: 'Label to identify Jira issues for automation'
-    required: false
-    default: 'autofix'
-  jira_rsolv_label:
-    description: 'Alternative label to identify Jira issues for automation'
-    required: false
-    default: 'rsolv'
-  jira_jql:
-    description: 'Custom JQL query to find issues (overrides label-based search)'
-    required: false
   github-token:
     description: |
       GitHub token for PR/issue operations. Automatically provided by GitHub Actions.
@@ -58,7 +38,8 @@ inputs:
       - 'scan': Full repository scan, creates GitHub issues (recommended starting point)
       - 'validate': Generate RED tests for labeled issues (use in separate job after scan)
       - 'mitigate': Apply fixes to validated issues (use in separate job after validate)
-      - 'full': Run all three phases in single job (⚠️ can consume many credits at once)
+      - 'full': Run all three phases in single job (can consume many credits at once)
+      - 'billing': Trigger billing for merged PR (RFC-091) - use on pull_request.closed with merged=true
 
       For production use, see workflow templates in RSOLV-action repo for multi-job patterns.
     required: false
@@ -120,13 +101,6 @@ runs:
     RSOLV_CONFIG_PATH: ${{ inputs.config_path }}
     RSOLV_ISSUE_LABEL: ${{ inputs.issue_label }}
     RSOLV_ENVIRONMENT_VARIABLES: ${{ inputs.environment_variables }}
-    # GITHUB_TOKEN should be passed from the workflow env
-    JIRA_HOST: ${{ inputs.jira_host }}
-    JIRA_EMAIL: ${{ inputs.jira_email }}
-    JIRA_API_TOKEN: ${{ inputs.jira_api_token }}
-    JIRA_AUTOFIX_LABEL: ${{ inputs.jira_autofix_label }}
-    JIRA_RSOLV_LABEL: ${{ inputs.jira_rsolv_label }}
-    JIRA_JQL: ${{ inputs.jira_jql }}
     RSOLV_MODE: ${{ inputs.mode }}
     RSOLV_SCAN_MODE: ${{ inputs.scan_mode }}
     RSOLV_ENABLE_SECURITY_ANALYSIS: ${{ inputs.enable_security_analysis }}

@@ -138,12 +138,12 @@ Every fix is proven with tests that fail before and pass after—no guesswork.
 | Input | Description | Default |
 |-------|-------------|---------|
 | `enable_ast_validation` | Use AST validation to reduce false positives | `true` |
-| `executable_tests` | Generate executable RED tests (RFC-060) | `true` |
+| `executable_tests` | Generate executable RED tests | `true` |
 | `claude_max_turns` | Max Claude iterations for test generation | `5` |
 | `enable_educational_pr` | Include security explanations in PRs | `true` |
 | `api_url` | RSOLV API endpoint | `https://api.rsolv.dev` |
 
-For complete configuration options, see [Configuration Guide](docs/CONFIGURATION.md).
+For complete configuration options, see [Documentation](https://docs.rsolv.dev).
 
 ## Security Features
 
@@ -170,9 +170,7 @@ Reduces false positives by 70-90% through:
 
 ## Pricing
 
-Based on RFC-066 credit system:
-
-- **Trial**: 10 credits free (5 at signup + 5 when adding billing)
+- **Trial**: 5 credits free at signup, 5 more when you add billing
 - **Pay As You Go**: $29 per fix
 - **Pro**: $599/month (60 fixes included, then $15/fix for additional)
 
@@ -186,41 +184,11 @@ This limit applies to vulnerability validation (computationally expensive). Othe
 
 **Need higher limits?** Contact us at [support@rsolv.dev](mailto:support@rsolv.dev) for enterprise plans.
 
-## External Issue Trackers
-
-RSOLV supports multiple issue tracking platforms:
-
-### Jira Integration
-
-```yaml
-- uses: RSOLV-dev/rsolv-action@v3
-  with:
-    rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
-    jira_host: 'your-domain.atlassian.net'
-    jira_email: 'your-email@example.com'
-    jira_api_token: ${{ secrets.JIRA_API_TOKEN }}
-```
-
-See [Jira Integration Guide](docs/jira-integration.md) for details.
-
-### Linear Integration
-
-```yaml
-- uses: RSOLV-dev/rsolv-action@v3
-  with:
-    rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
-  env:
-    LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }}
-```
-
-See [Linear Integration Guide](docs/linear-integration.md) for details.
-
 ## Support & Documentation
 
 - 📧 Email: [support@rsolv.dev](mailto:support@rsolv.dev)
 - 📖 Docs: [docs.rsolv.dev](https://docs.rsolv.dev)
 - 💬 GitHub Issues: [Report bugs or request features](https://github.com/RSOLV-dev/rsolv-action/issues)
-- 📚 Examples: [See RSOLV in action](https://github.com/RSOLV-dev/examples)
 
 ## Troubleshooting
 
@@ -248,37 +216,7 @@ For complex vulnerabilities:
 - Consider processing one issue at a time
 - Use `mode: scan` first to assess scope
 
-For more troubleshooting, see [Troubleshooting Guide](docs/TROUBLESHOOTING.md).
-
-## Development
-
-### Prerequisites
-
-- [Bun](https://bun.sh/) (latest version)
-- Docker (for container testing)
-- RSOLV-platform running locally
-
-### Setup
-
-```bash
-# Clone the repository
-git clone https://github.com/RSOLV-dev/rsolv-action.git
-cd rsolv-action
-
-# Install dependencies
-bun install
-
-# Run tests
-bun test
-
-# Type check
-bun run typecheck
-
-# Lint
-bun run lint
-```
-
-See [Development Guide](docs/DEVELOPMENT.md) for complete setup instructions.
+For more help, see [Documentation](https://docs.rsolv.dev) or [open an issue](https://github.com/RSOLV-dev/rsolv-action/issues).
 
 ## License
 
