@@ -15,7 +15,7 @@
 ## Quick Start
 
 ### 1. Get Your API Key
-- [Sign up at rsolv.dev/signup](https://rsolv.dev/signup) - Get 10 free credits to start
+- [Sign up at rsolv.dev/signup](https://rsolv.dev/signup) - 5 free credits instantly, 5 more when you add billing
 
 ### 2. Add API Key to GitHub Secrets
 In your repository: Settings → Secrets → New repository secret
@@ -149,7 +149,7 @@ For complete configuration options, see [Configuration Guide](docs/CONFIGURATION
 
 ### 170+ Security Patterns
 
-Enterprise-grade vulnerability detection across 8 languages with OWASP Top 10 coverage:
+Enterprise-grade vulnerability detection across 7 languages with OWASP Top 10 coverage:
 
 - **Injection**: SQL, NoSQL, Command, LDAP, Template, XPath
 - **XSS**: React dangerouslySetInnerHTML, innerHTML, document.write
@@ -166,7 +166,7 @@ Reduces false positives by 70-90% through:
 - Comment detection (filters out documentation)
 - String literal analysis (ignores example code)
 - User input flow analysis (validates reachability)
-- Multi-language support (JavaScript, TypeScript, Python, Ruby, PHP, Java)
+- Multi-language support (JavaScript, TypeScript, Python, Ruby, Java, PHP, Elixir)
 
 ## Pricing
 
