@@ -6,6 +6,7 @@
 #    - RFC-058: Creates validation branches with RED tests (when fully integrated)
 # 3. MITIGATE: Generate targeted security fixes via AI and create focused PRs
 #    - RFC-058: Uses tests from validation branch for test-aware fix generation
+# 4. BILLING: Trigger credit consumption when PR is merged (RFC-091)
 #
 # Usage:
 #   1. Add this file to .github/workflows/ in your repository
@@ -22,6 +23,11 @@
 #   - ValidationMode class implemented with branch persistence
 #   - Integration with PhaseExecutor pending
 #   - See rsolv-validate-with-branch-persistence.yml for RFC-058 specific workflow
+#
+# RFC-091 Status (December 2025):
+#   - Billing mode implemented for credit consumption on PR merge
+#   - Primary billing mechanism (Action-initiated, guaranteed execution)
+#   - Idempotent: safe to run multiple times, won't double-bill
 
 name: RSOLV Three-Phase Security Workflow
 
@@ -44,16 +50,21 @@ on:
         default: false
         type: boolean
 
+  # RFC-091: Trigger billing when PR is merged
+  pull_request:
+    types: [closed]
+
   # Uncomment to enable automatic scanning on code changes
   # push:
   #   branches: [ main, develop ]
-  # pull_request:
-  #   branches: [ main ]
 
 jobs:
   rsolv-security:
     name: RSOLV Security Analysis
     runs-on: ubuntu-latest
+
+    # Only run security analysis on workflow_dispatch (not on PR close events)
+    if: github.event_name == 'workflow_dispatch'
 
     # Required permissions for RSOLV to create issues and PRs
     permissions:
@@ -69,7 +80,8 @@ jobs:
           fetch-depth: 0
 
       - name: Run RSOLV Three-Phase Security Analysis
-        uses: rsolv-dev/rsolv-action@main
+        id: rsolv
+        uses: RSOLV-dev/rsolv-action@v3
         with:
           # ===== CORE CONFIGURATION =====
           rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
@@ -124,5 +136,45 @@ jobs:
           echo "2. Each issue represents one vulnerability type found in your code"
           echo "3. Issues labeled 'rsolv:automate' will trigger automatic fix generation"
           echo "4. Pull requests will be created with targeted security fixes"
+          echo "5. When PRs are merged, credits will be consumed automatically"
           echo ""
           echo "🔗 Learn more: https://docs.rsolv.dev/three-phase-workflow"
+
+  # =====================================================
+  # RFC-091: Billing Phase - Triggered on PR Merge
+  # =====================================================
+  # This job runs when a PR is merged to consume credits.
+  # It's idempotent - safe to run multiple times without double-billing.
+  #
+  # The billing system has three layers of protection:
+  # 1. Action billing (this job) - PRIMARY, guaranteed by GitHub Actions SLA
+  # 2. Webhook billing - BACKUP, triggered by GitHub webhook
+  # 3. Cleanup worker - SAFETY NET, catches any missed billing every 5 minutes
+
+  rsolv-billing:
+    name: RSOLV Billing
+    runs-on: ubuntu-latest
+
+    # Only run when a PR is merged (not just closed)
+    if: github.event_name == 'pull_request' && github.event.pull_request.merged == true
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: RSOLV Billing for Merged PR
+        uses: RSOLV-dev/rsolv-action@v3
+        with:
+          rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
+          mode: 'billing'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Billing Summary
+        run: |
+          echo "💳 RSOLV Billing Complete"
+          echo ""
+          echo "PR #${{ github.event.pull_request.number }} has been processed."
+          echo "If this was an RSOLV-generated fix, credits have been consumed."
+          echo ""
+          echo "Note: This billing is idempotent - no double-billing will occur."

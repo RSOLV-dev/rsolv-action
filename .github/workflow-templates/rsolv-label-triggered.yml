@@ -57,7 +57,7 @@ jobs:
           token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
 
       - name: Process Single Labeled Issue
-        uses: RSOLV-dev/rsolv-action@v3.7.36
+        uses: RSOLV-dev/rsolv-action@v3
         with:
           rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
 
@@ -102,7 +102,7 @@ jobs:
 
       - name: Process Issue ${{ matrix.issue }}
         if: matrix.issue != ''
-        uses: RSOLV-dev/rsolv-action@v3.7.36
+        uses: RSOLV-dev/rsolv-action@v3
         with:
           rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
 
@@ -139,7 +139,7 @@ jobs:
           token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
 
       - name: Process All Labeled Issues
-        uses: RSOLV-dev/rsolv-action@v3.7.36
+        uses: RSOLV-dev/rsolv-action@v3
         with:
           rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
 

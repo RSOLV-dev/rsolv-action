@@ -75,7 +75,7 @@ jobs:
 
       - name: RSOLV Validate with Branch Persistence
         id: rsolv-validate
-        uses: RSOLV-dev/rsolv-action@main
+        uses: RSOLV-dev/rsolv-action@v3
         with:
           # ===== CORE CONFIGURATION =====
           rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}

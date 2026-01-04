@@ -46,7 +46,7 @@ jobs:
           token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
 
       - name: Run RSOLV Three-Phase Workflow
-        uses: RSOLV-dev/rsolv-action@v3.7.34
+        uses: RSOLV-dev/rsolv-action@v3
         with:
           # RSOLV API key for accessing vulnerability patterns
           rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}

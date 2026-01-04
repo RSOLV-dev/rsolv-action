@@ -40,7 +40,7 @@ jobs:
 
       - name: Run RSOLV Security Scan
         id: scan
-        uses: RSOLV-dev/rsolv-action@main
+        uses: RSOLV-dev/rsolv-action@v3
         with:
           rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
           mode: 'scan'

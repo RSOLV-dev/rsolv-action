@@ -42,7 +42,7 @@ jobs:
 
       - name: Phase 2 - Validation
         id: validate
-        uses: RSOLV-dev/rsolv-action@main
+        uses: RSOLV-dev/rsolv-action@v3
         with:
           rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
           mode: 'validate'
@@ -73,7 +73,7 @@ jobs:
       - name: Phase 3 - Mitigation
         if: steps.check_validation.outputs.validation_passed == 'true'
         id: mitigate
-        uses: RSOLV-dev/rsolv-action@main
+        uses: RSOLV-dev/rsolv-action@v3
         with:
           rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
           mode: 'mitigate'
