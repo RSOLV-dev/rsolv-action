@@ -3,8 +3,8 @@ import { logger } from '../utils/logger.js';
 import { getAiClient } from './client.js';
 import { buildSolutionPrompt, getIssueTypePromptTemplate } from './prompts.js';
 import { ThreeTierExplanationFramework, CompleteExplanation } from '../security/explanation-framework.js';
-// RFC-095: Import unified adapter (exports ClaudeCodeAdapter for compatibility)
-import { ClaudeAgentSDKAdapter as ClaudeCodeAdapter } from './adapters/claude-agent-sdk.js';
+// RFC-095: Import factory function for adapter selection based on feature flags
+import { createClaudeAgentSDKAdapter } from './adapters/claude-agent-sdk.js';
 import { AIConfig, AIProvider, IssueAnalysis } from './types.js';
 
 /**
@@ -47,8 +47,10 @@ export async function generateSolution(
         credentialManager = await CredentialManagerSingleton.getInstance(config.rsolvApiKey);
       }
       
-      // RFC-095: Use new ClaudeAgentSDKAdapter config format
-      const claudeCodeAdapter = new ClaudeCodeAdapter({
+      // RFC-095: Use factory function to select adapter based on feature flags
+      // If use_legacy_claude_adapter flag is enabled, factory returns GitBasedClaudeCodeAdapter
+      // Otherwise returns ClaudeAgentSDKAdapter (new unified adapter)
+      const claudeCodeAdapter = createClaudeAgentSDKAdapter({
         repoPath: process.cwd(),
         credentialManager,
         useVendedCredentials: config.aiProvider.useVendedCredentials,

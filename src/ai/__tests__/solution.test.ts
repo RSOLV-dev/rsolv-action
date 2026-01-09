@@ -24,34 +24,38 @@ This fixes the error handling in the component.`
   };
 });
 
-// RFC-095: Mock the new unified adapter
-// The adapter returns GitSolutionResult with filesModified, then solution.ts reads files
+// RFC-095: Mock the unified adapter and factory function
+// solution.ts uses createClaudeAgentSDKAdapter factory which checks feature flags
 vi.mock('../adapters/claude-agent-sdk', () => {
-  return {
-    ClaudeAgentSDKAdapter: class MockClaudeAgentSDKAdapter {
-      constructor(_config: any) {}
+  class MockClaudeAgentSDKAdapter {
+    constructor(_config: any) {}
 
-      async generateSolutionWithGit(_issue: any, _analysis: any) {
-        return {
-          success: true,
-          message: 'Fixed vulnerabilities',
-          filesModified: ['src/auth/login.js', 'src/auth/validation.js'],
-          commitHash: 'abc123def456',
-          diffStats: { insertions: 10, deletions: 5, filesChanged: 2 }
-        };
-      }
-
-      async generateSolution(_issue: any, _analysis: any) {
-        // RFC-095: Return GitSolutionResult format (filesModified, not changes)
-        // solution.ts will read files to build changes map
-        return {
-          success: true,
-          message: 'Fixed vulnerabilities',
-          filesModified: ['src/auth/login.js', 'src/auth/validation.js'],
-          diffStats: { insertions: 10, deletions: 5, filesChanged: 2 }
-        };
-      }
+    async generateSolutionWithGit(_issue: any, _analysis: any) {
+      return {
+        success: true,
+        message: 'Fixed vulnerabilities',
+        filesModified: ['src/auth/login.js', 'src/auth/validation.js'],
+        commitHash: 'abc123def456',
+        diffStats: { insertions: 10, deletions: 5, filesChanged: 2 }
+      };
     }
+
+    async generateSolution(_issue: any, _analysis: any) {
+      // RFC-095: Return GitSolutionResult format (filesModified, not changes)
+      // solution.ts will read files to build changes map
+      return {
+        success: true,
+        message: 'Fixed vulnerabilities',
+        filesModified: ['src/auth/login.js', 'src/auth/validation.js'],
+        diffStats: { insertions: 10, deletions: 5, filesChanged: 2 }
+      };
+    }
+  }
+
+  return {
+    ClaudeAgentSDKAdapter: MockClaudeAgentSDKAdapter,
+    // Factory function that solution.ts now uses
+    createClaudeAgentSDKAdapter: (_config: any) => new MockClaudeAgentSDKAdapter(_config)
   };
 });
 
