@@ -35,6 +35,9 @@ import type {
 } from '@anthropic-ai/claude-agent-sdk';
 import { logger } from '../../utils/logger.js';
 import type { IssueAnalysis } from '../types.js';
+// RFC-095: Import legacy adapter for feature flag fallback
+import { GitBasedClaudeCodeAdapter } from './deprecated/claude-code-git.js';
+import type { AIConfig } from '../types.js';
 
 /**
  * Result interface for git-based solution generation
@@ -132,6 +135,8 @@ interface TestLogEntry {
  */
 export interface CredentialManager {
   getCredential(provider: string): Promise<string>;
+  // RFC-095: Feature flag support for legacy adapter fallback
+  shouldUseLegacyAdapter?(): boolean;
 }
 
 /**
@@ -1142,11 +1147,43 @@ Use Read, Glob, and Grep to explore. Do NOT make any changes.`;
 }
 
 /**
- * Factory function for creating adapter instances
+ * Factory function to create the appropriate adapter based on feature flags.
+ *
+ * RFC-095: When `use_legacy_claude_adapter` feature flag is enabled via FunWithFlags,
+ * this returns the legacy GitBasedClaudeCodeAdapter which uses the CLI directly
+ * instead of the Agent SDK binary (which has Docker compatibility issues).
+ *
+ * The legacy adapter is proven to work in containerized environments while the
+ * SDK binary has known compatibility issues (GitHub issues #20, #74, #865).
  */
 export function createClaudeAgentSDKAdapter(
   config: ClaudeAgentSDKAdapterConfig
-): ClaudeAgentSDKAdapter {
+): ClaudeAgentSDKAdapter | GitBasedClaudeCodeAdapter {
+  // RFC-095: Check feature flag for legacy adapter fallback
+  const useLegacy = config.credentialManager?.shouldUseLegacyAdapter?.() ?? false;
+
+  if (useLegacy) {
+    logger.info('[SDK Factory] Feature flag enabled: using legacy GitBasedClaudeCodeAdapter');
+
+    // Convert config to AIConfig format for legacy adapter
+    const legacyConfig: AIConfig = {
+      provider: 'anthropic',
+      model: config.model || 'claude-sonnet-4-5-20250929',
+      useVendedCredentials: config.useVendedCredentials,
+      useStructuredPhases: true, // Legacy adapter uses structured phases
+      claudeCodeConfig: {
+        verboseLogging: config.verbose
+      }
+    };
+
+    return new GitBasedClaudeCodeAdapter(
+      legacyConfig,
+      config.repoPath,
+      config.credentialManager
+    );
+  }
+
+  logger.info('[SDK Factory] Using ClaudeAgentSDKAdapter (new unified adapter)');
   return new ClaudeAgentSDKAdapter(config);
 }
 
