@@ -109,6 +109,17 @@ export async function createEducationalPullRequest(
   validationData?: ValidationData  // RFC-041: Validation phase data
 ): Promise<EducationalPrResult> {
   try {
+    // Validate commitHash parameter
+    if (!commitHash || typeof commitHash !== 'string') {
+      const errorMsg = `Invalid commitHash: expected string, got ${typeof commitHash}. This usually means the solution generation did not create any commits - check if the SDK made file modifications.`;
+      logger.error(errorMsg);
+      return {
+        success: false,
+        message: 'Cannot create PR without valid commit',
+        error: errorMsg
+      };
+    }
+
     logger.info(`Creating educational PR from commit ${commitHash.substring(0, 8)} for issue #${issue.number}`);
     
     // Configure git user if not set

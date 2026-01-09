@@ -2850,6 +2850,29 @@ ${validation.falsePositive ?
         // Log solution commitHash for debugging
         logger.info(`[MITIGATE] Solution generated with commitHash: ${solution.commitHash || 'UNDEFINED'}`);
 
+        // Check if solution failed (no file modifications)
+        if (!solution.success) {
+          const errorMsg = solution.error || solution.message || 'Unknown error';
+          logger.warn(`[MITIGATE] Solution generation returned success=false: ${errorMsg}`);
+
+          // Check if we can use a previous successful solution
+          if (lastSuccessfulSolution?.commitHash) {
+            logger.info(`[MITIGATE] Using previously stored solution with commitHash: ${lastSuccessfulSolution.commitHash}`);
+            // Use the previous successful solution
+            Object.assign(solution, {
+              success: true,
+              commitHash: lastSuccessfulSolution.commitHash,
+              filesModified: lastSuccessfulSolution.filesModified,
+              diffStats: lastSuccessfulSolution.diffStats
+            });
+          } else if (attempts < maxRetries) {
+            logger.info(`[MITIGATE] Retrying solution generation (attempt ${attempts}/${maxRetries})`);
+            continue;
+          } else {
+            throw new Error(`Solution generation failed: ${errorMsg}`);
+          }
+        }
+
         // Preserve commitHash from successful solution attempts
         // This handles the case where retry attempts don't create new commits
         // because files were already committed in a previous attempt
@@ -2868,6 +2891,13 @@ ${validation.falsePositive ?
           if (!solution.diffStats && lastSuccessfulSolution.diffStats) {
             solution.diffStats = lastSuccessfulSolution.diffStats;
           }
+        }
+
+        // Final validation: ensure we have a commitHash before proceeding
+        if (!solution.commitHash) {
+          const errorMsg = 'No commitHash available - solution did not create any commits';
+          logger.error(`[MITIGATE] ${errorMsg}`);
+          throw new Error(errorMsg);
         }
 
         // Run tests if requested

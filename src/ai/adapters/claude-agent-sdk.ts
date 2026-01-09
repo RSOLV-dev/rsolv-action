@@ -542,12 +542,33 @@ Important:
 
       // Execute SDK query
       let structuredOutput: FixResultOutput | undefined;
+      let toolCallCount = 0;
+      let editToolCalls = 0;
+
+      logger.info(`[SDK] Starting query with prompt length: ${prompt.length}, repoPath: ${this.repoPath}`);
       const queryGenerator: Query = query({ prompt, options });
 
       for await (const message of queryGenerator) {
         // Capture session ID from init message
         if (message.type === 'system' && 'subtype' in message && message.subtype === 'init') {
           this.sessionId = message.session_id;
+          logger.info(`[SDK] Session initialized: ${this.sessionId}`);
+        }
+
+        // Track tool usage for debugging
+        if (message.type === 'assistant' && 'message' in message) {
+          const assistantMsg = message.message as { content?: Array<{ type: string; name?: string }> };
+          if (assistantMsg.content) {
+            for (const block of assistantMsg.content) {
+              if (block.type === 'tool_use') {
+                toolCallCount++;
+                if (block.name === 'Edit') {
+                  editToolCalls++;
+                }
+                logger.info(`[SDK] Tool call: ${block.name} (total: ${toolCallCount}, edits: ${editToolCalls})`);
+              }
+            }
+          }
         }
 
         // Extract structured output from result
@@ -556,6 +577,7 @@ Important:
           if ('structured_output' in resultMessage && resultMessage.structured_output) {
             structuredOutput = resultMessage.structured_output as FixResultOutput;
           }
+          logger.info(`[SDK] Query completed. Total tool calls: ${toolCallCount}, Edit calls: ${editToolCalls}`);
         }
 
         if (this.verbose) {
@@ -565,12 +587,14 @@ Important:
 
       // Git integration - same as claude-code-git.ts
       const modifiedFiles = this.getModifiedFiles();
+      logger.info(`[SDK] Modified files detected: ${modifiedFiles.length} - [${modifiedFiles.join(', ')}]`);
 
       if (modifiedFiles.length === 0) {
+        logger.warn(`[SDK] No files modified. Tool calls made: ${toolCallCount}, Edit calls: ${editToolCalls}. This may indicate the SDK did not make any edits or the changes were not written to disk.`);
         return {
           success: false,
           message: 'No files were modified',
-          error: 'SDK did not make file changes'
+          error: `SDK did not make file changes. Tool calls: ${toolCallCount}, Edit calls: ${editToolCalls}`
         };
       }
 
