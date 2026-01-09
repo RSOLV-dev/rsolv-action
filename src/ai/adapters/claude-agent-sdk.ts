@@ -223,6 +223,38 @@ export class ClaudeAgentSDKAdapter {
   }
 
   /**
+   * Build environment variables for SDK subprocess
+   *
+   * FIX: GitHub issue #4383, #865 - explicitly pass PATH to fix spawn issues in containers
+   * FIX: GitHub issue #347 - exclude DEBUG to prevent [SandboxDebug] stdout pollution
+   *
+   * The SDK's spawn mechanism doesn't properly inherit environment variables in Docker
+   * containers, so we must explicitly pass each required variable instead of spreading
+   * process.env.
+   */
+  buildEnvForSDK(apiKey: string): Record<string, string> {
+    return {
+      // Explicitly set PATH - container spawn doesn't inherit properly (issue #4383)
+      PATH: process.env.PATH || '/usr/local/bin:/usr/bin:/bin:/app/node_modules/.bin',
+      // Core API credentials
+      ANTHROPIC_API_KEY: apiKey,
+      // Home directory for config files
+      HOME: process.env.HOME || '/root',
+      // Disable interactive prompts in headless mode
+      CI: 'true',
+      // Node environment
+      NODE_ENV: process.env.NODE_ENV || 'production',
+      // User identity for git operations
+      USER: process.env.USER || 'root',
+      // Shell for subprocess commands
+      SHELL: process.env.SHELL || '/bin/bash',
+      // Terminal type for proper output handling
+      TERM: process.env.TERM || 'xterm-256color',
+      // Note: DEBUG is intentionally excluded to prevent [SandboxDebug] stdout pollution (issue #347)
+    };
+  }
+
+  /**
    * Get the path to the Claude Code CLI executable
    *
    * In Docker containers, the CLI is at a different path than the SDK expects.
@@ -581,14 +613,8 @@ Important:
         executable: 'node',
 
         // Pass environment variables to the Claude Code process
-        // Required for Docker/CI where child processes may not inherit all env vars
-        env: {
-          ...process.env,
-          ANTHROPIC_API_KEY: apiKey,  // Use vended API key explicitly
-          HOME: process.env.HOME || '/root',
-          // Disable interactive prompts in headless mode
-          CI: 'true',
-        },
+        // Uses buildEnvForSDK() to fix Docker spawn issues (see method for details)
+        env: this.buildEnvForSDK(apiKey),
 
         // Structured output for parsing fix results
         outputFormat: {
@@ -730,12 +756,7 @@ Important:
         model: this.model,
         pathToClaudeCodeExecutable: this.getClaudeCodeExecutablePath(),
         executable: 'node',
-        env: {
-          ...process.env,
-          ANTHROPIC_API_KEY: apiKey,
-          HOME: process.env.HOME || '/root',
-          CI: 'true',
-        },
+        env: this.buildEnvForSDK(apiKey),
         resume: sessionId,
         forkSession,
         canUseTool: this.createCanUseTool(),
@@ -826,12 +847,7 @@ Do NOT make any changes yet.`;
       model: this.model,
       pathToClaudeCodeExecutable: this.getClaudeCodeExecutablePath(),
       executable: 'node',
-      env: {
-        ...process.env,
-        ANTHROPIC_API_KEY: apiKey,
-        HOME: process.env.HOME || '/root',
-        CI: 'true',
-      },
+      env: this.buildEnvForSDK(apiKey),
     };
 
     const contextQuery = query({ prompt: contextPrompt, options: contextOptions });
@@ -896,12 +912,7 @@ Do NOT make any changes yet.`;
         model: this.model,
         pathToClaudeCodeExecutable: this.getClaudeCodeExecutablePath(),
         executable: 'node',
-        env: {
-          ...process.env,
-          ANTHROPIC_API_KEY: apiKey,
-          HOME: process.env.HOME || '/root',
-          CI: 'true',
-        },
+        env: this.buildEnvForSDK(apiKey),
         outputFormat: {
           type: 'json_schema',
           schema: FixResultSchema
@@ -988,12 +999,7 @@ This is single-pass mode - gather context and fix in one session.`;
         model: this.model,
         pathToClaudeCodeExecutable: this.getClaudeCodeExecutablePath(),
         executable: 'node',
-        env: {
-          ...process.env,
-          ANTHROPIC_API_KEY: apiKey,
-          HOME: process.env.HOME || '/root',
-          CI: 'true',
-        },
+        env: this.buildEnvForSDK(apiKey),
         outputFormat: {
           type: 'json_schema',
           schema: FixResultSchema
@@ -1106,12 +1112,7 @@ Use Read, Glob, and Grep to explore. Do NOT make any changes.`;
         model: this.model,
         pathToClaudeCodeExecutable: this.getClaudeCodeExecutablePath(),
         executable: 'node',
-        env: {
-          ...process.env,
-          ANTHROPIC_API_KEY: apiKey,
-          HOME: process.env.HOME || '/root',
-          CI: 'true',
-        },
+        env: this.buildEnvForSDK(apiKey),
       };
 
       const exploredFiles: string[] = [];
