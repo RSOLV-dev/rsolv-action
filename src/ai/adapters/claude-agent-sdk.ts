@@ -218,6 +218,47 @@ export class ClaudeAgentSDKAdapter {
   }
 
   /**
+   * Get the path to the Claude Code CLI executable
+   *
+   * In Docker containers, the CLI is at a different path than the SDK expects.
+   * This method finds the correct path by checking multiple locations.
+   */
+  getClaudeCodeExecutablePath(): string {
+    // Possible locations for the Claude Code CLI
+    const possiblePaths = [
+      // Docker container path (production)
+      '/app/node_modules/@anthropic-ai/claude-code/cli.js',
+      // Local development paths
+      path.join(process.cwd(), 'node_modules', '@anthropic-ai', 'claude-code', 'cli.js'),
+      path.join(__dirname, '..', '..', '..', 'node_modules', '@anthropic-ai', 'claude-code', 'cli.js'),
+    ];
+
+    for (const cliPath of possiblePaths) {
+      if (fs.existsSync(cliPath)) {
+        logger.info(`[SDK] Found Claude Code CLI at: ${cliPath}`);
+        return cliPath;
+      }
+    }
+
+    // Fallback: try to find it using which/where command
+    try {
+      const claudePath = execSync('which claude 2>/dev/null || where claude 2>/dev/null', {
+        encoding: 'utf-8'
+      }).trim();
+      if (claudePath) {
+        logger.info(`[SDK] Found Claude Code CLI via PATH: ${claudePath}`);
+        return claudePath;
+      }
+    } catch {
+      // Ignore errors from which/where
+    }
+
+    // Last resort: return the first path and let the SDK fail with a clear error
+    logger.warn(`[SDK] Claude Code CLI not found at any expected location, using default path`);
+    return possiblePaths[0];
+  }
+
+  /**
    * Check if a file path is a test file that should be protected
    */
   isTestFile(filePath: string): boolean {
@@ -527,6 +568,10 @@ Important:
         maxTurns: this.maxTurns,
         model: this.model,
 
+        // Path to Claude Code CLI - needed for Docker containers where the CLI
+        // is in a different location than the SDK expects
+        pathToClaudeCodeExecutable: this.getClaudeCodeExecutablePath(),
+
         // Structured output for parsing fix results
         outputFormat: {
           type: 'json_schema',
@@ -662,6 +707,7 @@ Important:
         permissionMode: 'acceptEdits',
         maxTurns: this.maxTurns,
         model: this.model,
+        pathToClaudeCodeExecutable: this.getClaudeCodeExecutablePath(),
         resume: sessionId,
         forkSession,
         canUseTool: this.createCanUseTool(),
@@ -746,7 +792,8 @@ Do NOT make any changes yet.`;
       allowedTools: ['Read', 'Glob', 'Grep'],
       permissionMode: 'default',
       maxTurns: 2,
-      model: this.model
+      model: this.model,
+      pathToClaudeCodeExecutable: this.getClaudeCodeExecutablePath()
     };
 
     const contextQuery = query({ prompt: contextPrompt, options: contextOptions });
@@ -809,6 +856,7 @@ Do NOT make any changes yet.`;
         permissionMode: 'acceptEdits',
         maxTurns: this.maxTurns,
         model: this.model,
+        pathToClaudeCodeExecutable: this.getClaudeCodeExecutablePath(),
         outputFormat: {
           type: 'json_schema',
           schema: FixResultSchema
@@ -893,6 +941,7 @@ This is single-pass mode - gather context and fix in one session.`;
         permissionMode: 'acceptEdits',
         maxTurns: this.maxTurns + 2, // Extra turns for context gathering
         model: this.model,
+        pathToClaudeCodeExecutable: this.getClaudeCodeExecutablePath(),
         outputFormat: {
           type: 'json_schema',
           schema: FixResultSchema
@@ -1002,7 +1051,8 @@ Use Read, Glob, and Grep to explore. Do NOT make any changes.`;
         allowedTools: ['Read', 'Glob', 'Grep'],
         permissionMode: 'default',
         maxTurns: depth === 'ultra' ? 5 : depth === 'deep' ? 4 : depth === 'medium' ? 3 : 2,
-        model: this.model
+        model: this.model,
+        pathToClaudeCodeExecutable: this.getClaudeCodeExecutablePath()
       };
 
       const exploredFiles: string[] = [];
