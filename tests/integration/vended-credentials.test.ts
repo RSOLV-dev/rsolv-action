@@ -90,14 +90,15 @@ vi.mock('../../src/github/pr.js', () => ({
   }))
 }));
 
-// Mock the EnhancedClaudeCodeAdapter to avoid timeout issues
-vi.mock('../../src/ai/adapters/claude-code-enhanced.js', () => ({
-  EnhancedClaudeCodeAdapter: class {
+// RFC-095: Mock new unified ClaudeAgentSDKAdapter (replaces EnhancedClaudeCodeAdapter)
+vi.mock('../../src/ai/adapters/claude-agent-sdk.js', () => ({
+  ClaudeAgentSDKAdapter: class {
+    config: any;
     constructor(config: any) {
       // Store config for testing
       this.config = config;
     }
-    
+
     async gatherDeepContext(issue: any, analysisData: any) {
       // Return minimal context data
       return {
@@ -107,7 +108,50 @@ vi.mock('../../src/ai/adapters/claude-code-enhanced.js', () => ({
         contextDepth: this.config?.claudeCodeConfig?.contextDepth || 'standard'
       };
     }
-  }
+
+    async generateSolutionWithGit() {
+      return {
+        success: true,
+        message: 'Fixed',
+        filesModified: ['test.js'],
+        commitHash: 'abc123',
+        diffStats: { filesChanged: 1, insertions: 10, deletions: 5 }
+      };
+    }
+
+    async generateSolutionWithContext() {
+      return {
+        success: true,
+        message: 'Fixed',
+        filesModified: ['test.js'],
+        commitHash: 'abc123',
+        diffStats: { filesChanged: 1, insertions: 10, deletions: 5 }
+      };
+    }
+  },
+  GitSolutionResult: {},
+  createClaudeAgentSDKAdapter: (options: any) => ({
+    gatherDeepContext: async () => ({
+      files: [],
+      relatedIssues: [],
+      commits: [],
+      contextDepth: options?.contextDepth || 'standard'
+    }),
+    generateSolutionWithGit: async () => ({
+      success: true,
+      message: 'Fixed',
+      filesModified: ['test.js'],
+      commitHash: 'abc123',
+      diffStats: { filesChanged: 1, insertions: 10, deletions: 5 }
+    }),
+    generateSolutionWithContext: async () => ({
+      success: true,
+      message: 'Fixed',
+      filesModified: ['test.js'],
+      commitHash: 'abc123',
+      diffStats: { filesChanged: 1, insertions: 10, deletions: 5 }
+    })
+  })
 }));
 
 describe('Vended Credentials Integration', () => {

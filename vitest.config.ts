@@ -15,9 +15,9 @@ export default defineConfig({
     // Use 'node' environment for all tests (not jsdom/happy-dom)
     environment: 'node',
     
-    // Global setup
+    // Global setup (polyfills must come first!)
     globals: true,
-    setupFiles: ['./test/vitest-setup.ts'],
+    setupFiles: ['./test/vitest-polyfills.ts', './test/vitest-setup.ts'],
     
     // Performance settings based on environment
     // Use forks with single process to avoid worker overhead memory issues
@@ -25,7 +25,11 @@ export default defineConfig({
     poolOptions: {
       forks: {
         singleFork: true,  // Run all tests in single process to avoid worker memory overhead
-        execArgv: isMemoryConstrained ? ['--expose-gc'] : [],  // Allow manual GC in CI
+        // Load polyfills BEFORE any other modules using --require
+        execArgv: [
+          '--require', './test/vitest-preload.cjs',
+          ...(isMemoryConstrained ? ['--expose-gc'] : [])
+        ],
       }
     },
     

@@ -4,15 +4,16 @@
  */
 // SDK adapter removed - using CLI only
 import { RetryableClaudeCodeCLI } from './claude-code-cli-retry.js';
-import { IssueContext } from '../../types/index.js';
-import { AIConfig } from '../types.js';
-import { IssueAnalysis } from '../types.js';
-import { logger } from '../../utils/logger.js';
+// RFC-095: Updated import paths for deprecated folder location
+import { IssueContext } from '../../../types/index.js';
+import { AIConfig } from '../../types.js';
+import { IssueAnalysis } from '../../types.js';
+import { logger } from '../../../utils/logger.js';
 import { execSync } from 'child_process';
 import path from 'path';
-import type { AnalysisWithTestsResult } from '../test-generating-security-analyzer.js';
-import type { ValidationResult } from '../git-based-test-validator.js';
-import { TestAwareEnhancement, TestAwareOptions } from '../test-discovery/test-aware-enhancement.js';
+import type { AnalysisWithTestsResult } from '../../test-generating-security-analyzer.js';
+import type { ValidationResult } from '../../git-based-test-validator.js';
+import { TestAwareEnhancement, TestAwareOptions } from '../../test-discovery/test-aware-enhancement.js';
 
 /**
  * Result from git-based solution generation

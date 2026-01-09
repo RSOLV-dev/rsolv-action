@@ -6,9 +6,15 @@
 import { IssueContext, ActionConfig } from '../types/index.js';
 import { logger } from '../utils/logger.js';
 import { analyzeIssue } from './analyzer.js';
-import { GitBasedClaudeCodeAdapter } from './adapters/claude-code-git.js';
-import { ClaudeCodeMaxAdapter } from './adapters/claude-code-cli-dev.js';
-import { isClaudeMaxAvailable } from './adapters/claude-code-cli-dev.js';
+// RFC-095: Use new unified adapter with feature flag fallback
+import {
+  ClaudeAgentSDKAdapter,
+  GitSolutionResult,
+  createClaudeAgentSDKAdapter
+} from './adapters/claude-agent-sdk.js';
+// Legacy adapter import for Claude Max (dev mode) - kept until fully migrated
+// RFC-095: Moved to deprecated folder
+import { ClaudeCodeMaxAdapter, isClaudeMaxAvailable } from './adapters/deprecated/claude-code-cli-dev.js';
 import { createPullRequestFromGit } from '../github/pr-git.js';
 import { createEducationalPullRequest, ValidationData } from '../github/pr-git-educational.js';
 import { AIConfig, IssueAnalysis } from './types.js';
@@ -16,8 +22,9 @@ import { execSync } from 'child_process';
 import { TestGeneratingSecurityAnalyzer, AnalysisWithTestsResult } from './test-generating-security-analyzer.js';
 import { GitBasedTestValidator, ValidationResult } from './git-based-test-validator.js';
 import { VulnerabilityType } from '../security/types.js';
-import type { GitSolutionResult } from './adapters/claude-code-git.js';
-import type { CLISolutionResult } from './adapters/claude-code-cli.js';
+
+// Type alias for CLI results (legacy compatibility)
+type CLISolutionResult = GitSolutionResult;
 
 /**
  * Type guard to check if solution is GitSolutionResult
@@ -350,10 +357,19 @@ export async function processIssueWithGit(
     while (iteration < maxIterations) {
       logger.info(`Executing Claude Code to fix vulnerabilities (attempt ${iteration + 1}/${maxIterations})...`);
       
-      // Use Claude Max adapter in dev mode, otherwise use the standard adapter
-      const adapter = useClaudeMax 
+      // Use Claude Max adapter in dev mode, otherwise use the new unified SDK adapter
+      // RFC-095: ClaudeAgentSDKAdapter replaces GitBasedClaudeCodeAdapter
+      const adapter = useClaudeMax
         ? new ClaudeCodeMaxAdapter(aiConfig, process.cwd(), credentialManager)
-        : new GitBasedClaudeCodeAdapter(aiConfig, process.cwd(), credentialManager);
+        : createClaudeAgentSDKAdapter({
+          repoPath: process.cwd(),
+          credentialManager,
+          useVendedCredentials: aiConfig.useVendedCredentials,
+          maxTurns: 3,
+          model: aiConfig.model,
+          testFilePatterns: ['test/', 'tests/', 'spec/', '__tests__/', '.test.', '.spec.'],
+          verbose: aiConfig.claudeCodeConfig?.verboseLogging
+        });
       
       if (useClaudeMax) {
         logger.info('🚀 Using Claude Code Max (local authentication) for development');

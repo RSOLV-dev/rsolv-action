@@ -7,6 +7,9 @@ process.env.RSOLV_API_URL = 'https://api.rsolv-staging.com';
 // Ensure no executable path is set in tests (allows NODE_ENV=test check to work)
 delete process.env.CLAUDE_CODE_PATH;
 
+// Note: localStorage/sessionStorage polyfills are in vitest-polyfills.ts
+// which MUST be loaded before this file (see vitest.config.ts setupFiles order)
+
 // Global setup for Vitest tests
 import { afterEach, vi, beforeAll, afterAll } from 'vitest';
 import { setupMSW } from '../src/test/mocks/server';

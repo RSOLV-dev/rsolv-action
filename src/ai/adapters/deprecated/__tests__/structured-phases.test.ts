@@ -8,7 +8,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { GitBasedClaudeCodeAdapter } from '../claude-code-git.js';
 import { ClaudeCodeAdapter } from '../claude-code.js';
-import type { IssueContext, IssueAnalysis } from '../../../types/index.js';
+import type { IssueContext, IssueAnalysis } from '../../../../types/index.js';
 import type { SDKMessage } from '@anthropic-ai/claude-code';
 
 // Mock the base ClaudeCodeAdapter

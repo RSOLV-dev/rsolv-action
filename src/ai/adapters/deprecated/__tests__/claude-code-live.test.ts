@@ -6,10 +6,10 @@
  * Or automatically enabled when Claude Max is available
  */
 import { test, expect, describe, vi, beforeAll } from 'vitest';
-import { ClaudeCodeAdapter } from '../adapters/claude-code.js';
-import { AIConfig } from '../types.js';
+import { ClaudeCodeAdapter } from '../claude-code.js';
+import { AIConfig } from '../../../types.js';
 import { execSync } from 'child_process';
-import { isClaudeMaxAvailable } from '../adapters/claude-code-cli-dev.js';
+import { isClaudeMaxAvailable } from '../claude-code-cli-dev.js';
 
 // Detect Claude Max availability at module load time
 let canUseClaudeMax = false;

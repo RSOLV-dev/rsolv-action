@@ -20,9 +20,13 @@ const { mockGenerateSolutionWithGit, mockRetrievePhaseResults, mockStorePhaseRes
   };
 });
 
-// Mock modules at module level
-vi.mock('../../ai/adapters/claude-code-git.js', () => ({
-  GitBasedClaudeCodeAdapter: vi.fn(() => ({
+// RFC-095: Mock new ClaudeAgentSDKAdapter (replaces GitBasedClaudeCodeAdapter)
+vi.mock('../../ai/adapters/claude-agent-sdk.js', () => ({
+  ClaudeAgentSDKAdapter: vi.fn(() => ({
+    generateSolutionWithGit: mockGenerateSolutionWithGit
+  })),
+  GitSolutionResult: {},
+  createClaudeAgentSDKAdapter: vi.fn(() => ({
     generateSolutionWithGit: mockGenerateSolutionWithGit
   }))
 }));

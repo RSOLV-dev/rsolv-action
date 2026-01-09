@@ -7,8 +7,9 @@ import { RetryableClaudeCodeCLI } from '../claude-code-cli-retry';
 import { spawn } from 'child_process';
 import { EventEmitter } from 'events';
 
+// RFC-095: Updated import paths for deprecated folder location
 // Mock logger to capture debug output
-vi.mock('../../../utils/logger', () => ({
+vi.mock('../../../../utils/logger', () => ({
   logger: {
     info: vi.fn(),
     debug: vi.fn(),
@@ -33,8 +34,9 @@ describe('Claude Code CLI Credential Format Validation', () => {
     delete process.env.CLAUDE_CODE_MAX_API_KEY;
     delete process.env.RSOLV_DEV_MODE;
 
+    // RFC-095: Updated import paths for deprecated folder location
     // Get the mocked logger
-    const loggerModule = await import('../../../utils/logger.js');
+    const loggerModule = await import('../../../../utils/logger.js');
     mockLogger = loggerModule.logger;
   });
 

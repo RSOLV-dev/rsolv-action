@@ -86,9 +86,13 @@ export class ModeSelector {
     case 'all':
     case 'complete':
       return 'full';
-      
+
+    case 'billing':
+    case 'bill':
+      return 'billing';
+
     default:
-      throw new Error(`Unknown mode '${mode}'. Valid options: scan, validate, mitigate, fix, full`);
+      throw new Error(`Unknown mode '${mode}'. Valid options: scan, validate, mitigate, fix, full, billing`);
     }
   }
   
@@ -135,6 +139,8 @@ export class ModeSelector {
       return 'Validating and fixing vulnerabilities (combined mode)';
     case 'full':
       return 'Running full pipeline: scan, validate, and mitigate';
+    case 'billing':
+      return 'Triggering billing for merged PR (RFC-091)';
     default:
       return `Running in ${mode} mode`;
     }

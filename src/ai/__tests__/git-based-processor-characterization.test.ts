@@ -123,8 +123,11 @@ vi.mock('../../github/pr-git-educational.js', () => ({
   createEducationalPullRequest: mockCreateEducationalPullRequest
 }));
 
-vi.mock('../adapters/claude-code-git.js', () => ({
-  GitBasedClaudeCodeAdapter: MockGitBasedClaudeCodeAdapter
+// RFC-095: Mock new ClaudeAgentSDKAdapter (replaces GitBasedClaudeCodeAdapter)
+vi.mock('../adapters/claude-agent-sdk.js', () => ({
+  ClaudeAgentSDKAdapter: MockGitBasedClaudeCodeAdapter,
+  GitSolutionResult: {},
+  createClaudeAgentSDKAdapter: () => new MockGitBasedClaudeCodeAdapter()
 }));
 
 // Mock vulnerable file scanner

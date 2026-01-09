@@ -2,10 +2,11 @@
  * Claude Code CLI adapter that calls the CLI directly
  * Bypasses SDK issues with MCP and file editing in Docker
  */
-import { IssueContext } from '../../types/index.js';
-import { AIConfig } from '../types.js';
-import { IssueAnalysis } from '../types.js';
-import { logger } from '../../utils/logger.js';
+// RFC-095: Updated import paths for deprecated folder location
+import { IssueContext } from '../../../types/index.js';
+import { AIConfig } from '../../types.js';
+import { IssueAnalysis } from '../../types.js';
+import { logger } from '../../../utils/logger.js';
 import { spawn } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';

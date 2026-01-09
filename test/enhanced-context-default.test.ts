@@ -9,6 +9,21 @@ vi.mock('../src/ai/analyzer', () => ({
   analyzeIssue: vi.fn()
 }));
 
+// RFC-095: Mock the new unified ClaudeAgentSDKAdapter
+vi.mock('../src/ai/adapters/claude-agent-sdk', () => ({
+  ClaudeAgentSDKAdapter: vi.fn().mockImplementation(() => ({
+    gatherDeepContext: gatherDeepContextMock,
+    generateSolution: vi.fn().mockRejectedValue(new Error('Mock error')),
+    generateSolutionWithGit: vi.fn().mockRejectedValue(new Error('Mock error'))
+  })),
+  createClaudeAgentSDKAdapter: vi.fn().mockImplementation(() => ({
+    gatherDeepContext: gatherDeepContextMock,
+    generateSolution: vi.fn().mockRejectedValue(new Error('Mock error')),
+    generateSolutionWithGit: vi.fn().mockRejectedValue(new Error('Mock error'))
+  }))
+}));
+
+// Keep legacy mock for backwards compatibility during transition
 vi.mock('../src/ai/adapters/claude-code-enhanced', () => ({
   EnhancedClaudeCodeAdapter: vi.fn().mockImplementation(() => ({
     gatherDeepContext: gatherDeepContextMock,

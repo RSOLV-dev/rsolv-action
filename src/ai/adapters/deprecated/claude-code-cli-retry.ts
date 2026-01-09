@@ -5,10 +5,11 @@
 
 import { ClaudeCodeCLIAdapter } from './claude-code-cli.js';
 import type { CLISolutionResult } from './claude-code-cli.js';
-import { IssueContext } from '../../types/index.js';
-import { AIConfig } from '../types.js';
-import { IssueAnalysis } from '../types.js';
-import { logger } from '../../utils/logger.js';
+// RFC-095: Updated import paths for deprecated folder location
+import { IssueContext } from '../../../types/index.js';
+import { AIConfig } from '../../types.js';
+import { IssueAnalysis } from '../../types.js';
+import { logger } from '../../../utils/logger.js';
 
 export interface RetryConfig {
   maxAttempts: number;

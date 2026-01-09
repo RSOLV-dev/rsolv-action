@@ -2,8 +2,8 @@
  * Tests for Claude Code adapter
  */
 import { test, expect, vi, describe } from 'vitest';
-import { ClaudeCodeAdapter } from '../adapters/claude-code.js';
-import { AIConfig } from '../types.js';
+import { ClaudeCodeAdapter } from '../claude-code.js';
+import { AIConfig } from '../../../types.js';
 
 // Mock the Claude Code SDK to prevent loading the large library during tests
 // This significantly reduces memory usage and prevents OOM errors in CI

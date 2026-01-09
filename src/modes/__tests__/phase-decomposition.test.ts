@@ -49,9 +49,9 @@ vi.mock('../../ai/analyzer.js', () => ({
   analyzeIssue: mockAnalyzeIssue
 }));
 
-// Mock GitBasedClaudeCodeAdapter
-vi.mock('../../ai/adapters/claude-code-git.js', () => ({
-  GitBasedClaudeCodeAdapter: class {
+// Mock ClaudeAgentSDKAdapter (RFC-095: replaces GitBasedClaudeCodeAdapter)
+vi.mock('../../ai/adapters/claude-agent-sdk.js', () => ({
+  ClaudeAgentSDKAdapter: class {
     constructor() {}
     async generateSolutionWithGit() {
       return {
@@ -62,7 +62,19 @@ vi.mock('../../ai/adapters/claude-code-git.js', () => ({
         diffStats: { insertions: 10, deletions: 5, filesChanged: 1 }
       };
     }
-  }
+  },
+  GitSolutionResult: {},
+  createClaudeAgentSDKAdapter: () => ({
+    async generateSolutionWithGit() {
+      return {
+        success: true,
+        commitHash: 'fix-commit-123',
+        summary: { title: 'Fix SQL injection' },
+        filesModified: ['user.js'],
+        diffStats: { insertions: 10, deletions: 5, filesChanged: 1 }
+      };
+    }
+  })
 }));
 
 // Mock PR creation functions

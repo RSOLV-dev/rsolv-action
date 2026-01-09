@@ -77,14 +77,27 @@ vi.mock('../phase-data-client/index.js', () => ({
   }))
 }));
 
-vi.mock('../../ai/adapters/claude-code-git.js', () => ({
-  GitBasedClaudeCodeAdapter: vi.fn(() => ({
+// RFC-095: Mock new ClaudeAgentSDKAdapter (replaces GitBasedClaudeCodeAdapter)
+vi.mock('../../ai/adapters/claude-agent-sdk.js', () => ({
+  ClaudeAgentSDKAdapter: vi.fn(() => ({
     generateSolutionWithGit: vi.fn().mockResolvedValue({
       success: true,
       pullRequestUrl: 'https://github.com/test/repo/pull/1',
       pullRequestNumber: 1,
       commitHash: 'abc123',
-      filesModified: ['test.js']
+      filesModified: ['test.js'],
+      diffStats: { filesChanged: 1, insertions: 10, deletions: 5 }
+    })
+  })),
+  GitSolutionResult: {},
+  createClaudeAgentSDKAdapter: vi.fn(() => ({
+    generateSolutionWithGit: vi.fn().mockResolvedValue({
+      success: true,
+      pullRequestUrl: 'https://github.com/test/repo/pull/1',
+      pullRequestNumber: 1,
+      commitHash: 'abc123',
+      filesModified: ['test.js'],
+      diffStats: { filesChanged: 1, insertions: 10, deletions: 5 }
     })
   }))
 }));

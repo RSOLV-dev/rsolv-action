@@ -4,9 +4,9 @@
  */
 
 import { GitBasedClaudeCodeAdapter } from '../claude-code-git.js';
-import { AIConfig } from '../../types.js';
-import { IssueContext } from '../../../types/index.js';
-import { IssueAnalysis } from '../../types.js';
+import { AIConfig } from '../../../types.js';
+import { IssueContext } from '../../../../types/index.js';
+import { IssueAnalysis } from '../../../types.js';
 
 describe.skip('Claude CLI Usage in Mitigation', () => {
   const mockConfig: AIConfig = {

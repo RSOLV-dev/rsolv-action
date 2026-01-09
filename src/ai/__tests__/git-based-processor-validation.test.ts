@@ -8,7 +8,8 @@ import { logger } from '../../utils/logger.js';
 import { processIssueWithGit } from '../git-based-processor.js';
 import { TestGeneratingSecurityAnalyzer } from '../test-generating-security-analyzer.js';
 import { GitBasedTestValidator } from '../git-based-test-validator.js';
-import { GitBasedClaudeCodeAdapter } from '../adapters/claude-code-git.js';
+// RFC-095: Import new ClaudeAgentSDKAdapter
+import { ClaudeAgentSDKAdapter } from '../adapters/claude-agent-sdk.js';
 import { IssueContext, ActionConfig } from '../../types/index.js';
 import { execSync } from 'child_process';
 import nock from 'nock';
@@ -45,8 +46,13 @@ vi.mock('../git-based-test-validator.js', () => ({
   }))
 }));
 
-vi.mock('../adapters/claude-code-git.js', () => ({
-  GitBasedClaudeCodeAdapter: vi.fn(() => ({
+// RFC-095: Mock new ClaudeAgentSDKAdapter (replaces GitBasedClaudeCodeAdapter)
+vi.mock('../adapters/claude-agent-sdk.js', () => ({
+  ClaudeAgentSDKAdapter: vi.fn(() => ({
+    generateSolutionWithGit: mockGenerateSolutionWithGit
+  })),
+  GitSolutionResult: {},
+  createClaudeAgentSDKAdapter: vi.fn(() => ({
     generateSolutionWithGit: mockGenerateSolutionWithGit
   }))
 }));

@@ -1,7 +1,7 @@
 import { describe, expect, test, beforeEach, mock, vi } from 'vitest';
 import { EnhancedClaudeCodeAdapter } from '../claude-code-enhanced.js';
-import { AIConfig } from '../../types.js';
-import { IssueContext } from '../../../types/index.js';
+import { AIConfig } from '../../../types.js';
+import { IssueContext } from '../../../../types/index.js';
 import path from 'path';
 
 // Mock the parent class

@@ -3,10 +3,11 @@
  * Combines context gathering and solution generation into one query
  */
 import { ClaudeCodeAdapter } from './claude-code.js';
-import { IssueContext } from '../../types/index.js';
-import { IssueAnalysis, AIConfig } from '../types.js';
-import { logger } from '../../utils/logger.js';
-import { SolutionResult } from '../solution.js';
+// RFC-095: Updated import paths for deprecated folder location
+import { IssueContext } from '../../../types/index.js';
+import { IssueAnalysis, AIConfig } from '../../types.js';
+import { logger } from '../../../utils/logger.js';
+import { SolutionResult } from '../../solution.js';
 
 /**
  * Single-pass Claude Code adapter that combines context gathering and solution generation

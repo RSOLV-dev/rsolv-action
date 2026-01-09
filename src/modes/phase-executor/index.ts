@@ -8,7 +8,12 @@ import { ScanOrchestrator } from '../../scanner/index.js';
 import { analyzeIssue } from '../../ai/analyzer.js';
 import { TestGeneratingSecurityAnalyzer, AnalysisWithTestsResult } from '../../ai/test-generating-security-analyzer.js';
 import { GitBasedTestValidator, ValidationResult as TestValidationResult } from '../../ai/git-based-test-validator.js';
-import { GitBasedClaudeCodeAdapter, GitSolutionResult } from '../../ai/adapters/claude-code-git.js';
+// RFC-095: Use new unified adapter
+import {
+  ClaudeAgentSDKAdapter,
+  GitSolutionResult,
+  createClaudeAgentSDKAdapter
+} from '../../ai/adapters/claude-agent-sdk.js';
 import { createEducationalPullRequest } from '../../github/pr-git-educational.js';
 import { createPullRequestFromGit } from '../../github/pr-git.js';
 import { AIConfig, IssueAnalysis } from '../../ai/types.js';
@@ -93,7 +98,7 @@ export class PhaseExecutor {
 
   // These will be used for mocking in tests
   public testGenerator?: TestGeneratingSecurityAnalyzer;
-  public fixer?: GitBasedClaudeCodeAdapter;
+  public fixer?: ClaudeAgentSDKAdapter;
   public validationMode?: any; // ValidationMode instance for testing
 
   constructor(config: ActionConfig) {
@@ -1682,7 +1687,16 @@ export class PhaseExecutor {
         logger.info(`credentialManager exists: ${!!credentialManager}`);
         logger.info('==========================================');
 
-        const adapter = new GitBasedClaudeCodeAdapter(aiConfig, process.cwd(), credentialManager);
+        // RFC-095: Use new unified ClaudeAgentSDKAdapter
+        const adapter = createClaudeAgentSDKAdapter({
+          repoPath: process.cwd(),
+          credentialManager,
+          useVendedCredentials: aiConfig.useVendedCredentials,
+          maxTurns: 3,
+          model: aiConfig.model,
+          testFilePatterns: ['test/', 'tests/', 'spec/', '__tests__/', '.test.', '.spec.'],
+          verbose: aiConfig.claudeCodeConfig?.verboseLogging
+        });
 
         // Convert AnalysisData to IssueAnalysis
         const issueAnalysis: IssueAnalysis = {
@@ -2776,7 +2790,7 @@ ${validation.falsePositive ?
     validation: any,
     options: ExecuteOptions
   ): Promise<any> {
-    const { GitBasedClaudeCodeAdapter } = await import('../../ai/adapters/claude-code-git.js');
+    // RFC-095: Use new unified ClaudeAgentSDKAdapter (already imported at top of file)
 
     // Initialize credential manager if using vended credentials
     // Fix for RFC-067: mitigateIssue was creating adapter without credential manager,
@@ -2797,7 +2811,16 @@ ${validation.falsePositive ?
       logger.warn(`[MITIGATE] Skipping credential manager initialization - useVendedCredentials: ${this.config.aiProvider?.useVendedCredentials}, hasApiKey: ${!!this.config.rsolvApiKey}`);
     }
 
-    const adapter = new GitBasedClaudeCodeAdapter(this.config as any, process.cwd(), credentialManager);
+    // RFC-095: Use new unified ClaudeAgentSDKAdapter
+    const adapter = createClaudeAgentSDKAdapter({
+      repoPath: process.cwd(),
+      credentialManager,
+      useVendedCredentials: this.config.aiProvider?.useVendedCredentials,
+      maxTurns: 3,
+      model: this.config.aiProvider?.model,
+      testFilePatterns: ['test/', 'tests/', 'spec/', '__tests__/', '.test.', '.spec.'],
+      verbose: false
+    });
 
     // Apply fix with retries
     let attempts = 0;

@@ -1,5 +1,6 @@
 import { describe, test, expect, beforeEach, vi } from 'vitest';
-import { GitBasedClaudeCodeAdapter } from '../adapters/claude-code-git.js';
+// RFC-095: Import from new unified adapter (unused import kept for compatibility)
+import { ClaudeAgentSDKAdapter } from '../adapters/claude-agent-sdk.js';
 import { getMaxIterations } from '../git-based-processor.js';
 import { IssueContext, ActionConfig } from '../../types/index.js';
 import { VulnerabilityType } from '../../security/types.js';

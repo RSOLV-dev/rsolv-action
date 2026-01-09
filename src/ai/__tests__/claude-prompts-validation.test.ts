@@ -6,14 +6,15 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { GitBasedClaudeCodeAdapter } from '../adapters/claude-code-git.js';
+// RFC-095: Import from new unified adapter
+import { ClaudeAgentSDKAdapter } from '../adapters/claude-agent-sdk.js';
 import type { IssueContext } from '../../types/index.js';
 import type { AIConfig, IssueAnalysis } from '../types.js';
 import type { AnalysisWithTestsResult } from '../test-generating-security-analyzer.js';
 import type { ValidationResult } from '../git-based-test-validator.js';
 
-// We'll test the prompt construction by extending the adapter
-class TestableGitBasedClaudeCodeAdapter extends GitBasedClaudeCodeAdapter {
+// RFC-095: Test the prompt construction by extending the unified adapter
+class TestableClaudeAgentSDKAdapter extends ClaudeAgentSDKAdapter {
   // Expose protected method for testing
   public constructPrompt(
     issueContext: IssueContext,
@@ -94,7 +95,7 @@ class TestableGitBasedClaudeCodeAdapter extends GitBasedClaudeCodeAdapter {
 }
 
 describe('Claude Code Prompts - Test Validation Context', () => {
-  let adapter: TestableGitBasedClaudeCodeAdapter;
+  let adapter: TestableClaudeAgentSDKAdapter;
   let mockIssue: IssueContext;
   let mockAIConfig: AIConfig;
   let mockAnalysis: IssueAnalysis;
@@ -108,7 +109,7 @@ describe('Claude Code Prompts - Test Validation Context', () => {
       maxTokens: 4000
     };
     
-    adapter = new TestableGitBasedClaudeCodeAdapter(mockAIConfig, '/test/repo');
+    adapter = new TestableClaudeAgentSDKAdapter(mockAIConfig, '/test/repo');
     
     mockIssue = {
       id: 'test-1',
@@ -140,20 +141,23 @@ describe('Claude Code Prompts - Test Validation Context', () => {
   });
 
   describe('Base Prompt Updates', () => {
-    it('should include red-green-refactor validation in base prompt', () => {
+    // RFC-095: New adapter has a simplified prompt focused on security fixes
+    it('should include security context in base prompt', () => {
       const prompt = adapter.constructPrompt(mockIssue, mockAnalysis);
-      
-      expect(prompt).toContain('Red-Green-Refactor Validation');
-      expect(prompt).toContain('validate the vulnerability exists');
-      expect(prompt).toContain('RED phase');
-      expect(prompt).toContain('GREEN phase');
+
+      // RFC-095: New adapter prompt structure
+      expect(prompt).toContain('security vulnerability');
+      expect(prompt).toContain('Issue');
+      expect(prompt).toContain('Analysis');
+      expect(prompt).toContain('Instructions');
     });
 
-    it('should include test running instructions in base prompt', () => {
+    it('should include test file protection in base prompt', () => {
       const prompt = adapter.constructPrompt(mockIssue, mockAnalysis);
-      
-      expect(prompt).toContain('Run them to establish baseline');
-      expect(prompt).toContain('test that demonstrates the vulnerability');
+
+      // RFC-095: New adapter explicitly protects test files
+      expect(prompt).toContain('Do NOT modify test files');
+      expect(prompt).toContain('protected');
     });
   });
 

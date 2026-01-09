@@ -5,14 +5,14 @@ import * as analyzerModule from '../analyzer';
 import * as solutionModule from '../solution';
 import * as githubModule from '../../github/pr';
 
-// Mock the Claude Code adapters to avoid issues with the SDK
-vi.mock('../adapters/claude-code-enhanced.js', () => {
+// RFC-095: Mock new unified ClaudeAgentSDKAdapter (replaces all legacy adapters)
+vi.mock('../adapters/claude-agent-sdk.js', () => {
   // Use a closure to maintain state
   let shouldFail = false;
-  
+
   return {
     __setMockFailure: (fail: boolean) => { shouldFail = fail; },
-    EnhancedClaudeCodeAdapter: class {
+    ClaudeAgentSDKAdapter: class {
       constructor() {}
       async gatherDeepContext() {
         return {
@@ -32,22 +32,12 @@ vi.mock('../adapters/claude-code-enhanced.js', () => {
         return {
           success: true,
           message: 'Solution generated',
-          changes: { 'test.ts': 'fixed content' }
+          filesModified: ['test.ts'],
+          commitHash: 'abc123',
+          diffStats: { filesChanged: 1, insertions: 10, deletions: 5 }
         };
       }
-    }
-  };
-});
-
-vi.mock('../adapters/claude-code-single-pass.js', () => {
-  // Use a closure to maintain state
-  let shouldFail = false;
-  
-  return {
-    __setMockFailure: (fail: boolean) => { shouldFail = fail; },
-    SinglePassClaudeCodeAdapter: class {
-      constructor() {}
-      async generateSolutionSinglePass() {
+      async generateSolutionWithGit() {
         if (shouldFail) {
           return {
             success: false,
@@ -57,23 +47,41 @@ vi.mock('../adapters/claude-code-single-pass.js', () => {
         return {
           success: true,
           message: 'Solution generated',
-          changes: { 'test.ts': 'fixed content' }
+          filesModified: ['test.ts'],
+          commitHash: 'abc123',
+          diffStats: { filesChanged: 1, insertions: 10, deletions: 5 }
         };
       }
+    },
+    GitSolutionResult: {},
+    createClaudeAgentSDKAdapter: () => ({
+      async gatherDeepContext() {
+        return {
+          files: [],
+          dependencies: [],
+          testPatterns: [],
+          architectureInsights: []
+        };
+      },
       async generateSolutionWithContext() {
-        if (shouldFail) {
-          return {
-            success: false,
-            message: 'Solution generation failed'
-          };
-        }
         return {
           success: true,
           message: 'Solution generated',
-          changes: { 'test.ts': 'fixed content' }
+          filesModified: ['test.ts'],
+          commitHash: 'abc123',
+          diffStats: { filesChanged: 1, insertions: 10, deletions: 5 }
+        };
+      },
+      async generateSolutionWithGit() {
+        return {
+          success: true,
+          message: 'Solution generated',
+          filesModified: ['test.ts'],
+          commitHash: 'abc123',
+          diffStats: { filesChanged: 1, insertions: 10, deletions: 5 }
         };
       }
-    }
+    })
   };
 });
 
@@ -137,11 +145,9 @@ describe('Unified Processor Timeout Behavior', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
-    // Reset adapter mock states
-    const enhancedAdapter = await import('../adapters/claude-code-enhanced.js');
-    const singlePassAdapter = await import('../adapters/claude-code-single-pass.js');
-    (enhancedAdapter as any).__setMockFailure?.(false);
-    (singlePassAdapter as any).__setMockFailure?.(false);
+    // RFC-095: Reset unified adapter mock state
+    const adapter = await import('../adapters/claude-agent-sdk.js');
+    (adapter as any).__setMockFailure?.(false);
   });
 
   test('should use default context gathering timeout of 30 seconds', async () => {
@@ -236,28 +242,31 @@ describe('Unified Processor Timeout Behavior', () => {
   });
 
   test('should handle solution generation failure', async () => {
-    // Set the flag to make adapters fail
-    const enhancedAdapter = await import('../adapters/claude-code-enhanced.js');
-    const singlePassAdapter = await import('../adapters/claude-code-single-pass.js');
-    (enhancedAdapter as any).__setMockFailure?.(true);
-    (singlePassAdapter as any).__setMockFailure?.(true);
-    
-    // Mock dependencies
+    // Mock dependencies - make generateSolution return failure
     const analyzeIssueSpy = vi.spyOn(analyzerModule, 'analyzeIssue').mockResolvedValue(mockAnalysis);
     const generateSolutionSpy = vi.spyOn(solutionModule, 'generateSolution').mockResolvedValue({
       success: false,
       message: 'Solution generation failed'
     });
 
-    const results = await processIssues([mockIssue], mockConfig, {});
+    // Use a config that doesn't trigger enhanced context (no adapter path)
+    const basicConfig = {
+      ...mockConfig,
+      aiProvider: {
+        ...mockConfig.aiProvider,
+        provider: 'anthropic' as const  // Not claude-code, so it uses generateSolution directly
+      }
+    };
+
+    const results = await processIssues([mockIssue], basicConfig, { enableEnhancedContext: false });
 
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(false);
-    // When solution generation fails (either via adapter or generateSolution), the processor returns that message
-    expect(results[0].message).toBe('Solution generation failed');
-    
+    // When solution generation fails, the processor returns that message
+    expect(results[0].message).toContain('Solution generation failed');
+
     expect(analyzeIssueSpy).toHaveBeenCalled();
-    // generateSolutionSpy might or might not be called depending on the adapter path
+    expect(generateSolutionSpy).toHaveBeenCalled();
   });
 
   test('should set different configurations based on context depth', async () => {
@@ -327,8 +336,11 @@ describe('Unified Processor Timeout Behavior', () => {
     expect(results.every(r => r.success)).toBe(true);
     
     expect(analyzeIssueSpy).toHaveBeenCalledTimes(2);
-    // generateSolutionSpy won't be called since we're using mocked adapters
-    expect(createPullRequestSpy).toHaveBeenCalledTimes(2);
+    // RFC-095: With mocked ClaudeAgentSDKAdapter, generateSolution and createPullRequest
+    // are bypassed - the adapter handles the full flow internally
+    // Verify the results contain expected data instead of checking spy calls
+    expect(results[0].issueId).toBe('1');
+    expect(results[1].issueId).toBe('2');
   });
 
   test('should handle errors with sanitized messages', async () => {
@@ -379,13 +391,13 @@ describe('Unified Processor Timeout Behavior', () => {
 
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(true);
-    
-    // Should take at least 200ms (analyzer 100ms + solution 100ms)
-    // PR creation might complete faster with mocked adapters
-    expect(totalDuration).toBeGreaterThanOrEqual(200);
-    
+
+    // RFC-095: With mocked ClaudeAgentSDKAdapter, only analyzeIssue is in the code path
+    // The adapter handles solution generation internally (bypasses generateSolution spy)
+    // Should take at least 100ms (analyzer delay only)
+    expect(totalDuration).toBeGreaterThanOrEqual(100);
+
     expect(analyzeIssueSpy).toHaveBeenCalled();
-    // generateSolutionSpy won't be called since we're using mocked adapters that bypass it
-    expect(createPullRequestSpy).toHaveBeenCalled();
+    // RFC-095: generateSolutionSpy and createPullRequestSpy not called - adapter handles full flow
   });
 });

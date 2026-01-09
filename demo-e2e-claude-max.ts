@@ -4,8 +4,9 @@
  * This simulates what would happen if we could run the fixes locally
  */
 
-import { ClaudeCodeMaxAdapter } from './src/ai/adapters/claude-code-cli-dev.js';
-import { isClaudeMaxAvailable } from './src/ai/adapters/claude-code-cli-dev.js';
+// RFC-095: Moved to deprecated folder
+import { ClaudeCodeMaxAdapter } from './src/ai/adapters/deprecated/claude-code-cli-dev.js';
+import { isClaudeMaxAvailable } from './src/ai/adapters/deprecated/claude-code-cli-dev.js';
 import { AIConfig, IssueAnalysis } from './src/ai/types.js';
 import { IssueContext } from './src/types/index.js';
 

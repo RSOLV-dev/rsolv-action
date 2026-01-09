@@ -12,7 +12,8 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { GitBasedClaudeCodeAdapter } from '../../ai/adapters/claude-code-git.js';
+// RFC-095: Import from new unified adapter
+import { ClaudeAgentSDKAdapter } from '../../ai/adapters/claude-agent-sdk.js';
 import { AIConfig } from '../../ai/types.js';
 import { IssueContext } from '../../types/index.js';
 import { IssueAnalysis } from '../../ai/types.js';
@@ -168,7 +169,7 @@ describe('Nodegoat Validation Failure Reproduction', () => {
       ];
 
       // Simulate the fix validation pipeline
-      const adapter = new GitBasedClaudeCodeAdapter(mockConfig, process.cwd());
+      const adapter = new ClaudeAgentSDKAdapter(mockConfig, process.cwd());
 
       // Mock the CLI adapter to return the AI-generated "comprehensive" fix
       const cliGenerateSolutionSpy = vi.spyOn(adapter.cliAdapter, 'generateSolution');
@@ -238,7 +239,7 @@ describe('Nodegoat Validation Failure Reproduction', () => {
 
     it('should demonstrate that AI had no visibility into test requirements', async () => {
       // This test documents the root cause: AI operates without test context
-      const adapter = new GitBasedClaudeCodeAdapter(mockConfig, process.cwd());
+      const adapter = new ClaudeAgentSDKAdapter(mockConfig, process.cwd());
 
       // Simulate what the AI actually sees during fix generation
       const aiContextDuringFixGeneration = {

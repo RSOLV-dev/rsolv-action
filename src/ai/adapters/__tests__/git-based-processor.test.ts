@@ -37,9 +37,9 @@ vi.mock('../../../credentials/manager.js', () => ({
   }
 }));
 
-// Mock GitBasedClaudeCodeAdapter
-vi.mock('../claude-code-git.js', () => ({
-  GitBasedClaudeCodeAdapter: class {
+// RFC-095: Mock new ClaudeAgentSDKAdapter (replaces GitBasedClaudeCodeAdapter)
+vi.mock('../claude-agent-sdk.js', () => ({
+  ClaudeAgentSDKAdapter: class {
     async generateSolutionWithGit() {
       return {
         success: true,
@@ -59,7 +59,29 @@ vi.mock('../claude-code-git.js', () => ({
         }
       };
     }
-  }
+  },
+  GitSolutionResult: {},
+  createClaudeAgentSDKAdapter: () => ({
+    async generateSolutionWithGit() {
+      return {
+        success: true,
+        message: 'Fixed vulnerabilities',
+        filesModified: ['src/routes/users.js'],
+        commitHash: 'abc123def456',
+        diffStats: {
+          filesChanged: 1,
+          insertions: 10,
+          deletions: 5
+        },
+        summary: {
+          title: 'Fix SQL injection',
+          description: 'Replaced string concat with params',
+          securityImpact: 'Prevents SQL injection',
+          tests: ['Test with malicious input']
+        }
+      };
+    }
+  })
 }));
 
 // Import after mocks

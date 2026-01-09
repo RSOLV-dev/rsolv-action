@@ -3,9 +3,9 @@
  * Implements RFC-041 mode selection decisions
  */
 
-export type ExecutionMode = 'scan' | 'validate' | 'mitigate' | 'full' | 'validate-only' | 'validate-and-fix' | 'fix-only';
+export type ExecutionMode = 'scan' | 'validate' | 'mitigate' | 'full' | 'validate-only' | 'validate-and-fix' | 'fix-only' | 'billing';
 
-const VALID_MODES: ExecutionMode[] = ['scan', 'validate', 'mitigate', 'full', 'validate-only', 'validate-and-fix', 'fix-only'];
+const VALID_MODES: ExecutionMode[] = ['scan', 'validate', 'mitigate', 'full', 'validate-only', 'validate-and-fix', 'fix-only', 'billing'];
 
 export interface ModeRequirements {
   requiresIssue: boolean;
@@ -122,6 +122,13 @@ export function getModeRequirements(mode: ExecutionMode): ModeRequirements {
       requiresValidation: false
     };
 
+  case 'billing':
+    return {
+      requiresIssue: false, // Billing mode uses PR context, not issue
+      requiresScanData: false,
+      requiresValidation: false
+    };
+
   default:
     throw new Error(`Unknown mode: ${mode}`);
   }
@@ -144,6 +151,8 @@ export function getModeDescription(mode: ExecutionMode): string {
     return 'Validate and fix vulnerabilities for specific issues';
   case 'full':
     return 'Run all phases: scan, validate, and mitigate';
+  case 'billing':
+    return 'Trigger billing for merged PR (RFC-091)';
   default:
     return 'Unknown mode';
   }

@@ -9,6 +9,7 @@ import { ScanOrchestrator } from './scanner/index.js';
 import { getRepositoryDetails } from './github/api.js';
 import { getExecutionMode, getModeDescription } from './utils/mode-selector.js';
 import { PhaseExecutor } from './modes/phase-executor/index.js';
+import { executeBillingMode, getPRContextFromEvent } from './modes/billing-mode.js';
 
 async function run(): Promise<ActionStatus> {
   try {
@@ -24,31 +25,68 @@ async function run(): Promise<ActionStatus> {
     const mode = getExecutionMode();
     logger.info(`Execution mode: ${mode} - ${getModeDescription(mode)}`);
     
+    // RFC-091: Handle billing mode
+    if (mode === 'billing') {
+      const prContext = getPRContextFromEvent();
+      if (!prContext) {
+        return {
+          success: false,
+          message: 'Failed to get PR context from event. Billing mode requires pull_request event.',
+        };
+      }
+
+      const billingResult = await executeBillingMode(
+        {
+          apiUrl: process.env.RSOLV_API_URL || 'https://api.rsolv.dev',
+          apiKey: config.rsolvApiKey || '',
+        },
+        prContext
+      );
+
+      // Set outputs for GitHub Actions
+      if (process.env.GITHUB_OUTPUT) {
+        const fs = await import('fs');
+        const outputFile = process.env.GITHUB_OUTPUT;
+        fs.appendFileSync(outputFile, `billing_status=${billingResult.billingStatus || 'unknown'}\n`);
+        fs.appendFileSync(outputFile, `billing_skipped=${billingResult.skipped || false}\n`);
+        if (billingResult.fixAttemptId) {
+          fs.appendFileSync(outputFile, `fix_attempt_id=${billingResult.fixAttemptId}\n`);
+        }
+      }
+
+      return {
+        success: billingResult.success,
+        message: billingResult.message,
+      };
+    }
+
     // Handle three-phase modes
     if (mode === 'scan' || mode === 'validate' || mode === 'mitigate' || mode === 'full') {
       const executor = new PhaseExecutor(config);
-      
+
       // Get repository information
       const repoFullName = process.env.GITHUB_REPOSITORY;
       if (!repoFullName) {
         throw new Error('GITHUB_REPOSITORY environment variable not set');
       }
-      
+
       const [owner, name] = repoFullName.split('/');
       const repoDetails = await getRepositoryDetails(owner, name);
-      
+
       // Execute the selected mode
       const result = await executor.execute(mode, {
         repository: {
           owner,
           name,
-          defaultBranch: repoDetails.defaultBranch || 'main'
+          defaultBranch: repoDetails.defaultBranch || 'main',
         },
-        issueNumber: process.env.RSOLV_ISSUE_NUMBER ? parseInt(process.env.RSOLV_ISSUE_NUMBER) : undefined,
+        issueNumber: process.env.RSOLV_ISSUE_NUMBER
+          ? parseInt(process.env.RSOLV_ISSUE_NUMBER)
+          : undefined,
         createPR: config.createPR,
-        prType: process.env.RSOLV_EDUCATIONAL_PR !== 'false' ? 'educational' : 'standard'
+        prType: process.env.RSOLV_EDUCATIONAL_PR !== 'false' ? 'educational' : 'standard',
       });
-      
+
       // Set outputs for GitHub Actions
       if (process.env.GITHUB_OUTPUT) {
         const fs = await import('fs');
@@ -63,24 +101,33 @@ async function run(): Promise<ActionStatus> {
         if (mode === 'scan' && result.data) {
           const scanData = result.data as any;
           if (scanData.createdIssues) {
-            fs.appendFileSync(outputFile, `created_issues=${JSON.stringify(scanData.createdIssues)}\n`);
+            fs.appendFileSync(
+              outputFile,
+              `created_issues=${JSON.stringify(scanData.createdIssues)}\n`
+            );
             fs.appendFileSync(outputFile, `issues_created=${scanData.createdIssues.length}\n`);
           }
           if (scanData.vulnerabilities) {
-            fs.appendFileSync(outputFile, `scan_results=${JSON.stringify(scanData.vulnerabilities)}\n`);
-            fs.appendFileSync(outputFile, `security_findings=${JSON.stringify(scanData.vulnerabilities)}\n`);
+            fs.appendFileSync(
+              outputFile,
+              `scan_results=${JSON.stringify(scanData.vulnerabilities)}\n`
+            );
+            fs.appendFileSync(
+              outputFile,
+              `security_findings=${JSON.stringify(scanData.vulnerabilities)}\n`
+            );
           }
         }
       }
-      
+
       return {
         success: result.success,
-        message: result.message || `${mode} phase completed`
+        message: result.message || `${mode} phase completed`,
       };
     }
-    
+
     // If we get here, the mode wasn't handled
-    throw new Error(`Unsupported mode: ${mode}. Supported modes: scan, validate, mitigate, full`);
+    throw new Error(`Unsupported mode: ${mode}. Supported modes: scan, validate, mitigate, full, billing`);
   } catch (error) {
     logger.error('Action failed', error);
     return { 

@@ -7,9 +7,8 @@ import { generateSolution } from './solution.js';
 import { createPullRequest } from '../github/pr.js';
 import { createPullRequestFromGit } from '../github/pr-git.js';
 // import { getAiClient } from './client.js';
-import { EnhancedClaudeCodeAdapter } from './adapters/claude-code-enhanced.js';
-import { GitBasedClaudeCodeAdapter } from './adapters/claude-code-git.js';
-import { SinglePassClaudeCodeAdapter } from './adapters/claude-code-single-pass.js';
+// RFC-095: Use new unified ClaudeAgentSDKAdapter (replaces EnhancedClaudeCodeAdapter, GitBasedClaudeCodeAdapter, SinglePassClaudeCodeAdapter)
+import { ClaudeAgentSDKAdapter, createClaudeAgentSDKAdapter } from './adapters/claude-agent-sdk.js';
 import { processIssueWithGit } from './git-based-processor.js';
 import { AIConfig, IssueAnalysis } from './types.js';
 import { sanitizeErrorMessage } from '../utils/error-sanitizer.js';
@@ -188,7 +187,16 @@ async function processIssue(
       }
       
       const contextStart = Date.now();
-      const adapter = new SinglePassClaudeCodeAdapter(aiConfig, process.cwd(), credentialManager);
+      // RFC-095: Use new unified ClaudeAgentSDKAdapter
+      const adapter = createClaudeAgentSDKAdapter({
+        repoPath: process.cwd(),
+        credentialManager,
+        useVendedCredentials: aiConfig.useVendedCredentials,
+        maxTurns: 5, // Extra turns for single-pass context gathering
+        model: aiConfig.model,
+        testFilePatterns: ['test/', 'tests/', 'spec/', '__tests__/', '.test.', '.spec.'],
+        verbose: options.verboseLogging
+      });
       
       // Convert AnalysisData to IssueAnalysis
       const issueAnalysis: IssueAnalysis = {
@@ -202,10 +210,22 @@ async function processIssue(
       };
       
       // Generate solution with integrated context gathering
-      solution = await adapter.generateSolutionWithContext(issue, issueAnalysis, undefined, securityAnalysis);
+      // RFC-095: This returns GitSolutionResult with filesModified (not SolutionResult with changes)
+      const gitSolution = await adapter.generateSolutionWithContext(issue, issueAnalysis, undefined, securityAnalysis);
       contextGatheringTime = Date.now() - contextStart;
-      
+
       logger.info(`Single-pass processing completed in ${contextGatheringTime}ms`);
+
+      // GitSolutionResult already has files modified in-place, return directly
+      // (unlike standard SolutionResult which requires PR creation with changes map)
+      return {
+        issueId: issue.id,
+        success: gitSolution.success,
+        message: gitSolution.message,
+        error: gitSolution.error,
+        contextGatheringTime,
+        enhancedSolution: true
+      };
     }
     else if (options.enableEnhancedContext && config.aiProvider.provider === 'claude-code') {
       // Use enhanced context gathering (existing code)
@@ -244,8 +264,17 @@ async function processIssue(
       }
       
       const contextStart = Date.now();
-      logger.info(`Creating EnhancedClaudeCodeAdapter with credentialManager: ${!!credentialManager}`);
-      const adapter = new EnhancedClaudeCodeAdapter(aiConfig, process.cwd(), credentialManager);
+      // RFC-095: Use new unified ClaudeAgentSDKAdapter
+      logger.info(`Creating ClaudeAgentSDKAdapter with credentialManager: ${!!credentialManager}`);
+      const adapter = createClaudeAgentSDKAdapter({
+        repoPath: process.cwd(),
+        credentialManager,
+        useVendedCredentials: aiConfig.useVendedCredentials,
+        maxTurns: options.contextDepth === 'ultra' ? 7 : 5, // More turns for deeper context
+        model: aiConfig.model,
+        testFilePatterns: ['test/', 'tests/', 'spec/', '__tests__/', '.test.', '.spec.'],
+        verbose: options.verboseLogging
+      });
       
       // Gather deep context
       deepContext = await adapter.gatherDeepContext(issue, {

@@ -79,8 +79,9 @@ vi.mock('../../src/ai/security-analyzer.js', () => ({
   }
 }));
 
-vi.mock('../../src/ai/adapters/claude-code-enhanced.js', () => ({
-  EnhancedClaudeCodeAdapter: class {
+// RFC-095: Mock new unified ClaudeAgentSDKAdapter (replaces EnhancedClaudeCodeAdapter)
+vi.mock('../../src/ai/adapters/claude-agent-sdk.js', () => ({
+  ClaudeAgentSDKAdapter: class {
     async gatherDeepContext() {
       return {
         files: [],
@@ -88,7 +89,47 @@ vi.mock('../../src/ai/adapters/claude-code-enhanced.js', () => ({
         commits: []
       };
     }
-  }
+    async generateSolutionWithGit() {
+      return {
+        success: true,
+        message: 'Fixed',
+        filesModified: ['test.js'],
+        commitHash: 'abc123',
+        diffStats: { filesChanged: 1, insertions: 10, deletions: 5 }
+      };
+    }
+    async generateSolutionWithContext() {
+      return {
+        success: true,
+        message: 'Fixed',
+        filesModified: ['test.js'],
+        commitHash: 'abc123',
+        diffStats: { filesChanged: 1, insertions: 10, deletions: 5 }
+      };
+    }
+  },
+  GitSolutionResult: {},
+  createClaudeAgentSDKAdapter: () => ({
+    gatherDeepContext: async () => ({
+      files: [],
+      relatedIssues: [],
+      commits: []
+    }),
+    generateSolutionWithGit: async () => ({
+      success: true,
+      message: 'Fixed',
+      filesModified: ['test.js'],
+      commitHash: 'abc123',
+      diffStats: { filesChanged: 1, insertions: 10, deletions: 5 }
+    }),
+    generateSolutionWithContext: async () => ({
+      success: true,
+      message: 'Fixed',
+      filesModified: ['test.js'],
+      commitHash: 'abc123',
+      diffStats: { filesChanged: 1, insertions: 10, deletions: 5 }
+    })
+  })
 }));
 
 describe('Unified Processor', () => {

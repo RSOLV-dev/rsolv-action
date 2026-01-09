@@ -24,30 +24,52 @@ This fixes the error handling in the component.`
   };
 });
 
-// Mock the Claude Code adapter
-vi.mock('../adapters/claude-code', () => {
+// RFC-095: Mock the new unified adapter
+// The adapter returns GitSolutionResult with filesModified, then solution.ts reads files
+vi.mock('../adapters/claude-agent-sdk', () => {
   return {
-    ClaudeCodeAdapter: class MockClaudeCodeAdapter {
-      constructor(_config: any, _repoPath: string) {}
-      
-      async generateSolution(_issue: any, _analysis: any) {
+    ClaudeAgentSDKAdapter: class MockClaudeAgentSDKAdapter {
+      constructor(_config: any) {}
+
+      async generateSolutionWithGit(_issue: any, _analysis: any) {
         return {
           success: true,
-          changes: {
-            'src/auth/login.js': 'Fixed SQL injection with parameterized queries',
-            'src/auth/validation.js': 'Added input validation'
-          },
-          metadata: {
-            model: 'claude-sonnet-4-20250514',
-            contextGathering: 'enhanced',
-            totalFiles: 15,
-            analysisTime: 2500
-          }
+          message: 'Fixed vulnerabilities',
+          filesModified: ['src/auth/login.js', 'src/auth/validation.js'],
+          commitHash: 'abc123def456',
+          diffStats: { insertions: 10, deletions: 5, filesChanged: 2 }
+        };
+      }
+
+      async generateSolution(_issue: any, _analysis: any) {
+        // RFC-095: Return GitSolutionResult format (filesModified, not changes)
+        // solution.ts will read files to build changes map
+        return {
+          success: true,
+          message: 'Fixed vulnerabilities',
+          filesModified: ['src/auth/login.js', 'src/auth/validation.js'],
+          diffStats: { insertions: 10, deletions: 5, filesChanged: 2 }
         };
       }
     }
   };
 });
+
+// RFC-095: Mock fs/promises for solution.ts file reading
+vi.mock('fs/promises', () => ({
+  readFile: async (filePath: string) => {
+    const fileContents: Record<string, string> = {
+      'src/auth/login.js': 'Fixed SQL injection with parameterized queries',
+      'src/auth/validation.js': 'Added input validation',
+      'src/component.ts': 'Updated component code with better error handling',
+      'src/util.ts': 'Added validation functions'
+    };
+    if (fileContents[filePath]) {
+      return fileContents[filePath];
+    }
+    throw new Error(`File not found: ${filePath}`);
+  }
+}));
 
 // Mock the credentials manager using require.resolve
 // Removed require.resolve

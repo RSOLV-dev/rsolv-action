@@ -67,9 +67,29 @@ vi.mock('../git-based-test-validator.js', () => ({
 // Track the calls to generateSolutionWithGit
 let generateSolutionWithGitCalls: any[] = [];
 
-vi.mock('../adapters/claude-code-git.js', () => ({
-  GitBasedClaudeCodeAdapter: vi.fn(() => ({
-    generateSolutionWithGit: vi.fn((...args) => {
+// RFC-095: Mock the new ClaudeAgentSDKAdapter instead of GitBasedClaudeCodeAdapter
+vi.mock('../adapters/claude-agent-sdk.js', () => ({
+  ClaudeAgentSDKAdapter: vi.fn(() => ({
+    generateSolutionWithGit: vi.fn((...args: unknown[]) => {
+      generateSolutionWithGitCalls.push(args);
+      return Promise.resolve({
+        success: true,
+        message: 'Fixed',
+        filesModified: ['test.js'],
+        commitHash: 'abc123',
+        diffStats: { insertions: 10, deletions: 5, filesChanged: 1 },
+        summary: {
+          title: 'Fix vulnerability',
+          description: 'Fixed security issue',
+          securityImpact: 'Vulnerability patched',
+          tests: []
+        }
+      });
+    })
+  })),
+  GitSolutionResult: {},
+  createClaudeAgentSDKAdapter: vi.fn(() => ({
+    generateSolutionWithGit: vi.fn((...args: unknown[]) => {
       generateSolutionWithGitCalls.push(args);
       return Promise.resolve({
         success: true,

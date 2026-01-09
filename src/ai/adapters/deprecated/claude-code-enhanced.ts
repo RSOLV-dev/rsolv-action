@@ -4,10 +4,11 @@
  * repository understanding before generating solutions.
  */
 import { ClaudeCodeAdapter } from './claude-code.js';
-import { IssueContext } from '../../types/index.js';
-import { PullRequestSolution, AIConfig } from '../types.js';
-import { IssueAnalysis } from '../types.js';
-import { logger } from '../../utils/logger.js';
+// RFC-095: Updated import paths for deprecated folder location
+import { IssueContext } from '../../../types/index.js';
+import { PullRequestSolution, AIConfig } from '../../types.js';
+import { IssueAnalysis } from '../../types.js';
+import { logger } from '../../../utils/logger.js';
 import fs from 'fs';
 import path from 'path';
 

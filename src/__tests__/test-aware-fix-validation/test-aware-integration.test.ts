@@ -7,7 +7,8 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { GitBasedClaudeCodeAdapter } from '../../ai/adapters/claude-code-git.js';
+// RFC-095: Import from new unified adapter
+import { ClaudeAgentSDKAdapter } from '../../ai/adapters/claude-agent-sdk.js';
 import { TestAwareValidationPipeline } from '../../ai/test-discovery/test-aware-validation-pipeline.js';
 import { AIConfig } from '../../ai/types.js';
 import { IssueContext } from '../../types/index.js';
@@ -89,7 +90,7 @@ describe('Test-Aware Fix Generation Integration', () => {
       // Create mock repository structure with vulnerable code and tests
       await setupMockRepository(mockRepoPath);
 
-      const adapter = new GitBasedClaudeCodeAdapter(mockConfig, mockRepoPath);
+      const adapter = new ClaudeAgentSDKAdapter(mockConfig, mockRepoPath);
       const validationPipeline = new TestAwareValidationPipeline();
 
       // Step 1: Analyze repository for test-aware context BEFORE fix generation
@@ -138,7 +139,7 @@ describe('Test-Aware Fix Generation Integration', () => {
     it('should generate test-aware prompt enhancement that prevents behavioral violations', async () => {
       await setupMockRepository(mockRepoPath);
 
-      const adapter = new GitBasedClaudeCodeAdapter(mockConfig, mockRepoPath);
+      const adapter = new ClaudeAgentSDKAdapter(mockConfig, mockRepoPath);
       const validationPipeline = new TestAwareValidationPipeline();
 
       // Get test-aware context
@@ -312,7 +313,7 @@ describe('Test-Aware Fix Generation Integration', () => {
     it('should complete the full test-aware workflow end-to-end', async () => {
       await setupMockRepository(mockRepoPath);
 
-      const adapter = new GitBasedClaudeCodeAdapter(mockConfig, mockRepoPath);
+      const adapter = new ClaudeAgentSDKAdapter(mockConfig, mockRepoPath);
       const validationPipeline = new TestAwareValidationPipeline();
 
       // Step 1: Pre-analysis to get test-aware context

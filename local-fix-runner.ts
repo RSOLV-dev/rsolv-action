@@ -21,7 +21,8 @@ import { execSync, spawn } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import { logger } from './src/utils/logger.js';
-import { isClaudeMaxAvailable } from './src/ai/adapters/claude-code-cli-dev.js';
+// RFC-095: Moved to deprecated folder
+import { isClaudeMaxAvailable } from './src/ai/adapters/deprecated/claude-code-cli-dev.js';
 
 interface Options {
   repo: string;

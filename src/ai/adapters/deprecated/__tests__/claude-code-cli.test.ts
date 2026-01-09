@@ -3,9 +3,9 @@
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ClaudeCodeCLIAdapter } from '../claude-code-cli.js';
-import { AIConfig } from '../../types.js';
-import { IssueContext } from '../../../types/index.js';
-import { IssueAnalysis } from '../../types.js';
+import { AIConfig } from '../../../types.js';
+import { IssueContext } from '../../../../types/index.js';
+import { IssueAnalysis } from '../../../types.js';
 
 describe('ClaudeCodeCLIAdapter', () => {
   let adapter: ClaudeCodeCLIAdapter;

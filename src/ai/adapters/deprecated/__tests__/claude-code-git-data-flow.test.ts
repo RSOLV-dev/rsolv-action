@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { GitBasedClaudeCodeAdapter } from '../claude-code-git.js';
-import { IssueContext } from '../../../types/index.js';
+import { IssueContext } from '../../../../types/index.js';
 
 // Mock the logger at module level
 vi.mock('../../../utils/logger.js', () => ({

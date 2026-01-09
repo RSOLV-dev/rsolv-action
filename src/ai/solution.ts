@@ -3,7 +3,8 @@ import { logger } from '../utils/logger.js';
 import { getAiClient } from './client.js';
 import { buildSolutionPrompt, getIssueTypePromptTemplate } from './prompts.js';
 import { ThreeTierExplanationFramework, CompleteExplanation } from '../security/explanation-framework.js';
-import { ClaudeCodeAdapter } from './adapters/claude-code.js';
+// RFC-095: Import unified adapter (exports ClaudeCodeAdapter for compatibility)
+import { ClaudeAgentSDKAdapter as ClaudeCodeAdapter } from './adapters/claude-agent-sdk.js';
 import { AIConfig, AIProvider, IssueAnalysis } from './types.js';
 
 /**
@@ -46,43 +47,52 @@ export async function generateSolution(
         credentialManager = await CredentialManagerSingleton.getInstance(config.rsolvApiKey);
       }
       
-      // Convert AiProviderConfig to AIConfig
-      const aiConfig: AIConfig = {
-        provider: config.aiProvider.provider as AIProvider,
-        apiKey: config.aiProvider.providerApiKey,
-        model: config.aiProvider.model,
-        temperature: config.aiProvider.temperature,
-        maxTokens: config.aiProvider.maxTokens,
+      // RFC-095: Use new ClaudeAgentSDKAdapter config format
+      const claudeCodeAdapter = new ClaudeCodeAdapter({
+        repoPath: process.cwd(),
+        credentialManager,
         useVendedCredentials: config.aiProvider.useVendedCredentials,
-        claudeCodeConfig: {}
-      };
-      
-      // Use Claude Code adapter
-      const claudeCodeAdapter = new ClaudeCodeAdapter(aiConfig, process.cwd(), credentialManager);
-      
+        model: config.aiProvider.model,
+        maxTurns: 3
+      });
+
       // Convert AnalysisData to IssueAnalysis
       const issueAnalysis: IssueAnalysis = {
         summary: `${analysisData.issueType} issue requiring fixes`,
-        complexity: analysisData.estimatedComplexity === 'simple' ? 'low' : 
+        complexity: analysisData.estimatedComplexity === 'simple' ? 'low' :
           analysisData.estimatedComplexity === 'complex' ? 'high' : 'medium',
         estimatedTime: 60, // Default estimate
         potentialFixes: [analysisData.suggestedApproach],
         recommendedApproach: analysisData.suggestedApproach,
         relatedFiles: analysisData.filesToModify
       };
-      
+
       // Use Claude Code for solution generation
       const claudeResult = await claudeCodeAdapter.generateSolution(issue, issueAnalysis);
-      
+
       // If Claude Code succeeded, return the result
+      // Note: New adapter uses filesModified instead of changes - files are modified in-place
       if (claudeResult.success) {
+        // Build changes map from filesModified (files have already been modified in-place)
+        const changesMap: Record<string, string> = {};
+        if (claudeResult.filesModified) {
+          for (const filePath of claudeResult.filesModified) {
+            try {
+              const fs = await import('fs/promises');
+              changesMap[filePath] = await fs.readFile(filePath, 'utf-8');
+            } catch {
+              // File might have been deleted or renamed
+              changesMap[filePath] = '<file content unavailable>';
+            }
+          }
+        }
         return {
           success: true,
           message: 'Solution generated with Claude Code',
-          changes: claudeResult.changes
+          changes: changesMap
         };
       }
-      
+
       // If Claude Code failed, fall back to standard method
       if (claudeResult.error && claudeResult.error.includes('Claude Code CLI not available')) {
         logger.info('Claude Code not available, falling back to standard AI provider API');

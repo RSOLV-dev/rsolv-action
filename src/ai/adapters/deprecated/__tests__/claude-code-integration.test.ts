@@ -1,8 +1,9 @@
 import { describe, expect, test, beforeEach, vi } from 'vitest';
-import { ClaudeCodeAdapter } from '../adapters/claude-code.js';
-import { getAiClient } from '../client.js';
-import { AIConfig, IssueAnalysis } from '../types.js';
-import type { IssueContext } from '../../types/index.js';
+// RFC-095: Updated import paths for deprecated folder location
+import { ClaudeCodeAdapter } from '../claude-code.js';
+import { getAiClient } from '../../../client.js';
+import { AIConfig, IssueAnalysis } from '../../../types.js';
+import type { IssueContext } from '../../../../types/index.js';
 
 // Check if we should use real APIs
 const USE_REAL_APIS = process.env.USE_REAL_CLAUDE_CODE === 'true';
@@ -19,7 +20,8 @@ const { mockExistsSync, mockReadFileSync, mockWriteFileSync, mockMkdirSync, mock
 });
 
 // Mock modules outside of beforeEach for proper hoisting
-vi.mock('../../utils/logger', () => ({
+// RFC-095: Updated import paths for deprecated folder location
+vi.mock('../../../../utils/logger', () => ({
   Logger: class {
     info = vi.fn();
     warn = vi.fn();

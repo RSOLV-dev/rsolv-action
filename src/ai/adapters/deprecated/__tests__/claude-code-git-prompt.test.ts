@@ -9,7 +9,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { GitBasedClaudeCodeAdapter } from '../claude-code-git.js';
-import type { IssueContext, IssueAnalysis } from '../../types.js';
+import type { IssueContext, IssueAnalysis } from '../../../types.js';
 
 // Mock fs and child_process
 vi.mock('fs', () => ({

@@ -7,8 +7,8 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { GitBasedClaudeCodeAdapter } from '../claude-code-git.js';
-import type { IssueContext } from '../../../types/index.js';
-import type { AIConfig, IssueAnalysis } from '../../types.js';
+import type { IssueContext } from '../../../../types/index.js';
+import type { AIConfig, IssueAnalysis } from '../../../types.js';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { execSync } from 'child_process';

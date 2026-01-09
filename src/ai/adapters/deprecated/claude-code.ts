@@ -6,11 +6,12 @@
 import type { SDKMessage } from '@anthropic-ai/claude-code';
 import path from 'path';
 import fs from 'fs';
-import { logger } from '../../utils/logger.js';
-import { IssueContext } from '../../types/index.js';
-import { PullRequestSolution, AIConfig, ClaudeCodeConfig } from '../types.js';
-import { IssueAnalysis } from '../types.js';
-import { ConversationLogger, ConversationLogEntry } from '../conversation-logger.js';
+// RFC-095: Updated import paths for deprecated folder location
+import { logger } from '../../../utils/logger.js';
+import { IssueContext } from '../../../types/index.js';
+import { PullRequestSolution, AIConfig, ClaudeCodeConfig } from '../../types.js';
+import { IssueAnalysis } from '../../types.js';
+import { ConversationLogger, ConversationLogEntry } from '../../conversation-logger.js';
 
 /**
  * Analytics data for Claude Code usage

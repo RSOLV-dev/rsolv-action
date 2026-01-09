@@ -5,12 +5,13 @@
 
 import type { ValidationVulnerability } from '../utils/vulnerability-extraction.js';
 
-export type OperationMode = 
+export type OperationMode =
   | 'scan'      // Detect vulnerabilities (batch)
   | 'validate'  // Prove vulnerabilities exist with RED tests
   | 'mitigate'  // Fix proven vulnerabilities with GREEN+REFACTOR
   | 'fix'       // Combined validate+mitigate (legacy/default)
-  | 'full';     // All phases: scan+validate+mitigate
+  | 'full'      // All phases: scan+validate+mitigate
+  | 'billing';  // RFC-091: Trigger billing for merged PRs
 
 export interface ModeConfig {
   mode: OperationMode;

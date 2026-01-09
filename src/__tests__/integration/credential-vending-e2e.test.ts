@@ -4,7 +4,8 @@
  */
 
 import { RSOLVCredentialManager } from '../../credentials/manager.js';
-import { RetryableClaudeCodeCLI } from '../../ai/adapters/claude-code-cli-retry.js';
+// RFC-095: Import from new unified adapter
+import { ClaudeAgentSDKAdapter } from '../../ai/adapters/claude-agent-sdk.js';
 import type { IssueContext, IssueAnalysis } from '../../types/index.js';
 import type { AIConfig } from '../../ai/types.js';
 
@@ -54,14 +55,14 @@ describe('Credential Vending E2E Integration', () => {
       // Verify credential exchange was called
       expect(mockExchange).toHaveBeenCalledWith(['anthropic']);
       
-      // Step 3: Create RetryableClaudeCodeCLI with credential manager
+      // Step 3: Create ClaudeAgentSDKAdapter with credential manager
       const config: AIConfig = {
         provider: 'claude-code-cli',
         apiKey: '', // No direct API key
         timeout: 60000
       };
       
-      const adapter = new RetryableClaudeCodeCLI(
+      const adapter = new ClaudeAgentSDKAdapter(
         config, 
         '/test/repo', 
         credentialManager
@@ -195,7 +196,7 @@ describe('Credential Vending E2E Integration', () => {
         timeout: 60000
       };
       
-      const adapter = new RetryableClaudeCodeCLI(
+      const adapter = new ClaudeAgentSDKAdapter(
         config, 
         '/test/repo'
         // No credential manager passed
@@ -257,7 +258,7 @@ describe('Credential Vending E2E Integration', () => {
       };
       
       // Create adapter with no credential manager and no env var
-      const adapter = new RetryableClaudeCodeCLI(config, '/test/repo');
+      const adapter = new ClaudeAgentSDKAdapter(config, '/test/repo');
       
       const issueContext: IssueContext = {
         title: 'Test vulnerability',
@@ -294,7 +295,7 @@ describe('Credential Vending E2E Integration', () => {
         timeout: 60000
       };
       
-      const adapter = new RetryableClaudeCodeCLI(
+      const adapter = new ClaudeAgentSDKAdapter(
         config, 
         '/test/repo', 
         credentialManager as any

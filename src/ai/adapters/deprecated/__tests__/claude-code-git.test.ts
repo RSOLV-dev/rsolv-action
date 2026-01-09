@@ -1,6 +1,6 @@
 import { describe, expect, test, beforeEach, afterEach, vi } from 'vitest';
 import { GitBasedClaudeCodeAdapter } from '../claude-code-git.js';
-import { AIConfig } from '../../types.js';
+import { AIConfig } from '../../../types.js';
 import type { SDKMessage } from '@anthropic-ai/claude-code';
 
 // Use vi.hoisted for mocks that need to be available during module initialization

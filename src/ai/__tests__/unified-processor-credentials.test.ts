@@ -60,14 +60,15 @@ const { mockCredentialManagerReceived } = vi.hoisted(() => {
   };
 });
 
-vi.mock('../adapters/claude-code-enhanced.js', () => ({
-  EnhancedClaudeCodeAdapter: class {
+// RFC-095: Mock new unified ClaudeAgentSDKAdapter (replaces EnhancedClaudeCodeAdapter)
+vi.mock('../adapters/claude-agent-sdk.js', () => ({
+  ClaudeAgentSDKAdapter: class {
     config: any;
     repoPath: string;
     credentialManager: any;
-    
+
     constructor(config: any, repoPath: string, credentialManager?: any) {
-      console.log('EnhancedClaudeCodeAdapter constructor called');
+      console.log('ClaudeAgentSDKAdapter constructor called');
       console.log('Constructor args - config:', config?.provider, 'repoPath:', repoPath, 'credentialManager:', !!credentialManager);
       this.config = config;
       this.repoPath = repoPath;
@@ -76,7 +77,7 @@ vi.mock('../adapters/claude-code-enhanced.js', () => ({
       mockCredentialManagerReceived.set(credentialManager);
       console.log('Captured credentialManager:', !!credentialManager);
     }
-    
+
     async gatherDeepContext() {
       return {
         architecture: {
@@ -101,6 +102,56 @@ vi.mock('../adapters/claude-code-enhanced.js', () => ({
         }
       };
     }
+
+    async generateSolutionWithGit() {
+      return {
+        success: true,
+        message: 'Fixed',
+        filesModified: ['test.js'],
+        commitHash: 'abc123',
+        diffStats: { filesChanged: 1, insertions: 10, deletions: 5 }
+      };
+    }
+
+    async generateSolutionWithContext() {
+      return {
+        success: true,
+        message: 'Fixed',
+        filesModified: ['test.js'],
+        commitHash: 'abc123',
+        diffStats: { filesChanged: 1, insertions: 10, deletions: 5 }
+      };
+    }
+  },
+  GitSolutionResult: {},
+  createClaudeAgentSDKAdapter: (options: any) => {
+    const adapter = {
+      config: options,
+      repoPath: options?.repoPath || process.cwd(),
+      credentialManager: options?.credentialManager,
+      gatherDeepContext: async () => ({
+        files: [],
+        dependencies: [],
+        testPatterns: [],
+        architectureInsights: []
+      }),
+      generateSolutionWithGit: async () => ({
+        success: true,
+        message: 'Fixed',
+        filesModified: ['test.js'],
+        commitHash: 'abc123',
+        diffStats: { filesChanged: 1, insertions: 10, deletions: 5 }
+      }),
+      generateSolutionWithContext: async () => ({
+        success: true,
+        message: 'Fixed',
+        filesModified: ['test.js'],
+        commitHash: 'abc123',
+        diffStats: { filesChanged: 1, insertions: 10, deletions: 5 }
+      })
+    };
+    mockCredentialManagerReceived.set(options?.credentialManager);
+    return adapter;
   }
 }));
 
