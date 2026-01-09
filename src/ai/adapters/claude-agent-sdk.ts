@@ -554,10 +554,10 @@ Important:
     this.testLog = [];
 
     try {
-      // Set up API key if using vended credentials
-      if (this.useVendedCredentials && this.credentialManager) {
-        process.env.ANTHROPIC_API_KEY = await this.getApiKey();
-      }
+      // Get API key - either vended or from environment
+      const apiKey = await this.getApiKey();
+      process.env.ANTHROPIC_API_KEY = apiKey;
+      logger.info(`[SDK] API key obtained (length: ${apiKey.length}, prefix: ${apiKey.substring(0, 10)}...)`);
 
       const prompt = this.buildPrompt(issueContext, analysis);
 
@@ -571,6 +571,19 @@ Important:
         // Path to Claude Code CLI - needed for Docker containers where the CLI
         // is in a different location than the SDK expects
         pathToClaudeCodeExecutable: this.getClaudeCodeExecutablePath(),
+
+        // Use Node.js to run the CLI (required in Docker where bun is the main runtime)
+        executable: 'node',
+
+        // Pass environment variables to the Claude Code process
+        // Required for Docker/CI where child processes may not inherit all env vars
+        env: {
+          ...process.env,
+          ANTHROPIC_API_KEY: apiKey,  // Use vended API key explicitly
+          HOME: process.env.HOME || '/root',
+          // Disable interactive prompts in headless mode
+          CI: 'true',
+        },
 
         // Structured output for parsing fix results
         outputFormat: {
@@ -701,6 +714,9 @@ Important:
     forkSession: boolean = false
   ): Promise<GitSolutionResult> {
     try {
+      // Get API key - either vended or from environment
+      const apiKey = await this.getApiKey();
+
       const options: Options = {
         cwd: this.repoPath,
         allowedTools: ['Read', 'Edit', 'Bash', 'Glob', 'Grep'],
@@ -708,6 +724,13 @@ Important:
         maxTurns: this.maxTurns,
         model: this.model,
         pathToClaudeCodeExecutable: this.getClaudeCodeExecutablePath(),
+        executable: 'node',
+        env: {
+          ...process.env,
+          ANTHROPIC_API_KEY: apiKey,
+          HOME: process.env.HOME || '/root',
+          CI: 'true',
+        },
         resume: sessionId,
         forkSession,
         canUseTool: this.createCanUseTool(),
@@ -774,6 +797,9 @@ Important:
     issueContext: IssueContext,
     analysis: IssueAnalysis
   ): Promise<{ conservative: GitSolutionResult; aggressive: GitSolutionResult }> {
+    // Get API key - either vended or from environment
+    const apiKey = await this.getApiKey();
+
     // First pass: gather context
     const contextPrompt = `Analyze the codebase to understand the vulnerability:
 
@@ -793,7 +819,14 @@ Do NOT make any changes yet.`;
       permissionMode: 'default',
       maxTurns: 2,
       model: this.model,
-      pathToClaudeCodeExecutable: this.getClaudeCodeExecutablePath()
+      pathToClaudeCodeExecutable: this.getClaudeCodeExecutablePath(),
+      executable: 'node',
+      env: {
+        ...process.env,
+        ANTHROPIC_API_KEY: apiKey,
+        HOME: process.env.HOME || '/root',
+        CI: 'true',
+      },
     };
 
     const contextQuery = query({ prompt: contextPrompt, options: contextOptions });
@@ -844,9 +877,9 @@ Do NOT make any changes yet.`;
     this.testLog = [];
 
     try {
-      if (this.useVendedCredentials && this.credentialManager) {
-        process.env.ANTHROPIC_API_KEY = await this.getApiKey();
-      }
+      // Get API key - either vended or from environment
+      const apiKey = await this.getApiKey();
+      process.env.ANTHROPIC_API_KEY = apiKey;
 
       const prompt = this.buildPrompt(issueContext, analysis);
 
@@ -857,6 +890,13 @@ Do NOT make any changes yet.`;
         maxTurns: this.maxTurns,
         model: this.model,
         pathToClaudeCodeExecutable: this.getClaudeCodeExecutablePath(),
+        executable: 'node',
+        env: {
+          ...process.env,
+          ANTHROPIC_API_KEY: apiKey,
+          HOME: process.env.HOME || '/root',
+          CI: 'true',
+        },
         outputFormat: {
           type: 'json_schema',
           schema: FixResultSchema
@@ -931,9 +971,9 @@ Additional context gathering instructions:
 This is single-pass mode - gather context and fix in one session.`;
 
     try {
-      if (this.useVendedCredentials && this.credentialManager) {
-        process.env.ANTHROPIC_API_KEY = await this.getApiKey();
-      }
+      // Get API key - either vended or from environment
+      const apiKey = await this.getApiKey();
+      process.env.ANTHROPIC_API_KEY = apiKey;
 
       const options: Options = {
         cwd: this.repoPath,
@@ -942,6 +982,13 @@ This is single-pass mode - gather context and fix in one session.`;
         maxTurns: this.maxTurns + 2, // Extra turns for context gathering
         model: this.model,
         pathToClaudeCodeExecutable: this.getClaudeCodeExecutablePath(),
+        executable: 'node',
+        env: {
+          ...process.env,
+          ANTHROPIC_API_KEY: apiKey,
+          HOME: process.env.HOME || '/root',
+          CI: 'true',
+        },
         outputFormat: {
           type: 'json_schema',
           schema: FixResultSchema
@@ -1042,9 +1089,9 @@ ${options.includeDependencyAnalysis ? '- Analyze dependencies' : ''}
 Use Read, Glob, and Grep to explore. Do NOT make any changes.`;
 
     try {
-      if (this.useVendedCredentials && this.credentialManager) {
-        process.env.ANTHROPIC_API_KEY = await this.getApiKey();
-      }
+      // Get API key - either vended or from environment
+      const apiKey = await this.getApiKey();
+      process.env.ANTHROPIC_API_KEY = apiKey;
 
       const queryOptions: Options = {
         cwd: this.repoPath,
@@ -1052,7 +1099,14 @@ Use Read, Glob, and Grep to explore. Do NOT make any changes.`;
         permissionMode: 'default',
         maxTurns: depth === 'ultra' ? 5 : depth === 'deep' ? 4 : depth === 'medium' ? 3 : 2,
         model: this.model,
-        pathToClaudeCodeExecutable: this.getClaudeCodeExecutablePath()
+        pathToClaudeCodeExecutable: this.getClaudeCodeExecutablePath(),
+        executable: 'node',
+        env: {
+          ...process.env,
+          ANTHROPIC_API_KEY: apiKey,
+          HOME: process.env.HOME || '/root',
+          CI: 'true',
+        },
       };
 
       const exploredFiles: string[] = [];
