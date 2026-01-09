@@ -38,8 +38,9 @@ CMD ["bun", "test"]
 FROM base AS builder
 
 # Install Node.js for Claude Code SDK (some tools still need it)
+# Also install libc compatibility libraries for SDK native binaries (fixes Docker spawn issues)
 RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
-    apt-get install -y nodejs && \
+    apt-get install -y nodejs libc6 libstdc++6 libgcc-s1 && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install production dependencies only (includes @anthropic-ai/claude-code)
@@ -60,6 +61,12 @@ RUN ls -la node_modules/@anthropic-ai/claude-code/cli.js || echo "Claude Code SD
 
 # Production stage
 FROM base AS production
+
+# Install libc compatibility libraries for SDK native binaries (fixes Docker spawn issues)
+# These are required for the Claude Agent SDK to spawn processes correctly
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends libc6 libstdc++6 libgcc-s1 procps && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Copy Node.js from builder (some tools still need it)
 COPY --from=builder /usr/bin/node /usr/bin/node
