@@ -1160,6 +1160,28 @@ Use Read, Glob, and Grep to explore. Do NOT make any changes.`;
 export function createClaudeAgentSDKAdapter(
   config: ClaudeAgentSDKAdapterConfig
 ): ClaudeAgentSDKAdapter | GitBasedClaudeCodeAdapter {
+  // RFC-095: Environment variable overrides for testing and emergency fallback
+  // These override the feature flag from the platform
+  const forceSDK = process.env.RSOLV_FORCE_SDK_ADAPTER === 'true';
+  const forceLegacy = process.env.RSOLV_FORCE_LEGACY_ADAPTER === 'true';
+
+  if (forceSDK) {
+    logger.info('[SDK Factory] RSOLV_FORCE_SDK_ADAPTER=true: forcing ClaudeAgentSDKAdapter');
+    return new ClaudeAgentSDKAdapter(config);
+  }
+
+  if (forceLegacy) {
+    logger.info('[SDK Factory] RSOLV_FORCE_LEGACY_ADAPTER=true: forcing legacy adapter');
+    const legacyConfig: AIConfig = {
+      provider: 'anthropic',
+      model: config.model || 'claude-sonnet-4-5-20250929',
+      useVendedCredentials: config.useVendedCredentials,
+      useStructuredPhases: true,
+      claudeCodeConfig: { verboseLogging: config.verbose }
+    };
+    return new GitBasedClaudeCodeAdapter(legacyConfig, config.repoPath, config.credentialManager);
+  }
+
   // RFC-095: Check feature flag for legacy adapter fallback
   const useLegacy = config.credentialManager?.shouldUseLegacyAdapter?.() ?? false;
 
