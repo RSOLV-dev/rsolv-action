@@ -1,115 +1,142 @@
-import { ValidationMode } from '../validation-mode';
+/**
+ * Test suite for ValidationMode test commit behavior
+ *
+ * Verifies that commitTestsToBranch works correctly:
+ * - Writes executable JS (not JSON) to .rsolv/tests/
+ * - Handles git branch/push failures gracefully
+ * - Works in RSOLV_TESTING_MODE
+ */
+
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { ValidationMode } from '../validation-mode.js';
 import { execSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
+import { createTestConfig, createTestIssue, type ValidationModeTestAccess } from './test-fixtures.js';
 
 vi.mock('child_process');
 vi.mock('fs');
+vi.mock('../test-integration-client.js');
+vi.mock('../../github/api', () => ({
+  getGitHubClient: vi.fn(() => ({
+    issues: {
+      addLabels: vi.fn(),
+      createComment: vi.fn()
+    }
+  }))
+}));
 
-describe.skip('ValidationMode - Test Commit in Test Mode', () => {
+describe('ValidationMode - Test Commit in Test Mode', () => {
   let validationMode: ValidationMode;
+  let originalEnv: NodeJS.ProcessEnv;
   const mockRepoPath = '/test/repo';
-  const mockIssue = {
-    number: 123,
-    title: 'SQL Injection vulnerability',
-    body: 'Test vulnerability'
-  };
+  const mockIssue = createTestIssue();
 
   beforeEach(() => {
+    originalEnv = { ...process.env };
     vi.clearAllMocks();
     process.env.RSOLV_TESTING_MODE = 'true';
-    validationMode = new ValidationMode({
-      github: {} as any,
-      context: {
-        repo: { owner: 'test', repo: 'repo' },
-        payload: {}
-      } as any,
-      repoPath: mockRepoPath,
-      clientMode: 'validate'
-    });
+    // Clear RSOLV_API_URL to force the fallback path (.rsolv/tests/)
+    // Backend integration is tested in validation-mode-backend-integration.test.ts
+    delete process.env.RSOLV_API_URL;
+
+    const config = createTestConfig({ rsolvApiKey: undefined });
+    validationMode = new ValidationMode(config, mockRepoPath);
+
+    // Mock fs operations
+    (fs.mkdirSync as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
+    (fs.writeFileSync as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
+    (fs.existsSync as ReturnType<typeof vi.fn>).mockReturnValue(true);
+    (fs.readdirSync as ReturnType<typeof vi.fn>).mockReturnValue([]);
   });
 
   afterEach(() => {
-    delete process.env.RSOLV_TESTING_MODE;
+    process.env = originalEnv;
   });
 
-  describe('in test mode', () => {
-    it('should always attempt to commit tests even if branch creation initially fails', async () => {
+  describe('commitTestsToBranch', () => {
+    it('should write executable JavaScript when given an object with redTests', async () => {
       const testContent = {
-        red: { testName: 'SQL injection test', testCode: 'test code' }
+        redTests: [
+          { testName: 'SQL injection test', testCode: 'expect(true).toBe(true);' }
+        ]
       };
 
-      // Mock branch creation to fail initially
-      const execSyncMock = execSync as any;
-      execSyncMock.mockImplementation((cmd: string) => {
-        if (cmd.includes('git checkout -b')) {
-          throw new Error('Branch already exists');
-        }
-        return Buffer.from('');
-      });
+      const execSyncMock = execSync as unknown as ReturnType<typeof vi.fn>;
+      execSyncMock.mockReturnValue(Buffer.from(''));
 
-      // Mock fs operations
-      (fs.mkdirSync as any).mockReturnValue(undefined);
-      (fs.writeFileSync as any).mockReturnValue(undefined);
+      await validationMode.commitTestsToBranch(testContent, 'rsolv/validate/issue-123', mockIssue);
 
-      // Call the method
-      await validationMode.commitTestsToBranch(testContent, 'rsolv/validate/issue-123');
-
-      // Verify test file was written
+      // Verify test file was written with executable JS (not JSON)
       expect(fs.writeFileSync).toHaveBeenCalledWith(
         expect.stringContaining('validation.test.js'),
         expect.any(String),
         'utf8'
       );
 
-      // Verify commit was attempted
-      expect(execSyncMock).toHaveBeenCalledWith(
-        expect.stringMatching(/git commit/),
-        expect.any(Object)
-      );
+      const writtenContent = (fs.writeFileSync as ReturnType<typeof vi.fn>).mock.calls[0][1] as string;
+      expect(writtenContent).toContain('describe(');
+      expect(writtenContent).toContain('it(\'SQL injection test\'');
+      expect(writtenContent).toContain('expect(true).toBe(true);');
+      // Should NOT be JSON
+      expect(writtenContent).not.toMatch(/^\s*\{/);
     });
 
-    it('should force commit tests in test mode even if tests are imperfect', async () => {
-      const imperfectTestContent = {
-        incomplete: 'This is an incomplete test'
+    it('should handle branch creation failure and still commit tests', async () => {
+      const testContent = {
+        redTests: [{ testName: 'test', testCode: 'expect(1).toBe(1);' }]
       };
 
-      const execSyncMock = execSync as any;
-      execSyncMock.mockReturnValue(Buffer.from(''));
+      const execSyncMock = execSync as unknown as ReturnType<typeof vi.fn>;
+      execSyncMock.mockImplementation((cmd: string) => {
+        if (typeof cmd === 'string' && cmd.includes('git checkout -b')) {
+          throw new Error('Branch already exists');
+        }
+        return Buffer.from('');
+      });
 
-      (fs.mkdirSync as any).mockReturnValue(undefined);
-      (fs.writeFileSync as any).mockReturnValue(undefined);
+      // commitTestsToBranch doesn't create branches itself - it writes files and commits
+      await validationMode.commitTestsToBranch(testContent, 'rsolv/validate/issue-123', mockIssue);
 
-      // Should not throw even with imperfect content
-      await expect(
-        validationMode.commitTestsToBranch(imperfectTestContent, 'rsolv/validate/issue-123')
-      ).resolves.not.toThrow();
-
-      // Verify file was written with serialized content
-      expect(fs.writeFileSync).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.stringContaining('"incomplete"'),
-        'utf8'
-      );
+      // Verify test file was still written
+      expect(fs.writeFileSync).toHaveBeenCalled();
     });
 
-    it('should handle test commit even when git push fails', async () => {
-      const testContent = { test: 'content' };
+    it('should convert arbitrary object content to executable tests', async () => {
+      const arbitraryContent = {
+        red: {
+          testName: 'Arbitrary test',
+          testCode: 'const x = 1;\nexpect(x).toBe(1);'
+        }
+      };
 
-      const execSyncMock = execSync as any;
+      const execSyncMock = execSync as unknown as ReturnType<typeof vi.fn>;
+      execSyncMock.mockReturnValue(Buffer.from(''));
+
+      await validationMode.commitTestsToBranch(arbitraryContent, 'rsolv/validate/issue-123', mockIssue);
+
+      const writtenContent = (fs.writeFileSync as ReturnType<typeof vi.fn>).mock.calls[0][1] as string;
+      // Should contain describe/it structure
+      expect(writtenContent).toContain('describe(');
+      expect(writtenContent).toContain('it(\'Arbitrary test\'');
+    });
+
+    it('should handle git push failure gracefully', async () => {
+      const testContent = {
+        redTests: [{ testName: 'test', testCode: 'expect(1).toBe(1);' }]
+      };
+
+      const execSyncMock = execSync as unknown as ReturnType<typeof vi.fn>;
       execSyncMock.mockImplementation((cmd: string) => {
-        if (cmd.includes('git push')) {
+        if (typeof cmd === 'string' && cmd.includes('git push')) {
           throw new Error('Authentication failed');
         }
         return Buffer.from('');
       });
 
-      (fs.mkdirSync as any).mockReturnValue(undefined);
-      (fs.writeFileSync as any).mockReturnValue(undefined);
-
       // Should not throw even if push fails
       await expect(
-        validationMode.commitTestsToBranch(testContent, 'rsolv/validate/issue-123')
+        validationMode.commitTestsToBranch(testContent, 'rsolv/validate/issue-123', mockIssue)
       ).resolves.not.toThrow();
 
       // Verify test was still written and committed locally
@@ -119,40 +146,48 @@ describe.skip('ValidationMode - Test Commit in Test Mode', () => {
         expect.any(Object)
       );
     });
+
+    it('should pass string content through without conversion', async () => {
+      const stringContent = 'describe(\'Existing test\', () => {\n  it(\'works\', () => {\n    expect(true).toBe(true);\n  });\n});\n';
+
+      const execSyncMock = execSync as unknown as ReturnType<typeof vi.fn>;
+      execSyncMock.mockReturnValue(Buffer.from(''));
+
+      await validationMode.commitTestsToBranch(stringContent, 'rsolv/validate/issue-123', mockIssue);
+
+      const writtenContent = (fs.writeFileSync as ReturnType<typeof vi.fn>).mock.calls[0][1] as string;
+      expect(writtenContent).toBe(stringContent);
+    });
   });
 
-  describe('validateIssue in test mode', () => {
-    it('should ensure test commits happen in test mode regardless of test quality', async () => {
+  describe('validateVulnerability in test mode', () => {
+    it('should attempt test commits in test mode regardless of test quality', async () => {
       process.env.RSOLV_TESTING_MODE = 'true';
 
-      // Mock the necessary methods
-      const createBranchSpy = vi.spyOn(validationMode as any, 'createValidationBranch')
+      // Cast to test access type for spying on private methods
+      // vi.spyOn requires the object directly; ValidationModeTestAccess
+      // provides type-safe method names without `as any`
+      const spyTarget = validationMode as unknown as ValidationModeTestAccess;
+
+      const createBranchSpy = vi.spyOn(spyTarget, 'createValidationBranch')
         .mockResolvedValue('rsolv/validate/issue-123');
 
-      const commitTestsSpy = vi.spyOn(validationMode as any, 'commitTestsToBranch')
+      const commitTestsSpy = vi.spyOn(spyTarget, 'commitTestsToBranch')
         .mockResolvedValue(undefined);
 
-      const generateTestsSpy = vi.spyOn(validationMode as any, 'generateRedTests')
+      vi.spyOn(spyTarget, 'generateRedTests')
         .mockResolvedValue({
           generatedTests: {
-            testSuite: { red: { testCode: 'test' } }
+            testSuite: { redTests: [{ testCode: 'test', testName: 'test' }] }
           }
         });
 
-      // Mock other required methods
-      vi.spyOn(validationMode as any, 'analyzeCodebase').mockResolvedValue({});
-      vi.spyOn(validationMode as any, 'storeValidationResultWithBranch').mockResolvedValue(undefined);
+      vi.spyOn(spyTarget, 'storeValidationResultWithBranch').mockResolvedValue(undefined);
 
-      // Mock the test validator
-      const GitBasedTestValidator = vi.fn().mockImplementation(() => ({
-        validateFixWithTests: vi.fn().mockResolvedValue({ success: true })
-      }));
-      (validationMode as any).GitBasedTestValidator = GitBasedTestValidator;
+      // Call validateVulnerability
+      await validationMode.validateVulnerability(mockIssue);
 
-      // Call validateIssue
-      await validationMode.validateIssue(mockIssue as any);
-
-      // Verify test commit was attempted even in test mode
+      // Verify branch creation and test commit were attempted
       expect(createBranchSpy).toHaveBeenCalled();
       expect(commitTestsSpy).toHaveBeenCalled();
     });

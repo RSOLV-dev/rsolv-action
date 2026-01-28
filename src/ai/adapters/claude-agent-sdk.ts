@@ -291,7 +291,7 @@ export class ClaudeAgentSDKAdapter {
     }
 
     // Last resort: return the first path and let the SDK fail with a clear error
-    logger.warn(`[SDK] Claude Code CLI not found at any expected location, using default path`);
+    logger.warn('[SDK] Claude Code CLI not found at any expected location, using default path');
     return possiblePaths[0];
   }
 
@@ -865,14 +865,14 @@ Do NOT make any changes yet.`;
     // Fork A: Conservative approach
     const conservative = await this.generateWithResume(
       this.sessionId,
-      `Fix the vulnerability with MINIMAL changes. Only modify what is absolutely necessary.`,
+      'Fix the vulnerability with MINIMAL changes. Only modify what is absolutely necessary.',
       true
     );
 
     // Fork B: Aggressive approach (refactor for security)
     const aggressive = await this.generateWithResume(
       this.sessionId,
-      `Fix the vulnerability with a thorough approach. Refactor if needed for better security.`,
+      'Fix the vulnerability with a thorough approach. Refactor if needed for better security.',
       true
     );
 

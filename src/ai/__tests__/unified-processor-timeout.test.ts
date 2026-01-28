@@ -361,41 +361,28 @@ describe('Unified Processor Timeout Behavior', () => {
   });
 
   test('should include processing time in results', async () => {
-    // Mock dependencies with artificial delays
-    const analyzeIssueSpy = vi.spyOn(analyzerModule, 'analyzeIssue').mockImplementation(async () => {
-      await new Promise(resolve => setTimeout(resolve, 100));
-      return mockAnalysis;
+    // Mock all dependencies
+    const analyzeIssueSpy = vi.spyOn(analyzerModule, 'analyzeIssue').mockResolvedValue(mockAnalysis);
+    vi.spyOn(solutionModule, 'generateSolution').mockResolvedValue({
+      success: true,
+      message: 'Solution generated',
+      changes: { 'test.ts': 'fixed content' }
     });
-    
-    const generateSolutionSpy = vi.spyOn(solutionModule, 'generateSolution').mockImplementation(async () => {
-      await new Promise(resolve => setTimeout(resolve, 100));
-      return {
-        success: true,
-        message: 'Solution generated',
-        changes: { 'test.ts': 'fixed content' }
-      };
-    });
-    
-    const createPullRequestSpy = vi.spyOn(githubModule, 'createPullRequest').mockImplementation(async () => {
-      await new Promise(resolve => setTimeout(resolve, 100));
-      return {
-        success: true,
-        pullRequestUrl: 'https://github.com/test/repo/pull/1',
-        message: 'PR created'
-      };
+    vi.spyOn(githubModule, 'createPullRequest').mockResolvedValue({
+      success: true,
+      pullRequestUrl: 'https://github.com/test/repo/pull/1',
+      message: 'PR created'
     });
 
-    const start = Date.now();
+    // RFC-095: With claude-code provider, the adapter path is used which returns
+    // contextGatheringTime in the result (not wall clock processingTime)
     const results = await processIssues([mockIssue], mockConfig, {});
-    const totalDuration = Date.now() - start;
 
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(true);
-
-    // RFC-095: With mocked ClaudeAgentSDKAdapter, only analyzeIssue is in the code path
-    // The adapter handles solution generation internally (bypasses generateSolution spy)
-    // Should take at least 100ms (analyzer delay only)
-    expect(totalDuration).toBeGreaterThanOrEqual(100);
+    // contextGatheringTime is included when adapter path is used
+    expect(results[0]).toHaveProperty('contextGatheringTime');
+    expect(typeof results[0].contextGatheringTime).toBe('number');
 
     expect(analyzeIssueSpy).toHaveBeenCalled();
     // RFC-095: generateSolutionSpy and createPullRequestSpy not called - adapter handles full flow

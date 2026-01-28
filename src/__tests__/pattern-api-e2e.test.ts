@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeAll, afterAll, afterEach } from 'vitest';
-import { setupServer } from 'msw/node';
 import { http, HttpResponse } from 'msw';
+import { server } from '../test/mocks/server.js';
 import { SecurityDetectorV2 } from '../security/detector-v2';
 import { PatternAPIClient } from '../security/pattern-api-client';
 import type { SecurityPattern, SecurityIssue } from '../security/types';
@@ -100,8 +100,8 @@ describe('Pattern API E2E Integration with MSW', () => {
     }
   ];
 
-  // Create MSW server with handlers
-  const server = setupServer(
+  // Define handlers for this test suite (will be added to global MSW server)
+  const testHandlers = [
     http.get(`${apiUrl}/api/v1/patterns/javascript`, ({ request }) => {
       const url = new URL(request.url);
       if (url.searchParams.get('format') === 'enhanced') {
@@ -130,15 +130,15 @@ describe('Pattern API E2E Integration with MSW', () => {
       }
       return HttpResponse.json({ count: 0, patterns: [] });
     }),
-    
+
     http.get(`${apiUrl}/health`, () => {
       return HttpResponse.json({ status: 'healthy' });
     }),
-    
+
     http.get(`${apiUrl}/api/v1/patterns/health`, () => {
       return HttpResponse.json({ status: 'healthy' });
     }),
-    
+
     // Catch-all for other language patterns
     http.get(`${apiUrl}/api/v1/patterns/:language`, () => {
       return HttpResponse.json({
@@ -147,21 +147,23 @@ describe('Pattern API E2E Integration with MSW', () => {
         patterns: []
       });
     })
-  );
+  ];
 
   beforeAll(() => {
-    // Start the MSW server
-    server.listen({ onUnhandledRequest: 'bypass' });
+    // Add test handlers to global MSW server
+    server.use(...testHandlers);
   });
 
   afterEach(() => {
-    // Reset handlers between tests
+    // Reset handlers between tests (keeps base handlers)
     server.resetHandlers();
+    // Re-add our test handlers after reset
+    server.use(...testHandlers);
   });
 
   afterAll(() => {
-    // Clean up
-    server.close();
+    // Reset to base handlers only
+    server.resetHandlers();
   });
 
   test('SecurityDetectorV2 fetches patterns from API and detects vulnerabilities', async () => {

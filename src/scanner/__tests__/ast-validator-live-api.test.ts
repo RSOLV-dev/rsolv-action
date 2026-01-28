@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, beforeEach, afterAll, skipIf, vi } from 'vitest';
 import { ASTValidator } from '../ast-validator.js';
 import type { Vulnerability } from '../../security/types.js';
+import { http, passthrough } from 'msw';
 import { server } from '../../test/mocks/server.js';
 
 // These tests require a running RSOLV-api instance
@@ -12,10 +13,15 @@ const SKIP_LIVE_TESTS = process.env.SKIP_LIVE_TESTS === 'true';
 describe('AST Validator Live API Tests', () => {
   let validator: ASTValidator;
   let apiAvailable = false;
-  
+
   beforeAll(async () => {
-    // Bypass MSW for live API tests
-    server.close();
+    // Allow live API requests to pass through MSW (don't close the server)
+    // This avoids conflicts when running in shards with other tests
+    server.use(
+      http.all(`${API_URL}/*`, () => passthrough()),
+      http.all('http://localhost:4003/*', () => passthrough())
+    );
+
     // Check if API is available
     // Skip health check if we're using localhost (live API tests)
     if (API_URL.includes('localhost')) {
@@ -28,7 +34,7 @@ describe('AST Validator Live API Tests', () => {
         apiAvailable = false;
       }
     }
-    
+
     if (!apiAvailable) {
       console.warn(`
 ⚠️  Live API tests skipped - RSOLV-api not available at ${API_URL}
@@ -37,13 +43,13 @@ To run these tests:
 2. Run tests: npx vitest run src/scanner/__tests__/ast-validator-live-api.test.ts
 `);
     }
-    
+
     validator = new ASTValidator(TEST_API_KEY);
   });
-  
+
   afterAll(() => {
-    // Restart MSW after live API tests
-    server.listen({ onUnhandledRequest: 'warn' });
+    // Reset handlers to remove passthrough (let MSW handle requests again)
+    server.resetHandlers();
   });
   
   describe.skip('Real API Integration (Requires Forge Account)', () => {

@@ -628,25 +628,25 @@ export class PhaseExecutor {
         // Retrieve from storage
         try {
           const dataPromise = this.phaseDataClient.retrievePhaseResults(
-          `${options.repository.owner}/${options.repository.name}`,
-          options.issueNumber,
-          commitSha
-        );
+            `${options.repository.owner}/${options.repository.name}`,
+            options.issueNumber,
+            commitSha
+          );
 
-        const dataTimeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Phase data retrieval timeout after 15s')), 15000)
-        );
+          const dataTimeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Phase data retrieval timeout after 15s')), 15000)
+          );
 
-        validationData = await Promise.race([dataPromise, dataTimeoutPromise]) as any;
-        logger.info('[MITIGATE] Step 2 complete: Retrieved validation data', {
-          hasData: !!validationData,
-          keys: validationData ? Object.keys(validationData) : [],
-          hasValidation: !!validationData?.validation,
-          hasValidate: !!validationData?.validate,
-          validationKeys: validationData?.validation ? Object.keys(validationData.validation) : [],
-          validateKeys: validationData?.validate ? Object.keys(validationData.validate) : []
-        });
-      } catch (error) {
+          validationData = await Promise.race([dataPromise, dataTimeoutPromise]) as any;
+          logger.info('[MITIGATE] Step 2 complete: Retrieved validation data', {
+            hasData: !!validationData,
+            keys: validationData ? Object.keys(validationData) : [],
+            hasValidation: !!validationData?.validation,
+            hasValidate: !!validationData?.validate,
+            validationKeys: validationData?.validation ? Object.keys(validationData.validation) : [],
+            validateKeys: validationData?.validate ? Object.keys(validationData.validate) : []
+          });
+        } catch (error) {
           logger.warn('[MITIGATE] Step 2 warning: Failed to retrieve validation data:', {
             error: error instanceof Error ? error.message : String(error),
             stack: error instanceof Error ? error.stack : undefined
