@@ -13,55 +13,9 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import { ValidationMode } from '../validation-mode.js';
-import { ActionConfig, IssueContext } from '../../types/index.js';
+import { IssueContext } from '../../types/index.js';
 import { execSync } from 'child_process';
-
-// Create a minimal config for ValidationMode
-function createTestConfig(): ActionConfig {
-  return {
-    apiKey: 'test-key',
-    rsolvApiKey: 'test-rsolv-key',
-    githubToken: 'test-token',
-    configPath: '.rsolv/config.json',
-    issueLabel: 'rsolv:automate',
-    mode: 'validate',
-    executableTests: true,
-    aiProvider: {
-      apiKey: 'test-ai-key',
-      model: 'claude-sonnet-4-5-20250929',
-      provider: 'anthropic'
-    },
-    containerConfig: {
-      enabled: false
-    },
-    securitySettings: {
-      disableNetworkAccess: false
-    }
-  } as ActionConfig;
-}
-
-// Create a minimal issue context
-function createTestIssue(): IssueContext {
-  return {
-    id: 'issue-123',
-    number: 123,
-    title: 'SQL injection vulnerability',
-    body: 'Vulnerability in app/controllers/users_controller.rb:42',
-    labels: ['rsolv:automate'],
-    assignees: [],
-    file: 'app/controllers/users_controller.rb',
-    repository: {
-      owner: 'test-org',
-      name: 'test-repo',
-      fullName: 'test-org/test-repo',
-      defaultBranch: 'main'
-    },
-    source: 'github',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    metadata: {}
-  };
-}
+import { createTestConfig, createTestIssue } from './test-fixtures.js';
 
 describe('forceCommitTestsInTestMode() Output Format', () => {
   let tempDir: string;

@@ -18,6 +18,7 @@ import { getGitHubClient } from '../github/api.js';
 import { PhaseDataClient } from './phase-data-client/index.js';
 import { TestIntegrationClient } from './test-integration-client.js';
 import { extractVulnerabilitiesFromIssue } from '../utils/vulnerability-extraction.js';
+import { TEST_FILE_PATTERNS, EXCLUDED_DIRECTORIES } from '../constants/test-patterns.js';
 
 export class ValidationMode {
   private config: ActionConfig;
@@ -1539,56 +1540,9 @@ CWE: CWE-22`
   private async scanTestFiles(framework?: string): Promise<string[]> {
     const testFiles: string[] = [];
 
-    // Directories to exclude from search
-    const excludeDirs = new Set([
-      'node_modules',
-      'vendor',
-      '.git',
-      'dist',
-      'build',
-      'coverage',
-      '__pycache__',
-      '.pytest_cache',
-      'target',  // Java/Rust build dir
-      'deps'     // Elixir deps dir
-    ]);
-
-    // Test file patterns (regex) for all supported languages
-    const testPatterns = [
-      // JavaScript/TypeScript (Jest, Vitest, Mocha, Jasmine)
-      /\.spec\.ts$/,
-      /\.spec\.js$/,
-      /\.test\.ts$/,
-      /\.test\.js$/,
-      /\.spec\.tsx$/,
-      /\.spec\.jsx$/,
-      /\.test\.tsx$/,
-      /\.test\.jsx$/,
-      /_spec\.ts$/,    // Jasmine underscore convention
-      /_spec\.js$/,    // Jasmine underscore convention
-
-      // Ruby (RSpec + Minitest)
-      /_spec\.rb$/,    // RSpec convention
-      /_test\.rb$/,    // Minitest suffix convention
-      /^test_.*\.rb$/, // Minitest prefix convention
-
-      // Python (pytest, unittest)
-      /_test\.py$/,    // pytest suffix convention
-      /^test_.*\.py$/, // pytest prefix convention
-
-      // Java (JUnit, TestNG, Spock)
-      /Test\.java$/,   // JUnit standard (ends with Test.java)
-      /Tests\.java$/,  // JUnit plural convention
-      /^Test.*\.java$/, // JUnit prefix convention
-      /Spec\.java$/,   // Spock BDD convention
-
-      // PHP (PHPUnit, Pest)
-      /Test\.php$/,    // PHPUnit standard
-      /_test\.php$/,   // PHPUnit underscore convention
-
-      // Elixir (ExUnit)
-      /_test\.exs$/
-    ];
+    // Use shared constants for pattern matching and directory exclusion
+    const excludeDirs = EXCLUDED_DIRECTORIES;
+    const testPatterns = TEST_FILE_PATTERNS;
 
     /**
      * Recursively scan directory for test files using Node.js fs module.

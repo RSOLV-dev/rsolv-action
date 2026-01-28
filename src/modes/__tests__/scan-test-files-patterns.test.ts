@@ -14,31 +14,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import { ValidationMode } from '../validation-mode.js';
-import { ActionConfig } from '../../types/index.js';
-
-// Create a minimal config for ValidationMode
-function createTestConfig(): ActionConfig {
-  return {
-    apiKey: 'test-key',
-    rsolvApiKey: 'test-rsolv-key',
-    githubToken: 'test-token',
-    configPath: '.rsolv/config.json',
-    issueLabel: 'rsolv:automate',
-    mode: 'validate',
-    executableTests: true,
-    aiProvider: {
-      apiKey: 'test-ai-key',
-      model: 'claude-sonnet-4-5-20250929',
-      provider: 'anthropic'
-    },
-    containerConfig: {
-      enabled: false
-    },
-    securitySettings: {
-      disableNetworkAccess: false
-    }
-  } as ActionConfig;
-}
+import { createTestConfig } from './test-fixtures.js';
 
 describe('scanTestFiles() Pattern Coverage', () => {
   let tempDir: string;
