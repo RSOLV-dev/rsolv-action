@@ -42,11 +42,10 @@ describe('forceCommitTestsInTestMode() Output Format', () => {
     execSync('git add .', { cwd: tempDir, stdio: 'pipe' });
     execSync('git commit -m "Initial commit"', { cwd: tempDir, stdio: 'pipe' });
 
-    // Create ValidationMode with the temp dir as repoPath
+    // Create ValidationMode with the temp dir as repoPath (via constructor)
     const config = createTestConfig();
-    validationMode = new ValidationMode(config);
+    validationMode = new ValidationMode(config, tempDir);
     vm = exposeForTesting(validationMode);
-    vm.repoPath = tempDir;
 
     mockIssue = createTestIssue();
   });

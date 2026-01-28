@@ -24,7 +24,6 @@ export interface TestResultClassification {
  * Avoids `as any` casts while giving tests access to internal methods.
  */
 export interface ValidationModeTestAccess {
-  repoPath: string;
   scanTestFiles(framework?: string): Promise<string[]>;
   classifyTestResult(exitCode: number, stdout: string, stderr: string): TestResultClassification;
   convertToExecutableTest(testContent: unknown): string;
