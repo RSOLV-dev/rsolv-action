@@ -363,12 +363,12 @@ describe('Unified Processor Timeout Behavior', () => {
   test('should include processing time in results', async () => {
     // Mock all dependencies
     const analyzeIssueSpy = vi.spyOn(analyzerModule, 'analyzeIssue').mockResolvedValue(mockAnalysis);
-    const generateSolutionSpy = vi.spyOn(solutionModule, 'generateSolution').mockResolvedValue({
+    vi.spyOn(solutionModule, 'generateSolution').mockResolvedValue({
       success: true,
       message: 'Solution generated',
       changes: { 'test.ts': 'fixed content' }
     });
-    const createPullRequestSpy = vi.spyOn(githubModule, 'createPullRequest').mockResolvedValue({
+    vi.spyOn(githubModule, 'createPullRequest').mockResolvedValue({
       success: true,
       pullRequestUrl: 'https://github.com/test/repo/pull/1',
       message: 'PR created'

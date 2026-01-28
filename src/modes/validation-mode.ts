@@ -577,8 +577,8 @@ ${tests}
       return { type: 'test_failed', isValidFailure: true, reason: 'Assertion failed - vulnerability proven' };
     }
     // Jest/Vitest "Expected:/Received:" output patterns
-    if (/Expected:.*\n.*Received:/is.test(combined) ||
-        /Received:.*\n.*Expected:/is.test(combined)) {
+    if (/Expected:.*\n.*Received:/i.test(combined) ||
+        /Received:.*\n.*Expected:/i.test(combined)) {
       return { type: 'test_failed', isValidFailure: true, reason: 'Jest/Vitest assertion failed - vulnerability proven' };
     }
     // Chai/RSpec "expected ... to" patterns
@@ -621,7 +621,7 @@ ${tests}
       const testCode = this.convertToExecutableTest(testContent);
 
       // Validate syntax only when we generated the code (from object input)
-      // String passthrough may contain non-JavaScript code (Ruby, Python, etc.)
+      // String passthrough is written as-is; skip syntax validation for it
       if (typeof testContent !== 'string') {
         this.validateTestSyntax(testCode);
       }
@@ -721,7 +721,7 @@ ${tests}
         integratedContent = this.convertToExecutableTest(testContent);
 
         // Validate syntax only when we generated the code (from object input)
-        // String passthrough may contain non-JavaScript code (Ruby, Python, etc.)
+        // String passthrough is written as-is; skip syntax validation for it
         if (typeof testContent !== 'string') {
           this.validateTestSyntax(integratedContent);
         }
