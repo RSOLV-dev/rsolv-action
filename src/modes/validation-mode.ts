@@ -402,11 +402,211 @@ export class ValidationMode {
   }
 
   /**
+   * RFC-060-AMENDMENT-001: Convert test content object to executable JavaScript
+   *
+   * Handles multiple input formats:
+   * - String: pass through (already executable)
+   * - { redTests: [...] }: Array of test objects with testName/testCode
+   * - { red: {...} }: Single test object with testName/testCode
+   * - { tests: [...] }: TestSuite format with GeneratedTest[]
+   */
+  private convertToExecutableTest(testContent: unknown): string {
+    // String content - pass through
+    if (typeof testContent === 'string') {
+      return testContent;
+    }
+
+    // Not an object - wrap in minimal test structure
+    if (!testContent || typeof testContent !== 'object') {
+      return `describe('Vulnerability Test', () => {
+  it('validates vulnerability', () => {
+    // ${String(testContent)}
+    expect(true).toBe(true);
+  });
+});
+`;
+    }
+
+    const content = testContent as Record<string, unknown>;
+
+    // Handle { redTests: [...] } format
+    if (Array.isArray(content.redTests)) {
+      const tests = content.redTests
+        .map((test: { testName?: string; testCode?: string }, index: number) => {
+          const name = test.testName || `Test ${index + 1}`;
+          const code = test.testCode || 'expect(true).toBe(true);';
+          return `  it('${this.escapeTestName(name)}', () => {
+${this.indentCode(code, 4)}
+  });`;
+        })
+        .join('\n\n');
+
+      return `describe('Vulnerability Validation Tests', () => {
+${tests}
+});
+`;
+    }
+
+    // Handle { red: {...} } single test format
+    if (content.red && typeof content.red === 'object') {
+      const test = content.red as { testName?: string; testCode?: string };
+      const name = test.testName || 'Vulnerability Test';
+      const code = test.testCode || 'expect(true).toBe(true);';
+      return `describe('Vulnerability Validation Tests', () => {
+  it('${this.escapeTestName(name)}', () => {
+${this.indentCode(code, 4)}
+  });
+});
+`;
+    }
+
+    // Handle { tests: [...] } TestSuite format
+    if (Array.isArray(content.tests)) {
+      const tests = content.tests
+        .map((test: { testCode?: string }, index: number) => {
+          const code = test.testCode || 'expect(true).toBe(true);';
+          return `  it('Test ${index + 1}', () => {
+${this.indentCode(code, 4)}
+  });`;
+        })
+        .join('\n\n');
+
+      return `describe('Vulnerability Validation Tests', () => {
+${tests}
+});
+`;
+    }
+
+    // Unknown object format - create minimal wrapper
+    logger.warn('Unknown test content format, creating minimal test wrapper');
+    return `describe('Vulnerability Validation Tests', () => {
+  it('validates vulnerability', () => {
+    // Test content could not be properly parsed
+    expect(true).toBe(true);
+  });
+});
+`;
+  }
+
+  /**
+   * Helper: Escape single quotes in test names for JavaScript strings
+   */
+  private escapeTestName(name: string): string {
+    return name.replace(/'/g, "\\'").replace(/\n/g, ' ');
+  }
+
+  /**
+   * Helper: Indent code block by specified number of spaces
+   */
+  private indentCode(code: string, spaces: number): string {
+    const indent = ' '.repeat(spaces);
+    return code
+      .trim()
+      .split('\n')
+      .map(line => indent + line)
+      .join('\n');
+  }
+
+  /**
+   * RFC-060-AMENDMENT-001: Validate JavaScript syntax before writing test file
+   *
+   * Uses Function constructor to parse code without executing it.
+   * Throws SyntaxError if code is invalid.
+   */
+  private validateTestSyntax(code: string): void {
+    try {
+      // Function constructor parses but doesn't execute
+      new Function(code);
+    } catch (error) {
+      if (error instanceof SyntaxError) {
+        throw new Error(`Invalid JavaScript syntax in generated test: ${error.message}`);
+      }
+      // Other errors (like ReferenceError) are runtime errors, which are expected
+      // for RED tests that reference undefined functions
+    }
+  }
+
+  /**
+   * RFC-060-AMENDMENT-001: Classify test execution result
+   *
+   * Distinguishes between valid test failures (vulnerability proven) and
+   * errors (syntax errors, missing dependencies, etc.) that don't prove anything.
+   */
+  classifyTestResult(exitCode: number, stdout: string, stderr: string): {
+    type: 'test_passed' | 'test_failed' | 'syntax_error' | 'runtime_error' |
+          'missing_dependency' | 'command_not_found' | 'oom_killed' | 'terminated' | 'unknown';
+    isValidFailure: boolean;
+    reason: string;
+  } {
+    const combined = stdout + stderr;
+
+    // Check exit code first
+    if (exitCode === 0) {
+      return { type: 'test_passed', isValidFailure: false, reason: 'Tests passed - vulnerability not proven' };
+    }
+    if (exitCode === 127) {
+      return { type: 'command_not_found', isValidFailure: false, reason: 'Test runner not installed' };
+    }
+    if (exitCode === 137) {
+      return { type: 'oom_killed', isValidFailure: false, reason: 'Process killed - out of memory' };
+    }
+    if (exitCode === 143 || exitCode === 130) {
+      return { type: 'terminated', isValidFailure: false, reason: 'Process terminated or interrupted' };
+    }
+
+    // Check for error patterns FIRST (take priority over failure markers)
+    if (/SyntaxError|Unexpected token|unexpected end of|syntax error/i.test(combined)) {
+      return { type: 'syntax_error', isValidFailure: false, reason: 'Syntax error in test file' };
+    }
+    if (/ReferenceError|is not defined/i.test(combined)) {
+      return { type: 'runtime_error', isValidFailure: false, reason: 'Reference error - undefined variable' };
+    }
+    if (/TypeError:.*is not a function/i.test(combined)) {
+      return { type: 'runtime_error', isValidFailure: false, reason: 'Type error - function not found' };
+    }
+    if (/Cannot find module|ModuleNotFoundError|No module named|LoadError.*cannot load such file/i.test(combined)) {
+      return { type: 'missing_dependency', isValidFailure: false, reason: 'Missing dependency or module' };
+    }
+    if (/command not found|ENOENT/i.test(combined)) {
+      return { type: 'command_not_found', isValidFailure: false, reason: 'Command or file not found' };
+    }
+
+    // Check for valid test failure patterns
+    if (/AssertionError/i.test(combined)) {
+      return { type: 'test_failed', isValidFailure: true, reason: 'Assertion failed - vulnerability proven' };
+    }
+    // Jest/Vitest "Expected:/Received:" output patterns
+    if (/Expected:.*\n.*Received:/is.test(combined) ||
+        /Received:.*\n.*Expected:/is.test(combined)) {
+      return { type: 'test_failed', isValidFailure: true, reason: 'Jest/Vitest assertion failed - vulnerability proven' };
+    }
+    // Chai/RSpec "expected ... to" patterns
+    if (/expected\s+.*\s+to\s+(be|equal|match|include|contain)/i.test(combined)) {
+      return { type: 'test_failed', isValidFailure: true, reason: 'Assertion failed - vulnerability proven' };
+    }
+    // Checkmark failure symbols (✗ or ✖)
+    if (/[✗✖]/.test(combined) && exitCode === 1) {
+      return { type: 'test_failed', isValidFailure: true, reason: 'Test failed (checkmark) - vulnerability proven' };
+    }
+    // FAIL marker with failure indicators
+    if (/(FAIL|FAILED|Failures:|failed)/i.test(combined) && exitCode === 1) {
+      // Make sure it's not just a "FAIL" from error output
+      if (/(tests?|examples?|specs?).*fail/i.test(combined) ||
+          /\d+\s+(failed|failure)/i.test(combined)) {
+        return { type: 'test_failed', isValidFailure: true, reason: 'Test failed - vulnerability proven' };
+      }
+    }
+
+    // Unknown exit code 1 - could be test failure or error
+    return { type: 'unknown', isValidFailure: false, reason: 'Exit code 1 without clear failure pattern - manual review needed' };
+  }
+
+  /**
    * Force commit tests in test mode - ensures tests are always persisted
    * even when normal commit process fails
    */
   async forceCommitTestsInTestMode(
-    testContent: any,
+    testContent: unknown,
     branchName: string,
     issue: IssueContext
   ): Promise<void> {
@@ -416,14 +616,18 @@ export class ValidationMode {
       // Ensure directory exists
       fs.mkdirSync(testDir, { recursive: true });
 
-      // Serialize test content
-      const testString = typeof testContent === 'string'
-        ? testContent
-        : JSON.stringify(testContent, null, 2);
+      // RFC-060-AMENDMENT-001: Convert to executable JavaScript (not JSON)
+      const testCode = this.convertToExecutableTest(testContent);
+
+      // Validate syntax only when we generated the code (from object input)
+      // String passthrough may contain non-JavaScript code (Ruby, Python, etc.)
+      if (typeof testContent !== 'string') {
+        this.validateTestSyntax(testCode);
+      }
 
       // Write test file
       const testPath = path.join(testDir, 'validation.test.js');
-      fs.writeFileSync(testPath, testString, 'utf8');
+      fs.writeFileSync(testPath, testCode, 'utf8');
 
       // Try to ensure we're on the right branch
       try {
@@ -512,13 +716,13 @@ export class ValidationMode {
         const testDir = path.join(this.repoPath, '.rsolv', 'tests');
         fs.mkdirSync(testDir, { recursive: true });
 
-        // Serialize test content
-        if (typeof testContent === 'string') {
-          integratedContent = testContent;
-        } else if (testContent && typeof testContent === 'object') {
-          integratedContent = JSON.stringify(testContent, null, 2);
-        } else {
-          integratedContent = `// Validation test\ndescribe('Vulnerability Test', () => {\n  it('validates vulnerability', () => {\n    // ${testContent}\n  });\n});\n`;
+        // RFC-060-AMENDMENT-001: Convert to executable JavaScript (not JSON)
+        integratedContent = this.convertToExecutableTest(testContent);
+
+        // Validate syntax only when we generated the code (from object input)
+        // String passthrough may contain non-JavaScript code (Ruby, Python, etc.)
+        if (typeof testContent !== 'string') {
+          this.validateTestSyntax(integratedContent);
         }
 
         targetFile = path.join(testDir, 'validation.test.js');
@@ -1330,34 +1534,95 @@ CWE: CWE-22`
 
   /**
    * Scan repository for test files
+   * RFC-060-AMENDMENT-001: Comprehensive pattern coverage for all supported languages
    */
   private async scanTestFiles(framework?: string): Promise<string[]> {
     const testFiles: string[] = [];
-    const patterns = [
-      '**/*.spec.ts',
-      '**/*.spec.js',
-      '**/*.test.ts',
-      '**/*.test.js',
-      '**/*_spec.rb',
-      '**/*_test.py',
-      '**/*Test.java',
-      '**/*_test.exs'
+
+    // Directories to exclude from search
+    const excludeDirs = new Set([
+      'node_modules',
+      'vendor',
+      '.git',
+      'dist',
+      'build',
+      'coverage',
+      '__pycache__',
+      '.pytest_cache',
+      'target',  // Java/Rust build dir
+      'deps'     // Elixir deps dir
+    ]);
+
+    // Test file patterns (regex) for all supported languages
+    const testPatterns = [
+      // JavaScript/TypeScript (Jest, Vitest, Mocha, Jasmine)
+      /\.spec\.ts$/,
+      /\.spec\.js$/,
+      /\.test\.ts$/,
+      /\.test\.js$/,
+      /\.spec\.tsx$/,
+      /\.spec\.jsx$/,
+      /\.test\.tsx$/,
+      /\.test\.jsx$/,
+      /_spec\.ts$/,    // Jasmine underscore convention
+      /_spec\.js$/,    // Jasmine underscore convention
+
+      // Ruby (RSpec + Minitest)
+      /_spec\.rb$/,    // RSpec convention
+      /_test\.rb$/,    // Minitest suffix convention
+      /^test_.*\.rb$/, // Minitest prefix convention
+
+      // Python (pytest, unittest)
+      /_test\.py$/,    // pytest suffix convention
+      /^test_.*\.py$/, // pytest prefix convention
+
+      // Java (JUnit, TestNG, Spock)
+      /Test\.java$/,   // JUnit standard (ends with Test.java)
+      /Tests\.java$/,  // JUnit plural convention
+      /^Test.*\.java$/, // JUnit prefix convention
+      /Spec\.java$/,   // Spock BDD convention
+
+      // PHP (PHPUnit, Pest)
+      /Test\.php$/,    // PHPUnit standard
+      /_test\.php$/,   // PHPUnit underscore convention
+
+      // Elixir (ExUnit)
+      /_test\.exs$/
     ];
 
-    for (const pattern of patterns) {
+    /**
+     * Recursively scan directory for test files using Node.js fs module.
+     * More reliable than shell 'find' command in test environments.
+     */
+    const scanDirectory = (dir: string): void => {
       try {
-        const matches = execSync(`find ${this.repoPath} -name "${pattern.replace('**/', '')}" -type f`, {
-          encoding: 'utf8',
-          maxBuffer: 10 * 1024 * 1024 // 10MB
-        }).trim().split('\n').filter(Boolean);
+        const entries = fs.readdirSync(dir, { withFileTypes: true });
 
-        testFiles.push(...matches);
+        for (const entry of entries) {
+          const fullPath = path.join(dir, entry.name);
+
+          if (entry.isDirectory()) {
+            // Skip excluded directories
+            if (!excludeDirs.has(entry.name)) {
+              scanDirectory(fullPath);
+            }
+          } else if (entry.isFile()) {
+            // Check if file matches any test pattern
+            const fileName = entry.name;
+            if (testPatterns.some(pattern => pattern.test(fileName))) {
+              testFiles.push(fullPath);
+            }
+          }
+        }
       } catch (error) {
-        // Pattern not found, continue
+        // Directory might not exist or be unreadable, skip it
       }
-    }
+    };
 
-    return testFiles;
+    scanDirectory(this.repoPath);
+
+    // Remove duplicates and return
+    return [...new Set(testFiles)];
   }
 
   /**

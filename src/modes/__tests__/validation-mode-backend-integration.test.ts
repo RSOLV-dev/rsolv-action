@@ -121,9 +121,14 @@ end`;
     (execSync as any).mockImplementation((cmd: string) => {
       if (cmd.includes('git status')) return '';
       if (cmd.includes('git rev-parse HEAD')) return 'abc123';
-      if (cmd.includes('find')) return 'spec/controllers/users_controller_spec.rb\nspec/models/user_spec.rb';
       return '';
     });
+
+    // Mock scanTestFiles since it uses fs.readdirSync internally (not shell `find`)
+    vi.spyOn(validationMode as any, 'scanTestFiles').mockResolvedValue([
+      'spec/controllers/users_controller_spec.rb',
+      'spec/models/user_spec.rb'
+    ]);
   });
 
   afterEach(() => {
@@ -363,10 +368,11 @@ end`,
       // Arrange
       mockIssue.file = 'src/controllers/users.ts';
 
-      (execSync as any).mockImplementation((cmd: string) => {
-        if (cmd.includes('find')) return 'test/users.test.ts\ntest/api.test.ts';
-        return '';
-      });
+      // Override scanTestFiles mock for TypeScript files
+      vi.spyOn(validationMode as any, 'scanTestFiles').mockResolvedValue([
+        'test/users.test.ts',
+        'test/api.test.ts'
+      ]);
 
       mockTestIntegrationClient.analyze.mockResolvedValue({
         recommendations: [{ path: 'test/users.test.ts', score: 1.0, reason: 'match' }],
