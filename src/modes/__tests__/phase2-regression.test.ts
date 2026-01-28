@@ -157,9 +157,52 @@ describe('Phase 2 Regression Tests', () => {
       const result = vm.sanitizeTestStructure(regularCode);
       expect(result).toBe(regularCode);
     });
+
+    it('should handle nested test() with inner callbacks (brace depth tracking)', () => {
+      // Reproduces the exact AI output that caused the brace-depth bug:
+      // jest.fn callbacks inside test() have }) closings that the old naive
+      // state machine would match as the end of the test() block.
+      const badCode = `describe('Vulnerability Validation Tests', () => {
+  it('SQL Injection via userId parameter', () => {
+    const { ProfileDAO } = require('./profile');
+
+    test('SQL injection should fail', (done) => {
+      const mockDb = {
+        collection: () => ({
+          findOne: jest.fn((query, callback) => {
+            expect(query._id).toBe(NaN);
+            callback(null, { _id: 999, firstName: 'Admin' });
+          })
+        })
+      };
+      const dao = new ProfileDAO(mockDb);
+      dao.getByUserId("1' OR '1'='1", (err, user) => {
+        expect(user).toBeDefined();
+        done();
+      });
+    });
+  });
+});`;
+
+      const result = vm.sanitizeTestStructure(badCode);
+
+      // test() wrapper must be removed
+      expect(result).not.toMatch(/\btest\s*\(/);
+
+      // All inner code preserved (including jest.fn callback closings)
+      expect(result).toContain('jest.fn((query, callback)');
+      expect(result).toContain('expect(query._id).toBe(NaN)');
+      expect(result).toContain('expect(user).toBeDefined()');
+      expect(result).toContain('ProfileDAO');
+      expect(result).toContain('collection');
+
+      // Structure intact
+      expect(result).toContain('describe(');
+      expect(result).toContain('it(');
+    });
   });
 
-  describe('convertToExecutableTest() applies sanitization to strings', () => {
+  describe('convertToExecutableTestSanitized() applies sanitization to all paths', () => {
     it('should sanitize nested it/test in string input', () => {
       const badString = `describe('Tests', () => {
   it('check', () => {
@@ -169,14 +212,37 @@ describe('Phase 2 Regression Tests', () => {
   });
 });`;
 
-      const result = vm.convertToExecutableTest(badString);
+      const result = vm.convertToExecutableTestSanitized(badString);
 
       // Should be sanitized — no nested test() inside it()
       expect(result).toContain('expect(1).toBe(1)');
       expect(result).not.toContain("test('inner'");
     });
 
-    it('should still handle object formats correctly', () => {
+    it('should sanitize object input where testCode contains test() blocks', () => {
+      // This is the exact scenario from staging: AI returns an object where
+      // testCode itself contains a test() block, which gets wrapped in it()
+      const objectInput = {
+        red: {
+          testName: 'SQL Injection test',
+          testCode: `test('should detect injection', () => {
+      expect(isVulnerable("' OR 1=1")).toBe(true);
+    });`
+        }
+      };
+
+      const result = vm.convertToExecutableTestSanitized(objectInput);
+
+      // Should be executable JS with describe/it structure
+      expect(result).toContain('describe(');
+      expect(result).toContain('it(');
+      // The nested test() should be stripped
+      expect(result).not.toMatch(/\btest\s*\(/);
+      // The assertion body should be preserved
+      expect(result).toContain('expect(isVulnerable');
+    });
+
+    it('should still handle clean object formats correctly', () => {
       const objectInput = {
         red: {
           testName: 'SQL Injection test',
@@ -184,7 +250,7 @@ describe('Phase 2 Regression Tests', () => {
         }
       };
 
-      const result = vm.convertToExecutableTest(objectInput);
+      const result = vm.convertToExecutableTestSanitized(objectInput);
 
       // Should be executable JS, not JSON
       expect(result).toContain('describe(');

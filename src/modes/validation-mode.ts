@@ -500,6 +500,17 @@ ${tests}
   }
 
   /**
+   * Convert test content to executable code and sanitize the result.
+   * Wraps convertToExecutableTest to ensure sanitization always runs,
+   * even when the input is an object whose testCode contains nested test() blocks.
+   */
+  private convertToExecutableTestSanitized(testContent: unknown): string {
+    const code = this.convertToExecutableTest(testContent);
+    // Always sanitize the final output, regardless of input type
+    return this.sanitizeTestStructure(code);
+  }
+
+  /**
    * Sanitize test structure to fix common AI-generated issues.
    *
    * Detects nested it()/test() blocks (invalid in Jest/Vitest/Mocha) and
@@ -517,31 +528,49 @@ ${tests}
       return code;
     }
 
-    // Line-based approach: strip inner test() wrappers nested inside it() blocks
+    // Line-based approach with brace depth tracking:
+    // Strip inner test() wrappers nested inside it() blocks.
+    // Track brace depth to correctly find the closing }); of the nested test(),
+    // ignoring inner closings from callbacks, arrow functions, etc.
     const lines = code.split('\n');
     const result: string[] = [];
     let inIt = false;
     let inNestedTest = false;
+    let nestedTestBraceDepth = 0;
 
     for (const line of lines) {
       if (/^\s*it\s*\(/.test(line)) {
         inIt = true;
       }
 
-      // Inside it(): skip test() opening wrapper
-      if (inIt && /^\s*test\s*\(/.test(line)) {
+      // Inside it(): detect test() opening wrapper
+      if (inIt && !inNestedTest && /^\s*test\s*\(/.test(line)) {
         inNestedTest = true;
+        // Count opening braces on the test() line itself
+        nestedTestBraceDepth = (line.match(/\{/g) || []).length - (line.match(/\}/g) || []).length;
         continue;
       }
 
-      // Inside nested test(): skip its closing }); wrapper
-      if (inNestedTest && /^\s*\}\s*\)\s*;?\s*$/.test(line.trim())) {
-        inNestedTest = false;
+      if (inNestedTest) {
+        // Track brace depth inside the nested test() block
+        const opens = (line.match(/\{/g) || []).length;
+        const closes = (line.match(/\}/g) || []).length;
+        nestedTestBraceDepth += opens - closes;
+
+        // When depth drops to 0 (or below) and line looks like a closing, we found the end
+        if (nestedTestBraceDepth <= 0 && /^\s*\}\s*\)\s*;?\s*$/.test(line.trim())) {
+          inNestedTest = false;
+          nestedTestBraceDepth = 0;
+          continue;
+        }
+
+        // Otherwise, keep the line (it's the test body, just strip the wrapper)
+        result.push(line);
         continue;
       }
 
-      // Track when we leave an it() block (only when not inside nested test)
-      if (inIt && !inNestedTest && /^\s*\}\s*\)\s*;?\s*$/.test(line.trim())) {
+      // Track when we leave an it() block
+      if (inIt && /^\s*\}\s*\)\s*;?\s*$/.test(line.trim())) {
         inIt = false;
       }
 
@@ -680,7 +709,7 @@ ${tests}
       fs.mkdirSync(testDir, { recursive: true });
 
       // RFC-060-AMENDMENT-001: Convert to executable JavaScript (not JSON)
-      const testCode = this.convertToExecutableTest(testContent);
+      const testCode = this.convertToExecutableTestSanitized(testContent);
 
       // Validate syntax only when we generated the code (from object input)
       // String passthrough is written as-is; skip syntax validation for it
@@ -780,7 +809,7 @@ ${tests}
         fs.mkdirSync(testDir, { recursive: true });
 
         // RFC-060-AMENDMENT-001: Convert to executable JavaScript (not JSON)
-        integratedContent = this.convertToExecutableTest(testContent);
+        integratedContent = this.convertToExecutableTestSanitized(testContent);
 
         // Validate syntax only when we generated the code (from object input)
         // String passthrough is written as-is; skip syntax validation for it
