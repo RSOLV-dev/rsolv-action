@@ -493,7 +493,7 @@ ${tests}
    * Helper: Escape single quotes in test names for JavaScript strings
    */
   private escapeTestName(name: string): string {
-    return name.replace(/'/g, "\\'").replace(/\n/g, ' ');
+    return name.replace(/'/g, '\\\'').replace(/\n/g, ' ');
   }
 
   /**

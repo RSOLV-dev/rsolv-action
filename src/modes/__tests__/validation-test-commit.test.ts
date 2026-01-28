@@ -76,7 +76,7 @@ describe('ValidationMode - Test Commit in Test Mode', () => {
 
       const writtenContent = (fs.writeFileSync as ReturnType<typeof vi.fn>).mock.calls[0][1] as string;
       expect(writtenContent).toContain('describe(');
-      expect(writtenContent).toContain("it('SQL injection test'");
+      expect(writtenContent).toContain('it(\'SQL injection test\'');
       expect(writtenContent).toContain('expect(true).toBe(true);');
       // Should NOT be JSON
       expect(writtenContent).not.toMatch(/^\s*\{/);
@@ -118,7 +118,7 @@ describe('ValidationMode - Test Commit in Test Mode', () => {
       const writtenContent = (fs.writeFileSync as ReturnType<typeof vi.fn>).mock.calls[0][1] as string;
       // Should contain describe/it structure
       expect(writtenContent).toContain('describe(');
-      expect(writtenContent).toContain("it('Arbitrary test'");
+      expect(writtenContent).toContain('it(\'Arbitrary test\'');
     });
 
     it('should handle git push failure gracefully', async () => {
@@ -148,7 +148,7 @@ describe('ValidationMode - Test Commit in Test Mode', () => {
     });
 
     it('should pass string content through without conversion', async () => {
-      const stringContent = "describe('Existing test', () => {\n  it('works', () => {\n    expect(true).toBe(true);\n  });\n});\n";
+      const stringContent = 'describe(\'Existing test\', () => {\n  it(\'works\', () => {\n    expect(true).toBe(true);\n  });\n});\n';
 
       const execSyncMock = execSync as unknown as ReturnType<typeof vi.fn>;
       execSyncMock.mockReturnValue(Buffer.from(''));

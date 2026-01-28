@@ -85,7 +85,7 @@ SyntaxError: Unexpected token '{'
     });
 
     it('should detect unexpected token errors', () => {
-      const stderr = "SyntaxError: Unexpected token 'else'";
+      const stderr = 'SyntaxError: Unexpected token \'else\'';
       const result = validationMode.classifyTestResult(1, '', stderr);
 
       expect(result.type).toBe('syntax_error');
@@ -160,7 +160,7 @@ Error: Cannot find module 'express'
     });
 
     it('should detect ModuleNotFoundError (Python)', () => {
-      const stderr = "ModuleNotFoundError: No module named 'django'";
+      const stderr = 'ModuleNotFoundError: No module named \'django\'';
       const result = validationMode.classifyTestResult(1, '', stderr);
 
       expect(result.type).toBe('missing_dependency');
@@ -168,7 +168,7 @@ Error: Cannot find module 'express'
     });
 
     it('should detect No module named error (Python)', () => {
-      const stderr = "ImportError: No module named 'flask'";
+      const stderr = 'ImportError: No module named \'flask\'';
       const result = validationMode.classifyTestResult(1, '', stderr);
 
       expect(result.type).toBe('missing_dependency');
@@ -176,7 +176,7 @@ Error: Cannot find module 'express'
     });
 
     it('should detect LoadError (Ruby)', () => {
-      const stderr = "LoadError: cannot load such file -- rails";
+      const stderr = 'LoadError: cannot load such file -- rails';
       const result = validationMode.classifyTestResult(1, '', stderr);
 
       expect(result.type).toBe('missing_dependency');
@@ -290,7 +290,7 @@ FAIL tests/security.test.js
     });
 
     it('should detect ENOENT errors as file not found', () => {
-      const stderr = "Error: ENOENT: no such file or directory, open 'config.json'";
+      const stderr = 'Error: ENOENT: no such file or directory, open \'config.json\'';
       const result = validationMode.classifyTestResult(1, '', stderr);
 
       expect(result.type).toBe('command_not_found');
