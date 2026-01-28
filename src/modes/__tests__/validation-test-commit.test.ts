@@ -12,7 +12,7 @@ import { ValidationMode } from '../validation-mode.js';
 import { execSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
-import { createTestConfig, createTestIssue } from './test-fixtures.js';
+import { createTestConfig, createTestIssue, type ValidationModeTestAccess } from './test-fixtures.js';
 
 vi.mock('child_process');
 vi.mock('fs');
@@ -164,21 +164,25 @@ describe('ValidationMode - Test Commit in Test Mode', () => {
     it('should attempt test commits in test mode regardless of test quality', async () => {
       process.env.RSOLV_TESTING_MODE = 'true';
 
-      // Mock the necessary methods
-      const createBranchSpy = vi.spyOn(validationMode as any, 'createValidationBranch')
+      // Cast to test access type for spying on private methods
+      // vi.spyOn requires the object directly; ValidationModeTestAccess
+      // provides type-safe method names without `as any`
+      const spyTarget = validationMode as unknown as ValidationModeTestAccess;
+
+      const createBranchSpy = vi.spyOn(spyTarget, 'createValidationBranch')
         .mockResolvedValue('rsolv/validate/issue-123');
 
-      const commitTestsSpy = vi.spyOn(validationMode as any, 'commitTestsToBranch')
+      const commitTestsSpy = vi.spyOn(spyTarget, 'commitTestsToBranch')
         .mockResolvedValue(undefined);
 
-      vi.spyOn(validationMode as any, 'generateRedTests')
+      vi.spyOn(spyTarget, 'generateRedTests')
         .mockResolvedValue({
           generatedTests: {
             testSuite: { redTests: [{ testCode: 'test', testName: 'test' }] }
           }
         });
 
-      vi.spyOn(validationMode as any, 'storeValidationResultWithBranch').mockResolvedValue(undefined);
+      vi.spyOn(spyTarget, 'storeValidationResultWithBranch').mockResolvedValue(undefined);
 
       // Call validateVulnerability
       await validationMode.validateVulnerability(mockIssue);

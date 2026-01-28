@@ -11,15 +11,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { ValidationMode } from '../validation-mode.js';
-import { createTestConfig } from './test-fixtures.js';
-
-// Expected interface for test result classification
-interface TestResultClassification {
-  type: 'test_passed' | 'test_failed' | 'syntax_error' | 'runtime_error' |
-        'missing_dependency' | 'command_not_found' | 'oom_killed' | 'terminated' | 'unknown';
-  isValidFailure: boolean;
-  reason: string;
-}
+import { createTestConfig, type TestResultClassification } from './test-fixtures.js';
 
 describe('Test Result Classification', () => {
   let validationMode: ValidationMode;
@@ -31,7 +23,7 @@ describe('Test Result Classification', () => {
 
   describe('Exit Code Based Classification', () => {
     it('should classify exit code 0 as test passed (not valid failure)', () => {
-      const result = (validationMode as any).classifyTestResult(0, 'All tests passed', '');
+      const result = validationMode.classifyTestResult(0, 'All tests passed', '');
 
       expect(result.type).toBe('test_passed');
       expect(result.isValidFailure).toBe(false);
@@ -40,7 +32,7 @@ describe('Test Result Classification', () => {
 
     it('should classify exit code 127 as command not found', () => {
       const stderr = 'vitest: command not found';
-      const result = (validationMode as any).classifyTestResult(127, '', stderr);
+      const result = validationMode.classifyTestResult(127, '', stderr);
 
       expect(result.type).toBe('command_not_found');
       expect(result.isValidFailure).toBe(false);
@@ -48,7 +40,7 @@ describe('Test Result Classification', () => {
     });
 
     it('should classify exit code 137 as OOM killed', () => {
-      const result = (validationMode as any).classifyTestResult(137, '', '');
+      const result = validationMode.classifyTestResult(137, '', '');
 
       expect(result.type).toBe('oom_killed');
       expect(result.isValidFailure).toBe(false);
@@ -56,7 +48,7 @@ describe('Test Result Classification', () => {
     });
 
     it('should classify exit code 143 as terminated', () => {
-      const result = (validationMode as any).classifyTestResult(143, '', '');
+      const result = validationMode.classifyTestResult(143, '', '');
 
       expect(result.type).toBe('terminated');
       expect(result.isValidFailure).toBe(false);
@@ -64,7 +56,7 @@ describe('Test Result Classification', () => {
     });
 
     it('should classify exit code 130 as interrupted (SIGINT)', () => {
-      const result = (validationMode as any).classifyTestResult(130, '', '');
+      const result = validationMode.classifyTestResult(130, '', '');
 
       expect(result.type).toBe('terminated');
       expect(result.isValidFailure).toBe(false);
@@ -77,7 +69,7 @@ describe('Test Result Classification', () => {
 SyntaxError: Unexpected token '{'
     at Parser.parseStatement (internal/deps/acorn/acorn/dist/acorn.js:123:45)
       `;
-      const result = (validationMode as any).classifyTestResult(1, '', stderr);
+      const result = validationMode.classifyTestResult(1, '', stderr);
 
       expect(result.type).toBe('syntax_error');
       expect(result.isValidFailure).toBe(false);
@@ -86,7 +78,7 @@ SyntaxError: Unexpected token '{'
 
     it('should detect unexpected end of input', () => {
       const stderr = 'SyntaxError: Unexpected end of input';
-      const result = (validationMode as any).classifyTestResult(1, '', stderr);
+      const result = validationMode.classifyTestResult(1, '', stderr);
 
       expect(result.type).toBe('syntax_error');
       expect(result.isValidFailure).toBe(false);
@@ -94,7 +86,7 @@ SyntaxError: Unexpected token '{'
 
     it('should detect unexpected token errors', () => {
       const stderr = "SyntaxError: Unexpected token 'else'";
-      const result = (validationMode as any).classifyTestResult(1, '', stderr);
+      const result = validationMode.classifyTestResult(1, '', stderr);
 
       expect(result.type).toBe('syntax_error');
       expect(result.isValidFailure).toBe(false);
@@ -107,7 +99,7 @@ SyntaxError: Unexpected token '{'
          ^
 SyntaxError: invalid syntax
       `;
-      const result = (validationMode as any).classifyTestResult(1, '', stderr);
+      const result = validationMode.classifyTestResult(1, '', stderr);
 
       expect(result.type).toBe('syntax_error');
       expect(result.isValidFailure).toBe(false);
@@ -117,7 +109,7 @@ SyntaxError: invalid syntax
       const stderr = `
 user_spec.rb:15: syntax error, unexpected keyword_end
       `;
-      const result = (validationMode as any).classifyTestResult(1, '', stderr);
+      const result = validationMode.classifyTestResult(1, '', stderr);
 
       expect(result.type).toBe('syntax_error');
       expect(result.isValidFailure).toBe(false);
@@ -130,7 +122,7 @@ user_spec.rb:15: syntax error, unexpected keyword_end
 ReferenceError: undefinedVariable is not defined
     at Object.<anonymous> (test.js:5:1)
       `;
-      const result = (validationMode as any).classifyTestResult(1, '', stderr);
+      const result = validationMode.classifyTestResult(1, '', stderr);
 
       expect(result.type).toBe('runtime_error');
       expect(result.isValidFailure).toBe(false);
@@ -139,7 +131,7 @@ ReferenceError: undefinedVariable is not defined
 
     it('should detect "is not defined" errors', () => {
       const stderr = 'ReferenceError: detectSQLInjection is not defined';
-      const result = (validationMode as any).classifyTestResult(1, '', stderr);
+      const result = validationMode.classifyTestResult(1, '', stderr);
 
       expect(result.type).toBe('runtime_error');
       expect(result.isValidFailure).toBe(false);
@@ -147,7 +139,7 @@ ReferenceError: undefinedVariable is not defined
 
     it('should detect TypeError for missing functions', () => {
       const stderr = 'TypeError: x.someMethod is not a function';
-      const result = (validationMode as any).classifyTestResult(1, '', stderr);
+      const result = validationMode.classifyTestResult(1, '', stderr);
 
       expect(result.type).toBe('runtime_error');
       expect(result.isValidFailure).toBe(false);
@@ -160,7 +152,7 @@ ReferenceError: undefinedVariable is not defined
 Error: Cannot find module 'express'
     at Function.Module._resolveFilename (internal/modules/cjs/loader.js:636:15)
       `;
-      const result = (validationMode as any).classifyTestResult(1, '', stderr);
+      const result = validationMode.classifyTestResult(1, '', stderr);
 
       expect(result.type).toBe('missing_dependency');
       expect(result.isValidFailure).toBe(false);
@@ -169,7 +161,7 @@ Error: Cannot find module 'express'
 
     it('should detect ModuleNotFoundError (Python)', () => {
       const stderr = "ModuleNotFoundError: No module named 'django'";
-      const result = (validationMode as any).classifyTestResult(1, '', stderr);
+      const result = validationMode.classifyTestResult(1, '', stderr);
 
       expect(result.type).toBe('missing_dependency');
       expect(result.isValidFailure).toBe(false);
@@ -177,7 +169,7 @@ Error: Cannot find module 'express'
 
     it('should detect No module named error (Python)', () => {
       const stderr = "ImportError: No module named 'flask'";
-      const result = (validationMode as any).classifyTestResult(1, '', stderr);
+      const result = validationMode.classifyTestResult(1, '', stderr);
 
       expect(result.type).toBe('missing_dependency');
       expect(result.isValidFailure).toBe(false);
@@ -185,7 +177,7 @@ Error: Cannot find module 'express'
 
     it('should detect LoadError (Ruby)', () => {
       const stderr = "LoadError: cannot load such file -- rails";
-      const result = (validationMode as any).classifyTestResult(1, '', stderr);
+      const result = validationMode.classifyTestResult(1, '', stderr);
 
       expect(result.type).toBe('missing_dependency');
       expect(result.isValidFailure).toBe(false);
@@ -198,7 +190,7 @@ Error: Cannot find module 'express'
 AssertionError: expected 'safe' to equal 'vulnerable'
     at Context.<anonymous> (test.js:10:14)
       `;
-      const result = (validationMode as any).classifyTestResult(1, '', stderr);
+      const result = validationMode.classifyTestResult(1, '', stderr);
 
       expect(result.type).toBe('test_failed');
       expect(result.isValidFailure).toBe(true);
@@ -217,7 +209,7 @@ AssertionError: expected 'safe' to equal 'vulnerable'
 
       at Object.<anonymous> (tests/user.test.js:15:20)
       `;
-      const result = (validationMode as any).classifyTestResult(1, stdout, '');
+      const result = validationMode.classifyTestResult(1, stdout, '');
 
       expect(result.type).toBe('test_failed');
       expect(result.isValidFailure).toBe(true);
@@ -225,7 +217,7 @@ AssertionError: expected 'safe' to equal 'vulnerable'
 
     it('should classify "expected ... to" patterns as valid (Chai/RSpec)', () => {
       const stderr = 'expected result to be vulnerable';
-      const result = (validationMode as any).classifyTestResult(1, '', stderr);
+      const result = validationMode.classifyTestResult(1, '', stderr);
 
       expect(result.type).toBe('test_failed');
       expect(result.isValidFailure).toBe(true);
@@ -237,7 +229,7 @@ Test Suites: 1 failed, 0 passed, 1 total
 Tests:       3 failed, 0 passed, 3 total
 FAIL tests/security.test.js
       `;
-      const result = (validationMode as any).classifyTestResult(1, stdout, '');
+      const result = validationMode.classifyTestResult(1, stdout, '');
 
       expect(result.type).toBe('test_failed');
       expect(result.isValidFailure).toBe(true);
@@ -245,7 +237,7 @@ FAIL tests/security.test.js
 
     it('should classify checkmark failure symbols as valid', () => {
       const stdout = '✗ should detect SQL injection (5ms)';
-      const result = (validationMode as any).classifyTestResult(1, stdout, '');
+      const result = validationMode.classifyTestResult(1, stdout, '');
 
       expect(result.type).toBe('test_failed');
       expect(result.isValidFailure).toBe(true);
@@ -256,7 +248,7 @@ FAIL tests/security.test.js
     Expected: true
     Received: false
       `;
-      const result = (validationMode as any).classifyTestResult(1, stdout, '');
+      const result = validationMode.classifyTestResult(1, stdout, '');
 
       expect(result.type).toBe('test_failed');
       expect(result.isValidFailure).toBe(true);
@@ -265,7 +257,7 @@ FAIL tests/security.test.js
 
   describe('Edge Cases', () => {
     it('should return unknown for exit 1 without clear pattern', () => {
-      const result = (validationMode as any).classifyTestResult(1, '', 'Some error occurred');
+      const result = validationMode.classifyTestResult(1, '', 'Some error occurred');
 
       expect(result.type).toBe('unknown');
       expect(result.isValidFailure).toBe(false);
@@ -273,7 +265,7 @@ FAIL tests/security.test.js
     });
 
     it('should handle empty stdout and stderr', () => {
-      const result = (validationMode as any).classifyTestResult(1, '', '');
+      const result = validationMode.classifyTestResult(1, '', '');
 
       expect(result.type).toBe('unknown');
       expect(result.isValidFailure).toBe(false);
@@ -282,7 +274,7 @@ FAIL tests/security.test.js
     it('should prioritize syntax errors over FAIL markers', () => {
       // If there's a syntax error AND a FAIL marker, syntax error is the real issue
       const stderr = 'SyntaxError: Unexpected token\nFAIL';
-      const result = (validationMode as any).classifyTestResult(1, '', stderr);
+      const result = validationMode.classifyTestResult(1, '', stderr);
 
       expect(result.type).toBe('syntax_error');
       expect(result.isValidFailure).toBe(false);
@@ -291,7 +283,7 @@ FAIL tests/security.test.js
     it('should check both stdout and stderr for patterns', () => {
       const stdout = 'AssertionError: expected true to be false';
       const stderr = '';
-      const result = (validationMode as any).classifyTestResult(1, stdout, stderr);
+      const result = validationMode.classifyTestResult(1, stdout, stderr);
 
       expect(result.type).toBe('test_failed');
       expect(result.isValidFailure).toBe(true);
@@ -299,7 +291,7 @@ FAIL tests/security.test.js
 
     it('should detect ENOENT errors as file not found', () => {
       const stderr = "Error: ENOENT: no such file or directory, open 'config.json'";
-      const result = (validationMode as any).classifyTestResult(1, '', stderr);
+      const result = validationMode.classifyTestResult(1, '', stderr);
 
       expect(result.type).toBe('command_not_found');
       expect(result.isValidFailure).toBe(false);
@@ -321,7 +313,7 @@ tests/test_security.py:15: AssertionError
 =========================== short test summary info ============================
 FAILED tests/test_security.py::test_sql_injection - AssertionError: assert...
       `;
-      const result = (validationMode as any).classifyTestResult(1, stdout, '');
+      const result = validationMode.classifyTestResult(1, stdout, '');
 
       expect(result.type).toBe('test_failed');
       expect(result.isValidFailure).toBe(true);
@@ -340,7 +332,7 @@ Failures:
 Finished in 0.5 seconds (files took 1.2 seconds to load)
 1 example, 1 failure
       `;
-      const result = (validationMode as any).classifyTestResult(1, stdout, '');
+      const result = validationMode.classifyTestResult(1, stdout, '');
 
       expect(result.type).toBe('test_failed');
       expect(result.isValidFailure).toBe(true);
@@ -364,7 +356,7 @@ Failed asserting that false is true.
 FAILURES!
 Tests: 1, Assertions: 1, Failures: 1.
       `;
-      const result = (validationMode as any).classifyTestResult(1, stdout, '');
+      const result = validationMode.classifyTestResult(1, stdout, '');
 
       expect(result.type).toBe('test_failed');
       expect(result.isValidFailure).toBe(true);
@@ -378,7 +370,7 @@ Tests: 1, Assertions: 1, Failures: 1.
 java.lang.AssertionError: expected:<true> but was:<false>
     at org.junit.Assert.fail(Assert.java:88)
       `;
-      const result = (validationMode as any).classifyTestResult(1, stdout, '');
+      const result = validationMode.classifyTestResult(1, stdout, '');
 
       expect(result.type).toBe('test_failed');
       expect(result.isValidFailure).toBe(true);
@@ -396,7 +388,7 @@ java.lang.AssertionError: expected:<true> but was:<false>
 Finished in 0.1 seconds
 1 test, 1 failure
       `;
-      const result = (validationMode as any).classifyTestResult(1, stdout, '');
+      const result = validationMode.classifyTestResult(1, stdout, '');
 
       expect(result.type).toBe('test_failed');
       expect(result.isValidFailure).toBe(true);

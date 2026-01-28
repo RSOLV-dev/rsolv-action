@@ -7,36 +7,75 @@
  */
 
 import { ActionConfig, IssueContext } from '../../types/index.js';
+import type { ValidationMode } from '../validation-mode.js';
+
+/**
+ * Test result classification returned by classifyTestResult().
+ */
+export interface TestResultClassification {
+  type: 'test_passed' | 'test_failed' | 'syntax_error' | 'runtime_error' |
+        'missing_dependency' | 'command_not_found' | 'oom_killed' | 'terminated' | 'unknown';
+  isValidFailure: boolean;
+  reason: string;
+}
+
+/**
+ * Typed interface exposing ValidationMode's private/protected methods for testing.
+ * Avoids `as any` casts while giving tests access to internal methods.
+ */
+export interface ValidationModeTestAccess {
+  repoPath: string;
+  scanTestFiles(framework?: string): Promise<string[]>;
+  classifyTestResult(exitCode: number, stdout: string, stderr: string): TestResultClassification;
+  convertToExecutableTest(testContent: unknown): string;
+  validateTestSyntax(code: string): void;
+  createValidationBranch(issue: IssueContext): Promise<string>;
+  generateRedTests(issue: IssueContext, analysisData: unknown): Promise<unknown>;
+  storeValidationResultWithBranch(
+    issue: IssueContext, testResults: unknown, validationResult: unknown, branchName: string
+  ): Promise<void>;
+  commitTestsToBranch(testContent: unknown, branchName: string, issue?: IssueContext): Promise<void>;
+  forceCommitTestsInTestMode(testContent: unknown, branchName: string, issue: IssueContext): Promise<void>;
+  validateVulnerability(issue: IssueContext): Promise<unknown>;
+}
+
+/**
+ * Cast a ValidationMode instance to expose private methods for testing.
+ * This provides type-safe access to internals without `as any`.
+ */
+export function exposeForTesting(vm: ValidationMode): ValidationModeTestAccess {
+  return vm as unknown as ValidationModeTestAccess;
+}
 
 /**
  * Creates a minimal ActionConfig suitable for ValidationMode tests.
  * Uses test/dummy values for all required fields.
  */
 export function createTestConfig(overrides?: Partial<ActionConfig>): ActionConfig {
-  return {
+  const config: ActionConfig = {
     apiKey: 'test-key',
     rsolvApiKey: 'test-rsolv-key',
-    githubToken: 'test-token',
+    repoToken: 'test-token',
     configPath: '.rsolv/config.json',
     issueLabel: 'rsolv:automate',
-    mode: 'validate',
     executableTests: true,
     aiProvider: {
       apiKey: 'test-ai-key',
       model: 'claude-sonnet-4-5-20250929',
       provider: 'anthropic',
-      ...overrides?.aiProvider
+      ...overrides?.aiProvider,
     },
     containerConfig: {
       enabled: false,
-      ...overrides?.containerConfig
+      ...overrides?.containerConfig,
     },
     securitySettings: {
       disableNetworkAccess: false,
-      ...overrides?.securitySettings
+      ...overrides?.securitySettings,
     },
-    ...overrides
-  } as ActionConfig;
+    ...overrides,
+  };
+  return config;
 }
 
 /**
@@ -44,7 +83,7 @@ export function createTestConfig(overrides?: Partial<ActionConfig>): ActionConfi
  * Defaults to a SQL injection scenario against a Ruby controller.
  */
 export function createTestIssue(overrides?: Partial<IssueContext>): IssueContext {
-  return {
+  const issue: IssueContext = {
     id: 'issue-123',
     number: 123,
     title: 'SQL injection in users controller',
@@ -57,12 +96,13 @@ export function createTestIssue(overrides?: Partial<IssueContext>): IssueContext
       name: 'test-repo',
       fullName: 'test-org/test-repo',
       defaultBranch: 'main',
-      ...overrides?.repository
+      ...overrides?.repository,
     },
     source: 'github',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     metadata: {},
-    ...overrides
-  } as IssueContext;
+    ...overrides,
+  };
+  return issue;
 }

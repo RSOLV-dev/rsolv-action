@@ -6,25 +6,31 @@
  *
  * The bug: When testContent is an object, it was being JSON.stringify'd
  * and written to a .test.js file, which is invalid JavaScript.
+ *
+ * IMPORTANT: This file uses vi.importActual for fs/os/path to prevent
+ * mock interference from other test files sharing the same vitest fork.
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import * as fs from 'fs';
-import * as path from 'path';
-import * as os from 'os';
 import { ValidationMode } from '../validation-mode.js';
 import { IssueContext } from '../../types/index.js';
 import { execSync } from 'child_process';
-import { createTestConfig, createTestIssue } from './test-fixtures.js';
+import { createTestConfig, createTestIssue, exposeForTesting, type ValidationModeTestAccess } from './test-fixtures.js';
+
+// Use vi.importActual to get REAL fs/os/path, immune to mock leaks
+const realFs = await vi.importActual<typeof import('fs')>('fs');
+const realPath = await vi.importActual<typeof import('path')>('path');
+const realOs = await vi.importActual<typeof import('os')>('os');
 
 describe('forceCommitTestsInTestMode() Output Format', () => {
   let tempDir: string;
   let validationMode: ValidationMode;
+  let vm: ValidationModeTestAccess;
   let mockIssue: IssueContext;
 
   beforeEach(() => {
     // Create a real temp directory for each test
-    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rsolv-test-'));
+    tempDir = realFs.mkdtempSync(realPath.join(realOs.tmpdir(), 'rsolv-test-'));
 
     // Initialize as a git repo for commit operations
     execSync('git init', { cwd: tempDir, stdio: 'pipe' });
@@ -32,22 +38,23 @@ describe('forceCommitTestsInTestMode() Output Format', () => {
     execSync('git config user.name "Test User"', { cwd: tempDir, stdio: 'pipe' });
 
     // Create initial commit
-    fs.writeFileSync(path.join(tempDir, 'README.md'), '# Test');
+    realFs.writeFileSync(realPath.join(tempDir, 'README.md'), '# Test');
     execSync('git add .', { cwd: tempDir, stdio: 'pipe' });
     execSync('git commit -m "Initial commit"', { cwd: tempDir, stdio: 'pipe' });
 
     // Create ValidationMode with the temp dir as repoPath
     const config = createTestConfig();
     validationMode = new ValidationMode(config);
-    (validationMode as any).repoPath = tempDir;
+    vm = exposeForTesting(validationMode);
+    vm.repoPath = tempDir;
 
     mockIssue = createTestIssue();
   });
 
   afterEach(() => {
     // Clean up temp directory
-    if (tempDir && fs.existsSync(tempDir)) {
-      fs.rmSync(tempDir, { recursive: true, force: true });
+    if (tempDir && realFs.existsSync(tempDir)) {
+      realFs.rmSync(tempDir, { recursive: true, force: true });
     }
   });
 
@@ -68,10 +75,10 @@ describe('SQL Injection Test', () => {
         mockIssue
       );
 
-      const testFilePath = path.join(tempDir, '.rsolv', 'tests', 'validation.test.js');
-      expect(fs.existsSync(testFilePath)).toBe(true);
+      const testFilePath = realPath.join(tempDir, '.rsolv', 'tests', 'validation.test.js');
+      expect(realFs.existsSync(testFilePath)).toBe(true);
 
-      const writtenContent = fs.readFileSync(testFilePath, 'utf8');
+      const writtenContent = realFs.readFileSync(testFilePath, 'utf8');
       expect(writtenContent).toBe(testContent);
     });
   });
@@ -98,10 +105,10 @@ describe('SQL Injection Test', () => {
         mockIssue
       );
 
-      const testFilePath = path.join(tempDir, '.rsolv', 'tests', 'validation.test.js');
-      expect(fs.existsSync(testFilePath)).toBe(true);
+      const testFilePath = realPath.join(tempDir, '.rsolv', 'tests', 'validation.test.js');
+      expect(realFs.existsSync(testFilePath)).toBe(true);
 
-      const writtenContent = fs.readFileSync(testFilePath, 'utf8');
+      const writtenContent = realFs.readFileSync(testFilePath, 'utf8');
 
       // Content should NOT be JSON
       expect(() => JSON.parse(writtenContent)).toThrow();
@@ -134,8 +141,8 @@ describe('SQL Injection Test', () => {
         mockIssue
       );
 
-      const testFilePath = path.join(tempDir, '.rsolv', 'tests', 'validation.test.js');
-      const writtenContent = fs.readFileSync(testFilePath, 'utf8');
+      const testFilePath = realPath.join(tempDir, '.rsolv', 'tests', 'validation.test.js');
+      const writtenContent = realFs.readFileSync(testFilePath, 'utf8');
 
       // Should be valid JavaScript (parseable by new Function)
       expect(() => new Function(writtenContent)).not.toThrow();
@@ -165,8 +172,8 @@ describe('SQL Injection Test', () => {
         mockIssue
       );
 
-      const testFilePath = path.join(tempDir, '.rsolv', 'tests', 'validation.test.js');
-      const writtenContent = fs.readFileSync(testFilePath, 'utf8');
+      const testFilePath = realPath.join(tempDir, '.rsolv', 'tests', 'validation.test.js');
+      const writtenContent = realFs.readFileSync(testFilePath, 'utf8');
 
       // Should contain all test names
       expect(writtenContent).toContain('type 1');
@@ -193,8 +200,8 @@ describe('SQL Injection Test', () => {
         mockIssue
       );
 
-      const testFilePath = path.join(tempDir, '.rsolv', 'tests', 'validation.test.js');
-      const writtenContent = fs.readFileSync(testFilePath, 'utf8');
+      const testFilePath = realPath.join(tempDir, '.rsolv', 'tests', 'validation.test.js');
+      const writtenContent = realFs.readFileSync(testFilePath, 'utf8');
 
       // Should NOT be JSON
       expect(() => JSON.parse(writtenContent)).toThrow();
@@ -220,7 +227,6 @@ describe('SQL Injection Test', () => {
       };
 
       // Should validate syntax before writing
-      // Note: This test expects the implementation to validate syntax
       await expect(
         validationMode.forceCommitTestsInTestMode(
           testContent,
@@ -253,8 +259,8 @@ describe('SQL Injection Test', () => {
         )
       ).resolves.not.toThrow();
 
-      const testFilePath = path.join(tempDir, '.rsolv', 'tests', 'validation.test.js');
-      expect(fs.existsSync(testFilePath)).toBe(true);
+      const testFilePath = realPath.join(tempDir, '.rsolv', 'tests', 'validation.test.js');
+      expect(realFs.existsSync(testFilePath)).toBe(true);
     });
   });
 
@@ -275,8 +281,8 @@ describe('SQL Injection Test', () => {
         mockIssue
       );
 
-      const testFilePath = path.join(tempDir, '.rsolv', 'tests', 'validation.test.js');
-      const writtenContent = fs.readFileSync(testFilePath, 'utf8');
+      const testFilePath = realPath.join(tempDir, '.rsolv', 'tests', 'validation.test.js');
+      const writtenContent = realFs.readFileSync(testFilePath, 'utf8');
 
       // Should have proper structure
       expect(writtenContent).toMatch(/describe\s*\(['"]/);
@@ -304,8 +310,8 @@ describe('SQL Injection Test', () => {
         mockIssue
       );
 
-      const testFilePath = path.join(tempDir, '.rsolv', 'tests', 'validation.test.js');
-      const writtenContent = fs.readFileSync(testFilePath, 'utf8');
+      const testFilePath = realPath.join(tempDir, '.rsolv', 'tests', 'validation.test.js');
+      const writtenContent = realFs.readFileSync(testFilePath, 'utf8');
 
       // The test file should be runnable - either include imports or use globals
       expect(writtenContent).toMatch(/describe|it|expect/);

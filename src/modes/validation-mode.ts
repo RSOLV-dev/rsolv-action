@@ -693,7 +693,7 @@ ${tests}
    * Philosophy: If backend is down, we can't fully service the customer anyway.
    * Better to fail fast and maintain clear state than silently degrade.
    */
-  async commitTestsToBranch(testContent: any, branchName: string, issue?: IssueContext): Promise<void> {
+  async commitTestsToBranch(testContent: unknown, branchName: string, issue?: IssueContext): Promise<void> {
     try {
       let targetFile: string;
       let integratedContent: string;
