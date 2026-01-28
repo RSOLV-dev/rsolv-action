@@ -27,6 +27,7 @@ export interface ValidationModeTestAccess {
   scanTestFiles(framework?: string): Promise<string[]>;
   classifyTestResult(exitCode: number, stdout: string, stderr: string): TestResultClassification;
   convertToExecutableTest(testContent: unknown): string;
+  sanitizeTestStructure(code: string): string;
   validateTestSyntax(code: string): void;
   createValidationBranch(issue: IssueContext): Promise<string>;
   generateRedTests(issue: IssueContext, analysisData: unknown): Promise<unknown>;

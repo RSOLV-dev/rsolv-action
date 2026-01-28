@@ -210,6 +210,16 @@ export class ValidationMode {
         testFile: testResults.generatedTests.testFile
       };
 
+      // Convert ValidationResult to TestResults format for PR body display
+      const redTestResults = validationResult.vulnerableCommit.redTestsPassed || [];
+      const testResultsForDisplay = {
+        passed: redTestResults.filter(p => p).length,
+        failed: redTestResults.filter(p => !p).length,
+        total: redTestResults.length,
+        output: validationResult.error || (validationResult.success ? 'RED tests executed' : 'Test execution failed'),
+        exitCode: validationResult.vulnerableCommit.allPassed ? 0 : 1
+      };
+
       // RFC-060: Check if RED tests failed on vulnerable code (proving vulnerability exists)
       // In VALIDATE mode with HEAD==HEAD, we only check vulnerableCommit results
       const testsFailedOnVulnerableCode = !validationResult.vulnerableCommit.allPassed;
@@ -238,7 +248,7 @@ export class ValidationMode {
           validated: true,
           branchName: branchName || undefined,
           redTests: testResults.generatedTests.testSuite,
-          testResults: validationResult,
+          testResults: testResultsForDisplay,
           testExecutionResult,
           vulnerabilities,
           timestamp: new Date().toISOString(),
@@ -267,7 +277,7 @@ export class ValidationMode {
             validated: true,
             branchName: branchName || undefined,
             redTests: testResults.generatedTests.testSuite,
-            testResults: validationResult,
+            testResults: testResultsForDisplay,
             testExecutionResult,
             vulnerabilities,
             testingMode: true,
@@ -289,7 +299,7 @@ export class ValidationMode {
             issueId: issue.number,
             validated: false,
             falsePositiveReason: 'Tests passed on allegedly vulnerable code',
-            testResults: validationResult,
+            testResults: testResultsForDisplay,
             testExecutionResult,
             vulnerabilities,
             timestamp: new Date().toISOString(),
@@ -412,9 +422,9 @@ export class ValidationMode {
    * - { tests: [...] }: TestSuite format with GeneratedTest[]
    */
   private convertToExecutableTest(testContent: unknown): string {
-    // String content - pass through
+    // String content - sanitize and pass through
     if (typeof testContent === 'string') {
-      return testContent;
+      return this.sanitizeTestStructure(testContent);
     }
 
     // Not an object - wrap in minimal test structure
@@ -487,6 +497,58 @@ ${tests}
   });
 });
 `;
+  }
+
+  /**
+   * Sanitize test structure to fix common AI-generated issues.
+   *
+   * Detects nested it()/test() blocks (invalid in Jest/Vitest/Mocha) and
+   * replaces inner test() calls with plain function bodies.
+   * e.g. it('name', () => { test('inner', () => { ... }) })
+   * becomes it('name', () => { ... })
+   */
+  private sanitizeTestStructure(code: string): string {
+    const hasDescribe = /describe\s*\(/.test(code);
+    const hasIt = /\bit\s*\(/.test(code);
+    const hasTest = /\btest\s*\(/.test(code);
+
+    // Only fix if both it() and test() appear inside a describe()
+    if (!(hasDescribe && hasIt && hasTest)) {
+      return code;
+    }
+
+    // Line-based approach: strip inner test() wrappers nested inside it() blocks
+    const lines = code.split('\n');
+    const result: string[] = [];
+    let inIt = false;
+    let inNestedTest = false;
+
+    for (const line of lines) {
+      if (/^\s*it\s*\(/.test(line)) {
+        inIt = true;
+      }
+
+      // Inside it(): skip test() opening wrapper
+      if (inIt && /^\s*test\s*\(/.test(line)) {
+        inNestedTest = true;
+        continue;
+      }
+
+      // Inside nested test(): skip its closing }); wrapper
+      if (inNestedTest && /^\s*\}\s*\)\s*;?\s*$/.test(line.trim())) {
+        inNestedTest = false;
+        continue;
+      }
+
+      // Track when we leave an it() block (only when not inside nested test)
+      if (inIt && !inNestedTest && /^\s*\}\s*\)\s*;?\s*$/.test(line.trim())) {
+        inIt = false;
+      }
+
+      result.push(line);
+    }
+
+    return result.join('\n');
   }
 
   /**
@@ -1564,7 +1626,7 @@ CWE: CWE-22`
             // Check if file matches any test pattern
             const fileName = entry.name;
             if (testPatterns.some(pattern => pattern.test(fileName))) {
-              testFiles.push(fullPath);
+              testFiles.push(path.relative(this.repoPath, fullPath));
             }
           }
         }
