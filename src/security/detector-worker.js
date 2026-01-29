@@ -11,6 +11,47 @@ const logger = {
 };
 
 /**
+ * Build a set of 1-indexed line numbers that are inside comments.
+ * Handles single-line (//) and multi-line block comments.
+ */
+function buildCommentMap(code) {
+  const commentLines = new Set();
+  const lines = code.split('\n');
+  let inBlockComment = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const lineNum = i + 1; // 1-indexed
+    const trimmed = lines[i].trimStart();
+
+    if (inBlockComment) {
+      commentLines.add(lineNum);
+      if (trimmed.includes('*/')) {
+        inBlockComment = false;
+      }
+      continue;
+    }
+
+    // Single-line comment
+    if (trimmed.startsWith('//')) {
+      commentLines.add(lineNum);
+      continue;
+    }
+
+    // Block comment start
+    if (trimmed.startsWith('/*')) {
+      commentLines.add(lineNum);
+      const afterOpen = trimmed.substring(2);
+      if (!afterOpen.includes('*/')) {
+        inBlockComment = true;
+      }
+      continue;
+    }
+  }
+
+  return commentLines;
+}
+
+/**
  * Run pattern detection in the worker thread
  */
 async function runDetection() {
@@ -22,6 +63,12 @@ async function runDetection() {
     const vulnerabilities = [];
     const lines = code.split('\n');
     const seen = new Set();
+
+    // Build comment map once per file to skip false positives from commented-out code
+    const commentLines = buildCommentMap(code);
+    if (commentLines.size > 0) {
+      logger.info(`Skipping ${commentLines.size} comment lines in ${filePath}`);
+    }
 
     // Process each pattern
     for (const pattern of patterns) {
@@ -35,6 +82,12 @@ async function runDetection() {
             // In the worker, it can be terminated forcefully
             while ((match = regex.exec(code)) !== null) {
               const lineNumber = getLineNumber(code, match.index);
+
+              // Skip matches on comment lines
+              if (commentLines.has(lineNumber)) {
+                if (!regex.global) break;
+                continue;
+              }
 
               // Deduplicate by line + type
               const key = `${lineNumber}:${pattern.type}`;

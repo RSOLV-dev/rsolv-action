@@ -1,13 +1,19 @@
 /**
- * TDD test: Verify SecurityDetectorV2 skips code inside comments.
+ * TDD test: Verify comment-aware scanning skips code inside comments.
  *
  * Bug: The regex-based scanner scans every line individually without checking
  * whether it's inside a block comment or is a single-line comment. This causes
  * false positives from commented-out code.
+ *
+ * IMPORTANT: Tests cover BOTH paths:
+ *   1. SecurityDetectorV2 (direct) — uses buildCommentMap in processRegexPatterns
+ *   2. SafeDetector (worker thread) — uses buildCommentMap in detector-worker.js
+ *   Path #2 is the actual production SCAN path.
  */
 
 import { describe, it, expect } from 'vitest';
 import { SecurityDetectorV2 } from '../detector-v2.js';
+import { SafeDetector } from '../safe-detector.js';
 import { LocalPatternSource } from '../pattern-source.js';
 
 describe('SecurityDetectorV2 comment block awareness', () => {
@@ -86,6 +92,65 @@ describe('SecurityDetectorV2 comment block awareness', () => {
 }`;
     const detector = new SecurityDetectorV2(new LocalPatternSource());
     const results = await detector.detect(code, 'javascript', 'test.js');
+    expect(results).toHaveLength(0);
+  });
+});
+
+describe('SafeDetector (worker thread) comment block awareness', () => {
+  // These tests verify the PRODUCTION scan path:
+  // SafeDetector.detect() → runPatternsInWorker() → detector-worker.js
+
+  it('should not flag SQL injection patterns inside block comments via worker', async () => {
+    const code = `function doSomething() {
+  /*
+   * Old code:
+   * var query = "SELECT * FROM users WHERE id = '" + userId + "'";
+   * db.query(query);
+   */
+  return db.query('SELECT * FROM users WHERE id = $1', [userId]);
+}`;
+    const detector = new SafeDetector(new LocalPatternSource());
+    const results = await detector.detect(code, 'javascript', 'test.js');
+    detector.cleanup();
+    expect(results).toHaveLength(0);
+  });
+
+  it('should not flag patterns inside single-line comments via worker', async () => {
+    const code = `function query() {
+  // var q = "SELECT * FROM users WHERE id = '" + input + "'";
+  return db.query('SELECT * FROM users WHERE id = $1', [input]);
+}`;
+    const detector = new SafeDetector(new LocalPatternSource());
+    const results = await detector.detect(code, 'javascript', 'test.js');
+    detector.cleanup();
+    expect(results).toHaveLength(0);
+  });
+
+  it('should still flag vulnerable code outside comments via worker', async () => {
+    const code = `function query(userId) {
+  /* This is a comment */
+  var q = "SELECT * FROM users WHERE id = '" + userId + "'";
+  db.query(q);
+}`;
+    const detector = new SafeDetector(new LocalPatternSource());
+    const results = await detector.detect(code, 'javascript', 'test.js');
+    detector.cleanup();
+    expect(results.length).toBeGreaterThan(0);
+  });
+
+  it('should handle nodegoat-style block comment via worker', async () => {
+    const code = `function processProfile(userId, input) {
+  /*
+   * NOTE: This is intentionally vulnerable for training purposes
+   * var cipher = crypto.createCipher('aes256', key);
+   * var encrypted = cipher.update(input, 'utf8', 'hex');
+   * var query = "SELECT * FROM users WHERE id = '" + userId + "'";
+   */
+  return db.query('SELECT * FROM users WHERE id = $1', [userId]);
+}`;
+    const detector = new SafeDetector(new LocalPatternSource());
+    const results = await detector.detect(code, 'javascript', 'test.js');
+    detector.cleanup();
     expect(results).toHaveLength(0);
   });
 });
