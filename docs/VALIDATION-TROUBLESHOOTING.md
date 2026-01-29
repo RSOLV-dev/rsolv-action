@@ -237,6 +237,43 @@ grep -A5 -B5 "RSOLV generated test" spec/file_spec.rb
 
 ---
 
+### Pattern 5: Double-Wrapped Test Structure
+
+**Symptom**: Generated test file has nested `describe()/it()` blocks inside other `it()` blocks, causing test runner errors like "Nested `describe` is not allowed" or tests silently not executing.
+
+**Example of bad output**:
+```javascript
+describe('Vulnerability Validation Tests', () => {       // wrapper
+  it('SQL Injection via userId', () => {                  // wrapper
+    describe('ProfileDAO SQL Injection', () => {          // AI's code
+      it('should be vulnerable', () => {                  // AI's code
+        expect(isVulnerable("' OR 1=1")).toBe(true);
+      });
+    });
+  });
+});
+```
+
+**Root Cause**: The AI's `testCode` field (from `AdaptiveTestGenerator`) already contains complete `describe()/it()` blocks, but `convertToExecutableTest()` wraps it in another `describe/it` layer.
+
+**Diagnostic Steps**:
+```bash
+# 1. Check the generated test file for nesting
+grep -n 'describe\|it(' .rsolv/tests/*.test.js
+
+# 2. Look for describe() inside it() — always invalid
+# Valid: describe -> it (siblings)
+# Invalid: describe -> it -> describe -> it (nested)
+```
+
+**Resolution**: Fixed in v3.8.25 with two layers:
+1. **Smart detection** (`hasFrameworkStructure()`): When `testCode` already has `describe()` blocks, uses it directly without wrapping
+2. **Generalized sanitizer**: `sanitizeTestStructure()` unwraps `describe()/it()/test()` blocks nested inside `it()` blocks
+
+**If still occurring**: Check that the RSOLV-action version is v3.8.25+ or the `v3` floating tag is up to date.
+
+---
+
 ## Backend API Issues
 
 ### Symptom: 401 Unauthorized
@@ -704,7 +741,7 @@ echo "Validation success rate: $SUCCESS_RATE%"
 ## Version History
 
 - **v1.0** (2025-10-15): Initial version covering RFC-060 v3.7.54 + Amendment 001
-- **Next review**: 2025-11-01 (after 6-week monitoring period)
+- **v1.1** (2026-01-29): Added Pattern 5 (double-wrapped test structure) from v3.8.25 fix
 
 ---
 

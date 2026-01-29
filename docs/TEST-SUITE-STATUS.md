@@ -1,6 +1,6 @@
 # RSOLV-action Test Suite Status
 
-*Last Updated: 2025-08-25*
+*Last Updated: 2026-01-29*
 
 ## Overall Status: ✅ Operational
 
@@ -9,13 +9,13 @@ The test suite has been successfully migrated from Bun to Vitest with significan
 ## Test Coverage Summary
 
 ### Core Modules (100% Passing)
-- **src/modes/**: All 129 tests passing
+- **src/modes/**: All tests passing (including phase2-regression tests for test sanitization)
 - **src/ai/adapters/**: All adapter tests passing
 - **src/scanner/**: All scanner tests passing
 
 ### Known Issues
 1. **Dynamic Import Limitation**: `processIssues` in phase-executor cannot be properly mocked (documented workaround in place)
-2. **Memory Constraints**: Full test suite may hit memory limits when run all at once
+2. **Memory Constraints**: Use `npm run test:memory` for memory-safe execution with semi-parallel sharding (8 shards, 2 batches of 4)
 3. **Some Integration Tests Skipped**: Server-side AST integration tests are skipped (require platform connection)
 
 ## Key Improvements Made
@@ -40,18 +40,20 @@ The test suite has been successfully migrated from Bun to Vitest with significan
 ## Running Tests
 
 ```bash
-# Run all tests in a specific module
-npm test -- src/modes
+# Memory-safe full suite (recommended)
+npm run test:memory
 
 # Run a specific test file
-npm test -- src/modes/__tests__/integration-all-modes.test.ts
+npx vitest run src/modes/__tests__/phase2-regression.test.ts
 
 # Run with coverage
-npm test -- --coverage
+npx vitest run --coverage
 
 # Run a specific test by name
-npm test -- -t "should execute all three phases"
+npx vitest run -t "should execute all three phases"
 ```
+
+**Important**: Do NOT use `npm test` for the full suite — it causes OOM errors. Use `npm run test:memory` which runs 8 shards in 2 batches of 4 parallel workers with 4GB heap limit.
 
 ## Maintenance Notes
 
@@ -60,9 +62,20 @@ npm test -- -t "should execute all three phases"
 3. **Test Isolation**: Restore modified mocks after tests
 4. **Environment Variables**: Set `GITHUB_TOKEN` for GitHub API tests
 
+## Test Sanitization (v3.8.25+)
+
+The VALIDATE phase generates test code via `AdaptiveTestGenerator`. AI-generated `testCode` can contain various framework structures that need handling:
+
+| Pattern | Detection | Fix |
+|---------|-----------|-----|
+| `test()` inside `it()` | `sanitizeTestStructure()` | Strip `test()` wrapper, keep body |
+| `describe()/it()` inside `it()` | `sanitizeTestStructure()` | Strip nested wrappers, keep body |
+| `testCode` with complete `describe()` | `hasFrameworkStructure()` | Use directly, skip wrapping |
+
+Regression tests: `src/modes/__tests__/phase2-regression.test.ts`
+
 ## Future Improvements
 
 1. Refactor dynamic imports to static imports for better testability
 2. Continue gradual migration from remaining `any` types
 3. Add more comprehensive integration tests
-4. Improve memory usage for full test suite runs
