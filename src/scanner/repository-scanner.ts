@@ -13,6 +13,41 @@ export class RepositoryScanner {
   private github: ReturnType<typeof getGitHubClient>;
   private vendorDetector: VendorDetector;
 
+  /**
+   * Directories that contain non-production code (tests, artifacts, build scripts).
+   * Vulnerabilities in these files are not actionable for production security.
+   */
+  private static readonly NON_PRODUCTION_DIRS = [
+    'test/',
+    'tests/',
+    '__tests__/',
+    '__test__/',
+    'spec/',
+    'specs/',
+    'artifacts/',
+    'fixtures/',
+    'test-fixtures/',
+    '__fixtures__/',
+    '__mocks__/',
+    'mocks/',
+  ];
+
+  /**
+   * File name patterns for non-production files (test files, build configs, scripts).
+   */
+  private static readonly NON_PRODUCTION_FILE_PATTERNS = [
+    /\.test\.\w+$/,
+    /\.spec\.\w+$/,
+    /\.tests\.\w+$/,
+    /\.specs\.\w+$/,
+    /_test\.\w+$/,
+    /_spec\.\w+$/,
+    /^Gruntfile\.\w+$/,
+    /^Gulpfile\.\w+$/,
+    /^Rakefile$/,
+    /^Jakefile\.\w+$/,
+  ];
+
   constructor() {
     // Use SafeDetector instead of SecurityDetectorV2 to prevent hangs
     this.detector = new SafeDetector(createPatternSource());
@@ -47,10 +82,12 @@ export class RepositoryScanner {
 
           if (isVendorFile) {
             logger.info(`Skipping vendor/minified file: ${file.path}`);
-            // Skip scanning vendor files to avoid:
-            // 1. False positives from third-party library code
-            // 2. Performance issues (catastrophic regex backtracking on minified code)
-            // 3. Irrelevant security findings (vendor vulns should be tracked separately)
+            continue;
+          }
+
+          // Check if this is a non-production file (tests, artifacts, build configs)
+          if (RepositoryScanner.isNonProductionFile(file.path)) {
+            logger.info(`Skipping non-production file: ${file.path}`);
             continue;
           }
 
@@ -94,8 +131,8 @@ export class RepositoryScanner {
       logger.warn('AST validation is enabled but skipped - missing RSOLV API key');
     }
     
-    // Log that we only scanned application code (vendor files were skipped)
-    logger.info('Scanned application code only (vendor/minified files automatically excluded)');
+    // Log that we only scanned production application code
+    logger.info('Scanned production code only (vendor/minified and non-production files excluded)');
 
     // Group vulnerabilities by type
     const groupedVulnerabilities = this.groupVulnerabilities(vulnerabilities);
@@ -216,6 +253,32 @@ export class RepositoryScanner {
     
     const extension = path.substring(path.lastIndexOf('.'));
     return extensionMap[extension] || null;
+  }
+
+  /**
+   * Check if a file path is a non-production file (tests, artifacts, build configs).
+   * These files should be skipped during vulnerability scanning because findings
+   * in them are not actionable for production security.
+   */
+  static isNonProductionFile(filePath: string): boolean {
+    const normalizedPath = filePath.replace(/\\/g, '/');
+
+    // Check if path contains a non-production directory
+    for (const dir of RepositoryScanner.NON_PRODUCTION_DIRS) {
+      if (normalizedPath.includes(`/${dir}`) || normalizedPath.startsWith(dir)) {
+        return true;
+      }
+    }
+
+    // Check if filename matches non-production patterns
+    const filename = normalizedPath.split('/').pop() || '';
+    for (const pattern of RepositoryScanner.NON_PRODUCTION_FILE_PATTERNS) {
+      if (pattern.test(filename)) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   private isSupportedLanguage(language: string): boolean {

@@ -126,4 +126,6 @@ outputs:
   scan_results:
     description: 'Results from vulnerability scan in JSON format'
   created_issues:
-    description: 'GitHub issues created from scan results'
+    description: 'GitHub issues created from scan results (JSON array)'
+  issues_created:
+    description: 'Number of GitHub issues created from scan results'
