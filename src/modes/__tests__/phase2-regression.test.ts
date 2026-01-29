@@ -260,6 +260,106 @@ describe('Phase 2 Regression Tests', () => {
     });
   });
 
+  // ─── Fix #4: AI-generated testCode double-wrapping with describe/it ───
+
+  describe('double-wrapping prevention for testCode with framework structure', () => {
+    it('should not double-wrap testCode that already has describe/it structure', () => {
+      const objectInput = {
+        red: {
+          testName: 'SQL Injection test',
+          testCode: `describe('ProfileDAO SQL Injection', () => {
+  it('should be vulnerable', () => {
+    expect(isVulnerable("' OR 1=1")).toBe(true);
+  });
+});`
+        }
+      };
+      const result = vm.convertToExecutableTestSanitized(objectInput);
+
+      // Should contain the test content
+      expect(result).toContain('describe(');
+      expect(result).toContain('it(');
+      expect(result).toContain("expect(isVulnerable");
+
+      // Critical: the AI's describe/it should NOT be nested inside another it()
+      // Count describe blocks — should be at most 2 (outer wrapper + AI's), never nested
+      const describeCount = (result.match(/\bdescribe\s*\(/g) || []).length;
+      const itCount = (result.match(/\bit\s*\(/g) || []).length;
+
+      // If there's a wrapper describe + AI's describe, there should be only AI's it()
+      // not wrapper it() + AI's it() (which means double-wrapping)
+      // In a properly handled case: either use AI's code directly (1 describe, 1 it)
+      // or wrap in describe only (2 describe, 1 it) — never 1+ describe inside it()
+      if (describeCount >= 2) {
+        // If we have 2 describes, the inner one must NOT be inside an it() block
+        // Parse: find lines with it( and lines with describe(, verify no describe after it
+        const lines = result.split('\n');
+        let insideIt = false;
+        let braceDepth = 0;
+        let itBraceDepth = 0;
+        for (const line of lines) {
+          if (/^\s*it\s*\(/.test(line)) {
+            insideIt = true;
+            itBraceDepth = braceDepth;
+          }
+          braceDepth += (line.match(/\{/g) || []).length;
+          braceDepth -= (line.match(/\}/g) || []).length;
+          if (insideIt && /^\s*describe\s*\(/.test(line)) {
+            // describe() inside it() — this is the bug
+            expect(line).toBe('THIS SHOULD NOT HAPPEN: describe() nested inside it()');
+          }
+          if (insideIt && braceDepth <= itBraceDepth) {
+            insideIt = false;
+          }
+        }
+      }
+    });
+
+    it('should remove describe() blocks nested inside it() blocks via sanitizer', () => {
+      const badCode = `describe('Vulnerability Validation Tests', () => {
+  it('SQL Injection via userId', () => {
+    const { ProfileDAO } = require('./profile');
+    describe('ProfileDAO SQL Injection', () => {
+      it('should be vulnerable', (done) => {
+        const mockDb = { collection: () => ({ findOne: jest.fn() }) };
+        expect(mockDb).toBeDefined();
+        done();
+      });
+    });
+  });
+});`;
+      const result = vm.sanitizeTestStructure(badCode);
+
+      // Inner describe should be flattened — not nested inside it()
+      expect(result).toContain('describe(');
+      expect(result).toContain('it(');
+      expect(result).toContain('expect(mockDb).toBeDefined()');
+
+      // Should not have describe() nested inside it()
+      expect(result).not.toMatch(/\bit\s*\([^)]*\)[^{]*\{[\s\S]*?\bdescribe\s*\(/);
+    });
+
+    it('should handle redTests array where testCode already has test structure', () => {
+      const objectInput = {
+        redTests: [
+          {
+            testName: 'SQL Injection',
+            testCode: `it('should detect injection', () => {
+    expect(isVulnerable("' OR 1=1")).toBe(true);
+  });`
+          }
+        ]
+      };
+      const result = vm.convertToExecutableTestSanitized(objectInput);
+      expect(result).toContain('describe(');
+      expect(result).toContain("expect(isVulnerable");
+
+      // Should not have it() inside it()
+      const itMatches = result.match(/\bit\s*\(/g) || [];
+      expect(itMatches.length).toBeLessThanOrEqual(1);
+    });
+  });
+
   // ─── Fix #3: ValidationResult → TestResults conversion ────────────────
 
   describe('ValidationResult to TestResults conversion', () => {

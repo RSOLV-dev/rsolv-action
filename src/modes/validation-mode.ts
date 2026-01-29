@@ -446,6 +446,12 @@ export class ValidationMode {
         .map((test: { testName?: string; testCode?: string }, index: number) => {
           const name = test.testName || `Test ${index + 1}`;
           const code = test.testCode || 'expect(true).toBe(true);';
+
+          // If testCode already has framework structure, include it directly
+          if (this.hasFrameworkStructure(code)) {
+            return this.indentCode(code, 2);
+          }
+
           return `  it('${this.escapeTestName(name)}', () => {
 ${this.indentCode(code, 4)}
   });`;
@@ -461,8 +467,14 @@ ${tests}
     // Handle { red: {...} } single test format
     if (content.red && typeof content.red === 'object') {
       const test = content.red as { testName?: string; testCode?: string };
-      const name = test.testName || 'Vulnerability Test';
       const code = test.testCode || 'expect(true).toBe(true);';
+
+      // If testCode already has framework structure, use it directly
+      if (this.hasFrameworkStructure(code)) {
+        return code;
+      }
+
+      const name = test.testName || 'Vulnerability Test';
       return `describe('Vulnerability Validation Tests', () => {
   it('${this.escapeTestName(name)}', () => {
 ${this.indentCode(code, 4)}
@@ -476,6 +488,12 @@ ${this.indentCode(code, 4)}
       const tests = content.tests
         .map((test: { testCode?: string }, index: number) => {
           const code = test.testCode || 'expect(true).toBe(true);';
+
+          // If testCode already has framework structure, include it directly
+          if (this.hasFrameworkStructure(code)) {
+            return this.indentCode(code, 2);
+          }
+
           return `  it('Test ${index + 1}', () => {
 ${this.indentCode(code, 4)}
   });`;
@@ -519,58 +537,70 @@ ${tests}
    * becomes it('name', () => { ... })
    */
   private sanitizeTestStructure(code: string): string {
-    const hasDescribe = /describe\s*\(/.test(code);
     const hasIt = /\bit\s*\(/.test(code);
     const hasTest = /\btest\s*\(/.test(code);
 
-    // Only fix if both it() and test() appear inside a describe()
-    if (!(hasDescribe && hasIt && hasTest)) {
+    // Quick exit: if there's no it() block, there can't be nesting inside it()
+    if (!hasIt) {
       return code;
     }
 
     // Line-based approach with brace depth tracking:
-    // Strip inner test() wrappers nested inside it() blocks.
-    // Track brace depth to correctly find the closing }); of the nested test(),
+    // Strip inner test()/describe()/it() wrappers nested inside it() blocks.
+    // Track brace depth to correctly find the closing }); of nested blocks,
     // ignoring inner closings from callbacks, arrow functions, etc.
     const lines = code.split('\n');
     const result: string[] = [];
     let inIt = false;
-    let inNestedTest = false;
-    let nestedTestBraceDepth = 0;
+    let itBraceDepth = 0;
+    let currentBraceDepth = 0;
+    let inNestedBlock = false;
+    let nestedBlockBraceDepth = 0;
+    let justEnteredIt = false;
 
     for (const line of lines) {
-      if (/^\s*it\s*\(/.test(line)) {
+      const opens = (line.match(/\{/g) || []).length;
+      const closes = (line.match(/\}/g) || []).length;
+
+      // Detect entering an it() block (only the outermost one)
+      if (/^\s*it\s*\(/.test(line) && !inIt && !inNestedBlock) {
         inIt = true;
+        justEnteredIt = true;
+        itBraceDepth = currentBraceDepth;
       }
 
-      // Inside it(): detect test() opening wrapper
-      if (inIt && !inNestedTest && /^\s*test\s*\(/.test(line)) {
-        inNestedTest = true;
-        // Count opening braces on the test() line itself
-        nestedTestBraceDepth = (line.match(/\{/g) || []).length - (line.match(/\}/g) || []).length;
+      // Inside it(): detect nested test(), describe(), or it() opening wrapper
+      // Skip the line that just opened the it() block (justEnteredIt flag)
+      if (inIt && !justEnteredIt && !inNestedBlock && /^\s*(test|describe|it)\s*\(/.test(line)) {
+        inNestedBlock = true;
+        nestedBlockBraceDepth = opens - closes;
+        currentBraceDepth += opens - closes;
+        // Skip the wrapper line — its body will be kept
         continue;
       }
 
-      if (inNestedTest) {
-        // Track brace depth inside the nested test() block
-        const opens = (line.match(/\{/g) || []).length;
-        const closes = (line.match(/\}/g) || []).length;
-        nestedTestBraceDepth += opens - closes;
+      justEnteredIt = false;
+
+      if (inNestedBlock) {
+        nestedBlockBraceDepth += opens - closes;
+        currentBraceDepth += opens - closes;
 
         // When depth drops to 0 (or below) and line looks like a closing, we found the end
-        if (nestedTestBraceDepth <= 0 && /^\s*\}\s*\)\s*;?\s*$/.test(line.trim())) {
-          inNestedTest = false;
-          nestedTestBraceDepth = 0;
+        if (nestedBlockBraceDepth <= 0 && /^\s*\}\s*\)\s*;?\s*$/.test(line.trim())) {
+          inNestedBlock = false;
+          nestedBlockBraceDepth = 0;
           continue;
         }
 
-        // Otherwise, keep the line (it's the test body, just strip the wrapper)
+        // Otherwise, keep the line (it's the body, just strip the wrapper)
         result.push(line);
         continue;
       }
 
+      currentBraceDepth += opens - closes;
+
       // Track when we leave an it() block
-      if (inIt && /^\s*\}\s*\)\s*;?\s*$/.test(line.trim())) {
+      if (inIt && currentBraceDepth <= itBraceDepth && /^\s*\}\s*\)\s*;?\s*$/.test(line.trim())) {
         inIt = false;
       }
 
@@ -578,6 +608,16 @@ ${tests}
     }
 
     return result.join('\n');
+  }
+
+  /**
+   * Check if code already contains complete test framework structure.
+   * Returns true only when the code has a describe() block, indicating it's
+   * a fully-structured test. Individual it()/test() calls without describe()
+   * still need a wrapper and will be caught by sanitizeTestStructure() if nested.
+   */
+  private hasFrameworkStructure(code: string): boolean {
+    return /\bdescribe\s*\(/.test(code);
   }
 
   /**
