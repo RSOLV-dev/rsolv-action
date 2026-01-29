@@ -100,21 +100,23 @@ async function run(): Promise<ActionStatus> {
         // Set specific outputs based on mode
         if (mode === 'scan' && result.data) {
           const scanData = result.data as any;
-          if (scanData.createdIssues) {
+          // PhaseExecutor wraps scan results as { scan: ScanResult }
+          const scanResult = scanData.scan || scanData;
+          if (scanResult.createdIssues) {
             fs.appendFileSync(
               outputFile,
-              `created_issues=${JSON.stringify(scanData.createdIssues)}\n`
+              `created_issues=${JSON.stringify(scanResult.createdIssues)}\n`
             );
-            fs.appendFileSync(outputFile, `issues_created=${scanData.createdIssues.length}\n`);
+            fs.appendFileSync(outputFile, `issues_created=${scanResult.createdIssues.length}\n`);
           }
-          if (scanData.vulnerabilities) {
+          if (scanResult.vulnerabilities) {
             fs.appendFileSync(
               outputFile,
-              `scan_results=${JSON.stringify(scanData.vulnerabilities)}\n`
+              `scan_results=${JSON.stringify(scanResult.vulnerabilities)}\n`
             );
             fs.appendFileSync(
               outputFile,
-              `security_findings=${JSON.stringify(scanData.vulnerabilities)}\n`
+              `security_findings=${JSON.stringify(scanResult.vulnerabilities)}\n`
             );
           }
         }
