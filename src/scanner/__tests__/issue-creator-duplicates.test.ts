@@ -16,7 +16,8 @@ describe('IssueCreator - Duplicate Detection', () => {
         create: vi.fn(),
         update: vi.fn(),
         createComment: vi.fn(),
-        listForRepo: vi.fn()
+        listForRepo: vi.fn(),
+        addLabels: vi.fn().mockResolvedValue({ data: [] })
       }
     };
 
@@ -99,7 +100,8 @@ describe('IssueCreator - Duplicate Detection', () => {
       const existingIssue = {
         number: 123,
         title: '🔒 Cross-Site Scripting (XSS) vulnerabilities found in 2 files',
-        body: 'Old body content'
+        body: 'Old body content',
+        labels: [{ name: 'rsolv:detected' }, { name: 'rsolv:vuln-xss' }]
       };
 
       const group: VulnerabilityGroup = {
@@ -143,6 +145,60 @@ describe('IssueCreator - Duplicate Detection', () => {
         repo: 'repo',
         issue_number: 123,
         body: expect.stringContaining('📊 Scan Update')
+      });
+
+      // Should NOT call addLabels since rsolv:detected is already present
+      expect(mockGitHub.issues.addLabels).not.toHaveBeenCalled();
+    });
+
+    it('should add rsolv:detected label when missing from reused issue', async () => {
+      // Issue from an earlier run that lacks the rsolv:detected label
+      const existingIssue = {
+        number: 1107,
+        title: '🔒 SQL Injection vulnerabilities found in 2 files',
+        body: 'Old body content',
+        labels: [
+          { name: 'security' },
+          { name: 'automated-scan' },
+          { name: 'critical' },
+          { name: 'rsolv:vuln-sql_injection' }
+        ],
+        html_url: 'https://github.com/test/repo/issues/1107'
+      };
+
+      const group: VulnerabilityGroup = {
+        type: 'sql_injection',
+        severity: 'critical',
+        count: 2,
+        files: ['profile-dao.js', 'user-dao.js'],
+        vulnerabilities: [{
+          type: 'sql_injection',
+          severity: 'critical',
+          filePath: 'profile-dao.js',
+          line: 28,
+          description: 'SQL injection via string concatenation',
+          snippet: "var q = \"SELECT * FROM users WHERE id = '\" + userId + \"'\""
+        }]
+      };
+
+      const config: ScanConfig = {
+        repository: { owner: 'test', name: 'repo' },
+        branch: 'main',
+        createIssues: true
+      };
+
+      mockGitHub.issues.update.mockResolvedValue({ data: { ...existingIssue } });
+      mockGitHub.issues.createComment.mockResolvedValue({ data: {} });
+
+      // @ts-ignore - accessing private method for testing
+      await issueCreator.updateExistingIssue(existingIssue, group, config);
+
+      // Should call addLabels to ensure rsolv:detected is present for phase handoff
+      expect(mockGitHub.issues.addLabels).toHaveBeenCalledWith({
+        owner: 'test',
+        repo: 'repo',
+        issue_number: 1107,
+        labels: ['rsolv:detected']
       });
     });
   });

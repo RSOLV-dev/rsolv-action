@@ -218,6 +218,18 @@ export class IssueCreator {
       body
     });
 
+    // Ensure rsolv:detected label is present for phase handoff
+    // (existing issues from earlier runs may lack this label)
+    const labelNames = this.extractLabelNames(existingIssue.labels || []);
+    if (!labelNames.includes('rsolv:detected')) {
+      await this.github.issues.addLabels({
+        owner: config.repository.owner,
+        repo: config.repository.name,
+        issue_number: existingIssue.number,
+        labels: ['rsolv:detected']
+      });
+    }
+
     // Add a comment showing the delta
     const comment = this.generateUpdateComment(group, existingIssue);
     await this.github.issues.createComment({
