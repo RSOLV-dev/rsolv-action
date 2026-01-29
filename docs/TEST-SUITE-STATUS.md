@@ -74,6 +74,17 @@ The VALIDATE phase generates test code via `AdaptiveTestGenerator`. AI-generated
 
 Regression tests: `src/modes/__tests__/phase2-regression.test.ts`
 
+## Recent Test Additions (v3.8.26)
+
+| Test File | Tests | Purpose |
+|-----------|-------|---------|
+| `src/modes/phase-executor/__tests__/scan-apikey.test.ts` | 2 | Verify `rsolvApiKey` (not `apiKey`) is passed to scanner config |
+| `src/security/__tests__/comment-detection.test.ts` | 6 | Verify comment-aware scanning skips code inside `//` and `/* */` comments |
+
+These tests cover fixes for:
+- **Bug 1**: AST validation silently skipped due to API key mismatch (Fix 5 in RFC-060 Amendment 001)
+- **Bug 2**: False positives from commented-out code in regex scanner (Fix 6 in RFC-060 Amendment 001)
+
 ## Future Improvements
 
 1. Refactor dynamic imports to static imports for better testability

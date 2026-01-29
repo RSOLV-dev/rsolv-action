@@ -272,6 +272,26 @@ grep -n 'describe\|it(' .rsolv/tests/*.test.js
 
 **If still occurring**: Check that the RSOLV-action version is v3.8.25+ or the `v3` floating tag is up to date.
 
+### Pattern 6: AST Validation Silently Skipped
+
+**Symptom**: Scan phase completes but logs show "AST validation is enabled but skipped - missing RSOLV API key". More vulnerabilities reported than expected (false positives not filtered). The `enableASTValidation` flag is `true` but validation never runs.
+
+**Root Cause**: `phase-executor/index.ts:348` passed `this.config.apiKey` (backwards-compat alias, never populated by Zod config loader) instead of `this.config.rsolvApiKey`. The scanner received `rsolvApiKey: undefined`.
+
+**Diagnostic Steps**:
+```bash
+# 1. Check workflow logs for the skip message
+grep "AST validation.*skipped" workflow.log
+
+# 2. Verify rsolvApiKey is set in action inputs
+grep -i "rsolv.*api.*key" .github/workflows/*.yml
+
+# 3. Check action version (must be v3.8.26+)
+grep "uses.*RSOLV-dev/RSOLV-action" .github/workflows/*.yml
+```
+
+**Resolution**: Fixed in v3.8.26. One-line change: `this.config.apiKey` → `this.config.rsolvApiKey`. Update to v3.8.26+ or ensure the `v3` floating tag is current.
+
 ---
 
 ## Backend API Issues
@@ -742,6 +762,7 @@ echo "Validation success rate: $SUCCESS_RATE%"
 
 - **v1.0** (2025-10-15): Initial version covering RFC-060 v3.7.54 + Amendment 001
 - **v1.1** (2026-01-29): Added Pattern 5 (double-wrapped test structure) from v3.8.25 fix
+- **v1.2** (2026-01-29): Added Pattern 6 (AST validation skipped due to API key mismatch) from v3.8.26 fix
 
 ---
 

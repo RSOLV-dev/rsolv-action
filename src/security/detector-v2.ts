@@ -119,6 +119,55 @@ export class SecurityDetectorV2 {
   }
 
   /**
+   * Build a set of 1-indexed line numbers that are inside comments.
+   * Handles single-line comments (//) and multi-line block comments.
+   * A line is considered "in a comment" only if the entire line content
+   * (excluding leading whitespace) is part of a comment.
+   */
+  private buildCommentMap(code: string): Set<number> {
+    const commentLines = new Set<number>();
+    const lines = code.split('\n');
+    let inBlockComment = false;
+
+    for (let i = 0; i < lines.length; i++) {
+      const lineNum = i + 1; // 1-indexed
+      const trimmed = lines[i].trimStart();
+
+      if (inBlockComment) {
+        commentLines.add(lineNum);
+        if (trimmed.includes('*/')) {
+          inBlockComment = false;
+        }
+        continue;
+      }
+
+      // Single-line comment: entire line starts with //
+      if (trimmed.startsWith('//')) {
+        commentLines.add(lineNum);
+        continue;
+      }
+
+      // Block comment starting on this line
+      if (trimmed.startsWith('/*')) {
+        commentLines.add(lineNum);
+        // Check if the block comment closes on the same line
+        // (after the opening /*)
+        const afterOpen = trimmed.substring(2);
+        if (!afterOpen.includes('*/')) {
+          inBlockComment = true;
+        }
+        continue;
+      }
+
+      // Lines with block comment markers mid-line but code before them
+      // (e.g. `var x = 1; /* comment */`) are NOT marked as comment lines
+      // because they contain real code.
+    }
+
+    return commentLines;
+  }
+
+  /**
    * Process patterns that use regex matching
    */
   private async processRegexPatterns(
@@ -131,6 +180,9 @@ export class SecurityDetectorV2 {
     vulnerabilities: Vulnerability[]
   ): Promise<void> {
     logger.info(`SecurityDetectorV2: Processing ${regexPatterns.length} regex patterns for ${filePath}`);
+
+    // Pre-compute comment lines once for the entire file
+    const commentLines = this.buildCommentMap(code);
 
     for (let i = 0; i < regexPatterns.length; i++) {
       const pattern = regexPatterns[i];
@@ -149,7 +201,7 @@ export class SecurityDetectorV2 {
       if (!pattern.patterns?.regex) continue;
 
       try {
-        this.processPattern(pattern, code, language, filePath, seen, vulnerabilities);
+        this.processPattern(pattern, code, language, filePath, seen, vulnerabilities, commentLines);
       } catch (error) {
         logger.error(`Error processing pattern ${pattern.id} in ${filePath}:`, error);
         // Continue with next pattern
@@ -166,7 +218,8 @@ export class SecurityDetectorV2 {
     language: string,
     filePath: string,
     seen: Set<string>,
-    vulnerabilities: Vulnerability[]
+    vulnerabilities: Vulnerability[],
+    commentLines?: Set<number>
   ): void {
     const patternStartTime = Date.now();
 
@@ -178,6 +231,11 @@ export class SecurityDetectorV2 {
 
       // Process matches
       for (const { match, lineNumber } of result.matches) {
+        // Skip matches on lines that are entirely inside comments
+        if (commentLines && commentLines.has(lineNumber)) {
+          continue;
+        }
+
         const line = SafeRegexMatcher.getLineContent(code, lineNumber);
 
         // Debug logging for Ruby SQL injection
