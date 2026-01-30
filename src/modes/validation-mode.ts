@@ -19,6 +19,7 @@ import { PhaseDataClient } from './phase-data-client/index.js';
 import { TestIntegrationClient } from './test-integration-client.js';
 import { extractVulnerabilitiesFromIssue } from '../utils/vulnerability-extraction.js';
 import { TEST_FILE_PATTERNS, EXCLUDED_DIRECTORIES } from '../constants/test-patterns.js';
+import { classifyTestResult as classifyTestResultImpl } from '../utils/test-result-classifier.js';
 
 export class ValidationMode {
   private config: ActionConfig;
@@ -197,15 +198,25 @@ export class ValidationMode {
       // isTestingMode already declared above
 
       // RFC-060 Phase 2.2: Extract test execution metadata
+      // VALIDATE Phase Iteration 1: Use actual captured output instead of JSON.stringify
+      const vulnerableTestOutputs = validationResult.vulnerableCommit.testResults || [];
+      const capturedStdout = vulnerableTestOutputs
+        .map(t => t.stdout).filter(Boolean).join('\n');
+      const capturedStderr = vulnerableTestOutputs
+        .map(t => t.stderr).filter(Boolean).join('\n');
+      const crashCount = vulnerableTestOutputs.filter(t => t.crashed).length;
+
       const testExecutionResult: TestExecutionResult = {
-        passed: validationResult.vulnerableCommit.allPassed || false, // In VALIDATE mode, tests should FAIL (allPassed=false)
-        output: JSON.stringify(validationResult, null, 2), // Store full validation result as output
-        stderr: '',
+        passed: validationResult.vulnerableCommit.allPassed || false,
+        output: capturedStdout || JSON.stringify(validationResult, null, 2),
+        stderr: capturedStderr,
         timedOut: false,
-        exitCode: validationResult.vulnerableCommit.allPassed ? 0 : 1, // Exit code 1 means tests failed = vulnerability exists
-        error: validationResult.error && validationResult.error !== 'Fix validation failed - tests do not confirm vulnerability was fixed'
-          ? validationResult.error
-          : undefined, // Ignore "fix validation failed" error in VALIDATE mode since we're not validating a fix
+        exitCode: validationResult.vulnerableCommit.allPassed ? 0 : 1,
+        error: validationResult.vulnerableCommit.hasInfrastructureFailures
+          ? `${crashCount} test(s) crashed (infrastructure failure, not genuine assertion)`
+          : (validationResult.error && validationResult.error !== 'Fix validation failed - tests do not confirm vulnerability was fixed'
+            ? validationResult.error
+            : undefined),
         framework: testResults.generatedTests.framework,
         testFile: testResults.generatedTests.testFile
       };
@@ -219,6 +230,31 @@ export class ValidationMode {
         output: validationResult.error || (validationResult.success ? 'RED tests executed' : 'Test execution failed'),
         exitCode: validationResult.vulnerableCommit.allPassed ? 0 : 1
       };
+
+      // VALIDATE Phase Iteration 1: Check for all-crash scenario
+      const allCrashes = validationResult.vulnerableCommit.hasInfrastructureFailures
+        && vulnerableTestOutputs.length > 0
+        && vulnerableTestOutputs.every(t => t.crashed);
+
+      if (allCrashes) {
+        logger.warn('All RED tests crashed (infrastructure failures) — cannot validate');
+        if (!isTestingMode) {
+          // Mark as unvalidated — crashes don't prove vulnerability
+          await this.storeTestExecutionInPhaseData(issue, testExecutionResult, false, branchName || undefined, vulnerabilities);
+          return {
+            issueId: issue.number,
+            validated: false,
+            falsePositiveReason: 'All RED tests crashed with infrastructure errors (not genuine assertion failures)',
+            testResults: testResultsForDisplay,
+            testExecutionResult,
+            vulnerabilities,
+            timestamp: new Date().toISOString(),
+            commitHash: this.getCurrentCommitHash()
+          };
+        }
+        // In TESTING_MODE, log but proceed
+        logger.info('[TESTING MODE] All tests crashed but proceeding due to RSOLV_TESTING_MODE');
+      }
 
       // RFC-060: Check if RED tests failed on vulnerable code (proving vulnerability exists)
       // In VALIDATE mode with HEAD==HEAD, we only check vulnerableCommit results
@@ -670,67 +706,7 @@ ${tests}
     isValidFailure: boolean;
     reason: string;
   } {
-    const combined = stdout + stderr;
-
-    // Check exit code first
-    if (exitCode === 0) {
-      return { type: 'test_passed', isValidFailure: false, reason: 'Tests passed - vulnerability not proven' };
-    }
-    if (exitCode === 127) {
-      return { type: 'command_not_found', isValidFailure: false, reason: 'Test runner not installed' };
-    }
-    if (exitCode === 137) {
-      return { type: 'oom_killed', isValidFailure: false, reason: 'Process killed - out of memory' };
-    }
-    if (exitCode === 143 || exitCode === 130) {
-      return { type: 'terminated', isValidFailure: false, reason: 'Process terminated or interrupted' };
-    }
-
-    // Check for error patterns FIRST (take priority over failure markers)
-    if (/SyntaxError|Unexpected token|unexpected end of|syntax error/i.test(combined)) {
-      return { type: 'syntax_error', isValidFailure: false, reason: 'Syntax error in test file' };
-    }
-    if (/ReferenceError|is not defined/i.test(combined)) {
-      return { type: 'runtime_error', isValidFailure: false, reason: 'Reference error - undefined variable' };
-    }
-    if (/TypeError:.*is not a function/i.test(combined)) {
-      return { type: 'runtime_error', isValidFailure: false, reason: 'Type error - function not found' };
-    }
-    if (/Cannot find module|ModuleNotFoundError|No module named|LoadError.*cannot load such file/i.test(combined)) {
-      return { type: 'missing_dependency', isValidFailure: false, reason: 'Missing dependency or module' };
-    }
-    if (/command not found|ENOENT/i.test(combined)) {
-      return { type: 'command_not_found', isValidFailure: false, reason: 'Command or file not found' };
-    }
-
-    // Check for valid test failure patterns
-    if (/AssertionError/i.test(combined)) {
-      return { type: 'test_failed', isValidFailure: true, reason: 'Assertion failed - vulnerability proven' };
-    }
-    // Jest/Vitest "Expected:/Received:" output patterns
-    if (/Expected:.*\n.*Received:/i.test(combined) ||
-        /Received:.*\n.*Expected:/i.test(combined)) {
-      return { type: 'test_failed', isValidFailure: true, reason: 'Jest/Vitest assertion failed - vulnerability proven' };
-    }
-    // Chai/RSpec "expected ... to" patterns
-    if (/expected\s+.*\s+to\s+(be|equal|match|include|contain)/i.test(combined)) {
-      return { type: 'test_failed', isValidFailure: true, reason: 'Assertion failed - vulnerability proven' };
-    }
-    // Checkmark failure symbols (✗ or ✖)
-    if (/[✗✖]/.test(combined) && exitCode === 1) {
-      return { type: 'test_failed', isValidFailure: true, reason: 'Test failed (checkmark) - vulnerability proven' };
-    }
-    // FAIL marker with failure indicators
-    if (/(FAIL|FAILED|Failures:|failed)/i.test(combined) && exitCode === 1) {
-      // Make sure it's not just a "FAIL" from error output
-      if (/(tests?|examples?|specs?).*fail/i.test(combined) ||
-          /\d+\s+(failed|failure)/i.test(combined)) {
-        return { type: 'test_failed', isValidFailure: true, reason: 'Test failed - vulnerability proven' };
-      }
-    }
-
-    // Unknown exit code 1 - could be test failure or error
-    return { type: 'unknown', isValidFailure: false, reason: 'Exit code 1 without clear failure pattern - manual review needed' };
+    return classifyTestResultImpl(exitCode, stdout, stderr);
   }
 
   /**
@@ -1447,7 +1423,10 @@ Generate test code that:
 2. FAILS on vulnerable code (proves exploit works)
 3. PASSES after fix is applied
 4. Reuses existing setup blocks from target file
-5. Follows ${framework.name} conventions`;
+5. Follows ${framework.name} conventions
+6. Is COMPLETELY SELF-CONTAINED — do NOT use require() or import to load target modules.
+   Instead, INLINE the vulnerable function directly in the test code so it can execute anywhere.
+   Tests that require() modules that don't exist in the test directory will crash with MODULE_NOT_FOUND.`;
 
     if (previousAttempts.length > 0) {
       prompt += '\n\nPREVIOUS ATTEMPTS (learn from these errors):';

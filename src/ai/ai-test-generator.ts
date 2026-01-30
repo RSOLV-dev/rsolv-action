@@ -218,6 +218,22 @@ For multiple RED tests (complex vulnerabilities), return:
   ]
 }
 
+CRITICAL - SELF-CONTAINED TESTS:
+Tests MUST be completely self-contained. Do NOT use require() or import to load target modules.
+Instead, INLINE the vulnerable function directly in the test code so the test can execute anywhere.
+
+CORRECT:
+  // Inline the vulnerable function
+  function processInput(input) { return eval(input); }
+  // Test with malicious payload
+  let executed = false;
+  processInput("executed = true");
+  expect(executed).toBe(false); // Fails because eval runs the payload
+
+WRONG:
+  const { processInput } = require('./contributions'); // Will crash with MODULE_NOT_FOUND
+  processInput("malicious");
+
 IMPORTANT:
 - Keep ALL strings properly escaped (use \\" for quotes inside strings)
 - Avoid long test code to prevent truncation

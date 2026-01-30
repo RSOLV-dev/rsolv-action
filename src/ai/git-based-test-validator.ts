@@ -5,6 +5,12 @@
  * against both vulnerable and fixed versions of the code using git.
  *
  * RFC-060: Only RED tests are generated - tests that prove vulnerability exists
+ *
+ * VALIDATE Phase Iteration 1: Flattened execution, output capture, crash detection.
+ * - Single self-contained test file (no triple-nested scripts)
+ * - stdout/stderr captured (not suppressed)
+ * - classifyTestResult() used to distinguish crashes from genuine failures
+ * - All-crash scenarios rejected as invalid validation
  */
 
 import { execSync } from 'child_process';
@@ -13,6 +19,7 @@ import { join, dirname } from 'path';
 import { tmpdir } from 'os';
 import { VulnerabilityTestSuite, RedTest } from './test-generator.js';
 import { logger } from '../utils/logger.js';
+import { classifyTestResult, type TestResultClassification } from '../utils/test-result-classifier.js';
 
 // RFC-060: Extract RED tests helper
 function extractRedTests(testSuite: VulnerabilityTestSuite): RedTest[] {
@@ -25,16 +32,30 @@ function extractRedTests(testSuite: VulnerabilityTestSuite): RedTest[] {
   return [];
 }
 
+/**
+ * Result of running a single RED test.
+ * Replaces the previous bare boolean return.
+ */
+export interface SingleTestResult {
+  passed: boolean;
+  crashed: boolean;
+  exitCode: number;
+  stdout: string;
+  stderr: string;
+  classification: TestResultClassification;
+}
+
+export interface CommitTestResults {
+  redTestsPassed: boolean[];
+  allPassed: boolean;
+  testResults: SingleTestResult[];
+  hasInfrastructureFailures: boolean;
+}
+
 export interface ValidationResult {
   success: boolean;
-  vulnerableCommit: {
-    redTestsPassed: boolean[];  // Each should fail (vulnerability exists)
-    allPassed: boolean;         // Should be false on vulnerable code
-  };
-  fixedCommit: {
-    redTestsPassed: boolean[];  // Each should pass (vulnerability fixed)
-    allPassed: boolean;         // Should be true on fixed code
-  };
+  vulnerableCommit: CommitTestResults;
+  fixedCommit: CommitTestResults;
   isValidFix: boolean;
   error?: string;
 }
@@ -65,31 +86,23 @@ export class GitBasedTestValidator {
 
       logger.info(`Running ${redTests.length} RED test(s) for validation`);
 
-      // Create temporary test file
-      const testFile = this.createTestFile(testSuite);
-      const testPath = join(this.workDir, 'validation.test.js');
-
-      // Ensure directory exists
-      mkdirSync(dirname(testPath), { recursive: true });
-      writeFileSync(testPath, testFile);
+      // Ensure work directory exists
+      mkdirSync(this.workDir, { recursive: true });
 
       // Test on vulnerable commit
       const vulnerableResults = await this.runTestsOnCommit(
         vulnerableCommit,
-        testPath,
         testSuite
       );
 
       // Test on fixed commit
       const fixedResults = await this.runTestsOnCommit(
         fixedCommit,
-        testPath,
         testSuite
       );
 
       // Clean up
       try {
-        unlinkSync(testPath);
         rmSync(this.workDir, { recursive: true, force: true });
       } catch (e) {
         // Ignore cleanup errors
@@ -111,11 +124,15 @@ export class GitBasedTestValidator {
         success: false,
         vulnerableCommit: {
           redTestsPassed: [],
-          allPassed: false
+          allPassed: false,
+          testResults: [],
+          hasInfrastructureFailures: false
         },
         fixedCommit: {
           redTestsPassed: [],
-          allPassed: false
+          allPassed: false,
+          testResults: [],
+          hasInfrastructureFailures: false
         },
         isValidFix: false,
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -128,12 +145,8 @@ export class GitBasedTestValidator {
    */
   private async runTestsOnCommit(
     commit: string,
-    testPath: string,
     testSuite: VulnerabilityTestSuite
-  ): Promise<{
-    redTestsPassed: boolean[];
-    allPassed: boolean;
-  }> {
+  ): Promise<CommitTestResults> {
     // RFC-060: Extract RED tests
     const redTests = extractRedTests(testSuite);
 
@@ -148,15 +161,19 @@ export class GitBasedTestValidator {
       execSync(`git checkout ${commit} --quiet`, { cwd: this.repoPath });
 
       // Run each RED test individually
-      const redTestsPassed = redTests.map((_, index) =>
-        this.runSingleTest(testPath, index)
+      const testResults = redTests.map((redTest, index) =>
+        this.runSingleTest(redTest, index)
       );
 
+      const redTestsPassed = testResults.map(r => r.passed);
       const allPassed = redTestsPassed.every(passed => passed);
+      const hasInfrastructureFailures = testResults.some(r => r.crashed);
 
       return {
         redTestsPassed,
-        allPassed
+        allPassed,
+        testResults,
+        hasInfrastructureFailures
       };
     } finally {
       // Restore original branch
@@ -165,100 +182,136 @@ export class GitBasedTestValidator {
   }
 
   /**
-   * Run a single RED test by index
+   * Run a single RED test directly as a self-contained script.
+   *
+   * Flattened from the previous triple-nested approach:
+   * - Writes a single .js file with inlined assert helpers + test code
+   * - Captures stdout and stderr (not suppressed)
+   * - Uses classifyTestResult() to distinguish crashes from assertion failures
    */
-  private runSingleTest(testPath: string, testIndex: number): boolean {
+  runSingleTest(redTest: RedTest, testIndex: number): SingleTestResult {
+    const testFilePath = join(this.workDir, `red_test_${testIndex}_${Date.now()}.js`);
+
     try {
-      // Create a minimal test runner that executes the test code
-      const testWrapper = `
-        const { execSync } = require('child_process');
-        const fs = require('fs');
-        const path = require('path');
+      // Escape backticks and dollar signs in test code for template literal safety
+      const escapedTestCode = redTest.testCode
+        .replace(/\\/g, '\\\\')
+        .replace(/`/g, '\\`')
+        .replace(/\$/g, '\\$');
 
-        // Load test suite
-        const testSuite = require('${testPath}');
-        const test = testSuite.redTests[${testIndex}];
+      // Build a single self-contained test file
+      const testFileContent = `
+'use strict';
+const assert = require('assert');
 
-        if (!test) {
-          console.error('Test not found at index ${testIndex}');
-          process.exit(1);
-        }
+// Minimal expect() polyfill for test assertions
+function expect(actual) {
+  return {
+    toBe: (expected) => assert.strictEqual(actual, expected),
+    toEqual: (expected) => assert.deepStrictEqual(actual, expected),
+    toBeTruthy: () => assert.ok(actual),
+    toBeFalsy: () => assert.ok(!actual),
+    toBeNull: () => assert.strictEqual(actual, null),
+    toBeUndefined: () => assert.strictEqual(actual, undefined),
+    toBeDefined: () => assert.notStrictEqual(actual, undefined),
+    toBeNaN: () => assert.ok(Number.isNaN(actual)),
+    toContain: (item) => {
+      if (typeof actual === 'string') assert.ok(actual.includes(item), \`Expected "\${actual}" to contain "\${item}"\`);
+      else assert.ok(actual.indexOf(item) !== -1, \`Expected array to contain \${item}\`);
+    },
+    toMatch: (pattern) => assert.match(String(actual), pattern instanceof RegExp ? pattern : new RegExp(pattern)),
+    toThrow: (errorType) => {
+      let threw = false;
+      try { actual(); } catch(e) { threw = true; if (errorType && !(e instanceof errorType)) throw e; }
+      assert.ok(threw, 'Expected function to throw');
+    },
+    not: {
+      toBe: (expected) => assert.notStrictEqual(actual, expected),
+      toEqual: (expected) => assert.notDeepStrictEqual(actual, expected),
+      toContain: (item) => {
+        if (typeof actual === 'string') assert.ok(!actual.includes(item), \`Expected "\${actual}" not to contain "\${item}"\`);
+        else assert.ok(actual.indexOf(item) === -1, \`Expected array not to contain \${item}\`);
+      },
+      toMatch: (pattern) => {
+        const re = pattern instanceof RegExp ? pattern : new RegExp(pattern);
+        assert.ok(!re.test(String(actual)), \`Expected "\${actual}" not to match \${pattern}\`);
+      },
+      toBeTruthy: () => assert.ok(!actual),
+      toBeFalsy: () => assert.ok(actual),
+    }
+  };
+}
 
-        // Create a proper test file with the test framework
-        const testFileContent = \`
-          // Minimal test runner for validation
-          const assert = require('assert');
+// Make expect globally available
+global.expect = expect;
 
-          // Mock test function if not available
-          if (typeof test === 'undefined') {
-            global.test = async (name, fn) => {
-              console.log('Running test:', name);
-              try {
-                await fn();
-                console.log('✓ Test passed');
-              } catch (error) {
-                console.error('✗ Test failed:', error.message);
-                throw error;
-              }
-            };
-          }
+// Execute the test
+(async () => {
+  try {
+    ${redTest.testCode}
+    // If we reach here without error, test passed
+    console.log('TEST_RESULT: PASSED');
+    process.exit(0);
+  } catch (error) {
+    // Output structured info for classification
+    console.error('TEST_RESULT: FAILED');
+    console.error(error.name + ': ' + error.message);
+    if (error.stack) console.error(error.stack);
+    process.exit(1);
+  }
+})();
+`;
 
-          // Mock expect if not available
-          if (typeof expect === 'undefined') {
-            global.expect = (actual) => ({
-              toBe: (expected) => assert.strictEqual(actual, expected),
-              toBeTruthy: () => assert.ok(actual),
-              toBeFalsy: () => assert.ok(!actual),
-              toContain: (substring) => assert.ok(actual.includes(substring)),
-              not: {
-                toBe: (expected) => assert.notStrictEqual(actual, expected),
-                toContain: (substring) => assert.ok(!actual.includes(substring))
-              }
-            });
-          }
+      mkdirSync(dirname(testFilePath), { recursive: true });
+      writeFileSync(testFilePath, testFileContent);
 
-          // Execute the test
-          (async () => {
-            try {
-              \${test.testCode}
-              process.exit(0);
-            } catch (error) {
-              console.error('Test execution failed:', error.message);
-              process.exit(1);
-            }
-          })();
-        \`;
-
-        // Write and execute test file
-        const tempTestFile = '${testPath.replace('.test.js', '')}.red_${testIndex}.runner.js';
-        fs.writeFileSync(tempTestFile, testFileContent);
-
-        try {
-          execSync(\`node \${tempTestFile}\`, {
-            cwd: '${this.repoPath}',
-            stdio: 'pipe'
-          });
-          fs.unlinkSync(tempTestFile);
-          process.exit(0);
-        } catch (error) {
-          fs.unlinkSync(tempTestFile);
-          process.exit(1);
-        }
-      `;
-
-      const wrapperPath = testPath.replace('.test.js', `.red_${testIndex}.wrapper.js`);
-      writeFileSync(wrapperPath, testWrapper);
-
-      execSync(`node ${wrapperPath}`, {
+      // Execute with output capture (not suppressed)
+      const stdout = execSync(`node ${testFilePath}`, {
         cwd: this.repoPath,
-        stdio: 'pipe' // Suppress output
+        encoding: 'utf8',
+        timeout: 30000,
+        stdio: ['pipe', 'pipe', 'pipe']
       });
 
-      unlinkSync(wrapperPath);
-      return true;
-    } catch (error) {
-      logger.debug(`RED test ${testIndex} failed:`, error);
-      return false;
+      // Test passed (exit 0)
+      const classification = classifyTestResult(0, stdout, '');
+
+      // Clean up
+      try { unlinkSync(testFilePath); } catch { /* ignore */ }
+
+      return {
+        passed: true,
+        crashed: false,
+        exitCode: 0,
+        stdout,
+        stderr: '',
+        classification
+      };
+    } catch (error: unknown) {
+      const execError = error as { stdout?: Buffer | string; stderr?: Buffer | string; status?: number };
+      const stdout = execError.stdout?.toString() || '';
+      const stderr = execError.stderr?.toString() || '';
+      const exitCode = execError.status ?? 1;
+
+      // Use classifyTestResult to determine if this was a genuine failure or crash
+      const classification = classifyTestResult(exitCode, stdout, stderr);
+      const crashed = !classification.isValidFailure && classification.type !== 'test_passed';
+
+      logger.debug(`RED test ${testIndex} result: ${classification.type} (exitCode=${exitCode}, crashed=${crashed})`);
+      if (stdout) logger.debug(`  stdout: ${stdout.slice(0, 200)}`);
+      if (stderr) logger.debug(`  stderr: ${stderr.slice(0, 200)}`);
+
+      // Clean up
+      try { unlinkSync(testFilePath); } catch { /* ignore */ }
+
+      return {
+        passed: false,
+        crashed,
+        exitCode,
+        stdout,
+        stderr,
+        classification
+      };
     }
   }
 
@@ -273,7 +326,7 @@ export class GitBasedTestValidator {
     const redTests = extractRedTests(testSuite);
 
     // Generate test objects
-    const testObjects = redTests.map((redTest, index) => `  {
+    const testObjects = redTests.map((redTest, _index) => `  {
     testName: "${redTest.testName}",
     testCode: \`${escapeTestCode(redTest.testCode)}\`,
     attackVector: "${redTest.attackVector || ''}",
@@ -317,11 +370,29 @@ if (require.main === module) {
    * Expected behavior:
    * - On vulnerable code: RED tests should FAIL (prove vulnerability exists)
    * - On fixed code: RED tests should PASS (prove vulnerability fixed)
+   *
+   * VALIDATE Phase Iteration 1: Rejects all-crash scenarios.
+   * If every "failure" was actually an infrastructure crash (MODULE_NOT_FOUND,
+   * SyntaxError, etc.), the validation is not meaningful.
    */
   private validateResults(
-    vulnerableResults: { redTestsPassed: boolean[]; allPassed: boolean },
-    fixedResults: { redTestsPassed: boolean[]; allPassed: boolean }
+    vulnerableResults: CommitTestResults,
+    fixedResults: CommitTestResults
   ): boolean {
+    // Reject if every "failure" was actually an infrastructure crash
+    if (vulnerableResults.hasInfrastructureFailures) {
+      const genuineFailures = vulnerableResults.testResults
+        .filter(r => r.classification.isValidFailure);
+      if (genuineFailures.length === 0 && !vulnerableResults.allPassed) {
+        logger.warn('All test failures were infrastructure crashes, not genuine assertions');
+        logger.warn('Test results:');
+        for (const r of vulnerableResults.testResults) {
+          logger.warn(`  - ${r.classification.type}: ${r.classification.reason} (exit ${r.exitCode})`);
+        }
+        return false;
+      }
+    }
+
     // On vulnerable commit: RED tests should FAIL (proves vulnerability exists)
     const vulnerableValid = !vulnerableResults.allPassed;
 
