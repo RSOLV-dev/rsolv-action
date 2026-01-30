@@ -57,12 +57,13 @@ export interface GitHubIssue {
   labels: IssueLabel[];
 }
 
-export type ExistingIssueResult = GitHubIssue | 'skip:validated' | 'skip:false-positive' | null;
+export type ExistingIssueResult = GitHubIssue | 'skip:validated' | 'skip:false-positive' | 'skip:dismissed' | null;
 
 export interface IssueCreationResult {
   issues: CreatedIssue[];
   skippedValidated: number;
   skippedFalsePositive: number;
+  skippedDismissed?: number;
 }
 
 export interface FileToScan {

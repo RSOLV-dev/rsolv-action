@@ -97,6 +97,9 @@ async function runDetection() {
               }
               seen.add(key);
 
+              // Extract the line content for the snippet
+              const snippetLine = lines[lineNumber - 1] || '';
+
               vulnerabilities.push({
                 type: pattern.type,
                 severity: pattern.severity,
@@ -107,7 +110,8 @@ async function runDetection() {
                 cweId: pattern.cweId,
                 owaspCategory: pattern.owaspCategory,
                 remediation: pattern.remediation,
-                filePath: filePath
+                filePath: filePath,
+                snippet: snippetLine
               });
 
               // Exit after first match for non-global regex

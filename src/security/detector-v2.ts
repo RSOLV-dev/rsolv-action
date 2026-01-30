@@ -267,7 +267,8 @@ export class SecurityDetectorV2 {
           confidence: this.getConfidence(line, pattern.type),
           cweId: pattern.cweId,
           owaspCategory: pattern.owaspCategory,
-          remediation: pattern.remediation
+          remediation: pattern.remediation,
+          snippet: line
         };
 
         if (pattern.id === 'ruby-sql-injection' && language === 'ruby') {

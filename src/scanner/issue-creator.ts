@@ -75,12 +75,15 @@ export class IssueCreator {
    * Check if issue should be skipped based on its labels
    * Returns skip reason or null if issue should be processed
    */
-  private checkSkipStatus(labels: string[]): 'skip:validated' | 'skip:false-positive' | null {
+  private checkSkipStatus(labels: string[]): 'skip:validated' | 'skip:false-positive' | 'skip:dismissed' | null {
     if (labels.includes('rsolv:validated')) {
       return 'skip:validated';
     }
     if (labels.includes('rsolv:false-positive')) {
       return 'skip:false-positive';
+    }
+    if (labels.includes('rsolv:wont-fix') || labels.includes('rsolv:accepted-risk') || labels.includes('rsolv:deferred')) {
+      return 'skip:dismissed';
     }
     return null;
   }
@@ -92,10 +95,11 @@ export class IssueCreator {
     const createdIssues: CreatedIssue[] = [];
     let skippedValidated = 0;
     let skippedFalsePositive = 0;
+    let skippedDismissed = 0;
 
     if (!config.createIssues) {
       logger.info('Issue creation disabled, skipping');
-      return {issues: createdIssues, skippedValidated, skippedFalsePositive};
+      return {issues: createdIssues, skippedValidated, skippedFalsePositive, skippedDismissed};
     }
 
     // Separate vendor and application vulnerability groups
@@ -142,6 +146,11 @@ export class IssueCreator {
           continue;
         }
 
+        if (existingIssue === 'skip:dismissed') {
+          skippedDismissed++;
+          continue;
+        }
+
         if (existingIssue) {
           logger.info(`Found existing issue #${existingIssue.number} for ${group.type} vulnerabilities`);
           const updatedIssue = await this.updateExistingIssue(existingIssue, group, config);
@@ -156,7 +165,7 @@ export class IssueCreator {
       }
     }
 
-    return {issues: createdIssues, skippedValidated, skippedFalsePositive};
+    return {issues: createdIssues, skippedValidated, skippedFalsePositive, skippedDismissed};
   }
 
   private async findExistingIssue(
@@ -188,7 +197,12 @@ export class IssueCreator {
       const skipStatus = this.checkSkipStatus(labelNames);
 
       if (skipStatus) {
-        const reason = skipStatus === 'skip:validated' ? 'validated' : 'false positive';
+        const reasonMap: Record<string, string> = {
+          'skip:validated': 'validated',
+          'skip:false-positive': 'false positive',
+          'skip:dismissed': 'dismissed (wont-fix/accepted-risk/deferred)',
+        };
+        const reason = reasonMap[skipStatus] || skipStatus;
         logger.info(`Skipping ${reason} issue #${existingIssue.number} for ${group.type}`);
         return skipStatus;
       }
@@ -323,7 +337,28 @@ export class IssueCreator {
     sections.push(`**Total Instances**: ${group.count}`);
     sections.push(`**Affected Files**: ${group.files.length}`);
     sections.push('');
-    
+
+    // Security Classification (from first vulnerability — all share same type)
+    const representative = group.vulnerabilities[0];
+    if (representative) {
+      const classificationLines: string[] = [];
+      if (representative.cweId) {
+        const cweNum = representative.cweId.replace(/^CWE-/, '');
+        classificationLines.push(`- **CWE**: [${representative.cweId}](https://cwe.mitre.org/data/definitions/${cweNum}.html)`);
+      }
+      if (representative.owaspCategory) {
+        classificationLines.push(`- **OWASP**: ${representative.owaspCategory}`);
+      }
+      if (representative.confidence !== undefined) {
+        classificationLines.push(`- **Confidence**: ${representative.confidence}%`);
+      }
+      if (classificationLines.length > 0) {
+        sections.push('### Security Classification');
+        sections.push(...classificationLines);
+        sections.push('');
+      }
+    }
+
     // Description
     sections.push('### Description');
     sections.push(this.getVulnerabilityDescription(vulnType));
@@ -375,6 +410,9 @@ export class IssueCreator {
     sections.push(`*Repository: ${config.repository.owner}/${config.repository.name}*`);
     sections.push(`*Branch: ${config.repository.defaultBranch}*`);
     sections.push(`*Scan Date: ${new Date().toISOString()}*`);
+    sections.push('');
+    sections.push('*To dismiss this finding, add one of these labels:*');
+    sections.push('*`rsolv:false-positive` · `rsolv:wont-fix` · `rsolv:accepted-risk` · `rsolv:deferred`*');
     
     return sections.join('\n');
   }

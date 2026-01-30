@@ -33,6 +33,27 @@ export class RepositoryScanner {
   ];
 
   /**
+   * Directories that typically contain configuration files.
+   * Vulnerabilities in these files get a 0.5x confidence multiplier
+   * (aligned with backend file_path_classifier.ex).
+   */
+  private static readonly CONFIG_DIRS = [
+    'config/',
+    '.config/',
+    'configs/',
+  ];
+
+  /**
+   * File name patterns for configuration files.
+   * Matched against the filename (basename) portion of the path.
+   */
+  private static readonly CONFIG_FILE_PATTERNS = [
+    /\.config\.\w+$/,
+    /\.env\.\w+$/,
+    /^tsconfig.*\.json$/,
+  ];
+
+  /**
    * File name patterns for non-production files (test files, build configs, scripts).
    */
   private static readonly NON_PRODUCTION_FILE_PATTERNS = [
@@ -112,7 +133,10 @@ export class RepositoryScanner {
     }
     
     logger.info(`Scanning complete. Total vulnerabilities found: ${vulnerabilities.length}`);
-    
+
+    // Apply confidence reduction for config file vulnerabilities
+    RepositoryScanner.applyConfigConfidenceMultiplier(vulnerabilities);
+
     // Apply AST validation if enabled (default is true)
     if (config.enableASTValidation !== false && config.rsolvApiKey && typeof config.rsolvApiKey === 'string' && config.rsolvApiKey.length > 0) {
       logger.info('Performing AST validation on detected vulnerabilities (enabled by default)...');
@@ -279,6 +303,43 @@ export class RepositoryScanner {
     }
 
     return false;
+  }
+
+  /**
+   * Check if a file path is in a configuration directory or matches config file patterns.
+   */
+  static isConfigFile(filePath: string): boolean {
+    const normalizedPath = filePath.replace(/\\/g, '/');
+
+    // Check if path starts with or contains a config directory
+    for (const dir of RepositoryScanner.CONFIG_DIRS) {
+      if (normalizedPath.startsWith(dir) || normalizedPath.includes(`/${dir}`)) {
+        return true;
+      }
+    }
+
+    // Check if filename matches config file patterns
+    const filename = normalizedPath.split('/').pop() || '';
+    for (const pattern of RepositoryScanner.CONFIG_FILE_PATTERNS) {
+      if (pattern.test(filename)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Apply 0.5x confidence multiplier to vulnerabilities found in config files.
+   * Aligned with backend file_path_classifier.ex confidence reduction.
+   */
+  static applyConfigConfidenceMultiplier(vulnerabilities: Vulnerability[]): Vulnerability[] {
+    for (const vuln of vulnerabilities) {
+      if (vuln.filePath && RepositoryScanner.isConfigFile(vuln.filePath)) {
+        vuln.confidence = Math.round(vuln.confidence * 0.5);
+      }
+    }
+    return vulnerabilities;
   }
 
   private isSupportedLanguage(language: string): boolean {

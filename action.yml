@@ -18,7 +18,7 @@ inputs:
   issue_label:
     description: 'Label to identify issues for automation'
     required: false
-    default: 'rsolv:automate'
+    default: 'rsolv:detected'
   environment_variables:
     description: 'JSON string of environment variables to pass to the container'
     required: false
