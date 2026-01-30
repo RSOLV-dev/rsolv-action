@@ -1,40 +1,44 @@
 /**
  * ValidationMode - Test Execution Integration Tests
  *
- * Tests the integration of TestRunner into ValidationMode for executing RED tests,
- * capturing test execution metadata, and applying GitHub labels based on validation results.
+ * Tests the RFC-060-AMENDMENT-001 pipeline where validateVulnerability() uses
+ * framework-native test generation instead of GitBasedTestValidator.
+ *
+ * Pipeline: analyzeIssue -> detectFrameworkFromFile -> scanTestFiles ->
+ *           testIntegrationClient.analyze -> generateTestWithRetry ->
+ *           branch/commit/label/phaseData
  *
  * @see src/modes/validation-mode.ts
- * @implements RFC-060 Phase 2.2
+ * @implements RFC-060-AMENDMENT-001
  */
 
 import { describe, test, expect, beforeEach, vi, afterEach } from 'vitest';
 import type { IssueContext, ActionConfig } from '../../types/index.js';
-import type { TestRunResult } from '../../ai/test-runner.js';
+import type { TestSuite } from '../types.js';
 
 // Create mocks using vi.hoisted to ensure proper hoisting
 const {
-  mockRunTests,
+  mockAnalyzeIssue,
+  mockTestIntegrationClientAnalyze,
   mockStorePhaseResults,
   mockAddLabels,
-  mockCreateLabel,
-  mockAnalyzeIssue,
-  mockAnalyzeWithTestGeneration,
-  mockValidateFixWithTests
+  mockCreateLabel
 } = vi.hoisted(() => ({
-  mockRunTests: vi.fn(),
+  mockAnalyzeIssue: vi.fn(),
+  mockTestIntegrationClientAnalyze: vi.fn(),
   mockStorePhaseResults: vi.fn(),
   mockAddLabels: vi.fn(),
-  mockCreateLabel: vi.fn(),
-  mockAnalyzeIssue: vi.fn(),
-  mockAnalyzeWithTestGeneration: vi.fn(),
-  mockValidateFixWithTests: vi.fn()
+  mockCreateLabel: vi.fn()
 }));
 
 // Mock dependencies
-vi.mock('../../ai/test-runner.js', () => ({
-  TestRunner: vi.fn().mockImplementation(() => ({
-    runTests: mockRunTests
+vi.mock('../../ai/analyzer.js', () => ({
+  analyzeIssue: mockAnalyzeIssue
+}));
+
+vi.mock('../test-integration-client.js', () => ({
+  TestIntegrationClient: vi.fn().mockImplementation(() => ({
+    analyze: mockTestIntegrationClientAnalyze
   }))
 }));
 
@@ -53,19 +57,24 @@ vi.mock('@octokit/rest', () => ({
   }))
 }));
 
-vi.mock('../../ai/analyzer.js', () => ({
-  analyzeIssue: mockAnalyzeIssue
+vi.mock('../../github/api.js', () => ({
+  getGitHubClient: vi.fn().mockReturnValue({
+    issues: {
+      addLabels: mockAddLabels,
+      createLabel: mockCreateLabel
+    }
+  })
+}));
+
+vi.mock('../vendor-utils.js', () => ({
+  vendorFilterUtils: {
+    checkForVendorFiles: vi.fn().mockResolvedValue({ isVendor: false, files: [] })
+  }
 }));
 
 vi.mock('../../ai/test-generating-security-analyzer.js', () => ({
   TestGeneratingSecurityAnalyzer: vi.fn().mockImplementation(() => ({
-    analyzeWithTestGeneration: mockAnalyzeWithTestGeneration
-  }))
-}));
-
-vi.mock('../../ai/git-based-test-validator.js', () => ({
-  GitBasedTestValidator: vi.fn().mockImplementation(() => ({
-    validateFixWithTests: mockValidateFixWithTests
+    analyzeWithTestGeneration: vi.fn()
   }))
 }));
 
@@ -76,34 +85,46 @@ vi.mock('child_process', () => ({
 vi.mock('fs', () => ({
   default: {
     existsSync: vi.fn().mockReturnValue(false),
-    readFileSync: vi.fn(),
+    readFileSync: vi.fn().mockReturnValue(''),
     writeFileSync: vi.fn(),
-    mkdirSync: vi.fn()
+    mkdirSync: vi.fn(),
+    readdirSync: vi.fn().mockReturnValue([])
   },
   existsSync: vi.fn().mockReturnValue(false),
-  readFileSync: vi.fn(),
+  readFileSync: vi.fn().mockReturnValue(''),
   writeFileSync: vi.fn(),
-  mkdirSync: vi.fn()
+  mkdirSync: vi.fn(),
+  readdirSync: vi.fn().mockReturnValue([])
 }));
 
 import { ValidationMode } from '../validation-mode.js';
 
-describe('RFC-060 Phase 2.2: ValidationMode Test Execution Integration', () => {
+describe('RFC-060-AMENDMENT-001: ValidationMode Test Execution Integration', () => {
   let validationMode: ValidationMode;
   let mockConfig: ActionConfig;
   let mockIssue: IssueContext;
 
+  // Reusable test suite returned by generateTestWithRetry when validation succeeds
+  const successTestSuite: TestSuite = {
+    framework: 'jest',
+    testFile: 'src/__tests__/auth.test.js',
+    redTests: [{
+      testName: 'SQL injection vulnerability',
+      testCode: 'expect(vulnerable).toBe(true);',
+      attackVector: 'sql_injection',
+      expectedBehavior: 'should reject malicious input'
+    }]
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // Reset all mocks
-    mockRunTests.mockReset();
+    // Reset all hoisted mocks
+    mockAnalyzeIssue.mockReset();
+    mockTestIntegrationClientAnalyze.mockReset();
     mockStorePhaseResults.mockReset();
     mockAddLabels.mockReset();
     mockCreateLabel.mockReset();
-    mockAnalyzeIssue.mockReset();
-    mockAnalyzeWithTestGeneration.mockReset();
-    mockValidateFixWithTests.mockReset();
 
     // Default successful resolutions
     mockStorePhaseResults.mockResolvedValue({ success: true });
@@ -149,7 +170,7 @@ describe('RFC-060 Phase 2.2: ValidationMode Test Execution Integration', () => {
       updatedAt: '2024-01-01T00:00:00Z'
     };
 
-    // Mock analysis to return fixable issue
+    // Default: analyzeIssue returns fixable issue
     mockAnalyzeIssue.mockResolvedValue({
       canBeFixed: true,
       filesToModify: ['src/auth.js'],
@@ -159,287 +180,228 @@ describe('RFC-060 Phase 2.2: ValidationMode Test Execution Integration', () => {
       suggestedApproach: 'Fix SQL injection'
     });
 
-    // Mock test generation
-    mockAnalyzeWithTestGeneration.mockResolvedValue({
-      generatedTests: {
-        testSuite: 'test content',
-        framework: 'jest',
-        testFile: 'src/__tests__/auth.test.js'
-      }
+    // Default: testIntegrationClient.analyze returns a recommendation
+    mockTestIntegrationClientAnalyze.mockResolvedValue({
+      recommendations: [{ path: 'test/auth.test.js', score: 0.9, reason: 'Best match' }],
+      fallback: { path: 'test/auth.test.js', reason: 'Only candidate' }
     });
 
+    // Set env vars for GitHub operations
+    process.env.GITHUB_TOKEN = 'test-token';
+    process.env.GITHUB_REPOSITORY = 'test-org/test-repo';
+
+    // Create instance (rsolvApiKey set so TestIntegrationClient initializes)
     validationMode = new ValidationMode(mockConfig, '/tmp/test-repo');
+
+    // Spy on private methods to control the pipeline
+    vi.spyOn(validationMode as any, 'ensureCleanGitState').mockImplementation(() => {});
+    vi.spyOn(validationMode as any, 'loadFalsePositiveCache').mockImplementation(() => {});
+    vi.spyOn(validationMode as any, 'detectFrameworkFromFile').mockReturnValue('jest');
+    vi.spyOn(validationMode as any, 'scanTestFiles').mockResolvedValue(['test/auth.test.js']);
+    vi.spyOn(validationMode as any, 'integrateTestsWithBackendRetry').mockResolvedValue({
+      targetFile: 'test/auth.test.js',
+      content: 'integrated test content'
+    });
+    vi.spyOn(validationMode as any, 'addGitHubLabel').mockResolvedValue(undefined);
+    vi.spyOn(validationMode as any, 'storeTestExecutionInPhaseData').mockResolvedValue(undefined);
   });
 
-  describe('Test Execution with TestRunner', () => {
+  afterEach(() => {
+    delete process.env.GITHUB_TOKEN;
+    delete process.env.GITHUB_REPOSITORY;
+  });
+
+  describe('Test Execution with generateTestWithRetry Pipeline', () => {
     test('should mark as validated when RED test fails (vulnerability confirmed)', async () => {
-      // Mock test failure (RED test fails = vulnerability exists)
-      mockValidateFixWithTests.mockResolvedValue({
-        success: false, // Test failed = vulnerability confirmed
-        output: 'FAIL: SQL injection test detected vulnerability',
-        passed: false,
-        vulnerableCommit: {
-          allPassed: false, // Tests fail = vulnerability exists
-          redTestPassed: false,
-          greenTestPassed: false,
-          refactorTestPassed: true
-        },
-        fixedCommit: {
-          allPassed: true,
-          redTestPassed: true,
-          greenTestPassed: true,
-          refactorTestPassed: true
-        },
-        isValidFix: false
-      });
+      // generateTestWithRetry returns a test suite => RED test failed on vulnerable code
+      vi.spyOn(validationMode as any, 'generateTestWithRetry').mockResolvedValue(successTestSuite);
 
       const result = await validationMode.validateVulnerability(mockIssue);
 
       expect(result.validated).toBe(true);
       expect(result.testExecutionResult).toBeDefined();
       expect(result.testExecutionResult?.passed).toBe(false);
-      expect(result.testExecutionResult?.output).toContain('FAIL: SQL injection');
+      expect(result.testExecutionResult?.output).toContain('RED test failed on vulnerable code');
+      expect(result.testExecutionResult?.framework).toBe('jest');
+      expect(result.testExecutionResult?.testFile).toBe('src/__tests__/auth.test.js');
     });
 
-    test('should mark as false positive when RED test passes (no vulnerability)', async () => {
-      // Mock test success (RED test passes = no vulnerability = false positive)
-      mockValidateFixWithTests.mockResolvedValue({
-        success: true, // Test passed = no vulnerability
-        output: 'PASS: All tests passed',
-        passed: true,
-        vulnerableCommit: {
-          allPassed: true, // Tests pass = no vulnerability
-          redTestPassed: true,
-          greenTestPassed: true,
-          refactorTestPassed: true
-        },
-        fixedCommit: {
-          allPassed: true,
-          redTestPassed: true,
-          greenTestPassed: true,
-          refactorTestPassed: true
-        }
-      });
+    test('should mark as false positive when RED test passes (generateTestWithRetry returns null)', async () => {
+      // generateTestWithRetry returns null => could not generate a valid RED test
+      vi.spyOn(validationMode as any, 'generateTestWithRetry').mockResolvedValue(null);
 
       const result = await validationMode.validateVulnerability(mockIssue);
 
       expect(result.validated).toBe(false);
-      expect(result.falsePositiveReason).toContain('passed on allegedly vulnerable code');
+      expect(result.falsePositiveReason).toContain('Unable to generate valid RED test');
+      expect(result.falsePositiveReason).toContain('3 attempts');
+    });
+
+    test('should include branchName in result when validated', async () => {
+      vi.spyOn(validationMode as any, 'generateTestWithRetry').mockResolvedValue(successTestSuite);
+
+      const result = await validationMode.validateVulnerability(mockIssue);
+
+      expect(result.validated).toBe(true);
+      expect(result.branchName).toBeDefined();
+      expect(result.branchName).toContain('rsolv/validate/issue-123');
     });
   });
 
   describe('PhaseDataClient Integration', () => {
-    test('should store test execution results in PhaseDataClient', async () => {
-      mockValidateFixWithTests.mockResolvedValue({
-        success: false,
-        output: 'Test failed with details',
-        passed: false,
-        vulnerableCommit: {
-          allPassed: false,
-          redTestPassed: false,
-          greenTestPassed: false,
-          refactorTestPassed: true
-        },
-        fixedCommit: {
-          allPassed: true,
-          redTestPassed: true,
-          greenTestPassed: true,
-          refactorTestPassed: true
-        }
-      });
+    test('should store test execution results when validated', async () => {
+      // Re-create the spy so we can assert on it (beforeEach already sets one)
+      const storeSpy = vi.spyOn(validationMode as any, 'storeTestExecutionInPhaseData')
+        .mockResolvedValue(undefined);
+      vi.spyOn(validationMode as any, 'generateTestWithRetry').mockResolvedValue(successTestSuite);
 
-      const result = await validationMode.validateVulnerability(mockIssue);
+      await validationMode.validateVulnerability(mockIssue);
 
-      expect(mockStorePhaseResults).toHaveBeenCalled();
-      expect(result.testExecutionResult).toBeDefined();
-      expect(result.testExecutionResult?.output).toContain('"success": false');
-      expect(result.testExecutionResult?.output).toContain('Test failed with details');
+      expect(storeSpy).toHaveBeenCalled();
     });
 
-    test('should include test output in stored metadata', async () => {
-      const detailedOutput = 'FAIL: Detailed test output with vulnerability evidence';
-      const detailedStderr = 'Warning: Security issue detected';
+    test('should not store phase data when validation fails (null test suite)', async () => {
+      const storePhaseDataSpy = vi.spyOn(validationMode as any, 'storeTestExecutionInPhaseData');
+      vi.spyOn(validationMode as any, 'generateTestWithRetry').mockResolvedValue(null);
 
-      mockValidateFixWithTests.mockResolvedValue({
-        success: false,
-        output: detailedOutput,
-        stderr: detailedStderr,
-        passed: false,
-        vulnerableCommit: {
-          allPassed: false,
-          redTestPassed: false,
-          greenTestPassed: false,
-          refactorTestPassed: true
-        },
-        fixedCommit: {
-          allPassed: true,
-          redTestPassed: true,
-          greenTestPassed: true,
-          refactorTestPassed: true
-        }
-      });
+      await validationMode.validateVulnerability(mockIssue);
 
-      const result = await validationMode.validateVulnerability(mockIssue);
-
-      expect(result.testExecutionResult).toBeDefined();
-      expect(result.testExecutionResult?.output).toContain(detailedOutput);
-      expect(result.testExecutionResult?.stderr).toBe('');
+      // storeTestExecutionInPhaseData is NOT called when testSuite is null
+      // because we return early before reaching the store call
+      expect(storePhaseDataSpy).not.toHaveBeenCalled();
     });
   });
 
   describe('GitHub Issue Labeling', () => {
     test('should apply rsolv:validated label when vulnerability is confirmed', async () => {
-      mockValidateFixWithTests.mockResolvedValue({
-        success: false,
-        output: 'Test failed - vulnerability exists',
-        passed: false,
-        vulnerableCommit: {
-          allPassed: false,
-          redTestPassed: false,
-          greenTestPassed: false,
-          refactorTestPassed: true
-        },
-        fixedCommit: {
-          allPassed: true,
-          redTestPassed: true,
-          greenTestPassed: true,
-          refactorTestPassed: true
-        }
-      });
-
-      process.env.GITHUB_TOKEN = 'test-token';
-      process.env.GITHUB_REPOSITORY = 'test-org/test-repo';
+      vi.spyOn(validationMode as any, 'generateTestWithRetry').mockResolvedValue(successTestSuite);
 
       const result = await validationMode.validateVulnerability(mockIssue);
 
       expect(result.validated).toBe(true);
-      expect(mockAddLabels).toHaveBeenCalledWith(
-        expect.objectContaining({
-          owner: 'test-org',
-          repo: 'test-repo',
-          issue_number: 123,
-          labels: expect.arrayContaining(['rsolv:validated'])
-        })
+      expect((validationMode as any).addGitHubLabel).toHaveBeenCalledWith(
+        mockIssue,
+        'rsolv:validated'
       );
     });
 
-    test('should apply rsolv:false-positive label when validation fails', async () => {
-      mockValidateFixWithTests.mockResolvedValue({
-        success: true,
-        output: 'Test passed - no vulnerability',
-        passed: true,
-        vulnerableCommit: {
-          allPassed: true,
-          redTestPassed: true,
-          greenTestPassed: true,
-          refactorTestPassed: true
-        },
-        fixedCommit: {
-          allPassed: true,
-          redTestPassed: true,
-          greenTestPassed: true,
-          refactorTestPassed: true
-        }
-      });
-
-      process.env.GITHUB_TOKEN = 'test-token';
-      process.env.GITHUB_REPOSITORY = 'test-org/test-repo';
+    test('should not apply rsolv:validated label when validation fails', async () => {
+      vi.spyOn(validationMode as any, 'generateTestWithRetry').mockResolvedValue(null);
 
       const result = await validationMode.validateVulnerability(mockIssue);
 
       expect(result.validated).toBe(false);
-      expect(mockAddLabels).toHaveBeenCalledWith(
-        expect.objectContaining({
-          owner: 'test-org',
-          repo: 'test-repo',
-          issue_number: 123,
-          labels: expect.arrayContaining(['rsolv:false-positive'])
-        })
+      // addGitHubLabel should not be called with 'rsolv:validated' when testSuite is null
+      expect((validationMode as any).addGitHubLabel).not.toHaveBeenCalledWith(
+        mockIssue,
+        'rsolv:validated'
       );
     });
   });
 
   describe('Error Handling', () => {
-    test('should handle test execution timeout', async () => {
-      mockValidateFixWithTests.mockResolvedValue({
-        success: false,
-        output: '',
-        stderr: '',
-        error: 'Test execution timed out',
-        passed: false,
-        vulnerableCommit: {
-          allPassed: false,
-          redTestPassed: false,
-          greenTestPassed: false,
-          refactorTestPassed: false
-        },
-        fixedCommit: {
-          allPassed: false,
-          redTestPassed: false,
-          greenTestPassed: false,
-          refactorTestPassed: false
-        }
-      });
+    test('should handle timeout scenario (generateTestWithRetry returns null)', async () => {
+      // When all retry attempts time out, generateTestWithRetry returns null
+      vi.spyOn(validationMode as any, 'generateTestWithRetry').mockResolvedValue(null);
 
       const result = await validationMode.validateVulnerability(mockIssue);
 
-      expect(result.validated).toBe(true); // Tests failed = vulnerability exists
-      expect(result.testExecutionResult).toBeDefined();
-      expect(result.testExecutionResult?.error).toContain('timed out');
+      expect(result.validated).toBe(false);
+      expect(result.falsePositiveReason).toContain('Unable to generate valid RED test');
     });
 
-    test('should handle test execution errors gracefully', async () => {
-      mockValidateFixWithTests.mockRejectedValue(
+    test('should handle errors gracefully when generateTestWithRetry throws', async () => {
+      vi.spyOn(validationMode as any, 'generateTestWithRetry').mockRejectedValue(
         new Error('Command not found: jest')
       );
 
       const result = await validationMode.validateVulnerability(mockIssue);
 
       expect(result.validated).toBe(false);
-      expect(result.falsePositiveReason).toContain('error');
+      expect(result.falsePositiveReason).toContain('Validation error');
+    });
+
+    test('should handle missing TestIntegrationClient when rsolvApiKey is not set', async () => {
+      const configWithoutKey = { ...mockConfig, rsolvApiKey: undefined };
+      const modeWithoutKey = new ValidationMode(configWithoutKey, '/tmp/test-repo');
+      vi.spyOn(modeWithoutKey as any, 'ensureCleanGitState').mockImplementation(() => {});
+      vi.spyOn(modeWithoutKey as any, 'loadFalsePositiveCache').mockImplementation(() => {});
+
+      const result = await modeWithoutKey.validateVulnerability(mockIssue);
+
+      expect(result.validated).toBe(false);
+      expect(result.falsePositiveReason).toContain('TestIntegrationClient not initialized');
     });
   });
 
-  describe('RFC-060 Phase 3.1: PhaseDataClient Metadata Storage', () => {
-    test('should store branchName and testPath in PhaseDataClient', async () => {
-      // Set up phaseDataClient
-      const mockPhaseDataClient = {
-        storePhaseResults: mockStorePhaseResults
-      } as any;
-      (validationMode as any).phaseDataClient = mockPhaseDataClient;
-
-      // Mock test failure (RED test fails = vulnerability exists)
-      mockValidateFixWithTests.mockResolvedValue({
-        success: false,
-        output: 'Test failed',
-        passed: false,
-        vulnerableCommit: {
-          allPassed: false,
-          redTestPassed: false,
-          greenTestPassed: false,
-          refactorTestPassed: true
-        },
-        fixedCommit: {
-          allPassed: true,
-          redTestPassed: true,
-          greenTestPassed: true,
-          refactorTestPassed: true
-        }
-      });
-
-      mockStorePhaseResults.mockResolvedValue({ success: true });
+  describe('RFC-060-AMENDMENT-001: PhaseDataClient Metadata Storage', () => {
+    test('should pass branchName and testPath to storeTestExecutionInPhaseData', async () => {
+      vi.spyOn(validationMode as any, 'generateTestWithRetry').mockResolvedValue(successTestSuite);
+      // Replace the spy with one that captures args
+      const storeSpy = vi.spyOn(validationMode as any, 'storeTestExecutionInPhaseData')
+        .mockResolvedValue(undefined);
 
       await validationMode.validateVulnerability(mockIssue);
 
-      expect(mockStorePhaseResults).toHaveBeenCalled();
-      const storeCall = mockStorePhaseResults.mock.calls[0];
+      expect(storeSpy).toHaveBeenCalledWith(
+        mockIssue,
+        expect.objectContaining({
+          passed: false,
+          framework: 'jest',
+          testFile: 'src/__tests__/auth.test.js'
+        }),
+        true,
+        expect.stringContaining('rsolv/validate/issue-123'),
+        expect.any(Array) // vulnerabilities
+      );
+    });
+  });
 
-      // Verify branchName and testPath are included in the stored data
-      expect(storeCall[0]).toBe('validate');
-      expect(storeCall[1].validate[123]).toHaveProperty('branchName');
-      expect(storeCall[1].validate[123]).toHaveProperty('testPath');
-      expect(storeCall[1].validate[123]).toHaveProperty('validated');
-      expect(storeCall[1].validate[123]).toHaveProperty('testExecutionResult');
+  describe('Pipeline Flow', () => {
+    test('should call analyzeIssue before generating tests', async () => {
+      vi.spyOn(validationMode as any, 'generateTestWithRetry').mockResolvedValue(successTestSuite);
+
+      await validationMode.validateVulnerability(mockIssue);
+
+      expect(mockAnalyzeIssue).toHaveBeenCalledWith(mockIssue, mockConfig);
+    });
+
+    test('should not generate tests when analyzeIssue says issue cannot be fixed', async () => {
+      mockAnalyzeIssue.mockResolvedValue({
+        canBeFixed: false,
+        cannotFixReason: 'Requires architectural changes',
+        filesToModify: [],
+        issueType: 'security',
+        estimatedComplexity: 'high',
+        requiredContext: [],
+        suggestedApproach: ''
+      });
+
+      const generateSpy = vi.spyOn(validationMode as any, 'generateTestWithRetry');
+
+      const result = await validationMode.validateVulnerability(mockIssue);
+
+      expect(result.validated).toBe(false);
+      expect(result.falsePositiveReason).toContain('Requires architectural changes');
+      expect(generateSpy).not.toHaveBeenCalled();
+    });
+
+    test('should call detectFrameworkFromFile with primary vulnerable file', async () => {
+      vi.spyOn(validationMode as any, 'generateTestWithRetry').mockResolvedValue(successTestSuite);
+      const frameworkSpy = vi.spyOn(validationMode as any, 'detectFrameworkFromFile');
+
+      await validationMode.validateVulnerability(mockIssue);
+
+      expect(frameworkSpy).toHaveBeenCalled();
+    });
+
+    test('should call scanTestFiles to find candidate test files', async () => {
+      vi.spyOn(validationMode as any, 'generateTestWithRetry').mockResolvedValue(successTestSuite);
+      const scanSpy = vi.spyOn(validationMode as any, 'scanTestFiles');
+
+      await validationMode.validateVulnerability(mockIssue);
+
+      expect(scanSpy).toHaveBeenCalled();
     });
   });
 });

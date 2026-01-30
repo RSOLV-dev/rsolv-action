@@ -305,30 +305,24 @@ end`,
     });
   });
 
-  describe('Backend not configured - fallback behavior', () => {
-    it('should fall back to .rsolv/tests/ when API URL not set', async () => {
-      // Arrange - Remove API URL
-      delete process.env.RSOLV_API_URL;
-
-      const validationModeWithoutBackend = new ValidationMode(mockConfig);
+  describe('Backend not configured - error behavior', () => {
+    it('should error when backend not configured (no .rsolv/tests/ fallback)', async () => {
+      // Arrange - Remove rsolvApiKey to disable backend (testIntegrationClient will be null)
+      const configWithoutBackend = { ...mockConfig, rsolvApiKey: undefined };
+      const validationModeWithoutBackend = new ValidationMode(configWithoutBackend);
 
       const testContent = { redTests: [{ testName: 'test', testCode: 'code', attackVector: 'attack' }] };
 
-      // Act
-      await (validationModeWithoutBackend as any).commitTestsToBranch(
-        testContent,
-        'rsolv/validate/issue-123',
-        mockIssue
-      );
+      // Act & Assert - commitTestsToBranch requires backend integration, should throw
+      await expect(
+        (validationModeWithoutBackend as any).commitTestsToBranch(
+          testContent,
+          'rsolv/validate/issue-123',
+          mockIssue
+        )
+      ).rejects.toThrow('TestIntegrationClient not initialized');
 
-      // Assert - Should write to .rsolv/tests/ instead of calling backend
-      expect(fs.writeFileSync).toHaveBeenCalledWith(
-        expect.stringContaining('.rsolv/tests/validation.test.js'),
-        expect.any(String),
-        'utf8'
-      );
-
-      // Backend should NOT have been called
+      // Backend should NOT have been called (client was null)
       expect(mockTestIntegrationClient.analyze).not.toHaveBeenCalled();
       expect(mockTestIntegrationClient.generate).not.toHaveBeenCalled();
     });

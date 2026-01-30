@@ -28,6 +28,12 @@ interface ValidationResponse {
     isValid: boolean;
     confidence: number;
     reason?: string;
+    enclosingFunction?: {
+      name: string;
+      startLine: number;
+      endLine: number;
+      params: string[];
+    };
     astContext?: {
       inUserInputFlow: boolean;
       hasValidation: boolean;
@@ -213,21 +219,26 @@ export class ASTValidator {
       response.validated.map(v => [v.id, v])
     );
     
-    // Filter vulnerabilities based on validation results
+    // Filter vulnerabilities based on validation results and attach enclosingFunction
     const validated = vulnerabilities.filter(vuln => {
       const vulnId = `${vuln.type}-${vuln.line}-${vuln.column || 0}`;
       const validation = validationMap.get(vulnId);
-      
+
       if (!validation) {
         // No validation result, keep the vulnerability
         return true;
       }
-      
+
       if (!validation.isValid) {
         logger.debug(`Filtered false positive: ${vuln.filePath}:${vuln.line} - ${validation.reason}`);
         return false;
       }
-      
+
+      // Attach enclosingFunction from platform response for focused test context
+      if (validation.enclosingFunction) {
+        vuln.enclosingFunction = validation.enclosingFunction;
+      }
+
       return true;
     });
     

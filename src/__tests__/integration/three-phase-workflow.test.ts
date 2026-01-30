@@ -2,7 +2,7 @@
  * Integration test for RFC-058 three-phase workflow with validation branch persistence
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ValidationMode } from '../../modes/validation-mode.js';
 import { MitigationMode } from '../../modes/mitigation-mode.js';
 import { IssueContext } from '../../types/index.js';
@@ -10,6 +10,29 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { execSync } from 'child_process';
 import { initTestRepo } from '../helpers/git-test-utils.js';
+
+/**
+ * Helper: write validation result JSON to the local filesystem.
+ * This replaces the removed storeValidationResultWithBranch() method.
+ */
+function writeValidationResultLocally(
+  repoPath: string,
+  issue: IssueContext,
+  branchName: string
+): void {
+  const storageDir = path.join(repoPath, '.rsolv', 'validation');
+  fs.mkdirSync(storageDir, { recursive: true });
+  const data = {
+    issueId: issue.number,
+    branchName,
+    validated: true,
+    timestamp: new Date().toISOString()
+  };
+  fs.writeFileSync(
+    path.join(storageDir, `issue-${issue.number}.json`),
+    JSON.stringify(data, null, 2)
+  );
+}
 
 describe('Three-Phase Workflow Integration', () => {
   let testRepoPath: string;
@@ -84,13 +107,17 @@ describe('Three-Phase Workflow Integration', () => {
       });
     `;
 
+    // Mock integrateTestsWithBackendRetry so commitTestsToBranch works
+    // without a real backend, but let real git operations proceed
+    vi.spyOn(validationMode as any, 'integrateTestsWithBackendRetry').mockResolvedValue({
+      targetFile: '.rsolv/tests/validation.test.js',
+      content: testContent
+    });
+
     await validationMode.commitTestsToBranch(testContent, branchName);
-    await validationMode.storeValidationResultWithBranch(
-      mockIssue,
-      { testsPassed: false },
-      { validated: true },
-      branchName
-    );
+
+    // Store validation result locally (replaces removed storeValidationResultWithBranch)
+    writeValidationResultLocally(testRepoPath, mockIssue, branchName);
 
     // Verify validation branch exists and has tests
     const branches = execSync('git branch --list', { cwd: testRepoPath })

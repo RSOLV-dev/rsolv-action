@@ -37,6 +37,13 @@ export enum VulnerabilityType {
 
 export type Severity = 'critical' | 'high' | 'medium' | 'low';
 
+export interface EnclosingFunction {
+  name: string;
+  startLine: number;
+  endLine: number;
+  params: string[];
+}
+
 export interface Vulnerability {
   type: VulnerabilityType;
   severity: Severity;
@@ -51,6 +58,7 @@ export interface Vulnerability {
   filePath?: string;
   snippet?: string;
   isVendor?: boolean; // True if vulnerability is in vendor/third-party code
+  enclosingFunction?: EnclosingFunction; // Extracted by platform FunctionExtractor
 }
 
 export interface SecurityScanResult {

@@ -1,34 +1,59 @@
 /**
- * Test suite for RFC-059 RSOLV_TESTING_MODE functionality
- * Tests that validation proceeds regardless of test results when in testing mode
+ * Test suite for RFC-060-AMENDMENT-001 pipeline behavior
+ * Tests the new generateTestWithRetry-based validation flow
+ * and verifies RSOLV_TESTING_MODE has no effect on the new pipeline
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ValidationMode } from '../validation-mode';
 import { IssueContext, ActionConfig } from '../../types/index';
 import * as analyzer from '../../ai/analyzer';
-import { TestGeneratingSecurityAnalyzer } from '../../ai/test-generating-security-analyzer';
-import { GitBasedTestValidator } from '../../ai/git-based-test-validator';
 import * as fs from 'fs';
-import * as path from 'path';
 import { execSync } from 'child_process';
+import { TestSuite } from '../types';
 
 // Mock dependencies
 vi.mock('../../ai/analyzer');
 vi.mock('../../ai/test-generating-security-analyzer');
-vi.mock('../../ai/git-based-test-validator');
 vi.mock('child_process');
 vi.mock('fs');
 
-describe('ValidationMode - RSOLV_TESTING_MODE', () => {
+vi.mock('../vendor-utils.js', () => ({
+  vendorFilterUtils: {
+    checkForVendorFiles: vi.fn().mockResolvedValue({ isVendor: false, files: [] })
+  }
+}));
+
+vi.mock('../test-integration-client.js', () => ({
+  TestIntegrationClient: vi.fn().mockImplementation(() => ({
+    analyze: vi.fn().mockResolvedValue({ recommendations: [] }),
+    generate: vi.fn().mockResolvedValue({ integratedContent: '' })
+  }))
+}));
+
+describe('ValidationMode - RFC-060-AMENDMENT-001 Pipeline', () => {
   let validationMode: ValidationMode;
   let mockConfig: ActionConfig;
   let mockIssue: IssueContext;
   let originalEnv: NodeJS.ProcessEnv;
 
+  const validTestSuite: TestSuite = {
+    framework: 'jest',
+    testFile: 'test/vulnerability.test.js',
+    redTests: [
+      {
+        testName: 'should detect XSS vulnerability',
+        testCode: 'expect(sanitize("<script>alert(1)</script>")).not.toContain("<script>")',
+        attackVector: 'xss',
+        expectedBehavior: 'Fails on vulnerable code, passes after fix'
+      }
+    ]
+  };
+
   beforeEach(() => {
     // Save original env
     originalEnv = { ...process.env };
+    delete process.env.RSOLV_TESTING_MODE;
 
     // Setup mocks
     mockConfig = {
@@ -36,7 +61,7 @@ describe('ValidationMode - RSOLV_TESTING_MODE', () => {
       rsolvApiKey: 'test-rsolv-key',
       githubToken: 'test-token',
       mode: 'validate',
-      executableTests: true, // RFC-060 Phase 5.1: Enable executable tests for these tests
+      executableTests: true,
       aiProvider: {
         apiKey: 'test-ai-key',
         model: 'claude-sonnet-4-5-20250929',
@@ -69,6 +94,7 @@ describe('ValidationMode - RSOLV_TESTING_MODE', () => {
     (fs.existsSync as any).mockReturnValue(false);
     (fs.readFileSync as any).mockReturnValue('{}');
     (fs.writeFileSync as any).mockImplementation(() => {});
+    (fs.mkdirSync as any).mockImplementation(() => {});
 
     // Mock git operations
     (execSync as any).mockImplementation((cmd: string) => {
@@ -77,8 +103,25 @@ describe('ValidationMode - RSOLV_TESTING_MODE', () => {
       if (cmd.includes('git checkout -b')) return '';
       if (cmd.includes('git add')) return '';
       if (cmd.includes('git commit')) return '';
+      if (cmd.includes('git config')) return '';
+      if (cmd.includes('git push')) return '';
+      if (cmd.includes('git remote')) return '';
       return '';
     });
+
+    // Mock private methods on the instance
+    vi.spyOn(validationMode as any, 'generateTestWithRetry').mockResolvedValue(null);
+    vi.spyOn(validationMode as any, 'scanTestFiles').mockResolvedValue([]);
+    vi.spyOn(validationMode as any, 'detectFrameworkFromFile').mockReturnValue('jest');
+    vi.spyOn(validationMode as any, 'integrateTestsWithBackendRetry').mockResolvedValue({
+      targetFile: 'test/foo.test.js',
+      content: 'test code'
+    });
+    vi.spyOn(validationMode as any, 'createValidationBranch').mockResolvedValue('rsolv/validate/issue-123');
+    vi.spyOn(validationMode as any, 'ensureCleanGitState').mockImplementation(() => {});
+    vi.spyOn(validationMode as any, 'addGitHubLabel').mockResolvedValue(undefined);
+    vi.spyOn(validationMode as any, 'storeTestExecutionInPhaseData').mockResolvedValue(undefined);
+    vi.spyOn(validationMode as any, 'loadFalsePositiveCache').mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -88,325 +131,37 @@ describe('ValidationMode - RSOLV_TESTING_MODE', () => {
   });
 
   describe('Normal mode (RSOLV_TESTING_MODE not set)', () => {
-    it('should mark as false positive when tests pass', async () => {
-      // Setup: tests pass (no vulnerability)
+    it('should mark as validated when generateTestWithRetry returns a test suite', async () => {
       (analyzer.analyzeIssue as any).mockResolvedValue({
         canBeFixed: true,
         isSecurityIssue: true
       });
 
-      const mockTestGenerator = {
-        analyzeWithTestGeneration: vi.fn().mockResolvedValue({
-          generatedTests: {
-            testSuite: 'test code here'
-          }
-        })
-      };
-      TestGeneratingSecurityAnalyzer.prototype.analyzeWithTestGeneration =
-        mockTestGenerator.analyzeWithTestGeneration;
-
-      const mockValidator = {
-        validateFixWithTests: vi.fn().mockResolvedValue({
-          success: true,
-          output: 'All tests passed',
-          vulnerableCommit: {
-            allPassed: true, // Tests pass = no vulnerability
-            redTestPassed: true,
-            greenTestPassed: true,
-            refactorTestPassed: true
-          },
-          fixedCommit: {
-            allPassed: true,
-            redTestPassed: true,
-            greenTestPassed: true,
-            refactorTestPassed: true
-          }
-        })
-      };
-      GitBasedTestValidator.prototype.validateFixWithTests =
-        mockValidator.validateFixWithTests;
-
-      const result = await validationMode.validateVulnerability(mockIssue);
-
-      expect(result.validated).toBe(false);
-      expect(result.falsePositiveReason).toBe('Tests passed on allegedly vulnerable code');
-      expect(result.testingMode).toBeUndefined();
-    });
-
-    it('should mark as validated when tests fail', async () => {
-      // Setup: tests fail (vulnerability exists)
-      (analyzer.analyzeIssue as any).mockResolvedValue({
-        canBeFixed: true,
-        isSecurityIssue: true
-      });
-
-      const mockTestGenerator = {
-        analyzeWithTestGeneration: vi.fn().mockResolvedValue({
-          generatedTests: {
-            testSuite: 'test code here'
-          }
-        })
-      };
-      TestGeneratingSecurityAnalyzer.prototype.analyzeWithTestGeneration =
-        mockTestGenerator.analyzeWithTestGeneration;
-
-      const mockValidator = {
-        validateFixWithTests: vi.fn().mockResolvedValue({
-          success: false,
-          output: 'Test failed: XSS vulnerability detected',
-          vulnerableCommit: {
-            allPassed: false, // Tests fail = vulnerability exists
-            redTestPassed: false,
-            greenTestPassed: false,
-            refactorTestPassed: true
-          },
-          fixedCommit: {
-            allPassed: true,
-            redTestPassed: true,
-            greenTestPassed: true,
-            refactorTestPassed: true
-          }
-        })
-      };
-      GitBasedTestValidator.prototype.validateFixWithTests =
-        mockValidator.validateFixWithTests;
+      vi.spyOn(validationMode as any, 'generateTestWithRetry').mockResolvedValue(validTestSuite);
 
       const result = await validationMode.validateVulnerability(mockIssue);
 
       expect(result.validated).toBe(true);
       expect(result.falsePositiveReason).toBeUndefined();
-      expect(result.testingMode).toBeUndefined();
-    });
-  });
-
-  describe('Testing mode (RSOLV_TESTING_MODE=true)', () => {
-    beforeEach(() => {
-      process.env.RSOLV_TESTING_MODE = 'true';
+      expect(result.branchName).toBe('rsolv/validate/issue-123');
+      expect(result.redTests).toEqual(validTestSuite);
     });
 
-    it('should mark as validated even when tests pass', async () => {
-      // Setup: tests pass (would normally be false positive)
+    it('should mark as false positive when generateTestWithRetry returns null', async () => {
       (analyzer.analyzeIssue as any).mockResolvedValue({
         canBeFixed: true,
         isSecurityIssue: true
       });
 
-      const mockTestGenerator = {
-        analyzeWithTestGeneration: vi.fn().mockResolvedValue({
-          generatedTests: {
-            testSuite: 'test code here'
-          }
-        })
-      };
-      TestGeneratingSecurityAnalyzer.prototype.analyzeWithTestGeneration =
-        mockTestGenerator.analyzeWithTestGeneration;
-
-      const mockValidator = {
-        validateFixWithTests: vi.fn().mockResolvedValue({
-          success: true,
-          output: 'All tests passed',
-          vulnerableCommit: {
-            allPassed: true, // Tests pass - would normally be false positive
-            redTestPassed: true,
-            greenTestPassed: true,
-            refactorTestPassed: true
-          },
-          fixedCommit: {
-            allPassed: true,
-            redTestPassed: true,
-            greenTestPassed: true,
-            refactorTestPassed: true
-          }
-        })
-      };
-      GitBasedTestValidator.prototype.validateFixWithTests =
-        mockValidator.validateFixWithTests;
+      vi.spyOn(validationMode as any, 'generateTestWithRetry').mockResolvedValue(null);
 
       const result = await validationMode.validateVulnerability(mockIssue);
 
-      // In testing mode, should be validated even though tests passed
-      expect(result.validated).toBe(true);
-      expect(result.testingMode).toBe(true);
-      expect(result.testingModeNote).toBe('Tests passed but proceeding due to RSOLV_TESTING_MODE');
-      expect(result.falsePositiveReason).toBeUndefined();
-    });
-
-    it('should still mark as validated when tests fail', async () => {
-      // Setup: tests fail (vulnerability exists)
-      (analyzer.analyzeIssue as any).mockResolvedValue({
-        canBeFixed: true,
-        isSecurityIssue: true
-      });
-
-      const mockTestGenerator = {
-        analyzeWithTestGeneration: vi.fn().mockResolvedValue({
-          generatedTests: {
-            testSuite: 'test code here'
-          }
-        })
-      };
-      TestGeneratingSecurityAnalyzer.prototype.analyzeWithTestGeneration =
-        mockTestGenerator.analyzeWithTestGeneration;
-
-      const mockValidator = {
-        validateFixWithTests: vi.fn().mockResolvedValue({
-          success: false,
-          output: 'Test failed: XSS vulnerability detected',
-          vulnerableCommit: {
-            allPassed: false, // Tests fail = vulnerability exists
-            redTestPassed: false,
-            greenTestPassed: false,
-            refactorTestPassed: true
-          },
-          fixedCommit: {
-            allPassed: true,
-            redTestPassed: true,
-            greenTestPassed: true,
-            refactorTestPassed: true
-          }
-        })
-      };
-      GitBasedTestValidator.prototype.validateFixWithTests =
-        mockValidator.validateFixWithTests;
-
-      const result = await validationMode.validateVulnerability(mockIssue);
-
-      // Should be validated normally
-      expect(result.validated).toBe(true);
-      expect(result.testingMode).toBeUndefined(); // Not set when tests fail normally
-      expect(result.testingModeNote).toBeUndefined();
-    });
-
-    it('should include testing mode info in validation branch operations', async () => {
-      // Setup for testing branch creation
-      (analyzer.analyzeIssue as any).mockResolvedValue({
-        canBeFixed: true,
-        isSecurityIssue: true
-      });
-
-      const mockTestGenerator = {
-        analyzeWithTestGeneration: vi.fn().mockResolvedValue({
-          generatedTests: {
-            testSuite: 'test code here'
-          }
-        })
-      };
-      TestGeneratingSecurityAnalyzer.prototype.analyzeWithTestGeneration =
-        mockTestGenerator.analyzeWithTestGeneration;
-
-      const mockValidator = {
-        validateFixWithTests: vi.fn().mockResolvedValue({
-          success: true,
-          output: 'All tests passed',
-          vulnerableCommit: {
-            allPassed: true, // Tests pass
-            redTestPassed: true,
-            greenTestPassed: true,
-            refactorTestPassed: true
-          },
-          fixedCommit: {
-            allPassed: true,
-            redTestPassed: true,
-            greenTestPassed: true,
-            refactorTestPassed: true
-          }
-        })
-      };
-      GitBasedTestValidator.prototype.validateFixWithTests =
-        mockValidator.validateFixWithTests;
-
-      const result = await validationMode.validateVulnerability(mockIssue);
-
-      // Verify branch operations still work in testing mode
-      expect(execSync).toHaveBeenCalledWith(
-        expect.stringContaining('git checkout -b'),
-        expect.any(Object)
-      );
-
-      expect(result.validated).toBe(true);
-      expect(result.branchName).toBeDefined();
-      expect(result.testingMode).toBe(true);
-    });
-  });
-
-  describe('Edge cases', () => {
-    it('should respect RSOLV_TESTING_MODE=false as normal mode', async () => {
-      process.env.RSOLV_TESTING_MODE = 'false';
-
-      // Setup: tests pass
-      (analyzer.analyzeIssue as any).mockResolvedValue({
-        canBeFixed: true,
-        isSecurityIssue: true
-      });
-
-      const mockTestGenerator = {
-        analyzeWithTestGeneration: vi.fn().mockResolvedValue({
-          generatedTests: {
-            testSuite: 'test code here'
-          }
-        })
-      };
-      TestGeneratingSecurityAnalyzer.prototype.analyzeWithTestGeneration =
-        mockTestGenerator.analyzeWithTestGeneration;
-
-      const mockValidator = {
-        validateFixWithTests: vi.fn().mockResolvedValue({
-          success: true,
-          output: 'All tests passed',
-          vulnerableCommit: {
-            allPassed: true, // Tests pass
-            redTestPassed: true,
-            greenTestPassed: true,
-            refactorTestPassed: true
-          },
-          fixedCommit: {
-            allPassed: true,
-            redTestPassed: true,
-            greenTestPassed: true,
-            refactorTestPassed: true
-          }
-        })
-      };
-      GitBasedTestValidator.prototype.validateFixWithTests =
-        mockValidator.validateFixWithTests;
-
-      const result = await validationMode.validateVulnerability(mockIssue);
-
-      // Should behave as normal mode
       expect(result.validated).toBe(false);
-      expect(result.falsePositiveReason).toBe('Tests passed on allegedly vulnerable code');
-      expect(result.testingMode).toBeUndefined();
+      expect(result.falsePositiveReason).toBe('Unable to generate valid RED test after 3 attempts');
     });
 
-    it('should handle testing mode with test generation failure', async () => {
-      process.env.RSOLV_TESTING_MODE = 'true';
-
-      // Setup: test generation fails
-      (analyzer.analyzeIssue as any).mockResolvedValue({
-        canBeFixed: true,
-        isSecurityIssue: true
-      });
-
-      const mockTestGenerator = {
-        analyzeWithTestGeneration: vi.fn().mockResolvedValue({
-          generatedTests: null // Test generation failed
-        })
-      };
-      TestGeneratingSecurityAnalyzer.prototype.analyzeWithTestGeneration =
-        mockTestGenerator.analyzeWithTestGeneration;
-
-      const result = await validationMode.validateVulnerability(mockIssue);
-
-      // Even in testing mode, should fail if tests can't be generated
-      expect(result.validated).toBe(false);
-      expect(result.falsePositiveReason).toBe('Unable to generate validation tests');
-      expect(result.testingMode).toBeUndefined();
-    });
-
-    it('should handle testing mode with analysis failure', async () => {
-      process.env.RSOLV_TESTING_MODE = 'true';
-
-      // Setup: analysis determines it can't be fixed
+    it('should mark as not validated when analysis says canBeFixed is false', async () => {
       (analyzer.analyzeIssue as any).mockResolvedValue({
         canBeFixed: false,
         cannotFixReason: 'Not a real security issue',
@@ -415,10 +170,124 @@ describe('ValidationMode - RSOLV_TESTING_MODE', () => {
 
       const result = await validationMode.validateVulnerability(mockIssue);
 
-      // Even in testing mode, should respect analysis results
       expect(result.validated).toBe(false);
       expect(result.falsePositiveReason).toBe('Not a real security issue');
-      expect(result.testingMode).toBeUndefined();
+    });
+  });
+
+  describe('Testing mode (RSOLV_TESTING_MODE=true)', () => {
+    beforeEach(() => {
+      process.env.RSOLV_TESTING_MODE = 'true';
+    });
+
+    it('should still mark as validated when generateTestWithRetry returns a suite', async () => {
+      (analyzer.analyzeIssue as any).mockResolvedValue({
+        canBeFixed: true,
+        isSecurityIssue: true
+      });
+
+      vi.spyOn(validationMode as any, 'generateTestWithRetry').mockResolvedValue(validTestSuite);
+
+      const result = await validationMode.validateVulnerability(mockIssue);
+
+      // Testing mode does not change the pipeline outcome
+      expect(result.validated).toBe(true);
+      expect(result.falsePositiveReason).toBeUndefined();
+      expect(result.branchName).toBe('rsolv/validate/issue-123');
+    });
+
+    it('should still mark as false positive when generateTestWithRetry returns null', async () => {
+      (analyzer.analyzeIssue as any).mockResolvedValue({
+        canBeFixed: true,
+        isSecurityIssue: true
+      });
+
+      vi.spyOn(validationMode as any, 'generateTestWithRetry').mockResolvedValue(null);
+
+      const result = await validationMode.validateVulnerability(mockIssue);
+
+      // In the new pipeline, RSOLV_TESTING_MODE does NOT override test generation failures
+      expect(result.validated).toBe(false);
+      expect(result.falsePositiveReason).toBe('Unable to generate valid RED test after 3 attempts');
+    });
+
+    it('should still respect analysis failure even in testing mode', async () => {
+      (analyzer.analyzeIssue as any).mockResolvedValue({
+        canBeFixed: false,
+        cannotFixReason: 'Not a real security issue',
+        isSecurityIssue: false
+      });
+
+      const result = await validationMode.validateVulnerability(mockIssue);
+
+      expect(result.validated).toBe(false);
+      expect(result.falsePositiveReason).toBe('Not a real security issue');
+    });
+  });
+
+  describe('Edge cases', () => {
+    it('should treat RSOLV_TESTING_MODE=false the same as unset', async () => {
+      process.env.RSOLV_TESTING_MODE = 'false';
+
+      (analyzer.analyzeIssue as any).mockResolvedValue({
+        canBeFixed: true,
+        isSecurityIssue: true
+      });
+
+      vi.spyOn(validationMode as any, 'generateTestWithRetry').mockResolvedValue(null);
+
+      const result = await validationMode.validateVulnerability(mockIssue);
+
+      expect(result.validated).toBe(false);
+      expect(result.falsePositiveReason).toBe('Unable to generate valid RED test after 3 attempts');
+    });
+
+    it('should include branch name and test suite when validation succeeds', async () => {
+      (analyzer.analyzeIssue as any).mockResolvedValue({
+        canBeFixed: true,
+        isSecurityIssue: true
+      });
+
+      vi.spyOn(validationMode as any, 'generateTestWithRetry').mockResolvedValue(validTestSuite);
+
+      const result = await validationMode.validateVulnerability(mockIssue);
+
+      expect(result.validated).toBe(true);
+      expect(result.branchName).toBe('rsolv/validate/issue-123');
+      expect(result.redTests).toEqual(validTestSuite);
+      expect(result.testExecutionResult).toBeDefined();
+      expect(result.testExecutionResult?.passed).toBe(false); // RED test must fail
+      expect(result.testExecutionResult?.framework).toBe('jest');
+    });
+
+    it('should skip validation when executableTests is disabled', async () => {
+      const disabledConfig = {
+        ...mockConfig,
+        executableTests: false
+      } as ActionConfig;
+
+      const disabledMode = new ValidationMode(disabledConfig);
+      vi.spyOn(disabledMode as any, 'loadFalsePositiveCache').mockImplementation(() => {});
+
+      const result = await disabledMode.validateVulnerability(mockIssue);
+
+      // When executableTests is disabled, validation is skipped and result is validated=true
+      expect(result.validated).toBe(true);
+      expect(result.falsePositiveReason).toBeUndefined();
+    });
+
+    it('should call addGitHubLabel and storeTestExecutionInPhaseData on success', async () => {
+      (analyzer.analyzeIssue as any).mockResolvedValue({
+        canBeFixed: true,
+        isSecurityIssue: true
+      });
+
+      vi.spyOn(validationMode as any, 'generateTestWithRetry').mockResolvedValue(validTestSuite);
+
+      await validationMode.validateVulnerability(mockIssue);
+
+      expect((validationMode as any).addGitHubLabel).toHaveBeenCalledWith(mockIssue, 'rsolv:validated');
+      expect((validationMode as any).storeTestExecutionInPhaseData).toHaveBeenCalled();
     });
   });
 });

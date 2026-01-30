@@ -32,9 +32,6 @@ export interface ValidationModeTestAccess {
   validateTestSyntax(code: string): void;
   createValidationBranch(issue: IssueContext): Promise<string>;
   generateRedTests(issue: IssueContext, analysisData: unknown): Promise<unknown>;
-  storeValidationResultWithBranch(
-    issue: IssueContext, testResults: unknown, validationResult: unknown, branchName: string
-  ): Promise<void>;
   commitTestsToBranch(testContent: unknown, branchName: string, issue?: IssueContext): Promise<void>;
   forceCommitTestsInTestMode(testContent: unknown, branchName: string, issue: IssueContext): Promise<void>;
   validateVulnerability(issue: IssueContext): Promise<unknown>;

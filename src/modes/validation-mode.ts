@@ -8,7 +8,6 @@ import { logger } from '../utils/logger.js';
 import { ValidationResult, TestExecutionResult, Vulnerability, TestFileContext, TestSuite, AttemptHistory, TestFramework } from './types.js';
 import { vendorFilterUtils } from './vendor-utils.js';
 import { TestGeneratingSecurityAnalyzer } from '../ai/test-generating-security-analyzer.js';
-import { GitBasedTestValidator } from '../ai/git-based-test-validator.js';
 import { analyzeIssue } from '../ai/analyzer.js';
 import { AIConfig } from '../ai/types.js';
 import { execSync } from 'child_process';
@@ -139,211 +138,235 @@ export class ValidationMode {
         };
       }
       
-      // Step 5: Generate RED tests
-      logger.info(`Generating RED tests for issue #${issue.number}`);
-      const testResults = await this.generateRedTests(issue, analysisData);
-      
-      if (!testResults || !testResults.generatedTests) {
-        logger.warn(`Failed to generate tests for issue #${issue.number}`);
+      // Step 5: RFC-060-AMENDMENT-001 Pipeline — Framework-native test generation
+      // Uses the already-implemented pipeline methods instead of standalone scripts
+      logger.info(`[RFC-060-AMENDMENT-001] Starting framework-native test generation for issue #${issue.number}`);
+
+      if (!this.testIntegrationClient) {
+        throw new Error('TestIntegrationClient not initialized — RSOLV API key required for validation');
+      }
+
+      // Step 5a: Detect framework from vulnerable files
+      const primaryFile = vulnerabilities[0]?.file || analysisData.filesToModify?.[0] || '';
+      const frameworkName = this.detectFrameworkFromFile(primaryFile);
+      const framework = this.detectFrameworkFromPath(
+        primaryFile.replace(/\.(js|ts|rb|py|java|php|ex|exs)$/, '.test.$1')
+      );
+      logger.info(`Detected framework: ${frameworkName} for ${primaryFile}`);
+
+      // Step 5b: Scan for existing test files
+      const candidateTestFiles = await this.scanTestFiles(frameworkName);
+      logger.info(`Found ${candidateTestFiles.length} test files in repository`);
+
+      // Step 5c: Build vulnerability context with enclosing function extraction
+      const vuln = vulnerabilities[0];
+      let vulnerableCode = '';
+      if (vuln && primaryFile) {
+        try {
+          const fullPath = path.resolve(this.repoPath, primaryFile);
+          if (fs.existsSync(fullPath)) {
+            const fullFileContent = fs.readFileSync(fullPath, 'utf8');
+            // Use enclosing function if available from SCAN phase AST validation
+            if (vuln.enclosingFunction) {
+              const { startLine, endLine } = vuln.enclosingFunction;
+              const lines = fullFileContent.split('\n');
+              vulnerableCode = lines.slice(startLine - 1, endLine).join('\n');
+              logger.info(`Using enclosing function '${vuln.enclosingFunction.name}' (lines ${startLine}-${endLine}) as context`);
+            } else {
+              vulnerableCode = fullFileContent;
+              logger.info('No enclosing function available, using full file as context');
+            }
+          }
+        } catch (readError) {
+          logger.warn(`Could not read vulnerable file ${primaryFile}: ${readError}`);
+        }
+      }
+
+      // Step 5d: Select or create target test file
+      let targetTestFile: TestFileContext;
+      if (candidateTestFiles.length > 0) {
+        try {
+          // Use backend to score and select the best target test file
+          const analysis = await this.testIntegrationClient.analyze({
+            vulnerableFile: primaryFile,
+            vulnerabilityType: vuln?.type || issue.title,
+            candidateTestFiles,
+            framework: frameworkName
+          });
+
+          const targetPath = analysis.recommendations?.[0]?.path || candidateTestFiles[0];
+          logger.info(`Backend recommended target: ${targetPath} (score: ${analysis.recommendations?.[0]?.score})`);
+
+          const targetFullPath = path.join(this.repoPath, targetPath);
+          const targetContent = fs.existsSync(targetFullPath)
+            ? fs.readFileSync(targetFullPath, 'utf8')
+            : '';
+
+          targetTestFile = {
+            path: targetPath,
+            content: targetContent,
+            framework: frameworkName
+          };
+        } catch (analyzeError) {
+          logger.warn(`Backend analyze failed, using first test file: ${analyzeError}`);
+          const fallbackPath = candidateTestFiles[0];
+          const fallbackFullPath = path.join(this.repoPath, fallbackPath);
+          targetTestFile = {
+            path: fallbackPath,
+            content: fs.existsSync(fallbackFullPath) ? fs.readFileSync(fallbackFullPath, 'utf8') : '',
+            framework: frameworkName
+          };
+        }
+      } else {
+        // No test files exist — create a fallback path based on framework conventions
+        const testDirMap: Record<string, string> = {
+          'mocha': 'test/unit',
+          'jest': '__tests__',
+          'vitest': '__tests__',
+          'rspec': 'spec',
+          'pytest': 'tests',
+          'phpunit': 'tests',
+          'exunit': 'test'
+        };
+        const testDir = testDirMap[frameworkName] || 'test';
+        const ext = this.getLanguageExtension(frameworkName);
+        const fallbackPath = `${testDir}/vulnerability_validation${ext}`;
+        logger.info(`No test files found — using fallback path: ${fallbackPath}`);
+
+        targetTestFile = {
+          path: fallbackPath,
+          content: '', // Empty — new file
+          framework: frameworkName
+        };
+      }
+
+      // Step 5e: Build vulnerability descriptor for test generation
+      const vulnerabilityDescriptor: Vulnerability = {
+        type: vuln?.type || 'unknown',
+        description: vuln?.description || issue.title,
+        location: `${primaryFile}:${vuln?.line || 0}`,
+        attackVector: vuln?.type || 'unknown',
+        vulnerablePattern: vulnerableCode.slice(0, 500), // Truncate for prompt
+        source: primaryFile
+      };
+
+      // Step 5f: Generate test with retry loop (existing RFC-060 method)
+      logger.info('Generating RED test with retry loop...');
+      const testSuite = await this.generateTestWithRetry(
+        vulnerabilityDescriptor,
+        targetTestFile,
+        3 // maxAttempts
+      );
+
+      if (!testSuite) {
+        logger.warn(`Failed to generate valid RED test after retries for issue #${issue.number}`);
         return {
           issueId: issue.number,
           validated: false,
-          falsePositiveReason: 'Unable to generate validation tests',
+          falsePositiveReason: 'Unable to generate valid RED test after 3 attempts',
           vulnerabilities,
           timestamp: new Date().toISOString(),
           commitHash: this.getCurrentCommitHash()
         };
       }
-      
-      // Step 6: RFC-058 - Create validation branch and commit tests
+
+      logger.info(`✅ RED test generated: ${testSuite.testFile} (framework: ${testSuite.framework})`);
+
+      // Step 6: Create validation branch and commit integrated test
       logger.info('Creating validation branch for test persistence');
       let branchName: string | null = null;
-      const isTestingMode = process.env.RSOLV_TESTING_MODE === 'true';
 
       try {
         branchName = await this.createValidationBranch(issue);
-        await this.commitTestsToBranch(testResults.generatedTests.testSuite, branchName, issue);
-        logger.info(`✅ Tests committed to validation branch: ${branchName}`);
-      } catch (error) {
-        if (isTestingMode) {
-          // In test mode, we MUST persist tests even if imperfect
-          logger.warn(`Test mode: Force committing tests despite error: ${error}`);
-          try {
-            // Try to recover by using existing branch or creating with different approach
-            branchName = `rsolv/validate/issue-${issue.number}`;
-            await this.forceCommitTestsInTestMode(testResults.generatedTests.testSuite, branchName, issue);
-            logger.info(`✅ Test mode: Tests force-committed to branch: ${branchName}`);
-          } catch (forceError) {
-            logger.error(`Test mode: Failed to force commit tests: ${forceError}`);
-            // Even if commit fails, keep branch name for tracking
-          }
-        } else {
-          logger.warn(`Could not create validation branch: ${error}`);
-          // Continue with standard validation if branch creation fails in non-test mode
+
+        // AST-integrate the test into the target file via backend
+        let targetFile = testSuite.testFile;
+        let integratedContent = testSuite.redTests[0]?.testCode || '';
+
+        try {
+          const integration = await this.integrateTestsWithBackendRetry(testSuite, issue);
+          targetFile = integration.targetFile;
+          integratedContent = integration.content;
+          logger.info(`AST integration succeeded: ${targetFile}`);
+        } catch (integrationError) {
+          logger.warn(`AST integration failed, writing test directly: ${integrationError}`);
+          // Write to the target test file path directly
         }
+
+        // Write integrated test to the repo's test directory (not .rsolv/tests/)
+        const fullTargetPath = path.join(this.repoPath, targetFile);
+        fs.mkdirSync(path.dirname(fullTargetPath), { recursive: true });
+        fs.writeFileSync(fullTargetPath, integratedContent, 'utf8');
+
+        // Commit
+        execSync('git config user.email "rsolv-validation@rsolv.dev"', { cwd: this.repoPath });
+        execSync('git config user.name "RSOLV Validation Bot"', { cwd: this.repoPath });
+        execSync(`git add "${targetFile}"`, { cwd: this.repoPath });
+        execSync(`git commit -m "Add RED test proving vulnerability for issue #${issue.number}"`, { cwd: this.repoPath });
+        logger.info(`✅ Tests committed to validation branch: ${branchName} (file: ${targetFile})`);
+
+        // Push to remote
+        try {
+          const token = process.env.GITHUB_TOKEN || process.env.GH_PAT;
+          if (token && process.env.GITHUB_REPOSITORY) {
+            const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
+            const authenticatedUrl = `https://x-access-token:${token}@github.com/${owner}/${repo}.git`;
+            try {
+              execSync(`git remote set-url origin ${authenticatedUrl}`, { cwd: this.repoPath });
+            } catch (configError) {
+              logger.debug('Could not configure authenticated remote');
+            }
+          }
+          execSync(`git push -f origin ${branchName}`, { cwd: this.repoPath });
+          logger.info(`Pushed validation branch ${branchName} to remote`);
+        } catch (pushError) {
+          logger.warn(`Could not push validation branch to remote: ${pushError}`);
+        }
+      } catch (branchError) {
+        logger.warn(`Could not create validation branch: ${branchError}`);
       }
 
-      // Step 7: Run tests to verify they fail (proving vulnerability exists)
-      logger.info('Running RED tests to prove vulnerability exists');
-      const validator = new GitBasedTestValidator();
-      const validationResult = await validator.validateFixWithTests(
-        'HEAD',
-        'HEAD',
-        testResults.generatedTests.testSuite
-      );
-
-      // Step 8: Determine validation status
-      // RFC-060: In VALIDATE mode, we only check if RED tests FAIL on vulnerable code
-      // We pass HEAD for both commits, so we only care about vulnerableCommit results
-      // isTestingMode already declared above
-
-      // RFC-060 Phase 2.2: Extract test execution metadata
-      // VALIDATE Phase Iteration 1: Use actual captured output instead of JSON.stringify
-      const vulnerableTestOutputs = validationResult.vulnerableCommit.testResults || [];
-      const capturedStdout = vulnerableTestOutputs
-        .map(t => t.stdout).filter(Boolean).join('\n');
-      const capturedStderr = vulnerableTestOutputs
-        .map(t => t.stderr).filter(Boolean).join('\n');
-      const crashCount = vulnerableTestOutputs.filter(t => t.crashed).length;
-
+      // Step 7: The test was already run by generateTestWithRetry()
+      // If we got here, the RED test FAILED on vulnerable code (proving vulnerability)
       const testExecutionResult: TestExecutionResult = {
-        passed: validationResult.vulnerableCommit.allPassed || false,
-        output: capturedStdout || JSON.stringify(validationResult, null, 2),
-        stderr: capturedStderr,
+        passed: false, // RED test must have failed (generateTestWithRetry ensures this)
+        output: 'RED test failed on vulnerable code — vulnerability proven',
+        stderr: '',
         timedOut: false,
-        exitCode: validationResult.vulnerableCommit.allPassed ? 0 : 1,
-        error: validationResult.vulnerableCommit.hasInfrastructureFailures
-          ? `${crashCount} test(s) crashed (infrastructure failure, not genuine assertion)`
-          : (validationResult.error && validationResult.error !== 'Fix validation failed - tests do not confirm vulnerability was fixed'
-            ? validationResult.error
-            : undefined),
-        framework: testResults.generatedTests.framework,
-        testFile: testResults.generatedTests.testFile
+        exitCode: 1,
+        framework: testSuite.framework,
+        testFile: testSuite.testFile
       };
 
-      // Convert ValidationResult to TestResults format for PR body display
-      const redTestResults = validationResult.vulnerableCommit.redTestsPassed || [];
       const testResultsForDisplay = {
-        passed: redTestResults.filter(p => p).length,
-        failed: redTestResults.filter(p => !p).length,
-        total: redTestResults.length,
-        output: validationResult.error || (validationResult.success ? 'RED tests executed' : 'Test execution failed'),
-        exitCode: validationResult.vulnerableCommit.allPassed ? 0 : 1
+        passed: 0,
+        failed: testSuite.redTests.length,
+        total: testSuite.redTests.length,
+        output: 'RED tests failed as expected (vulnerability proven)',
+        exitCode: 1
       };
 
-      // VALIDATE Phase Iteration 1: Check for all-crash scenario
-      const allCrashes = validationResult.vulnerableCommit.hasInfrastructureFailures
-        && vulnerableTestOutputs.length > 0
-        && vulnerableTestOutputs.every(t => t.crashed);
+      // Step 8: Vulnerability validated — RED test failed on vulnerable code
+      logger.info('✅ Vulnerability validated! RED tests failed as expected');
 
-      if (allCrashes) {
-        logger.warn('All RED tests crashed (infrastructure failures) — cannot validate');
-        if (!isTestingMode) {
-          // Mark as unvalidated — crashes don't prove vulnerability
-          await this.storeTestExecutionInPhaseData(issue, testExecutionResult, false, branchName || undefined, vulnerabilities);
-          return {
-            issueId: issue.number,
-            validated: false,
-            falsePositiveReason: 'All RED tests crashed with infrastructure errors (not genuine assertion failures)',
-            testResults: testResultsForDisplay,
-            testExecutionResult,
-            vulnerabilities,
-            timestamp: new Date().toISOString(),
-            commitHash: this.getCurrentCommitHash()
-          };
-        }
-        // In TESTING_MODE, log but proceed
-        logger.info('[TESTING MODE] All tests crashed but proceeding due to RSOLV_TESTING_MODE');
-      }
+      // Add validated label
+      await this.addGitHubLabel(issue, 'rsolv:validated');
 
-      // RFC-060: Check if RED tests failed on vulnerable code (proving vulnerability exists)
-      // In VALIDATE mode with HEAD==HEAD, we only check vulnerableCommit results
-      const testsFailedOnVulnerableCode = !validationResult.vulnerableCommit.allPassed;
+      // Store via PhaseDataClient
+      await this.storeTestExecutionInPhaseData(issue, testExecutionResult, true, branchName || undefined, vulnerabilities);
 
-      if (testsFailedOnVulnerableCode) {
-        // RFC-060: Tests FAILED on vulnerable code = vulnerability EXISTS = validated!
-        logger.info('✅ Vulnerability validated! RED tests failed as expected');
+      return {
+        issueId: issue.number,
+        validated: true,
+        branchName: branchName || undefined,
+        redTests: testSuite,
+        testResults: testResultsForDisplay,
+        testExecutionResult,
+        vulnerabilities,
+        timestamp: new Date().toISOString(),
+        commitHash: this.getCurrentCommitHash()
+      };
 
-        // RFC-058: Store validation result with branch reference
-        if (branchName) {
-          await this.storeValidationResultWithBranch(issue, testResults, validationResult, branchName);
-          logger.info(`Validation result stored with branch reference: ${branchName}`);
-        } else {
-          // Fallback to standard storage
-          await this.storeValidationResult(issue, testResults, validationResult);
-        }
-
-        // RFC-060 Phase 2.2: Add validated label
-        await this.addGitHubLabel(issue, 'rsolv:validated');
-
-        // RFC-060 Phase 2.2 & 3.1: Store via PhaseDataClient
-        await this.storeTestExecutionInPhaseData(issue, testExecutionResult, true, branchName || undefined, vulnerabilities);
-
-        return {
-          issueId: issue.number,
-          validated: true,
-          branchName: branchName || undefined,
-          redTests: testResults.generatedTests.testSuite,
-          testResults: testResultsForDisplay,
-          testExecutionResult,
-          vulnerabilities,
-          timestamp: new Date().toISOString(),
-          commitHash: this.getCurrentCommitHash()
-        };
-      } else {
-        // RFC-060: Tests PASSED on vulnerable code = no vulnerability = false positive (unless testing mode)
-        if (isTestingMode) {
-          logger.info('[TESTING MODE] Tests passed but proceeding anyway for known vulnerable repo');
-
-          // RFC-058: Store validation result with branch reference even in test mode
-          if (branchName) {
-            await this.storeValidationResultWithBranch(issue, testResults, validationResult, branchName);
-            logger.info(`Test mode validation result stored with branch reference: ${branchName}`);
-          } else {
-            // Fallback to standard storage
-            await this.storeValidationResult(issue, testResults, validationResult);
-          }
-
-          // RFC-060 Phase 2.2 & 3.1: Store via PhaseDataClient
-          await this.storeTestExecutionInPhaseData(issue, testExecutionResult, true, branchName || undefined, vulnerabilities);
-
-          // In testing mode, still mark as validated to allow full workflow testing
-          return {
-            issueId: issue.number,
-            validated: true,
-            branchName: branchName || undefined,
-            redTests: testResults.generatedTests.testSuite,
-            testResults: testResultsForDisplay,
-            testExecutionResult,
-            vulnerabilities,
-            testingMode: true,
-            testingModeNote: 'Tests passed but proceeding due to RSOLV_TESTING_MODE',
-            timestamp: new Date().toISOString(),
-            commitHash: this.getCurrentCommitHash()
-          };
-        } else {
-          logger.info('Tests passed on vulnerable code - marking as false positive');
-          this.addToFalsePositiveCache(issue);
-
-          // RFC-060 Phase 2.2: Add false-positive label
-          await this.addGitHubLabel(issue, 'rsolv:false-positive');
-
-          // RFC-060 Phase 2.2 & 3.1: Store via PhaseDataClient
-          await this.storeTestExecutionInPhaseData(issue, testExecutionResult, false, branchName || undefined, vulnerabilities);
-
-          return {
-            issueId: issue.number,
-            validated: false,
-            falsePositiveReason: 'Tests passed on allegedly vulnerable code',
-            testResults: testResultsForDisplay,
-            testExecutionResult,
-            vulnerabilities,
-            timestamp: new Date().toISOString(),
-            commitHash: this.getCurrentCommitHash()
-          };
-        }
-      }
-      
     } catch (error) {
       logger.error(`Validation failed for issue #${issue.number}:`, error);
       return {
@@ -384,48 +407,8 @@ export class ValidationMode {
     
     return results;
   }
-  
-  /**
-   * Generate RED tests for vulnerability validation
-   */
-  private async generateRedTests(issue: IssueContext, analysisData: any): Promise<any> {
-    const aiConfig: AIConfig = {
-      provider: 'anthropic',
-      apiKey: this.config.aiProvider.apiKey,
-      model: this.config.aiProvider.model,
-      temperature: 0.2,
-      maxTokens: this.config.aiProvider.maxTokens,
-      useVendedCredentials: this.config.aiProvider.useVendedCredentials
-    };
-    
-    const testAnalyzer = new TestGeneratingSecurityAnalyzer(aiConfig);
-    
-    // Get codebase files for test generation
-    const codebaseFiles = new Map<string, string>();
-    
-    if (analysisData.filesToModify && analysisData.filesToModify.length > 0) {
-      for (const filePath of analysisData.filesToModify) {
-        try {
-          const fullPath = path.resolve(this.repoPath, filePath);
-          if (fs.existsSync(fullPath)) {
-            const content = fs.readFileSync(fullPath, 'utf8');
-            codebaseFiles.set(filePath, content);
-            logger.debug(`Added file for test generation: ${filePath}`);
-          }
-        } catch (error) {
-          logger.warn(`Could not read file ${filePath}:`, error);
-        }
-      }
-    }
-    
-    // Generate tests focused on proving vulnerability exists
-    return await testAnalyzer.analyzeWithTestGeneration(
-      issue,
-      this.config,
-      codebaseFiles
-    );
-  }
-  
+
+
 
   /**
    * RFC-058: Create validation branch for test persistence
@@ -710,90 +693,6 @@ ${tests}
   }
 
   /**
-   * Force commit tests in test mode - ensures tests are always persisted
-   * even when normal commit process fails
-   */
-  async forceCommitTestsInTestMode(
-    testContent: unknown,
-    branchName: string,
-    issue: IssueContext
-  ): Promise<void> {
-    const testDir = path.join(this.repoPath, '.rsolv', 'tests');
-
-    try {
-      // Ensure directory exists
-      fs.mkdirSync(testDir, { recursive: true });
-
-      // RFC-060-AMENDMENT-001: Convert to executable JavaScript (not JSON)
-      const testCode = this.convertToExecutableTestSanitized(testContent);
-
-      // Validate syntax only when we generated the code (from object input)
-      // String passthrough is written as-is; skip syntax validation for it
-      if (typeof testContent !== 'string') {
-        this.validateTestSyntax(testCode);
-      }
-
-      // Write test file
-      const testPath = path.join(testDir, 'validation.test.js');
-      fs.writeFileSync(testPath, testCode, 'utf8');
-
-      // Try to ensure we're on the right branch
-      try {
-        execSync(`git checkout ${branchName} 2>/dev/null || git checkout -b ${branchName}`, {
-          cwd: this.repoPath,
-          stdio: 'pipe'
-        });
-      } catch {
-        // Branch operations failed, but continue with commit attempt
-        logger.debug('Branch checkout failed, continuing with current branch');
-      }
-
-      // Configure git identity
-      try {
-        execSync('git config user.email "rsolv-validation@rsolv.dev"', {
-          cwd: this.repoPath,
-          stdio: 'pipe'
-        });
-        execSync('git config user.name "RSOLV Validation Bot"', {
-          cwd: this.repoPath,
-          stdio: 'pipe'
-        });
-      } catch {
-        // Git config might already be set
-      }
-
-      // Stage and commit
-      execSync('git add .rsolv/tests/', { cwd: this.repoPath });
-      execSync(`git commit -m "Test mode: Add validation tests for issue #${issue.number}" || true`, {
-        cwd: this.repoPath,
-        stdio: 'pipe'
-      });
-
-      // Try to push but don't fail if it doesn't work
-      try {
-        const token = process.env.GITHUB_TOKEN || process.env.GH_PAT;
-        if (token && process.env.GITHUB_REPOSITORY) {
-          const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
-          const authenticatedUrl = `https://x-access-token:${token}@github.com/${owner}/${repo}.git`;
-          execSync(`git remote set-url origin ${authenticatedUrl} 2>/dev/null || true`, {
-            cwd: this.repoPath,
-            stdio: 'pipe'
-          });
-        }
-        execSync(`git push -f origin ${branchName} 2>/dev/null || true`, {
-          cwd: this.repoPath,
-          stdio: 'pipe'
-        });
-      } catch {
-        logger.debug('Push failed in test mode, but tests are committed locally');
-      }
-    } catch (error) {
-      logger.error(`Force commit in test mode failed: ${error}`);
-      throw error;
-    }
-  }
-
-  /**
    * RFC-058 + RFC-060-AMENDMENT-001 Phase 2: Commit generated tests to validation branch
    * Uses retry with exponential backoff for backend integration
    *
@@ -802,48 +701,23 @@ ${tests}
    */
   async commitTestsToBranch(testContent: unknown, branchName: string, issue?: IssueContext): Promise<void> {
     try {
-      let targetFile: string;
-      let integratedContent: string;
+      // Backend integration required — no .rsolv/tests/ fallback
+      const result = await this.integrateTestsWithBackendRetry(testContent, issue);
+      const targetFile = result.targetFile;
+      const integratedContent = result.content;
+      logger.info(`✅ Backend integration succeeded: ${targetFile}`);
 
-      // Phase 3: Backend integration with retry
-      // For now, backend doesn't exist yet, so we use temporary fallback
-      if (this.config.rsolvApiKey && process.env.RSOLV_API_URL) {
-        try {
-          const result = await this.integrateTestsWithBackendRetry(testContent, issue);
-          targetFile = result.targetFile;
-          integratedContent = result.content;
-          logger.info(`✅ Backend integration succeeded: ${targetFile}`);
-        } catch (backendError) {
-          logger.error(`Backend integration failed after retries: ${backendError}`);
-          throw new Error(`Cannot commit tests: backend unavailable. ${backendError}`);
-        }
-      } else {
-        // Temporary: Backend not configured yet (Phase 2)
-        // Use .rsolv/tests/ until backend is ready in Phase 3
-        logger.info('Backend not configured (Phase 3 pending), using .rsolv/tests/');
-        const testDir = path.join(this.repoPath, '.rsolv', 'tests');
-        fs.mkdirSync(testDir, { recursive: true });
-
-        // RFC-060-AMENDMENT-001: Convert to executable JavaScript (not JSON)
-        integratedContent = this.convertToExecutableTestSanitized(testContent);
-
-        // Validate syntax only when we generated the code (from object input)
-        // String passthrough is written as-is; skip syntax validation for it
-        if (typeof testContent !== 'string') {
-          this.validateTestSyntax(integratedContent);
-        }
-
-        targetFile = path.join(testDir, 'validation.test.js');
-        fs.writeFileSync(targetFile, integratedContent, 'utf8');
-      }
+      // Write integrated content to the repo's test directory
+      const fullTargetPath = path.join(this.repoPath, targetFile);
+      fs.mkdirSync(path.dirname(fullTargetPath), { recursive: true });
+      fs.writeFileSync(fullTargetPath, integratedContent, 'utf8');
 
       // Configure git identity for commits
       execSync('git config user.email "rsolv-validation@rsolv.dev"', { cwd: this.repoPath });
       execSync('git config user.name "RSOLV Validation Bot"', { cwd: this.repoPath });
 
       // Commit to branch
-      const commitPath = path.dirname(targetFile);
-      execSync(`git add ${commitPath}`, { cwd: this.repoPath });
+      execSync(`git add "${targetFile}"`, { cwd: this.repoPath });
       execSync('git commit -m "Add validation tests for issue"', { cwd: this.repoPath });
 
       logger.info(`Committed tests to branch ${branchName} (target: ${targetFile})`);
@@ -865,7 +739,6 @@ ${tests}
         logger.info(`Pushed validation branch ${branchName} to remote`);
       } catch (pushError) {
         logger.warn(`Could not push validation branch to remote: ${pushError}`);
-        // Continue anyway - branch exists locally for immediate use
       }
     } catch (error) {
       logger.error(`Failed to commit tests to branch ${branchName}:`, error);
@@ -1015,60 +888,6 @@ ${tests}
   }
 
 
-  /**
-   * RFC-058: Store validation result with branch reference
-   */
-  async storeValidationResultWithBranch(
-    issue: IssueContext,
-    testResults: any,
-    validationResult: any,
-    branchName: string
-  ): Promise<void> {
-    const storageDir = path.join(this.repoPath, '.rsolv', 'validation');
-    fs.mkdirSync(storageDir, { recursive: true });
-
-    const filePath = path.join(storageDir, `issue-${issue.number}.json`);
-    const data = {
-      issueId: issue.number,
-      issueTitle: issue.title,
-      branchName: branchName,  // NEW: Store branch reference
-      validated: true,
-      testResults: testResults,
-      validationResult: validationResult,
-      timestamp: new Date().toISOString(),
-      commitHash: this.getCurrentCommitHash()
-    };
-
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
-    logger.info(`Validation result with branch stored at ${filePath}`);
-  }
-
-  /**
-   * Store validation result for mitigation phase
-   */
-  private async storeValidationResult(
-    issue: IssueContext,
-    testResults: any,
-    validationResult: any
-  ): Promise<void> {
-    const storageDir = path.join(this.repoPath, '.rsolv', 'validation');
-    fs.mkdirSync(storageDir, { recursive: true });
-
-    const filePath = path.join(storageDir, `issue-${issue.number}.json`);
-    const data = {
-      issueId: issue.number,
-      issueTitle: issue.title,
-      validated: true,
-      testResults: testResults,
-      validationResult: validationResult,
-      timestamp: new Date().toISOString(),
-      commitHash: this.getCurrentCommitHash()
-    };
-
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
-    logger.info(`Validation result stored at ${filePath}`);
-  }
-  
   /**
    * Load false positive cache
    */
