@@ -175,14 +175,35 @@ export class PhaseExecutor {
         logger.info(`[MITIGATE] Detecting up to ${maxIssues} issues with label '${labelToUse}'`);
 
         const { detectIssuesFromAllPlatforms } = await import('../../platforms/issue-detector.js');
-        const detectedIssues = await detectIssuesFromAllPlatforms({
+
+        // Retry with backoff to handle GitHub API label propagation delay.
+        // When VALIDATE adds labels seconds before MITIGATE runs, the GitHub
+        // issue listing API may not reflect the label change immediately.
+        let detectedIssues = await detectIssuesFromAllPlatforms({
           ...this.config,
           issueLabel: labelToUse,
           maxIssues
         });
 
         if (detectedIssues.length === 0) {
-          logger.warn(`[MITIGATE] No issues found with label '${labelToUse}'`);
+          const retryDelays = [5000, 10000, 15000]; // 5s, 10s, 15s
+          for (const delay of retryDelays) {
+            logger.info(`[MITIGATE] No issues found yet, retrying in ${delay / 1000}s (GitHub API label propagation delay)...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            detectedIssues = await detectIssuesFromAllPlatforms({
+              ...this.config,
+              issueLabel: labelToUse,
+              maxIssues
+            });
+            if (detectedIssues.length > 0) {
+              logger.info(`[MITIGATE] Found ${detectedIssues.length} issues after retry`);
+              break;
+            }
+          }
+        }
+
+        if (detectedIssues.length === 0) {
+          logger.warn(`[MITIGATE] No issues found with label '${labelToUse}' after retries`);
           return {
             success: false,
             phase: 'mitigate',
