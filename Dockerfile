@@ -68,11 +68,18 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends libc6 libstdc++6 libgcc-s1 procps && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Copy Node.js toolchain from builder (node, npm, npx needed for test framework execution)
+# Copy Node.js and npm toolchain from builder
+# node binary
 COPY --from=builder /usr/bin/node /usr/bin/node
-COPY --from=builder /usr/bin/npm /usr/bin/npm
-COPY --from=builder /usr/bin/npx /usr/bin/npx
+# npm lib directory (contains npm package with bin/npm-cli.js, bin/npx-cli.js, lib/cli.js)
 COPY --from=builder /usr/lib /usr/lib
+# Recreate npm/npx symlinks (Docker COPY resolves symlinks to regular files, breaking
+# the require('../lib/cli.js') path resolution in npx-cli.js and npm-cli.js)
+RUN ln -sf /usr/lib/node_modules/npm/bin/npm-cli.js /usr/bin/npm && \
+    ln -sf /usr/lib/node_modules/npm/bin/npx-cli.js /usr/bin/npx
+
+# Verify Node.js toolchain works in production stage
+RUN node --version && npm --version && npx --version
 
 # Copy built application and all dependencies
 COPY --from=builder /app/dist ./dist
