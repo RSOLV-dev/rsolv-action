@@ -382,6 +382,60 @@ describe("test2", function() {
     });
   });
 
+  describe('Tool availability checking', () => {
+    test('checkToolAvailable returns true for tools that exist', () => {
+      // node --check is mocked to succeed
+      const result = (validationMode as any).checkToolAvailable('node');
+      expect(result).toBe(true);
+    });
+
+    test('checkToolAvailable returns false for tools that do not exist', () => {
+      // Mock execSync to throw for 'which' command (tool not found)
+      mockExecSync.mockImplementation((cmd: string) => {
+        if (cmd.startsWith('which ')) {
+          const err = new Error('not found');
+          (err as NodeJS.ErrnoException).code = 'ENOENT';
+          throw err;
+        }
+        return '';
+      });
+
+      const result = (validationMode as any).checkToolAvailable('nonexistent-tool');
+      expect(result).toBe(false);
+    });
+
+    test('runTest returns clear error when framework tool is not available', async () => {
+      // Mock execSync so 'which' fails for npx
+      mockExecSync.mockImplementation((cmd: string) => {
+        if (cmd.startsWith('which ')) {
+          throw new Error('not found');
+        }
+        return '';
+      });
+
+      const framework = (validationMode as any).frameworkFromName('mocha');
+      const result = await (validationMode as any).runTest('/tmp/test.js', framework);
+
+      // Should return passed: false with a clear indication of tool missing
+      expect(result.passed).toBe(false);
+    });
+
+    test('validateSyntax throws clear error when syntax check tool is not available', async () => {
+      // Mock execSync so 'which' fails for node
+      mockExecSync.mockImplementation((cmd: string) => {
+        if (cmd.startsWith('which ')) {
+          throw new Error('not found');
+        }
+        return '';
+      });
+
+      const framework = (validationMode as any).frameworkFromName('mocha');
+      await expect(
+        (validationMode as any).validateSyntax('/tmp/test.js', framework)
+      ).rejects.toThrow(/not available|not found|not installed/i);
+    });
+  });
+
   describe('End-to-end: mocha + code_injection produces correct test', () => {
     test('full pipeline generates mocha test for code_injection vulnerability', async () => {
       const result = await (validationMode as any).generateTestWithRetry(

@@ -1408,6 +1408,27 @@ CWE: CWE-798`
   }
 
   /**
+   * Check if a command-line tool is available on the system PATH.
+   * Extracts the base tool name from a command string and uses `which` to verify.
+   */
+  private checkToolAvailable(tool: string): boolean {
+    try {
+      execSync(`which ${tool}`, { encoding: 'utf8', stdio: 'pipe' });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Extract the base tool name from a command string.
+   * e.g., "npx mocha" → "npx", "bundle exec rspec" → "bundle", "node --check" → "node"
+   */
+  private getBaseToolFromCommand(command: string): string {
+    return command.split(/\s+/)[0];
+  }
+
+  /**
    * Validate syntax of test file
    */
   private async validateSyntax(testFile: string, framework: TestFramework): Promise<void> {
@@ -1416,11 +1437,20 @@ CWE: CWE-798`
       return;
     }
 
+    const baseTool = this.getBaseToolFromCommand(framework.syntaxCheckCommand);
+    if (!this.checkToolAvailable(baseTool)) {
+      throw new Error(
+        `Syntax check tool '${baseTool}' is not installed or not available on PATH. ` +
+        `Framework '${framework.name}' requires '${baseTool}' for syntax validation.`
+      );
+    }
+
     try {
       const command = `${framework.syntaxCheckCommand} ${testFile}`;
       execSync(command, { cwd: this.repoPath, encoding: 'utf8' });
-    } catch (error: any) {
-      throw new Error(`Syntax validation failed: ${error.message}`);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Syntax validation failed: ${message}`);
     }
   }
 
@@ -1434,6 +1464,15 @@ CWE: CWE-798`
   }> {
     if (!framework.testCommand) {
       logger.warn('No test command available, skipping test execution');
+      return { passed: false, existingTestsFailed: false };
+    }
+
+    const baseTool = this.getBaseToolFromCommand(framework.testCommand);
+    if (!this.checkToolAvailable(baseTool)) {
+      logger.warn(
+        `Test runner tool '${baseTool}' is not installed or not available on PATH. ` +
+        `Framework '${framework.name}' requires '${baseTool}' for test execution. Skipping test run.`
+      );
       return { passed: false, existingTestsFailed: false };
     }
 

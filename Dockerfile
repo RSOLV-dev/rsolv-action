@@ -68,8 +68,10 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends libc6 libstdc++6 libgcc-s1 procps && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Copy Node.js from builder (some tools still need it)
+# Copy Node.js toolchain from builder (node, npm, npx needed for test framework execution)
 COPY --from=builder /usr/bin/node /usr/bin/node
+COPY --from=builder /usr/bin/npm /usr/bin/npm
+COPY --from=builder /usr/bin/npx /usr/bin/npx
 COPY --from=builder /usr/lib /usr/lib
 
 # Copy built application and all dependencies

@@ -67,10 +67,11 @@ export function parseIssueBody(issueBody: string): ParsedIssueBody {
     return result;
   }
 
-  // Extract type
-  const typeMatch = issueBody.match(/\*\*Type\*\*:\s*(\S+)/);
+  // Extract type (e.g., **Type**: Code Injection or **Type**: Command_injection)
+  // Use (.+) to capture multi-word human-readable types like "Code Injection"
+  const typeMatch = issueBody.match(/\*\*Type\*\*:\s*(.+)/);
   if (typeMatch) {
-    result.type = typeMatch[1];
+    result.type = typeMatch[1].trim();
   }
 
   // Extract severity
