@@ -72,10 +72,14 @@ vi.mock('../vendor-utils.js', () => ({
   }
 }));
 
-vi.mock('../../ai/test-generating-security-analyzer.js', () => ({
-  TestGeneratingSecurityAnalyzer: vi.fn().mockImplementation(() => ({
-    analyzeWithTestGeneration: vi.fn()
-  }))
+vi.mock('../../ai/client.js', () => ({
+  getAiClient: vi.fn().mockResolvedValue({
+    complete: vi.fn().mockResolvedValue(`\`\`\`javascript
+test('security vulnerability', () => {
+  expect(vulnerable).toBe(true);
+});
+\`\`\``)
+  })
 }));
 
 vi.mock('child_process', () => ({

@@ -7,9 +7,8 @@ import { IssueContext, ActionConfig } from '../types/index.js';
 import { logger } from '../utils/logger.js';
 import { ValidationResult, TestExecutionResult, Vulnerability, TestFileContext, TestSuite, AttemptHistory, TestFramework } from './types.js';
 import { vendorFilterUtils } from './vendor-utils.js';
-import { TestGeneratingSecurityAnalyzer } from '../ai/test-generating-security-analyzer.js';
+import { getAiClient } from '../ai/client.js';
 import { analyzeIssue } from '../ai/analyzer.js';
-import { AIConfig } from '../ai/types.js';
 import { execSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -1047,7 +1046,7 @@ ${tests}
     maxAttempts: number = 3
   ): Promise<TestSuite | null> {
     const previousAttempts: AttemptHistory[] = [];
-    const framework = this.detectFrameworkFromPath(targetTestFile.path);
+    const framework = this.frameworkFromName(targetTestFile.framework);
 
     logger.info(`Starting test generation with retry (max ${maxAttempts} attempts)`);
     logger.info(`Vulnerability: ${vulnerability.type} at ${vulnerability.location}`);
@@ -1150,7 +1149,8 @@ ${tests}
   }
 
   /**
-   * Generate test using LLM with vulnerability context and retry feedback
+   * Generate test using LLM with vulnerability context and retry feedback.
+   * Calls the AI client directly — no indirection through TestGeneratingSecurityAnalyzer.
    */
   private async generateTestWithLLM(
     vulnerability: Vulnerability,
@@ -1158,63 +1158,73 @@ ${tests}
     previousAttempts: AttemptHistory[],
     framework: TestFramework
   ): Promise<TestSuite> {
-    // Build LLM prompt with realistic vulnerability examples
     const prompt = this.buildLLMPrompt(vulnerability, targetTestFile, previousAttempts, framework);
 
-    // Use existing TestGeneratingSecurityAnalyzer for LLM interaction
-    const aiConfig: AIConfig = {
-      provider: 'anthropic',
-      apiKey: this.config.aiProvider.apiKey,
-      model: this.config.aiProvider.model,
+    const aiClient = await getAiClient(this.config.aiProvider);
+    const response = await aiClient.complete(prompt, {
       temperature: 0.2,
       maxTokens: this.config.aiProvider.maxTokens,
-      useVendedCredentials: this.config.aiProvider.useVendedCredentials
-    };
+      model: this.config.aiProvider.model
+    });
 
-    const testAnalyzer = new TestGeneratingSecurityAnalyzer(aiConfig);
+    const redTests = this.parseTestResponse(response, vulnerability, framework);
 
-    // Create a mock issue context for the analyzer
-    const mockIssue: IssueContext = {
-      id: `vuln-${Date.now()}`,
-      number: 0,
-      title: vulnerability.description,
-      body: prompt,
-      labels: [],
-      assignees: [],
-      repository: {
-        owner: 'test',
-        name: 'test',
-        fullName: 'test/test',
-        defaultBranch: 'main'
-      },
-      source: 'github',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      metadata: {}
-    };
-
-    const codebaseFiles = new Map<string, string>();
-    codebaseFiles.set(targetTestFile.path, targetTestFile.content);
-
-    const result = await testAnalyzer.analyzeWithTestGeneration(
-      mockIssue,
-      this.config,
-      codebaseFiles
-    );
-
-    if (!result.generatedTests?.testSuite) {
+    if (redTests.length === 0) {
       throw new Error('LLM failed to generate test suite');
     }
-
-    // Convert to our TestSuite format
-    const redTests = result.generatedTests.testSuite.redTests
-      || (result.generatedTests.testSuite.red ? [result.generatedTests.testSuite.red] : []);
 
     return {
       framework: framework.name,
       testFile: targetTestFile.path,
       redTests
     };
+  }
+
+  /**
+   * Parse LLM response into structured red test entries.
+   * Extracts code blocks and wraps as TestSuite redTests.
+   */
+  private parseTestResponse(
+    response: string,
+    vulnerability: Vulnerability,
+    framework: TestFramework
+  ): TestSuite['redTests'] {
+    // Extract code blocks from response
+    const codeBlockMatch = response.match(/```(?:javascript|typescript|ruby|python|js|ts|rb|py)?\s*\n([\s\S]*?)```/);
+    const testCode = codeBlockMatch?.[1]?.trim() || response.trim();
+
+    if (!testCode) return [];
+
+    // Try structured JSON response first
+    try {
+      const parsed = JSON.parse(testCode);
+      if (Array.isArray(parsed.redTests)) return parsed.redTests;
+      if (Array.isArray(parsed.red)) return parsed.red;
+      if (parsed.testCode) return [parsed];
+    } catch {
+      // Not JSON — treat as raw test code
+    }
+
+    // Split on describe/it/test blocks if multiple tests present
+    const testBlocks = testCode.split(/\n(?=(?:describe|it|test)\s*\()/);
+    if (testBlocks.length > 1) {
+      return testBlocks
+        .filter(block => block.trim().length > 0)
+        .map((block, i) => ({
+          testName: `security_${vulnerability.type}_test_${i + 1}`,
+          testCode: block.trim(),
+          attackVector: vulnerability.attackVector,
+          expectedBehavior: 'should_fail_on_vulnerable_code'
+        }));
+    }
+
+    // Single test — wrap as-is
+    return [{
+      testName: `security_${vulnerability.type}_test`,
+      testCode,
+      attackVector: vulnerability.attackVector,
+      expectedBehavior: 'should_fail_on_vulnerable_code'
+    }];
   }
 
   /**
@@ -1312,14 +1322,45 @@ CWE: CWE-78`,
 Pattern: res.sendFile(\`/app/uploads/\${filename}\`)
 Attack: ../../../etc/passwd
 Impact: Read sensitive files
-CWE: CWE-22`
+CWE: CWE-22`,
+
+      'code_injection': `REAL-WORLD EXAMPLE (NodeGoat):
+Pattern: const preTax = eval(req.body.preTax);
+Attack: require('child_process').execSync('cat /etc/passwd')
+Impact: Remote code execution via eval() of user input
+CWE: CWE-94`,
+
+      'hardcoded_secrets': `REAL-WORLD EXAMPLE:
+Pattern: zapApiKey: "v9dn0balpqas1pcc281tn5ood1"
+Attack: Searching source code or git history for API keys
+Impact: Unauthorized API access
+CWE: CWE-798`
     };
 
     return examples[vulnerabilityType.toLowerCase()] || `Vulnerability type: ${vulnerabilityType}`;
   }
 
   /**
-   * Detect framework from test file path
+   * Map framework name (from backend detection) to TestFramework object.
+   * Central registry — avoids re-detecting framework from file path.
+   */
+  private frameworkFromName(name: string): TestFramework {
+    const frameworks: Record<string, TestFramework> = {
+      'mocha':   { name: 'mocha',   testCommand: 'npx mocha',          syntaxCheckCommand: 'node --check' },
+      'jest':    { name: 'jest',    testCommand: 'npx jest',            syntaxCheckCommand: 'node --check' },
+      'vitest':  { name: 'vitest',  testCommand: 'npx vitest run',     syntaxCheckCommand: 'node --check' },
+      'rspec':   { name: 'rspec',   testCommand: 'bundle exec rspec',  syntaxCheckCommand: 'ruby -c' },
+      'pytest':  { name: 'pytest',  testCommand: 'pytest',             syntaxCheckCommand: 'python -m py_compile' },
+      'phpunit': { name: 'phpunit', testCommand: 'vendor/bin/phpunit', syntaxCheckCommand: 'php -l' },
+      'exunit':  { name: 'exunit',  testCommand: 'mix test',           syntaxCheckCommand: 'elixir -c' },
+      'minitest': { name: 'minitest', testCommand: 'ruby -Itest',     syntaxCheckCommand: 'ruby -c' },
+      'junit5':  { name: 'junit5',  testCommand: 'mvn test -Dtest=',  syntaxCheckCommand: 'javac' },
+    };
+    return frameworks[name.toLowerCase()] || this.detectFrameworkFromPath(name);
+  }
+
+  /**
+   * Detect framework from test file path (fallback when name not in registry)
    */
   private detectFrameworkFromPath(testPath: string): TestFramework {
     const fileName = path.basename(testPath);

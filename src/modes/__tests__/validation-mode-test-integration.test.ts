@@ -25,23 +25,14 @@ import { execSync } from 'child_process';
 
 // Mock dependencies
 vi.mock('../../ai/analyzer');
-vi.mock('../../ai/test-generating-security-analyzer', () => ({
-  TestGeneratingSecurityAnalyzer: vi.fn().mockImplementation(() => ({
-    analyzeWithTestGeneration: vi.fn().mockResolvedValue({
-      generatedTests: {
-        testSuite: {
-          redTests: [{
-            testName: 'test_security_vulnerability',
-            testCode: 'it "detects vulnerability" do\n  # test code\nend',
-            attackVector: 'malicious input',
-            expectedBehavior: 'should reject',
-            vulnerableCodePath: 'app/test.rb',
-            vulnerablePattern: 'pattern'
-          }]
-        }
-      }
-    })
-  }))
+vi.mock('../../ai/client.js', () => ({
+  getAiClient: vi.fn().mockResolvedValue({
+    complete: vi.fn().mockResolvedValue(`\`\`\`ruby
+it "detects vulnerability" do
+  # test code
+end
+\`\`\``)
+  })
 }));
 vi.mock('../../ai/git-based-test-validator');
 vi.mock('child_process');
