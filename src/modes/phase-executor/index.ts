@@ -1367,9 +1367,11 @@ export class PhaseExecutor {
         commitHash: metadata.commitSha
       };
     } else if (phase === 'validation') {
-      phaseData.validation = data;
+      // PhaseDataClient expects client-side key 'validate', not 'validation'
+      (phaseData as Record<string, unknown>).validate = data;
     } else if (phase === 'mitigation') {
-      phaseData.mitigation = data;
+      // PhaseDataClient expects client-side key 'mitigate', not 'mitigation'
+      (phaseData as Record<string, unknown>).mitigate = data;
     }
 
     await this.phaseDataClient.storePhaseResults(
