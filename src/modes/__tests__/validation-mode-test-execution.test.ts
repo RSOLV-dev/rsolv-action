@@ -407,5 +407,43 @@ describe('RFC-060-AMENDMENT-001: ValidationMode Test Execution Integration', () 
 
       expect(scanSpy).toHaveBeenCalled();
     });
+
+    test('should skip analyzeIssue when priorAnalysis is provided', async () => {
+      vi.spyOn(validationMode as any, 'generateTestWithRetry').mockResolvedValue(successTestSuite);
+
+      const priorAnalysis = {
+        canBeFixed: true,
+        filesToModify: ['src/auth.js'],
+        issueType: 'security' as const,
+        estimatedComplexity: 'medium' as const,
+        requiredContext: [],
+        suggestedApproach: 'Fix SQL injection'
+      };
+
+      await validationMode.validateVulnerability(mockIssue, priorAnalysis);
+
+      expect(mockAnalyzeIssue).not.toHaveBeenCalled();
+    });
+
+    test('should use priorAnalysis.canBeFixed to skip unfixable issues', async () => {
+      const priorAnalysis = {
+        canBeFixed: false,
+        cannotFixReason: 'Requires major refactor',
+        filesToModify: [],
+        issueType: 'security' as const,
+        estimatedComplexity: 'complex' as const,
+        requiredContext: [],
+        suggestedApproach: ''
+      };
+
+      const generateSpy = vi.spyOn(validationMode as any, 'generateTestWithRetry');
+
+      const result = await validationMode.validateVulnerability(mockIssue, priorAnalysis);
+
+      expect(mockAnalyzeIssue).not.toHaveBeenCalled();
+      expect(result.validated).toBe(false);
+      expect(result.falsePositiveReason).toContain('Requires major refactor');
+      expect(generateSpy).not.toHaveBeenCalled();
+    });
   });
 });

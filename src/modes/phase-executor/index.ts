@@ -20,7 +20,7 @@ import { AIConfig, IssueAnalysis } from '../../ai/types.js';
 import { TestRunner, TestRunResult } from '../../ai/test-runner.js';
 import { extractVulnerabilitiesFromIssue } from '../../utils/vulnerability-extraction.js';
 // import { getIssue } from '../../github/api.js'; // Not needed yet
-import type { ActionConfig, IssueContext } from '../../types/index.js';
+import type { ActionConfig, IssueContext, AnalysisData } from '../../types/index.js';
 import type { Vulnerability } from '../../security/types.js';
 import type { ValidationResult, MitigationResult } from '../types.js';
 import type { 
@@ -2207,7 +2207,10 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
           const validationMode = new ValidationMode(this.config, process.cwd());
 
           logger.info(`[VALIDATE-STANDALONE] Using ValidationMode for issue #${issue.number}`);
-          const vmValidationResult = await validationMode.validateVulnerability(issue);
+          const vmValidationResult = await validationMode.validateVulnerability(
+            issue,
+            scanData && 'analysisData' in scanData ? (scanData as { analysisData: AnalysisData }).analysisData : undefined
+          );
 
           // Run additional tests if requested and we have generated tests
           let testExecution = null;

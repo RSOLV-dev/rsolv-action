@@ -3,7 +3,7 @@
  * RFC-041: Prove vulnerabilities exist with RED tests
  */
 
-import { IssueContext, ActionConfig } from '../types/index.js';
+import { IssueContext, ActionConfig, AnalysisData } from '../types/index.js';
 import { logger } from '../utils/logger.js';
 import { ValidationResult, TestExecutionResult, Vulnerability, TestFileContext, TestSuite, AttemptHistory, TestFramework } from './types.js';
 import { vendorFilterUtils } from './vendor-utils.js';
@@ -57,7 +57,7 @@ export class ValidationMode {
   /**
    * Validate a single vulnerability
    */
-  async validateVulnerability(issue: IssueContext): Promise<ValidationResult> {
+  async validateVulnerability(issue: IssueContext, priorAnalysis?: AnalysisData): Promise<ValidationResult> {
     const isTestingMode = process.env.RSOLV_TESTING_MODE === 'true';
     const executableTestsEnabled = this.config.executableTests ?? true; // RFC-060 Phase 5.1: Default enabled
 
@@ -121,9 +121,15 @@ export class ValidationMode {
         };
       }
 
-      // Step 4: Analyze the issue
-      logger.info(`Analyzing issue #${issue.number} for validation`);
-      const analysisData = await analyzeIssue(issue, this.config);
+      // Step 4: Analyze the issue (skip if priorAnalysis provided)
+      let analysisData: AnalysisData;
+      if (priorAnalysis) {
+        logger.info(`[VALIDATION MODE] Using prior analysis for issue #${issue.number} (skipping analyzeIssue)`);
+        analysisData = priorAnalysis;
+      } else {
+        logger.info(`Analyzing issue #${issue.number} for validation`);
+        analysisData = await analyzeIssue(issue, this.config);
+      }
 
       if (!analysisData.canBeFixed) {
         logger.warn(`Issue #${issue.number} cannot be validated: ${analysisData.cannotFixReason}`);
@@ -147,7 +153,7 @@ export class ValidationMode {
 
       // Step 5a: Detect framework via backend API (reads package.json/Gemfile/requirements.txt)
       const primaryFile = vulnerabilities[0]?.file || analysisData.filesToModify?.[0] || '';
-      const frameworkName = await this.detectFrameworkWithBackend(primaryFile);
+      let frameworkName = await this.detectFrameworkWithBackend(primaryFile);
       const framework = this.detectFrameworkFromPath(
         primaryFile.replace(/\.(js|ts|rb|py|java|php|ex|exs)$/, '.test.$1')
       );
@@ -181,7 +187,7 @@ export class ValidationMode {
         }
       }
 
-      // Step 5d: Select or create target test file
+      // Step 5d: Select or create target test file (with E2E framework filtering)
       let targetTestFile: TestFileContext;
       if (candidateTestFiles.length > 0) {
         try {
@@ -193,28 +199,112 @@ export class ValidationMode {
             framework: frameworkName
           });
 
-          const targetPath = analysis.recommendations?.[0]?.path || candidateTestFiles[0];
-          logger.info(`Backend recommended target: ${targetPath} (score: ${analysis.recommendations?.[0]?.score})`);
+          // Iterate through recommendations, skipping E2E framework targets
+          let selectedPath: string | null = null;
+          let selectedContent = '';
+          const recommendations = analysis.recommendations || [];
 
-          const targetFullPath = path.join(this.repoPath, targetPath);
-          const targetContent = fs.existsSync(targetFullPath)
-            ? fs.readFileSync(targetFullPath, 'utf8')
-            : '';
+          for (const rec of recommendations) {
+            const recFullPath = path.join(this.repoPath, rec.path);
+            const recContent = fs.existsSync(recFullPath) ? fs.readFileSync(recFullPath, 'utf8') : '';
+            const contentFramework = this.detectFrameworkFromContent(recContent);
 
-          targetTestFile = {
-            path: targetPath,
-            content: targetContent,
-            framework: frameworkName
-          };
+            if (contentFramework && this.isE2EFramework(contentFramework)) {
+              logger.info(`[VALIDATION MODE] Skipping E2E target: ${rec.path} (detected: ${contentFramework})`);
+              continue;
+            }
+
+            // If content detection finds a different unit framework, override
+            if (contentFramework && contentFramework !== frameworkName && !this.isE2EFramework(contentFramework)) {
+              logger.info(`[VALIDATION MODE] Target framework override: ${frameworkName} → ${contentFramework} (from ${rec.path})`);
+              frameworkName = contentFramework;
+            }
+
+            selectedPath = rec.path;
+            selectedContent = recContent;
+            logger.info(`Backend recommended target: ${rec.path} (score: ${rec.score})`);
+            break;
+          }
+
+          // If no recommendation survived E2E filtering, try candidates directly
+          if (!selectedPath) {
+            for (const candidate of candidateTestFiles) {
+              const candFullPath = path.join(this.repoPath, candidate);
+              const candContent = fs.existsSync(candFullPath) ? fs.readFileSync(candFullPath, 'utf8') : '';
+              const candFramework = this.detectFrameworkFromContent(candContent);
+
+              if (candFramework && this.isE2EFramework(candFramework)) {
+                logger.info(`[VALIDATION MODE] Skipping E2E candidate: ${candidate} (detected: ${candFramework})`);
+                continue;
+              }
+
+              selectedPath = candidate;
+              selectedContent = candContent;
+              if (candFramework && candFramework !== frameworkName) {
+                frameworkName = candFramework;
+              }
+              break;
+            }
+          }
+
+          if (selectedPath) {
+            targetTestFile = {
+              path: selectedPath,
+              content: selectedContent,
+              framework: frameworkName
+            };
+          } else {
+            // All candidates are E2E — fall through to create-new-file path
+            logger.info('[VALIDATION MODE] All candidate test files are E2E frameworks — creating new unit test file');
+            const testDirMap: Record<string, string> = {
+              'mocha': 'test/unit',
+              'jest': '__tests__',
+              'vitest': '__tests__',
+              'rspec': 'spec',
+              'pytest': 'tests',
+              'phpunit': 'tests',
+              'exunit': 'test'
+            };
+            const testDir = testDirMap[frameworkName] || 'test/unit';
+            const ext = this.getLanguageExtension(frameworkName);
+            const fallbackPath = `${testDir}/vulnerability_validation${ext}`;
+            targetTestFile = {
+              path: fallbackPath,
+              content: '',
+              framework: frameworkName
+            };
+          }
         } catch (analyzeError) {
-          logger.warn(`Backend analyze failed, using first test file: ${analyzeError}`);
-          const fallbackPath = candidateTestFiles[0];
-          const fallbackFullPath = path.join(this.repoPath, fallbackPath);
-          targetTestFile = {
-            path: fallbackPath,
-            content: fs.existsSync(fallbackFullPath) ? fs.readFileSync(fallbackFullPath, 'utf8') : '',
-            framework: frameworkName
-          };
+          logger.warn(`Backend analyze failed, using first non-E2E test file: ${analyzeError}`);
+          // Filter fallback candidates for E2E frameworks too
+          let fallbackPath: string | null = null;
+          let fallbackContent = '';
+          for (const candidate of candidateTestFiles) {
+            const candFullPath = path.join(this.repoPath, candidate);
+            const candContent = fs.existsSync(candFullPath) ? fs.readFileSync(candFullPath, 'utf8') : '';
+            const candFramework = this.detectFrameworkFromContent(candContent);
+            if (candFramework && this.isE2EFramework(candFramework)) {
+              continue;
+            }
+            fallbackPath = candidate;
+            fallbackContent = candContent;
+            break;
+          }
+          if (fallbackPath) {
+            targetTestFile = {
+              path: fallbackPath,
+              content: fallbackContent,
+              framework: frameworkName
+            };
+          } else {
+            const testDir = 'test/unit';
+            const ext = this.getLanguageExtension(frameworkName);
+            targetTestFile = {
+              path: `${testDir}/vulnerability_validation${ext}`,
+              content: '',
+              framework: frameworkName
+            };
+          }
         }
       } else {
         // No test files exist — create a fallback path based on framework conventions
@@ -1355,6 +1445,8 @@ CWE: CWE-798`
       'exunit':  { name: 'exunit',  testCommand: 'mix test',           syntaxCheckCommand: 'elixir -c' },
       'minitest': { name: 'minitest', testCommand: 'ruby -Itest',     syntaxCheckCommand: 'ruby -c' },
       'junit5':  { name: 'junit5',  testCommand: 'mvn test -Dtest=',  syntaxCheckCommand: 'javac' },
+      'cypress':    { name: 'cypress',    testCommand: 'npx cypress run --spec', syntaxCheckCommand: 'node --check' },
+      'playwright': { name: 'playwright', testCommand: 'npx playwright test',    syntaxCheckCommand: 'node --check' },
     };
     return frameworks[name.toLowerCase()] || this.detectFrameworkFromPath(name);
   }
@@ -1384,6 +1476,58 @@ CWE: CWE-798`
 
     // Default to generic
     return { name: 'generic', syntaxCheckCommand: 'echo "No syntax check"', testCommand: 'echo "No test runner"' };
+  }
+
+  /**
+   * Detect test framework from file content using import/require patterns.
+   * RFC-034: Per-file framework detection based on import/require analysis.
+   * Returns null for unrecognized content (falls back to project-level detection).
+   */
+  private detectFrameworkFromContent(content: string): string | null {
+    // Cypress (check before mocha — Cypress tests also use describe/it)
+    if (/\bcy\.(get|visit|request|contains|intercept|wait)\b/.test(content) ||
+        /\bCypress\.(Commands|env|config)\b/.test(content) ||
+        /\/\/\/\s*<reference\s+types="Cypress"\s*\/>/.test(content)) {
+      return 'cypress';
+    }
+    // Playwright
+    if (/from\s+['"]@playwright\/test['"]/.test(content) ||
+        /require\s*\(\s*['"]@playwright\/test['"]\s*\)/.test(content)) {
+      return 'playwright';
+    }
+    // Selenium
+    if (/from\s+selenium\s+import/.test(content) ||
+        /require\s*\(\s*['"]selenium-webdriver['"]\s*\)/.test(content)) {
+      return 'selenium';
+    }
+    // Vitest (before jest — similar syntax)
+    if (/from\s+['"]vitest['"]/.test(content) ||
+        /import\s*\{[^}]*\}\s*from\s*['"]vitest['"]/.test(content)) {
+      return 'vitest';
+    }
+    // Jest / Testing Library
+    if (/from\s+['"]@testing-library\//.test(content) ||
+        /require\s*\(\s*['"]@testing-library\//.test(content)) {
+      return 'jest';
+    }
+    // Mocha (chai without cy.)
+    if ((/require\s*\(\s*['"]chai['"]\s*\)/.test(content) ||
+         /from\s+['"]chai['"]/.test(content)) &&
+        !/\bcy\./.test(content)) {
+      return 'mocha';
+    }
+    return null;
+  }
+
+  /**
+   * Check if a framework is an E2E framework that can't validate in isolation.
+   * E2E frameworks require a running app server and can't be used for unit-level validation.
+   */
+  private isE2EFramework(framework: string): boolean {
+    const e2eFrameworks = new Set([
+      'cypress', 'playwright', 'selenium', 'webdriver', 'puppeteer', 'nightwatch'
+    ]);
+    return e2eFrameworks.has(framework.toLowerCase());
   }
 
   /**
