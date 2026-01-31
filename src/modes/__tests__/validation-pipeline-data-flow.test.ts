@@ -613,6 +613,111 @@ describe("test2", function() {
     });
   });
 
+  describe('buildLLMPrompt source file import', () => {
+    const sourceVulnerability: Vulnerability = {
+      type: 'hardcoded_secrets',
+      description: 'Hardcoded cryptographic key in development config (CWE-798)',
+      location: 'config/env/development.js:12',
+      attackVector: 'Extract hardcoded key for decryption',
+      vulnerablePattern: "cryptoKey: 'JCmcYCg...'",
+      source: 'config/env/development.js'
+    };
+
+    const noSourceVulnerability: Vulnerability = {
+      type: 'hardcoded_secrets',
+      description: 'Hardcoded secret detected',
+      location: 'unknown:0',
+      attackVector: 'Extract hardcoded key',
+      vulnerablePattern: "secret: 'abc123'"
+    };
+
+    test('prompt includes source file path for import', async () => {
+      await (validationMode as any).generateTestWithRetry(
+        sourceVulnerability,
+        mochaTestFile,
+        3
+      );
+
+      expect(capturedPrompt).not.toBeNull();
+      expect(capturedPrompt).toContain('process.cwd()');
+      expect(capturedPrompt).toContain('config/env/development.js');
+    });
+
+    test('prompt does NOT contain SELF-CONTAINED or INLINE instructions when source is present', async () => {
+      await (validationMode as any).generateTestWithRetry(
+        sourceVulnerability,
+        mochaTestFile,
+        3
+      );
+
+      expect(capturedPrompt).not.toBeNull();
+      expect(capturedPrompt).not.toContain('COMPLETELY SELF-CONTAINED');
+      expect(capturedPrompt).not.toContain('INLINE the vulnerable function directly');
+    });
+
+    test('prompt includes VULNERABLE SOURCE FILE section', async () => {
+      await (validationMode as any).generateTestWithRetry(
+        sourceVulnerability,
+        mochaTestFile,
+        3
+      );
+
+      expect(capturedPrompt).not.toBeNull();
+      expect(capturedPrompt).toContain('VULNERABLE SOURCE FILE: config/env/development.js');
+    });
+
+    test('prompt includes import strategy guidance', async () => {
+      await (validationMode as any).generateTestWithRetry(
+        sourceVulnerability,
+        mochaTestFile,
+        3
+      );
+
+      expect(capturedPrompt).not.toBeNull();
+      expect(capturedPrompt).toContain('require(');
+      expect(capturedPrompt).toContain('fs.readFileSync(');
+      expect(capturedPrompt).toContain('Strategy A');
+      expect(capturedPrompt).toContain('Strategy B');
+    });
+
+    test('falls back to self-contained mode when source is not set', async () => {
+      await (validationMode as any).generateTestWithRetry(
+        noSourceVulnerability,
+        mochaTestFile,
+        3
+      );
+
+      expect(capturedPrompt).not.toBeNull();
+      expect(capturedPrompt).toContain('SELF-CONTAINED');
+      expect(capturedPrompt).not.toContain('IMPORT the actual source file');
+    });
+
+    test('retry prompt includes MODULE_NOT_FOUND guidance when previous attempt had that error', async () => {
+      // Call buildLLMPrompt directly with previous attempts containing MODULE_NOT_FOUND
+      const framework = (validationMode as any).frameworkFromName('mocha');
+      const previousAttempts = [
+        {
+          attempt: 1,
+          error: 'TestExecutionError',
+          errorMessage: "Cannot find module '/tmp/test-repo/app/routes/contributions.js' MODULE_NOT_FOUND"
+        }
+      ];
+
+      const prompt = (validationMode as any).buildLLMPrompt(
+        sourceVulnerability,
+        mochaTestFile,
+        previousAttempts,
+        framework
+      );
+
+      expect(prompt).toContain('MODULE_NOT_FOUND');
+      expect(prompt).toContain('process.cwd()');
+      expect(prompt).toContain('config/env/development.js');
+      // Should warn against relative paths
+      expect(prompt).toContain('Do NOT use relative paths');
+    });
+  });
+
   describe('isE2EFramework', () => {
     test('cypress is E2E', () => {
       expect((validationMode as any).isE2EFramework('cypress')).toBe(true);

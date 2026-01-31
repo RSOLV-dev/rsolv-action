@@ -1335,7 +1335,7 @@ TYPE: ${vulnerability.type}
 LOCATION: ${vulnerability.location}
 ATTACK VECTOR: ${vulnerability.attackVector}
 ${vulnerability.vulnerablePattern ? `VULNERABLE PATTERN: ${vulnerability.vulnerablePattern}` : ''}
-${vulnerability.source ? `SOURCE: ${vulnerability.source}` : ''}
+${vulnerability.source ? `SOURCE: ${vulnerability.source}\nVULNERABLE SOURCE FILE: ${vulnerability.source}` : ''}
 
 ${realisticExamples}
 
@@ -1354,9 +1354,21 @@ Generate test code that:
 3. PASSES after fix is applied
 4. Reuses existing setup blocks from target file
 5. Follows ${framework.name} conventions
-6. Is COMPLETELY SELF-CONTAINED — do NOT use require() or import to load target modules.
-   Instead, INLINE the vulnerable function directly in the test code so it can execute anywhere.
-   Tests that require() modules that don't exist in the test directory will crash with MODULE_NOT_FOUND.`;
+${vulnerability.source ? `6. IMPORT the actual source file — do NOT inline/copy vulnerable code into the test.
+   The test runs with process.cwd() set to the repository root.
+   Use one of these strategies to reference the vulnerable source file:
+
+   Strategy A — require() (for modules that export values without side effects):
+   const target = require(path.join(process.cwd(), '${vulnerability.source}'));
+
+   Strategy B — fs.readFileSync() (for files with side effects like DB connections, HTTP servers):
+   const sourceCode = fs.readFileSync(path.join(process.cwd(), '${vulnerability.source}'), 'utf8');
+   Then use pattern matching, regex, or parsing to test the source content.
+
+   Choose Strategy A when the file exports testable values (configs, utilities, pure functions).
+   Choose Strategy B when requiring the file would trigger side effects (route handlers, middleware, DB models).
+
+   IMPORTANT: Always use path.join(process.cwd(), '<relative-path>') — never use relative require paths like '../'.` : `6. Is SELF-CONTAINED — inline the vulnerable pattern directly in the test.`}`;
 
     if (previousAttempts.length > 0) {
       prompt += '\n\nPREVIOUS ATTEMPTS (learn from these errors):';
@@ -1372,6 +1384,11 @@ Generate test code that:
         prompt += '\n\nIMPORTANT: Make the test MORE AGGRESSIVE. It must FAIL on vulnerable code.';
       } else if (lastError === 'ExistingTestsRegression') {
         prompt += '\n\nIMPORTANT: Don\'t break existing tests. Avoid modifying shared state or setup blocks.';
+      } else if (lastError === 'TestExecutionError' &&
+                 previousAttempts[previousAttempts.length - 1].errorMessage?.includes('MODULE_NOT_FOUND')) {
+        prompt += `\n\nIMPORTANT: The previous attempt failed with MODULE_NOT_FOUND. ` +
+          `Use path.join(process.cwd(), '${vulnerability.source}') to reference the source file. ` +
+          `Do NOT use relative paths like require('../...'). process.cwd() is always the repository root.`;
       }
     }
 
