@@ -146,9 +146,9 @@ export class ValidationMode {
         throw new Error('TestIntegrationClient not initialized — RSOLV API key required for validation');
       }
 
-      // Step 5a: Detect framework from vulnerable files
+      // Step 5a: Detect framework via backend API (reads package.json/Gemfile/requirements.txt)
       const primaryFile = vulnerabilities[0]?.file || analysisData.filesToModify?.[0] || '';
-      const frameworkName = this.detectFrameworkFromFile(primaryFile);
+      const frameworkName = await this.detectFrameworkWithBackend(primaryFile);
       const framework = this.detectFrameworkFromPath(
         primaryFile.replace(/\.(js|ts|rb|py|java|php|ex|exs)$/, '.test.$1')
       );
@@ -284,7 +284,7 @@ export class ValidationMode {
         let integratedContent = testSuite.redTests[0]?.testCode || '';
 
         try {
-          const integration = await this.integrateTestsWithBackendRetry(testSuite, issue);
+          const integration = await this.integrateTestsWithBackendRetry(testSuite, issue, targetTestFile);
           targetFile = integration.targetFile;
           integratedContent = integration.content;
           logger.info(`AST integration succeeded: ${targetFile}`);
@@ -752,7 +752,8 @@ ${tests}
    */
   private async integrateTestsWithBackendRetry(
     testContent: any,
-    issue?: IssueContext
+    issue?: IssueContext,
+    preSelectedTarget?: TestFileContext
   ): Promise<{ targetFile: string; content: string }> {
     const maxAttempts = 3;
     const baseDelay = 1000; // 1 second
@@ -765,44 +766,54 @@ ${tests}
       try {
         logger.debug(`Backend integration attempt ${attempt}/${maxAttempts}...`);
 
-        // Step 1: Scan for test files
-        const candidateTestFiles = await this.scanTestFiles();
-        if (candidateTestFiles.length === 0) {
-          throw new Error('No test files found in repository');
+        // Use pre-selected target from validateVulnerability() if available
+        // This ensures consistency between the analyze scoring and generate targeting
+        let targetPath: string;
+        let targetFileContent: string;
+        let framework: string;
+
+        if (preSelectedTarget) {
+          targetPath = preSelectedTarget.path;
+          targetFileContent = preSelectedTarget.content;
+          framework = preSelectedTarget.framework;
+          logger.info(`Using pre-selected target file: ${targetPath} (framework: ${framework})`);
+        } else {
+          // Fallback: scan, detect, and analyze from scratch (legacy code path)
+          const candidateTestFiles = await this.scanTestFiles();
+          if (candidateTestFiles.length === 0) {
+            throw new Error('No test files found in repository');
+          }
+
+          framework = await this.detectFrameworkWithBackend(issue?.file || '');
+
+          const analysis = await this.testIntegrationClient.analyze({
+            vulnerableFile: issue?.file || 'unknown',
+            vulnerabilityType: issue?.title || 'unknown',
+            candidateTestFiles,
+            framework
+          });
+
+          if (!analysis.recommendations || analysis.recommendations.length === 0) {
+            throw new Error('Backend returned no test file recommendations');
+          }
+
+          targetPath = analysis.recommendations[0].path;
+          logger.info(`Backend recommended target file: ${targetPath} (score: ${analysis.recommendations[0].score})`);
+
+          const targetFilePath = path.join(this.repoPath, targetPath);
+          if (!fs.existsSync(targetFilePath)) {
+            throw new Error(`Recommended target file does not exist: ${targetPath}`);
+          }
+          targetFileContent = fs.readFileSync(targetFilePath, 'utf8');
         }
 
-        // Step 2: Detect framework from vulnerable file
-        const framework = this.detectFrameworkFromFile(issue?.file || '');
-
-        // Step 3: Analyze test files to find best target
-        const analysis = await this.testIntegrationClient.analyze({
-          vulnerableFile: issue?.file || 'unknown',
-          vulnerabilityType: issue?.title || 'unknown',
-          candidateTestFiles,
-          framework
-        });
-
-        if (!analysis.recommendations || analysis.recommendations.length === 0) {
-          throw new Error('Backend returned no test file recommendations');
-        }
-
-        const targetPath = analysis.recommendations[0].path;
-        logger.info(`Backend recommended target file: ${targetPath} (score: ${analysis.recommendations[0].score})`);
-
-        // Step 4: Read target file content
-        const targetFilePath = path.join(this.repoPath, targetPath);
-        if (!fs.existsSync(targetFilePath)) {
-          throw new Error(`Recommended target file does not exist: ${targetPath}`);
-        }
-        const targetFileContent = fs.readFileSync(targetFilePath, 'utf8');
-
-        // Step 5: Format test suite for backend API
+        // Format test suite for backend API
         const testSuite = this.formatTestSuite(testContent);
 
-        // Step 6: Detect language from target file
+        // Detect language from target file
         const language = this.detectLanguage(targetPath);
 
-        // Step 7: Generate AST-integrated test
+        // Generate AST-integrated test
         const generated = await this.testIntegrationClient.generate({
           targetFileContent,
           testSuite,
@@ -815,7 +826,7 @@ ${tests}
           logger.debug(`Insertion point: line ${generated.insertionPoint.line}, strategy: ${generated.insertionPoint.strategy}`);
         }
 
-        // Step 8: Return integrated result
+        // Return integrated result
         return {
           targetFile: targetPath,
           content: generated.integratedContent
@@ -1553,6 +1564,71 @@ CWE: CWE-22`
     };
 
     return languageMap[ext] || 'javascript'; // Default to JavaScript
+  }
+
+  /**
+   * Detect test framework via backend API using manifest files (package.json, Gemfile, etc.)
+   * Falls back to extension-based detection if backend call fails or returns no result.
+   */
+  private async detectFrameworkWithBackend(filePath: string): Promise<string> {
+    if (!this.testIntegrationClient) {
+      logger.debug('No TestIntegrationClient — falling back to extension-based detection');
+      return this.detectFrameworkFromFile(filePath);
+    }
+
+    try {
+      // Read manifest files from the repository
+      const packageJsonPath = path.join(this.repoPath, 'package.json');
+      const gemfilePath = path.join(this.repoPath, 'Gemfile');
+      const requirementsTxtPath = path.join(this.repoPath, 'requirements.txt');
+
+      let packageJson: { devDependencies?: Record<string, string>; dependencies?: Record<string, string> } | null = null;
+      let gemfile: string | null = null;
+      let requirementsTxt: string | null = null;
+
+      if (fs.existsSync(packageJsonPath)) {
+        try {
+          packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+        } catch (parseErr) {
+          logger.warn(`Could not parse package.json: ${parseErr}`);
+        }
+      }
+      if (fs.existsSync(gemfilePath)) {
+        gemfile = fs.readFileSync(gemfilePath, 'utf8');
+      }
+      if (fs.existsSync(requirementsTxtPath)) {
+        requirementsTxt = fs.readFileSync(requirementsTxtPath, 'utf8');
+      }
+
+      // Find config files in repo root that indicate frameworks
+      const configPatterns = [
+        'vitest.config.ts', 'vitest.config.js', 'vitest.config.mts',
+        'jest.config.ts', 'jest.config.js', 'jest.config.mjs',
+        '.mocharc.yml', '.mocharc.json', '.mocharc.js',
+        'pytest.ini', 'setup.cfg', 'pyproject.toml',
+        '.rspec', 'spec_helper.rb'
+      ];
+      const configFiles = configPatterns.filter(f => fs.existsSync(path.join(this.repoPath, f)));
+
+      // Skip backend call if no manifest files found
+      if (!packageJson && !gemfile && !requirementsTxt && configFiles.length === 0) {
+        logger.debug('No manifest files found — falling back to extension-based detection');
+        return this.detectFrameworkFromFile(filePath);
+      }
+
+      const response = await this.testIntegrationClient.detectFramework({
+        packageJson,
+        gemfile,
+        requirementsTxt,
+        configFiles
+      });
+
+      logger.info(`Backend framework detection: ${response.framework} (testDir: ${response.testDir})`);
+      return response.framework;
+    } catch (error) {
+      logger.warn(`Backend framework detection failed, falling back to extension-based: ${error}`);
+      return this.detectFrameworkFromFile(filePath);
+    }
   }
 
   /**

@@ -17,6 +17,20 @@
 import { logger } from '../utils/logger.js';
 
 // Types based on RFC-060-AMENDMENT-001 API specification
+export interface FrameworkDetectRequest {
+  packageJson?: { devDependencies?: Record<string, string>; dependencies?: Record<string, string> } | null;
+  gemfile?: string | null;
+  requirementsTxt?: string | null;
+  configFiles?: string[];
+}
+
+export interface FrameworkDetectResponse {
+  framework: string;
+  version?: string | null;
+  testDir: string;
+  compatibleWith: string[];
+}
+
 export interface AnalyzeRequest {
   vulnerableFile: string;
   vulnerabilityType: string;
@@ -72,6 +86,16 @@ export class TestIntegrationClient {
   ) {
     // Support environment variable override with production default
     this.baseUrl = baseUrl || process.env.RSOLV_API_URL || 'https://api.rsolv.dev';
+  }
+
+  /**
+   * Detect test framework from package/manifest files via backend API
+   */
+  async detectFramework(request: FrameworkDetectRequest): Promise<FrameworkDetectResponse> {
+    return this.makeRequest<FrameworkDetectResponse>(
+      '/api/v1/framework/detect',
+      request
+    );
   }
 
   /**
