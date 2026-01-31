@@ -153,8 +153,9 @@ export class PhaseDataClient {
       }
 
       // Extract just the data for this specific issue using the issue number as key
+      // Callers use different key formats: "1172" or "issue-1172"
       const issueKey = String(metadata.issueNumber);
-      phaseSpecificData = phaseIssueData[issueKey];
+      phaseSpecificData = phaseIssueData[issueKey] || phaseIssueData[`issue-${issueKey}`];
 
       // If no data found for this specific issue, throw validation error
       if (!phaseSpecificData) {
