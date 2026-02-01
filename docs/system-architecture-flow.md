@@ -391,3 +391,92 @@ graph TD
 ```
 
 This architecture enables RSOLV to provide comprehensive, security-aware, and educational pull requests that not only fix issues but also help teams understand and prevent future occurrences.
+
+## GitHub Actions Runtime Architecture
+
+This diagram shows the container boundaries and orchestration when the RSOLV action runs as a Docker container action in a GitHub Actions workflow.
+
+```mermaid
+graph TB
+    subgraph "GitHub Actions Runner (ubuntu-latest)"
+        direction TB
+
+        subgraph "Host Runner Steps"
+            CHECKOUT["actions/checkout@v4<br/>/home/runner/work/repo/repo"]
+            SETUP_RUBY["ruby/setup-ruby@v1<br/>Installs Ruby + gems on HOST<br/>(not available inside container)"]
+            SETUP_NODE["actions/setup-node (if present)<br/>Installs Node on HOST"]
+        end
+
+        subgraph "Docker Container (RSOLV-action)"
+            direction TB
+
+            subgraph "Base Image: oven/bun:latest"
+                BUN["Bun Runtime"]
+                NODE["Node.js 22 (copied from builder stage)"]
+                GIT["git + curl"]
+                CLAUDE_CLI["Claude Code CLI"]
+                MISE["mise (multi-runtime manager)"]
+                BUILD_TOOLS["build-essential, libssl-dev,<br/>libreadline-dev, zlib1g-dev,<br/>libyaml-dev, libffi-dev, etc."]
+            end
+
+            subgraph "RSOLV Application (/app)"
+                ENTRY["entrypoint.sh"]
+                DIST["dist/ (compiled TypeScript)"]
+                NMODS["node_modules/"]
+            end
+
+            subgraph "Workspace Mount (/github/workspace)"
+                REPO_CODE["Customer Repository Code<br/>(mounted from host checkout)"]
+                DOTGIT[".git directory"]
+                TEST_FILES["Test files written here<br/>(framework-native paths)"]
+            end
+
+            subgraph "Three-Phase Pipeline"
+                SCAN["SCAN Phase<br/>repository-scanner.ts<br/>vendor-detector.ts"]
+                VALIDATE["VALIDATE Phase<br/>validation-mode.ts<br/>test-runner.ts"]
+                MITIGATE["MITIGATE Phase<br/>Claude Code SDK"]
+            end
+
+            subgraph "On-Demand Runtime Install (VALIDATE)"
+                MISE_INSTALL["mise install ruby@3.4.1<br/>(compiles from source, ~3-5min)"]
+                SHIMS["/root/.local/share/mise/shims<br/>ruby, python, etc."]
+                BUNDLE["bundle install<br/>(from container Ruby, not host)"]
+            end
+        end
+    end
+
+    subgraph "External Services"
+        RSOLV_API["RSOLV Platform API<br/>api.rsolv.dev<br/>(pattern fetch, phase data,<br/>credential vending, AST analysis)"]
+        GITHUB_API["GitHub API<br/>(issues, PRs, branches)"]
+        AI_PROVIDER["AI Provider<br/>(Claude via vended credentials)"]
+    end
+
+    CHECKOUT --> |"Mounts /home/runner/work/repo<br/>as /github/workspace"| REPO_CODE
+    SETUP_RUBY -.-> |"HOST ONLY - not visible<br/>inside Docker container"| CHECKOUT
+    ENTRY --> SCAN
+    SCAN --> VALIDATE
+    VALIDATE --> MITIGATE
+    VALIDATE --> MISE_INSTALL
+    MISE_INSTALL --> SHIMS
+    SHIMS --> BUNDLE
+    BUNDLE --> VALIDATE
+    SCAN --> RSOLV_API
+    VALIDATE --> RSOLV_API
+    VALIDATE --> AI_PROVIDER
+    MITIGATE --> AI_PROVIDER
+    MITIGATE --> GITHUB_API
+    SCAN --> GITHUB_API
+    RSOLV_API --> |"Vended AI credentials"| AI_PROVIDER
+```
+
+### Key Architectural Constraints
+
+1. **Docker container isolation**: Steps like `ruby/setup-ruby@v1` install tools on the **host runner**, not inside the Docker container. The RSOLV-action container has its own filesystem and PATH. Only `/github/workspace` is shared between host and container.
+
+2. **Runtime installation via mise**: Since host-installed runtimes aren't available, the container uses `mise` to install language runtimes on-demand (Ruby, Python, etc.). This adds startup time (~3-5 min for Ruby compilation from source) but ensures the correct runtime is available regardless of host configuration.
+
+3. **Dependency mismatch**: Even when the host's `setup-ruby` caches gems in `vendor/bundle`, those gems have native extensions compiled for the host's Ruby. The container's mise-installed Ruby requires its own `bundle install` to recompile native extensions.
+
+4. **PATH propagation**: After `mise install`, the shims directory must be added to `process.env.PATH` and explicitly passed to all `execSync` calls via `env: process.env` to ensure child processes can find the runtime binaries.
+
+5. **Workspace mount**: GitHub Actions mounts the checked-out repository at `/github/workspace`. All file operations (scanning, test writing, git operations) happen in this shared directory. Tests are written to framework-native paths within the workspace (e.g., `spec/`, `__tests__/`, `tests/`), not to temporary directories.

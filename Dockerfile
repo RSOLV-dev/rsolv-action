@@ -70,7 +70,10 @@ RUN apt-get update && \
       libc6 libstdc++6 libgcc-s1 procps \
       build-essential libssl-dev libreadline-dev zlib1g-dev \
       libyaml-dev libffi-dev libgdbm-dev libncurses5-dev \
-      autoconf bison && \
+      autoconf bison \
+      # Database client libraries for native gem/package compilation
+      # (mysql2, pg, sqlite3 gems; psycopg2, mysqlclient Python packages)
+      default-libmysqlclient-dev libpq-dev libsqlite3-dev && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install mise for multi-runtime support (Ruby, Python, Java, etc.)
