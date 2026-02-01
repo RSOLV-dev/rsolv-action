@@ -138,6 +138,28 @@ export class IssueInterpreter {
       /exec\(/i,
       /system\(/i,
     ],
+    'code-injection': [
+      /code\s*injection/i,
+      /\beval\s*\(/i,
+      /eval\(\s*(req\.|request\.|user|input)/i,
+      /dynamic\s+code\s+execution/i,
+      /CWE-94/i,
+    ],
+    'hardcoded-secrets': [
+      /hardcoded\s*(secret|credential|password|key|token)/i,
+      /CWE-798/i,
+      /hardcoded\s+api\s*key/i,
+    ],
+    'open-redirect': [
+      /open\s+redirect/i,
+      /CWE-601/i,
+      /unvalidated\s+redirect/i,
+    ],
+    'information-disclosure': [
+      /information\s+disclosure/i,
+      /timing\s+(attack|side.channel)/i,
+      /CWE-208/i,
+    ],
     'injection': [
       /injection/i,
       /A03:2021/,

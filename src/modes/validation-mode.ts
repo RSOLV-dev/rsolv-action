@@ -25,6 +25,8 @@ export class ValidationMode {
   private repoPath: string;
   private phaseDataClient: PhaseDataClient | null;
   private testIntegrationClient: TestIntegrationClient | null;
+  private lastTestOutput: string = '';
+  private lastTestStderr: string = '';
 
   constructor(config: ActionConfig, repoPath?: string) {
     this.config = config;
@@ -419,8 +421,8 @@ export class ValidationMode {
       // If we got here, the RED test FAILED on vulnerable code (proving vulnerability)
       const testExecutionResult: TestExecutionResult = {
         passed: false, // RED test must have failed (generateTestWithRetry ensures this)
-        output: 'RED test failed on vulnerable code — vulnerability proven',
-        stderr: '',
+        output: this.lastTestOutput || 'RED test failed on vulnerable code — vulnerability proven',
+        stderr: this.lastTestStderr || '',
         timedOut: false,
         exitCode: 1,
         framework: testSuite.framework,
@@ -1182,6 +1184,8 @@ ${tests}
         // 4. Run test (must FAIL on vulnerable code)
         try {
           const testResult = await this.runTest(tempFile, framework);
+          this.lastTestOutput = testResult.output;
+          this.lastTestStderr = testResult.stderr;
 
           if (testResult.passed) {
             logger.warn(`✗ Test passed unexpectedly on attempt ${attempt} (should fail on vulnerable code)`);
@@ -1367,7 +1371,18 @@ ${vulnerability.source ? `6. IMPORT the actual source file — do NOT inline/cop
 
    Choose Strategy A when the file exports testable values (configs, utilities, pure functions).
    Choose Strategy B when requiring the file would trigger side effects (route handlers, middleware, DB models).
-
+${(() => {
+  const src = vulnerability.source || '';
+  const isLikelyConfig = /config|settings|env|\.config\./i.test(src);
+  const isLikelyRouteHandler = /routes?|controllers?|middleware|handlers?/i.test(src);
+  const isLikelyModel = /models?|dao|data|schema/i.test(src);
+  if (isLikelyConfig) {
+    return `\n   HINT: '${src}' appears to be a CONFIG file — prefer Strategy A (require()).`;
+  } else if (isLikelyRouteHandler || isLikelyModel) {
+    return `\n   HINT: '${src}' appears to be a route/model file — prefer Strategy B (readFileSync()).`;
+  }
+  return '';
+})()}
    IMPORTANT: Always use path.join(process.cwd(), '<relative-path>') — never use relative require paths like '../'.` : `6. Is SELF-CONTAINED — inline the vulnerable pattern directly in the test.`}`;
 
     if (previousAttempts.length > 0) {
@@ -1622,10 +1637,12 @@ CWE: CWE-798`
     passed: boolean;
     existingTestsFailed: boolean;
     failedTests?: string[];
+    output: string;
+    stderr: string;
   }> {
     if (!framework.testCommand) {
       logger.warn('No test command available, skipping test execution');
-      return { passed: false, existingTestsFailed: false };
+      return { passed: false, existingTestsFailed: false, output: '', stderr: '' };
     }
 
     const baseTool = this.getBaseToolFromCommand(framework.testCommand);
@@ -1634,7 +1651,7 @@ CWE: CWE-798`
         `Test runner tool '${baseTool}' is not installed or not available on PATH. ` +
         `Framework '${framework.name}' requires '${baseTool}' for test execution. Skipping test run.`
       );
-      return { passed: false, existingTestsFailed: false };
+      return { passed: false, existingTestsFailed: false, output: '', stderr: '' };
     }
 
     try {
@@ -1647,12 +1664,15 @@ CWE: CWE-798`
 
       return {
         passed,
-        existingTestsFailed: false
+        existingTestsFailed: false,
+        output,
+        stderr: ''
       };
     } catch (error: any) {
       // Test failed (which is good for RED tests!)
       // Check if it's just the new test or if existing tests also failed
       const output = error.stdout || error.message || '';
+      const stderr = error.stderr || '';
 
       // Simple heuristic: if output mentions multiple failures, check if existing tests failed
       const failureCount = (output.match(/failed/gi) || []).length;
@@ -1661,7 +1681,9 @@ CWE: CWE-798`
       return {
         passed: false,
         existingTestsFailed,
-        failedTests: existingTestsFailed ? this.extractFailedTestNames(output) : undefined
+        failedTests: existingTestsFailed ? this.extractFailedTestNames(output) : undefined,
+        output,
+        stderr
       };
     }
   }

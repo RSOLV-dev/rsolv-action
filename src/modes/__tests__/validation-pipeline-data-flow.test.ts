@@ -57,19 +57,21 @@ vi.mock('../../github/api.js', () => ({
   })
 }));
 
-vi.mock('../test-integration-client.js', () => ({
-  TestIntegrationClient: vi.fn().mockImplementation(() => ({
-    analyze: vi.fn(),
-    generate: vi.fn(),
-    detectFramework: vi.fn()
-  }))
-}));
+vi.mock('../test-integration-client.js', () => {
+  const MockTestIntegrationClient = vi.fn().mockImplementation(function(this: Record<string, unknown>) {
+    this.analyze = vi.fn();
+    this.generate = vi.fn();
+    this.detectFramework = vi.fn();
+  });
+  return { TestIntegrationClient: MockTestIntegrationClient };
+});
 
-vi.mock('../../modes/phase-data-client/index.js', () => ({
-  PhaseDataClient: vi.fn().mockImplementation(() => ({
-    storePhaseResults: vi.fn().mockResolvedValue({ success: true })
-  }))
-}));
+vi.mock('../../modes/phase-data-client/index.js', () => {
+  const MockPhaseDataClient = vi.fn().mockImplementation(function(this: Record<string, unknown>) {
+    this.storePhaseResults = vi.fn().mockResolvedValue({ success: true });
+  });
+  return { PhaseDataClient: MockPhaseDataClient };
+});
 
 vi.mock('child_process', () => ({
   execSync: mockExecSync
@@ -715,6 +717,103 @@ describe("test2", function() {
       expect(prompt).toContain('config/env/development.js');
       // Should warn against relative paths
       expect(prompt).toContain('Do NOT use relative paths');
+    });
+  });
+
+  describe('runTest returns raw stdout/stderr', () => {
+    test('runTest returns raw stdout from test failure', async () => {
+      // Override mockExecSync for this test to return specific output
+      mockExecSync.mockImplementation((cmd: string) => {
+        execCommandLog.push(cmd);
+        if (cmd.includes('which')) return '/usr/bin/npx';
+        if (cmd.includes('npx mocha')) {
+          const err: Error & { stdout?: string; stderr?: string; status?: number } = new Error('Test failed');
+          err.stdout = 'FAIL: should reject eval injection\n  Expected: safe output\n  Received: executed code';
+          err.stderr = 'Warning: deprecated API';
+          err.status = 1;
+          throw err;
+        }
+        return '';
+      });
+
+      const framework = (validationMode as any).frameworkFromName('mocha');
+      const result = await (validationMode as any).runTest('/tmp/test.js', framework);
+
+      expect(result.output).toContain('FAIL: should reject eval injection');
+      expect(result.stderr).toContain('deprecated API');
+    });
+
+    test('runTest returns output from successful test execution', async () => {
+      mockExecSync.mockImplementation((cmd: string) => {
+        execCommandLog.push(cmd);
+        if (cmd.includes('which')) return '/usr/bin/npx';
+        if (cmd.includes('npx mocha')) {
+          return '2 passing (15ms)\n0 failures\nAll tests passed';
+        }
+        return '';
+      });
+
+      const framework = (validationMode as any).frameworkFromName('mocha');
+      const result = await (validationMode as any).runTest('/tmp/test.js', framework);
+
+      expect(result.output).toContain('2 passing');
+      expect(result.stderr).toBe('');
+    });
+
+    test('lastTestOutput is populated after generateTestWithRetry', async () => {
+      const result = await (validationMode as any).generateTestWithRetry(
+        mochaVulnerability,
+        mochaTestFile,
+        3
+      );
+
+      expect(result).not.toBeNull();
+      // lastTestOutput should be set from the test run
+      expect((validationMode as any).lastTestOutput).toBeDefined();
+      expect(typeof (validationMode as any).lastTestOutput).toBe('string');
+    });
+  });
+
+  describe('buildLLMPrompt Strategy A/B file-type hints', () => {
+    const sourceVulnerability: Vulnerability = {
+      type: 'hardcoded_secrets',
+      description: 'Hardcoded cryptographic key in development config (CWE-798)',
+      location: 'config/env/development.js:12',
+      attackVector: 'Extract hardcoded key for decryption',
+      vulnerablePattern: "cryptoKey: 'JCmcYCg...'",
+      source: 'config/env/development.js'
+    };
+
+    test('prompt includes Strategy A hint for config files', async () => {
+      const configVuln: Vulnerability = {
+        ...sourceVulnerability,
+        source: 'config/env/development.js'
+      };
+      await (validationMode as any).generateTestWithRetry(configVuln, mochaTestFile, 1);
+      expect(capturedPrompt).not.toBeNull();
+      expect(capturedPrompt).toContain('prefer Strategy A');
+      expect(capturedPrompt).toContain('CONFIG file');
+    });
+
+    test('prompt includes Strategy B hint for route files', async () => {
+      const routeVuln: Vulnerability = {
+        ...sourceVulnerability,
+        source: 'app/routes/contributions.js'
+      };
+      await (validationMode as any).generateTestWithRetry(routeVuln, mochaTestFile, 1);
+      expect(capturedPrompt).not.toBeNull();
+      expect(capturedPrompt).toContain('prefer Strategy B');
+      expect(capturedPrompt).toContain('route/model file');
+    });
+
+    test('prompt does not include hint for generic files', async () => {
+      const genericVuln: Vulnerability = {
+        ...sourceVulnerability,
+        source: 'lib/utils/helper.js'
+      };
+      await (validationMode as any).generateTestWithRetry(genericVuln, mochaTestFile, 1);
+      expect(capturedPrompt).not.toBeNull();
+      expect(capturedPrompt).not.toContain('HINT:');
     });
   });
 

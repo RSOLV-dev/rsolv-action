@@ -148,6 +148,10 @@ export class TestGeneratingSecurityAnalyzer extends SecurityAwareAnalyzer {
       'xss': 'XSS',
       'command-injection': 'COMMAND_INJECTION',
       'path-traversal': 'PATH_TRAVERSAL',
+      'code-injection': 'CODE_INJECTION',
+      'hardcoded-secrets': 'HARDCODED_SECRETS',
+      'open-redirect': 'OPEN_REDIRECT',
+      'information-disclosure': 'INFORMATION_DISCLOSURE',
       'xxe': 'XXE',
       'ssrf': 'SSRF',
       'insecure-deserialization': 'INSECURE_DESERIALIZATION'

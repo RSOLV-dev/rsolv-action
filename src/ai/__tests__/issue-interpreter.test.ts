@@ -489,6 +489,50 @@ const user = await db.query(
   });
 });
 
+describe('IssueInterpreter vulnerability type extraction from SCAN-produced issues', () => {
+  let interpreter: IssueInterpreter;
+
+  beforeEach(() => {
+    interpreter = new IssueInterpreter();
+  });
+
+  test('should classify eval() code injection as code-injection', async () => {
+    const result = await interpreter.interpretIssue({
+      title: '🔒 Code Injection vulnerabilities found in 1 file',
+      body: '**Type**: Code Injection\n**CWE**: CWE-94\n\nUsing eval() with user input can execute arbitrary code\n\n```javascript\nconst preTax = eval(req.body.preTax);\n```',
+      labels: ['security', 'critical', 'rsolv:vuln-code_injection']
+    });
+    expect(result.vulnerabilityType).toBe('code-injection');
+  });
+
+  test('should classify hardcoded secrets as hardcoded-secrets', async () => {
+    const result = await interpreter.interpretIssue({
+      title: '🔒 Hardcoded Secrets vulnerabilities found in 2 files',
+      body: '**Type**: Hardcoded Secrets\n**CWE**: CWE-798\n\nAPI keys should not be hardcoded in source code',
+      labels: ['security', 'high', 'rsolv:vuln-hardcoded_secrets']
+    });
+    expect(result.vulnerabilityType).toBe('hardcoded-secrets');
+  });
+
+  test('should classify open redirect as open-redirect', async () => {
+    const result = await interpreter.interpretIssue({
+      title: '🔒 Open Redirect vulnerabilities found in 2 files',
+      body: '**Type**: Open Redirect\n**CWE**: CWE-601\n\nRedirecting to user-controlled URLs without validation',
+      labels: ['security', 'medium', 'rsolv:vuln-open_redirect']
+    });
+    expect(result.vulnerabilityType).toBe('open-redirect');
+  });
+
+  test('should classify information disclosure / timing attack as information-disclosure', async () => {
+    const result = await interpreter.interpretIssue({
+      title: '🔒 Information Disclosure vulnerabilities found in 1 file',
+      body: '**Type**: Information Disclosure\n**CWE**: CWE-208\n\nTiming side-channel in password comparison allows enumeration',
+      labels: ['security', 'medium', 'rsolv:vuln-information_disclosure']
+    });
+    expect(result.vulnerabilityType).toBe('information-disclosure');
+  });
+});
+
 describe('IssueInterpreter Error Handling', () => {
   test('should handle empty issue body', async () => {
     const interpreter = new IssueInterpreter();
