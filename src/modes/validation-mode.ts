@@ -1226,8 +1226,11 @@ ${tests}
         }
 
         // 4. Run test (must FAIL on vulnerable code)
+        // Pass testName to filter only the generated test — avoids running existing tests
+        // that may fail due to missing infrastructure (DATABASE_URL, etc.)
         try {
-          const testResult = await this.runTest(tempFile, framework);
+          const testName = testSuite.redTests[0]?.testName;
+          const testResult = await this.runTest(tempFile, framework, testName);
           this.lastTestOutput = testResult.output;
           this.lastTestStderr = testResult.stderr;
 
@@ -1734,9 +1737,37 @@ CWE: CWE-798`
   }
 
   /**
+   * Build a test name filter flag for the given framework.
+   * Returns empty string if no testName is provided.
+   * This ensures only the newly generated test runs, not existing tests in the file.
+   */
+  private buildTestNameFilter(framework: TestFramework, testName?: string): string {
+    if (!testName) return '';
+
+    // Framework-specific flags for filtering by test name
+    const nameFilterFlags: Record<string, string> = {
+      'jest': '--testNamePattern',
+      'vitest': '-t',
+      'mocha': '--grep',
+      'rspec': '-e',
+      'pytest': '-k',
+      'minitest': '-n',
+      'phpunit': '--filter',
+      'exunit': '--only',
+    };
+
+    const flag = nameFilterFlags[framework.name];
+    if (!flag) return '';
+
+    // Escape the test name for shell use
+    const escapedName = testName.replace(/"/g, '\\"');
+    return ` ${flag} "${escapedName}"`;
+  }
+
+  /**
    * Run test and check results
    */
-  private async runTest(testFile: string, framework: TestFramework): Promise<{
+  private async runTest(testFile: string, framework: TestFramework, testName?: string): Promise<{
     passed: boolean;
     existingTestsFailed: boolean;
     failedTests?: string[];
@@ -1759,7 +1790,9 @@ CWE: CWE-798`
     }
 
     try {
-      const command = `${framework.testCommand} ${testFile}`;
+      const nameFilter = this.buildTestNameFilter(framework, testName);
+      const command = `${framework.testCommand} ${testFile}${nameFilter}`;
+      logger.info(`Running test command: ${command}`);
       const output = execSync(command, { cwd: this.repoPath, encoding: 'utf8' });
 
       // Parse output to determine if test passed

@@ -109,7 +109,7 @@ const VERSION_FILES: Record<string, string[]> = {
  */
 export class TestRunner {
   private readonly DEFAULT_TIMEOUT = 30000; // 30 seconds
-  private readonly RUNTIME_INSTALL_TIMEOUT = 120000; // 2 minutes for runtime install
+  private readonly RUNTIME_INSTALL_TIMEOUT = 600000; // 10 minutes for runtime install (Ruby compiles from source)
   private readonly DEP_INSTALL_TIMEOUT = 180000; // 3 minutes for dependency install
 
   /**
