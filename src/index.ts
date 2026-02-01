@@ -13,6 +13,13 @@ import { executeBillingMode, getPRContextFromEvent } from './modes/billing-mode.
 
 async function run(): Promise<ActionStatus> {
   try {
+    // Allow TARGET_REPOSITORY to override GITHUB_REPOSITORY for cross-repo scanning
+    // (e.g., when the workflow runs in repo A but scans/creates issues in repo B)
+    if (process.env.TARGET_REPOSITORY) {
+      logger.info(`TARGET_REPOSITORY override: ${process.env.TARGET_REPOSITORY} (was: ${process.env.GITHUB_REPOSITORY})`);
+      process.env.GITHUB_REPOSITORY = process.env.TARGET_REPOSITORY;
+    }
+
     // Log startup information
     logger.info('Starting RSOLV action v2.0 - Enhanced Logging Active');
     logger.info(`Build timestamp: ${new Date().toISOString()}`);
