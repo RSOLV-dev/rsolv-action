@@ -68,6 +68,11 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends libc6 libstdc++6 libgcc-s1 procps && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
+# Install mise for multi-runtime support (Ruby, Python, Java, etc.)
+# Runtimes are installed on-demand per project via ensureRuntime() in test-runner
+RUN curl https://mise.run | sh
+ENV PATH="/root/.local/share/mise/shims:/root/.local/bin:${PATH}"
+
 # Copy Node.js and npm toolchain from builder
 # node binary
 COPY --from=builder /usr/bin/node /usr/bin/node

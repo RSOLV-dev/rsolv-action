@@ -17,7 +17,19 @@ export class VendorDetector {
     'external',
     'libs',
     'dependencies',
-    'dist'
+    'dist',
+    // Rails asset pipeline
+    'app/assets/javascripts',
+    'public/assets',
+    'public/packs',
+    // Django
+    'static/vendor',
+    // Laravel
+    'public/vendor',
+    // General build outputs
+    'build',
+    '_build',
+    'out'
   ];
   
   private readonly MINIFIED_PATTERNS = [
@@ -50,22 +62,27 @@ export class VendorDetector {
     ]
   };
 
-  async isVendorFile(filePath: string): Promise<boolean> {
+  async isVendorFile(filePath: string, content?: string): Promise<boolean> {
     // Check if path contains vendor directory
     if (this.matchesVendorPattern(filePath)) {
       return true;
     }
-    
+
     // Check if file is minified
     if (this.isMinified(filePath)) {
       return true;
     }
-    
+
     // Check if filename matches known vendor libraries
     if (this.matchesKnownLibrary(filePath)) {
       return true;
     }
-    
+
+    // Check file content headers (license headers, library banners)
+    if (await this.containsVendorIndicators(filePath, content)) {
+      return true;
+    }
+
     return false;
   }
   

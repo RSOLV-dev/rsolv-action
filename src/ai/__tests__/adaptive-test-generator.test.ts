@@ -513,5 +513,67 @@ describe('AdaptiveTestGenerator', () => {
       expect(result.framework).toBe('jest');
       expect(result.testCode).toContain('expect(');
     });
+
+    test('should prefer rspec over minitest for .js file in Ruby project', async () => {
+      // RailsGoat scenario: finding is in a .js file but project has both rspec and minitest
+      const vulnerability: Vulnerability = {
+        type: 'XSS',
+        severity: 'high',
+        file: 'app/assets/javascripts/application.js',
+        line: 10,
+        description: 'XSS in JavaScript asset'
+      };
+
+      const rubyProjectWithJS = {
+        'Gemfile': 'gem "rspec-rails"\ngem "minitest"',
+        'spec/rails_helper.rb': 'require "rspec/rails"',
+      };
+
+      const result = await generator.generateAdaptiveTests(vulnerability, rubyProjectWithJS);
+
+      expect(result.success).toBe(true);
+      // rspec should be preferred over minitest due to specificity
+      expect(result.framework).toBe('rspec');
+    });
+
+    test('should prefer pytest over unittest when both detected', async () => {
+      const vulnerability: Vulnerability = {
+        type: 'SQL_INJECTION',
+        severity: 'critical',
+        file: 'templates/index.html',
+        line: 5,
+        description: 'SQL injection in template'
+      };
+
+      const pythonProject = {
+        'requirements.txt': 'pytest==7.0.0\nunittest2==1.1.0',
+      };
+
+      const result = await generator.generateAdaptiveTests(vulnerability, pythonProject);
+
+      expect(result.success).toBe(true);
+      // pytest should be preferred over unittest due to specificity
+      expect(result.framework).toBe('pytest');
+    });
+
+    test('should still use extension-based preference for .rb files', async () => {
+      const vulnerability: Vulnerability = {
+        type: 'SQL_INJECTION',
+        severity: 'high',
+        file: 'app/models/user.rb',
+        line: 15,
+        description: 'SQL injection in model'
+      };
+
+      const rubyProject = {
+        'Gemfile': 'gem "rspec-rails"\ngem "minitest"',
+      };
+
+      const result = await generator.generateAdaptiveTests(vulnerability, rubyProject);
+
+      expect(result.success).toBe(true);
+      // .rb extension should map to rspec first in extension preferences
+      expect(result.framework).toBe('rspec');
+    });
   });
 });

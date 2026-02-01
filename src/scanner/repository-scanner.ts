@@ -99,7 +99,7 @@ export class RepositoryScanner {
       if (file.language && this.isSupportedLanguage(file.language)) {
         try {
           // Check if this is a vendor file
-          const isVendorFile = await this.vendorDetector.isVendorFile(file.path);
+          const isVendorFile = await this.vendorDetector.isVendorFile(file.path, file.content);
 
           if (isVendorFile) {
             logger.info(`Skipping vendor/minified file: ${file.path}`);

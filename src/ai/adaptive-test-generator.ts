@@ -366,14 +366,31 @@ export class AdaptiveTestGenerator {
     };
 
     const preferredFrameworks = extensionPreferences[fileExt || ''] || [];
-    
-    // Find first matching framework
+
+    // Find first matching framework based on file extension
     for (const preferred of preferredFrameworks) {
-      const match = frameworks.find(f => 
-        f.name.toLowerCase() === preferred || 
+      const match = frameworks.find(f =>
+        f.name.toLowerCase() === preferred ||
         f.name.toLowerCase().includes(preferred)
       );
       if (match) return match;
+    }
+
+    // When extension doesn't resolve (e.g., .js finding in a Ruby project),
+    // use specificity to pick the more specific framework over a transitive one
+    const specificityOrder: Record<string, string[]> = {
+      'rspec': ['minitest'],      // rspec-rails overrides transitive minitest
+      'pytest': ['unittest'],     // pytest overrides stdlib unittest
+      'jest': ['jasmine'],        // jest overrides jasmine
+      'junit5': ['junit'],        // junit5 overrides junit4
+      'vitest': ['jest'],         // vitest overrides jest when both detected
+    };
+
+    for (const [preferred, lessSpecific] of Object.entries(specificityOrder)) {
+      const preferredMatch = frameworks.find(f => f.name.toLowerCase() === preferred);
+      if (preferredMatch && frameworks.some(f => lessSpecific.includes(f.name.toLowerCase()))) {
+        return preferredMatch;
+      }
     }
 
     // Default to highest confidence framework
