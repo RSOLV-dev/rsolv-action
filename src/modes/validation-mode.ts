@@ -1282,10 +1282,16 @@ ${tests}
               `${classification.type} — ${classification.reason}`
             );
             restoreOriginal();
+            // Include actual error output so the AI can understand what went wrong
+            const errorDetails = (testResult.stderr || testResult.output || '')
+              .split('\n')
+              .filter(line => /error|cannot|not found|load|missing|undefined/i.test(line))
+              .slice(0, 5)
+              .join('\n');
             previousAttempts.push({
               attempt,
               error: classification.type,
-              errorMessage: classification.reason,
+              errorMessage: `${classification.reason}${errorDetails ? ': ' + errorDetails : ''}`,
               timestamp: new Date().toISOString()
             });
             continue; // Retry with error context
@@ -1529,6 +1535,11 @@ ${(() => {
           prompt += '\n\nPREVIOUS ATTEMPT FAILED: The test file contained no test cases. ' +
             'Ensure the file has describe()/it() blocks (for mocha) or test() blocks. ' +
             'require() and import statements must be at the top of the file, NOT inside test blocks.';
+        } else if (lastMessage.includes('cannot load such file') || lastMessage.includes('LoadError')) {
+          prompt += `\n\nPREVIOUS ATTEMPT FAILED: ${lastMessage}. ` +
+            'DO NOT require rails_helper, spec_helper, or application-specific helpers. ' +
+            'Write a STANDALONE test that only requires rspec and the vulnerable source file directly. ' +
+            'Use require_relative or explicit paths. The test must run without Rails booting.';
         } else {
           prompt += `\n\nPREVIOUS ATTEMPT FAILED: ${lastError} — ${lastMessage}. ` +
             'Fix the error and ensure tests can run to completion.';
