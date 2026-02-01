@@ -1521,7 +1521,14 @@ ${(() => {
       if (lastError === 'SyntaxError') {
         prompt += `\n\nIMPORTANT: Fix the syntax error. Ensure valid ${framework.name} syntax.`;
       } else if (lastError === 'TestPassedUnexpectedly') {
-        prompt += '\n\nIMPORTANT: Make the test MORE AGGRESSIVE. It must FAIL on vulnerable code.';
+        prompt += '\n\nIMPORTANT: Your previous test PASSED when it must FAIL to prove the vulnerability. ' +
+          'The test must make a concrete assertion about the INSECURE behavior. Examples:\n' +
+          '- For SQL injection: assert that raw user input appears unescaped in the query string\n' +
+          '- For XSS: assert that user input is included in output WITHOUT HTML encoding\n' +
+          '- For insecure crypto: assert that the code uses MD5/SHA1/DES instead of bcrypt/argon2\n' +
+          '- For path traversal: assert that "../" sequences are NOT stripped from file paths\n' +
+          'The test MUST call the actual vulnerable function/method and assert the insecure behavior IS present. ' +
+          'Do NOT test that a fix works — test that the vulnerability EXISTS by asserting the bad behavior.';
       } else if (lastError === 'ExistingTestsRegression') {
         prompt += '\n\nIMPORTANT: Don\'t break existing tests. Avoid modifying shared state or setup blocks.';
       } else if (lastError === 'TestExecutionError' &&
