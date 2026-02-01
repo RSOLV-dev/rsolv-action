@@ -208,6 +208,17 @@ export class TestRunner {
       );
       console.log(`[TestRunner] Runtime installed: ${stdout}`);
       if (stderr) console.log(`[TestRunner] Runtime install stderr: ${stderr}`);
+
+      // Ensure mise shims and install paths are on the current process PATH
+      // so subsequent execSync calls (syntax check, test run) can find the binary
+      const homedir = process.env.HOME || '/root';
+      const miseShims = `${homedir}/.local/share/mise/shims`;
+      const miseBin = `${homedir}/.local/bin`;
+      const currentPath = process.env.PATH || '';
+      if (!currentPath.includes(miseShims)) {
+        process.env.PATH = `${miseShims}:${miseBin}:${currentPath}`;
+        console.log(`[TestRunner] Updated PATH to include mise shims: ${miseShims}`);
+      }
     } catch (error: unknown) {
       const execError = error as { stderr?: string; message?: string };
       throw new Error(
