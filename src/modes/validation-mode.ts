@@ -1159,6 +1159,29 @@ ${tests}
         logger.info(`Ensuring dependencies for framework: ${frameworkNameForSetup}`);
         await testRunnerSetup.ensureDependencies(frameworkNameForSetup, this.repoPath);
         logger.info('Runtime and dependency setup complete');
+        // Defensively ensure mise shims are on PATH — the TestRunner updates
+        // process.env.PATH but verify it persisted and add if missing
+        const homedir = process.env.HOME || '/root';
+        const miseShims = `${homedir}/.local/share/mise/shims`;
+        const miseBin = `${homedir}/.local/bin`;
+        if (!process.env.PATH?.includes(miseShims)) {
+          process.env.PATH = `${miseShims}:${miseBin}:${process.env.PATH || ''}`;
+          logger.info(`ValidationMode: Added mise shims to PATH: ${miseShims}`);
+        }
+        logger.info(`PATH after setup (first 300 chars): ${process.env.PATH?.substring(0, 300)}`);
+        // Verify the runtime is actually available after setup
+        const runtimeBin = frameworkNameForSetup === 'rspec' || frameworkNameForSetup === 'minitest' ? 'ruby' : frameworkNameForSetup === 'pytest' ? 'python' : 'node';
+        try {
+          const whichResult = execSync(`which ${runtimeBin}`, { encoding: 'utf8', env: process.env }).trim();
+          logger.info(`Runtime binary '${runtimeBin}' found at: ${whichResult}`);
+        } catch {
+          logger.warn(`Runtime binary '${runtimeBin}' not found on PATH after setup`);
+          // Last resort: check if the mise shims directory has the binary
+          try {
+            const shimExists = execSync(`ls -la ${miseShims}/${runtimeBin} 2>/dev/null || echo "NOT_FOUND"`, { encoding: 'utf8' }).trim();
+            logger.warn(`Shim check: ${shimExists}`);
+          } catch { /* ignore */ }
+        }
       } catch (setupError) {
         logger.warn(`Runtime/dependency setup warning: ${setupError instanceof Error ? setupError.message : String(setupError)}`);
         // Continue anyway — test execution may still work (e.g., Node is always available)
@@ -1695,9 +1718,12 @@ CWE: CWE-798`
    */
   private checkToolAvailable(tool: string): boolean {
     try {
-      execSync(`which ${tool}`, { encoding: 'utf8', stdio: 'pipe' });
+      // Explicitly pass process.env to ensure PATH updates from ensureRuntime() are visible
+      const result = execSync(`which ${tool}`, { encoding: 'utf8', stdio: 'pipe', env: process.env });
+      logger.debug(`Tool '${tool}' found at: ${result.trim()}`);
       return true;
     } catch {
+      logger.debug(`Tool '${tool}' not found. PATH: ${process.env.PATH?.substring(0, 200)}`);
       return false;
     }
   }
@@ -1729,7 +1755,7 @@ CWE: CWE-798`
 
     try {
       const command = `${framework.syntaxCheckCommand} ${testFile}`;
-      execSync(command, { cwd: this.repoPath, encoding: 'utf8' });
+      execSync(command, { cwd: this.repoPath, encoding: 'utf8', env: process.env });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
       throw new Error(`Syntax validation failed: ${message}`);
@@ -1793,7 +1819,7 @@ CWE: CWE-798`
       const nameFilter = this.buildTestNameFilter(framework, testName);
       const command = `${framework.testCommand} ${testFile}${nameFilter}`;
       logger.info(`Running test command: ${command}`);
-      const output = execSync(command, { cwd: this.repoPath, encoding: 'utf8' });
+      const output = execSync(command, { cwd: this.repoPath, encoding: 'utf8', env: process.env });
 
       // Parse output to determine if test passed
       // This is a simplified check - real implementation would parse framework-specific output
