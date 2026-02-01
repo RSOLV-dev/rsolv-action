@@ -17,7 +17,7 @@ import { PhaseDataClient } from './phase-data-client/index.js';
 import { TestIntegrationClient } from './test-integration-client.js';
 import { extractVulnerabilitiesFromIssue } from '../utils/vulnerability-extraction.js';
 import { TEST_FILE_PATTERNS, EXCLUDED_DIRECTORIES } from '../constants/test-patterns.js';
-import { classifyTestResult as classifyTestResultImpl } from '../utils/test-result-classifier.js';
+import { classifyTestResult as classifyTestResultImpl, parseTestOutputCounts } from '../utils/test-result-classifier.js';
 
 export class ValidationMode {
   private config: ActionConfig;
@@ -429,11 +429,12 @@ export class ValidationMode {
         testFile: testSuite.testFile
       };
 
+      const counts = parseTestOutputCounts(this.lastTestOutput || '');
       const testResultsForDisplay = {
-        passed: 0,
-        failed: testSuite.redTests.length,
-        total: testSuite.redTests.length,
-        output: 'RED tests failed as expected (vulnerability proven)',
+        passed: counts.passed,
+        failed: counts.failed || testSuite.redTests.length,
+        total: counts.total || testSuite.redTests.length,
+        output: this.lastTestOutput || 'No test output captured',
         exitCode: 1
       };
 
@@ -1198,6 +1199,29 @@ ${tests}
             continue; // Retry with "make it fail" feedback
           }
 
+          // 4b. Classify test failure — is it a genuine assertion failure or an infrastructure crash?
+          const classification = this.classifyTestResult(
+            testResult.exitCode,
+            testResult.output,
+            testResult.stderr
+          );
+
+          if (!classification.isValidFailure) {
+            logger.warn(
+              `✗ Test failure is not a genuine assertion on attempt ${attempt}: ` +
+              `${classification.type} — ${classification.reason}`
+            );
+            previousAttempts.push({
+              attempt,
+              error: classification.type,
+              errorMessage: classification.reason,
+              timestamp: new Date().toISOString()
+            });
+            continue; // Retry with error context
+          }
+
+          logger.info(`✓ Genuine test failure on attempt ${attempt}: ${classification.reason}`);
+
           // 5. Check for regressions (existing tests should still pass)
           if (testResult.existingTestsFailed) {
             logger.warn(`✗ Existing tests failed on attempt ${attempt} (regression detected)`);
@@ -1210,7 +1234,7 @@ ${tests}
             continue; // Retry with regression context
           }
 
-          // Success! Test is valid
+          // Success! Test is valid — genuine assertion failure on vulnerable code
           logger.info(`✓ Test generation successful on attempt ${attempt}`);
           return testSuite;
 
@@ -1302,6 +1326,26 @@ ${tests}
     // Split on describe/it/test blocks if multiple tests present
     const testBlocks = testCode.split(/\n(?=(?:describe|it|test)\s*\()/);
     if (testBlocks.length > 1) {
+      // Check if first block is only imports/requires (no test structure)
+      const firstBlock = testBlocks[0].trim();
+      const isImportOnly = firstBlock.length > 0 &&
+        !(/\b(?:describe|it|test)\s*\(/.test(firstBlock));
+
+      if (isImportOnly) {
+        const preamble = testBlocks[0];
+        const testOnlyBlocks = testBlocks.slice(1).filter(b => b.trim().length > 0);
+
+        return testOnlyBlocks.map((block, i) => ({
+          testName: testOnlyBlocks.length === 1
+            ? `security_${vulnerability.type}_test`
+            : `security_${vulnerability.type}_test_${i + 1}`,
+          testCode: (preamble + '\n' + block).trim(),
+          attackVector: vulnerability.attackVector,
+          expectedBehavior: 'should_fail_on_vulnerable_code' as const
+        }));
+      }
+
+      // All blocks self-contained — original behavior
       return testBlocks
         .filter(block => block.trim().length > 0)
         .map((block, i) => ({
@@ -1404,6 +1448,16 @@ ${(() => {
         prompt += `\n\nIMPORTANT: The previous attempt failed with MODULE_NOT_FOUND. ` +
           `Use path.join(process.cwd(), '${vulnerability.source}') to reference the source file. ` +
           `Do NOT use relative paths like require('../...'). process.cwd() is always the repository root.`;
+      } else if (['runtime_error', 'missing_dependency', 'syntax_error'].includes(lastError)) {
+        const lastMessage = previousAttempts[previousAttempts.length - 1].errorMessage || '';
+        if (lastMessage.includes('No tests found')) {
+          prompt += '\n\nPREVIOUS ATTEMPT FAILED: The test file contained no test cases. ' +
+            'Ensure the file has describe()/it() blocks (for mocha) or test() blocks. ' +
+            'require() and import statements must be at the top of the file, NOT inside test blocks.';
+        } else {
+          prompt += `\n\nPREVIOUS ATTEMPT FAILED: ${lastError} — ${lastMessage}. ` +
+            'Fix the error and ensure tests can run to completion.';
+        }
       }
     }
 
@@ -1639,10 +1693,11 @@ CWE: CWE-798`
     failedTests?: string[];
     output: string;
     stderr: string;
+    exitCode: number;
   }> {
     if (!framework.testCommand) {
       logger.warn('No test command available, skipping test execution');
-      return { passed: false, existingTestsFailed: false, output: '', stderr: '' };
+      return { passed: false, existingTestsFailed: false, output: '', stderr: '', exitCode: 1 };
     }
 
     const baseTool = this.getBaseToolFromCommand(framework.testCommand);
@@ -1651,7 +1706,7 @@ CWE: CWE-798`
         `Test runner tool '${baseTool}' is not installed or not available on PATH. ` +
         `Framework '${framework.name}' requires '${baseTool}' for test execution. Skipping test run.`
       );
-      return { passed: false, existingTestsFailed: false, output: '', stderr: '' };
+      return { passed: false, existingTestsFailed: false, output: '', stderr: '', exitCode: 1 };
     }
 
     try {
@@ -1666,13 +1721,15 @@ CWE: CWE-798`
         passed,
         existingTestsFailed: false,
         output,
-        stderr: ''
+        stderr: '',
+        exitCode: 0
       };
     } catch (error: any) {
       // Test failed (which is good for RED tests!)
       // Check if it's just the new test or if existing tests also failed
       const output = error.stdout || error.message || '';
       const stderr = error.stderr || '';
+      const exitCode = error.status || 1;
 
       // Simple heuristic: if output mentions multiple failures, check if existing tests failed
       const failureCount = (output.match(/failed/gi) || []).length;
@@ -1683,7 +1740,8 @@ CWE: CWE-798`
         existingTestsFailed,
         failedTests: existingTestsFailed ? this.extractFailedTestNames(output) : undefined,
         output,
-        stderr
+        stderr,
+        exitCode
       };
     }
   }

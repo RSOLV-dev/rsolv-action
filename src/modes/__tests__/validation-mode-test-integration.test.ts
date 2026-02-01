@@ -253,7 +253,11 @@ end`,
             return '1 example, 0 failures';
           }
           // Second attempt: test FAILS as expected (proves vulnerability)
-          return 'Failures:\n  1) User SQL injection test failed';
+          const error: Error & { stdout?: string; stderr?: string; status?: number } = new Error('1 example, 1 failure');
+          error.stdout = 'Failures:\n  1) User SQL injection test\n     AssertionError: expected safe to equal vulnerable\n\n1 example, 1 failure';
+          error.stderr = '';
+          error.status = 1;
+          throw error;
         }
         return '';
       });
@@ -329,15 +333,28 @@ end`,
         if (cmd.includes('bundle exec rspec')) {
           testRunCount++;
           if (testRunCount === 1) {
-            // First attempt: Multiple FAILED tests (regression detected!)
-            const error: any = new Error(`FAILED: FilesController path traversal test - Expected status 400, got 200
-FAILED: FilesController shows file - undefined method 'create' for nil:NilClass`);
-            error.stdout = error.message;
+            // First attempt: Multiple tests failed (regression detected!)
+            // The "failed" keyword must appear 2+ times for existingTestsFailed heuristic
+            const error: Error & { stdout?: string; stderr?: string; status?: number } = new Error('tests failed');
+            error.stdout = `1) FilesController path traversal test failed
+  AssertionError: expected status 400, got 200
+
+2) FilesController shows file failed
+  AssertionError: undefined method 'create'
+
+2 tests failed, 0 passed`;
+            error.stderr = '';
+            error.status = 1;
             throw error;
           }
           // Second attempt: Only ONE failed test (correct - just the new RED test)
-          const error: any = new Error('FAILED: FilesController path traversal test');
-          error.stdout = error.message;
+          const error: Error & { stdout?: string; stderr?: string; status?: number } = new Error('1 test failed');
+          error.stdout = `FAIL FilesController path traversal test
+  AssertionError: expected safe path to be rejected
+
+1 test failed, 0 passed`;
+          error.stderr = '';
+          error.status = 1;
           throw error;
         }
         return '';

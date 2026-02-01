@@ -387,6 +387,58 @@ describe("test2", function() {
       );
       expect(result[0].attackVector).toBe(mochaVulnerability.attackVector);
     });
+
+    test('keeps imports+describe as single entry when first block is only imports', () => {
+      const response = `\`\`\`javascript
+const assert = require('assert');
+const path = require('path');
+
+describe('Code Injection', function() {
+  it('should reject eval', function() {
+    assert.ok(true);
+  });
+});
+\`\`\``;
+      const result = (validationMode as any).parseTestResponse(
+        response, mochaVulnerability, { name: 'mocha', testCommand: 'npx mocha' }
+      );
+      expect(result.length).toBe(1);
+      expect(result[0].testCode).toContain('require');
+      expect(result[0].testCode).toContain('describe');
+    });
+
+    test('keeps imports+it as single entry', () => {
+      const response = `const chai = require('chai');
+
+it('should detect injection', function() {
+  chai.expect(true).to.be.false;
+});`;
+      const result = (validationMode as any).parseTestResponse(
+        response, mochaVulnerability, { name: 'mocha', testCommand: 'npx mocha' }
+      );
+      expect(result.length).toBe(1);
+      expect(result[0].testCode).toContain('require');
+      expect(result[0].testCode).toContain('it(');
+    });
+
+    test('prepends imports to each block when multiple self-contained describes follow', () => {
+      const response = `const assert = require('assert');
+
+describe('test1', function() {
+  it('a', function() { assert.ok(true); });
+});
+describe('test2', function() {
+  it('b', function() { assert.ok(false); });
+});`;
+      const result = (validationMode as any).parseTestResponse(
+        response, mochaVulnerability, { name: 'mocha', testCommand: 'npx mocha' }
+      );
+      expect(result.length).toBe(2);
+      expect(result[0].testCode).toContain('require');
+      expect(result[0].testCode).toContain('test1');
+      expect(result[1].testCode).toContain('require');
+      expect(result[1].testCode).toContain('test2');
+    });
   });
 
   describe('Tool availability checking', () => {
@@ -966,6 +1018,68 @@ describe("test2", function() {
 
       // Should have fallen through to create-new-file path
       // The test succeeds if no error is thrown, meaning fallback worked
+    });
+  });
+
+  describe('generateTestWithRetry crash detection', () => {
+    test('rejects "0 passing" mocha output as inconclusive and returns null', async () => {
+      // Mock AI to return a valid test
+      mockAiComplete.mockResolvedValue(`\`\`\`javascript
+describe('test', function() {
+  it('should fail', function() {});
+});
+\`\`\``);
+      mockGetAiClient.mockReturnValue({ complete: mockAiComplete });
+
+      // Mock execSync: mocha exits 1 with "0 passing" (no tests discovered)
+      mockExecSync.mockImplementation((cmd: string) => {
+        if (cmd.includes('git')) return 'abc123';
+        if (cmd.includes('node --check')) return '';
+        if (cmd.includes('which ')) return '/usr/bin/npx';
+        if (cmd.includes('npx mocha') || cmd.includes('node ')) {
+          const err: Error & { stdout?: string; stderr?: string; status?: number } = new Error('exit 1');
+          err.stdout = '\n  0 passing (1ms)\n\n';
+          err.stderr = '';
+          err.status = 1;
+          throw err;
+        }
+        return '';
+      });
+
+      const result = await (validationMode as any).generateTestWithRetry(
+        mochaVulnerability, mochaTestFile, 1
+      );
+      expect(result).toBeNull();
+    });
+
+    test('accepts AssertionError as genuine validation', async () => {
+      // Mock AI to return a valid test
+      mockAiComplete.mockResolvedValue(`\`\`\`javascript
+describe('test', function() {
+  it('should fail', function() {});
+});
+\`\`\``);
+      mockGetAiClient.mockReturnValue({ complete: mockAiComplete });
+
+      // Mock execSync: mocha exits 1 with real assertion failure
+      mockExecSync.mockImplementation((cmd: string) => {
+        if (cmd.includes('git')) return 'abc123';
+        if (cmd.includes('node --check')) return '';
+        if (cmd.includes('which ')) return '/usr/bin/npx';
+        if (cmd.includes('npx mocha') || cmd.includes('node ')) {
+          const err: Error & { stdout?: string; stderr?: string; status?: number } = new Error('exit 1');
+          err.stdout = '1 failing\n  AssertionError: expected safe to equal unsafe';
+          err.stderr = '';
+          err.status = 1;
+          throw err;
+        }
+        return '';
+      });
+
+      const result = await (validationMode as any).generateTestWithRetry(
+        mochaVulnerability, mochaTestFile, 1
+      );
+      expect(result).not.toBeNull();
     });
   });
 });

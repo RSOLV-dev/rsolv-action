@@ -82,6 +82,57 @@ export function classifyTestResult(exitCode: number, stdout: string, stderr: str
     }
   }
 
+  // No tests found/ran (mocha "0 passing", empty suite, etc.)
+  if (/0 passing|0 tests?\b|no tests? found|test suite empty/i.test(combined) &&
+      !/[1-9]\d*\s+(passing|pass|passed)/i.test(combined)) {
+    return { type: 'runtime_error', isValidFailure: false, reason: 'No tests found or executed in test file' };
+  }
+
   // Unknown exit code 1 - could be test failure or error
   return { type: 'unknown', isValidFailure: false, reason: 'Exit code 1 without clear failure pattern - manual review needed' };
+}
+
+/**
+ * Parse test output to extract pass/fail counts.
+ * Handles Mocha, Jest/Vitest, pytest, and RSpec output formats.
+ */
+export function parseTestOutputCounts(output: string): { passed: number; failed: number; total: number } {
+  // Mocha: "N passing" + "N failing"
+  const mochaPass = output.match(/(\d+)\s+passing/i);
+  const mochaFail = output.match(/(\d+)\s+failing/i);
+  if (mochaPass || mochaFail) {
+    const passed = mochaPass ? parseInt(mochaPass[1], 10) : 0;
+    const failed = mochaFail ? parseInt(mochaFail[1], 10) : 0;
+    return { passed, failed, total: passed + failed };
+  }
+
+  // Jest/Vitest: "Tests: N failed, N passed, N total"
+  const jestMatch = output.match(/Tests:\s+(?:(\d+)\s+failed,?\s*)?(?:(\d+)\s+passed,?\s*)?(\d+)\s+total/i);
+  if (jestMatch) {
+    return {
+      failed: parseInt(jestMatch[1] || '0', 10),
+      passed: parseInt(jestMatch[2] || '0', 10),
+      total: parseInt(jestMatch[3], 10)
+    };
+  }
+
+  // pytest: "N passed, N failed" or "N failed"
+  const pytestPass = output.match(/(\d+)\s+passed/i);
+  const pytestFail = output.match(/(\d+)\s+failed/i);
+  if (pytestPass || pytestFail) {
+    const passed = pytestPass ? parseInt(pytestPass[1], 10) : 0;
+    const failed = pytestFail ? parseInt(pytestFail[1], 10) : 0;
+    return { passed, failed, total: passed + failed };
+  }
+
+  // RSpec: "N examples, N failures"
+  const rspecMatch = output.match(/(\d+)\s+examples?,\s+(\d+)\s+failures?/i);
+  if (rspecMatch) {
+    const total = parseInt(rspecMatch[1], 10);
+    const failed = parseInt(rspecMatch[2], 10);
+    return { passed: total - failed, failed, total };
+  }
+
+  // Fallback
+  return { passed: 0, failed: 0, total: 0 };
 }

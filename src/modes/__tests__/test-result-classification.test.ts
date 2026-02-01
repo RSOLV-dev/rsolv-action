@@ -11,6 +11,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { ValidationMode } from '../validation-mode.js';
+import { parseTestOutputCounts } from '../../utils/test-result-classifier.js';
 import { createTestConfig, type TestResultClassification } from './test-fixtures.js';
 
 describe('Test Result Classification', () => {
@@ -296,6 +297,24 @@ FAIL tests/security.test.js
       expect(result.type).toBe('command_not_found');
       expect(result.isValidFailure).toBe(false);
     });
+
+    it('should classify mocha "0 passing" as not a valid failure', () => {
+      const result = validationMode.classifyTestResult(1, '\n  0 passing (1ms)\n\n', '');
+      expect(result.isValidFailure).toBe(false);
+      expect(result.type).toBe('runtime_error');
+    });
+
+    it('should classify "No test files found" as not a valid failure', () => {
+      const result = validationMode.classifyTestResult(1, 'No test files found', '');
+      expect(result.isValidFailure).toBe(false);
+    });
+
+    it('should NOT classify "0 passing" as invalid when real passes also present', () => {
+      // Mocha output with real passes + failures should be classified as valid failure
+      const stdout = '3 passing (5ms)\n1 failing\n\nAssertionError: expected safe to equal unsafe';
+      const result = validationMode.classifyTestResult(1, stdout, '');
+      expect(result.isValidFailure).toBe(true);
+    });
   });
 
   describe('Framework-Specific Output', () => {
@@ -393,5 +412,42 @@ Finished in 0.1 seconds
       expect(result.type).toBe('test_failed');
       expect(result.isValidFailure).toBe(true);
     });
+  });
+});
+
+describe('parseTestOutputCounts', () => {
+  it('should parse mocha output with passing and failing', () => {
+    const output = '  3 passing (5ms)\n  1 failing\n';
+    const counts = parseTestOutputCounts(output);
+    expect(counts).toEqual({ passed: 3, failed: 1, total: 4 });
+  });
+
+  it('should parse mocha output with only passing', () => {
+    const output = '  5 passing (10ms)\n';
+    const counts = parseTestOutputCounts(output);
+    expect(counts).toEqual({ passed: 5, failed: 0, total: 5 });
+  });
+
+  it('should parse mocha "0 passing" output', () => {
+    const output = '\n  0 passing (1ms)\n\n';
+    const counts = parseTestOutputCounts(output);
+    expect(counts).toEqual({ passed: 0, failed: 0, total: 0 });
+  });
+
+  it('should parse Jest/Vitest output', () => {
+    const output = 'Tests:  2 failed, 3 passed, 5 total';
+    const counts = parseTestOutputCounts(output);
+    expect(counts).toEqual({ passed: 3, failed: 2, total: 5 });
+  });
+
+  it('should parse RSpec output', () => {
+    const output = '10 examples, 2 failures';
+    const counts = parseTestOutputCounts(output);
+    expect(counts).toEqual({ passed: 8, failed: 2, total: 10 });
+  });
+
+  it('should return zeros for unparseable output', () => {
+    const counts = parseTestOutputCounts('some random output');
+    expect(counts).toEqual({ passed: 0, failed: 0, total: 0 });
   });
 });
