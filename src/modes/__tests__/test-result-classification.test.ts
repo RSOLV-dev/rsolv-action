@@ -183,6 +183,16 @@ Error: Cannot find module 'express'
       expect(result.type).toBe('missing_dependency');
       expect(result.isValidFailure).toBe(false);
     });
+
+    it('should detect Ruby LoadError with (LoadError) suffix', () => {
+      // Real Ruby output format: "cannot load such file" comes BEFORE "(LoadError)"
+      const stderr = `/github/workspace/spec/security_test_spec.rb:1:in \`require': cannot load such file -- rails_helper (LoadError)
+\tfrom /github/workspace/spec/security_test_spec.rb:1:in \`<top (required)>'`;
+      const result = validationMode.classifyTestResult(1, '', stderr);
+
+      expect(result.type).toBe('missing_dependency');
+      expect(result.isValidFailure).toBe(false);
+    });
   });
 
   describe('Valid Test Failure Detection', () => {
@@ -300,6 +310,15 @@ FAIL tests/security.test.js
 
     it('should classify mocha "0 passing" as not a valid failure', () => {
       const result = validationMode.classifyTestResult(1, '\n  0 passing (1ms)\n\n', '');
+      expect(result.isValidFailure).toBe(false);
+      expect(result.type).toBe('runtime_error');
+    });
+
+    it('should classify RSpec "0 examples, 0 failures" with error as not valid', () => {
+      // RSpec output when test crashes during load (e.g., LoadError outside examples)
+      const stdout = `Finished in 0.00023 seconds (files took 0.5 seconds to load)
+0 examples, 0 failures, 1 error occurred outside of examples`;
+      const result = validationMode.classifyTestResult(1, stdout, '');
       expect(result.isValidFailure).toBe(false);
       expect(result.type).toBe('runtime_error');
     });

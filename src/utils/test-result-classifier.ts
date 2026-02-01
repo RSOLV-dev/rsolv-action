@@ -50,11 +50,21 @@ export function classifyTestResult(exitCode: number, stdout: string, stderr: str
   if (/TypeError:.*is not a function/i.test(combined)) {
     return { type: 'runtime_error', isValidFailure: false, reason: 'Type error - function not found' };
   }
-  if (/Cannot find module|ModuleNotFoundError|No module named|LoadError.*cannot load such file/i.test(combined)) {
+  if (/Cannot find module|ModuleNotFoundError|No module named|cannot load such file|LoadError/i.test(combined)) {
     return { type: 'missing_dependency', isValidFailure: false, reason: 'Missing dependency or module' };
   }
   if (/command not found|ENOENT/i.test(combined)) {
     return { type: 'command_not_found', isValidFailure: false, reason: 'Command or file not found' };
+  }
+
+  // Check for empty test runs BEFORE failure patterns — "0 examples, 0 failures" in RSpec
+  // or "0 passing" in Mocha should NOT be classified as valid failures
+  if (/0 examples?,\s*0 failures?/i.test(combined)) {
+    return { type: 'runtime_error', isValidFailure: false, reason: 'No test examples executed (RSpec error outside examples)' };
+  }
+  if (/0 passing|0 tests?\b|no tests? found|test suite empty/i.test(combined) &&
+      !/[1-9]\d*\s+(passing|pass|passed)/i.test(combined)) {
+    return { type: 'runtime_error', isValidFailure: false, reason: 'No tests found or executed in test file' };
   }
 
   // Check for valid test failure patterns
@@ -80,12 +90,6 @@ export function classifyTestResult(exitCode: number, stdout: string, stderr: str
         /\d+\s+(failed|failure)/i.test(combined)) {
       return { type: 'test_failed', isValidFailure: true, reason: 'Test failed - vulnerability proven' };
     }
-  }
-
-  // No tests found/ran (mocha "0 passing", empty suite, etc.)
-  if (/0 passing|0 tests?\b|no tests? found|test suite empty/i.test(combined) &&
-      !/[1-9]\d*\s+(passing|pass|passed)/i.test(combined)) {
-    return { type: 'runtime_error', isValidFailure: false, reason: 'No tests found or executed in test file' };
   }
 
   // Unknown exit code 1 - could be test failure or error
