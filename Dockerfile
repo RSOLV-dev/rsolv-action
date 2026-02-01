@@ -64,8 +64,13 @@ FROM base AS production
 
 # Install libc compatibility libraries for SDK native binaries (fixes Docker spawn issues)
 # These are required for the Claude Agent SDK to spawn processes correctly
+# Also install build dependencies for mise to compile runtimes (Ruby, Python, etc.) from source
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends libc6 libstdc++6 libgcc-s1 procps && \
+    apt-get install -y --no-install-recommends \
+      libc6 libstdc++6 libgcc-s1 procps \
+      build-essential libssl-dev libreadline-dev zlib1g-dev \
+      libyaml-dev libffi-dev libgdbm-dev libncurses5-dev \
+      autoconf bison && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install mise for multi-runtime support (Ruby, Python, Java, etc.)

@@ -1177,15 +1177,37 @@ ${tests}
           framework
         );
 
-        // 2. Write to temp file
-        const tempDir = path.join(this.repoPath, '.rsolv', 'temp');
-        fs.mkdirSync(tempDir, { recursive: true });
+        // 2. Write test to target test file path (framework-native directory)
+        // This ensures the test runner discovers the file and imports resolve
+        // correctly against the real project structure (not .rsolv/temp/).
+        const targetPath = path.join(this.repoPath, targetTestFile.path);
+        fs.mkdirSync(path.dirname(targetPath), { recursive: true });
 
-        const ext = this.getLanguageExtension(framework.name);
-        const tempFile = path.join(tempDir, `test_${Date.now()}${ext}`);
-        fs.writeFileSync(tempFile, testSuite.redTests[0].testCode, 'utf8');
+        // Back up existing file content so we can restore on failure
+        const hadExistingFile = fs.existsSync(targetPath);
+        const originalContent = hadExistingFile
+          ? fs.readFileSync(targetPath, 'utf8')
+          : null;
 
-        logger.info(`Wrote test to temp file: ${tempFile}`);
+        fs.writeFileSync(targetPath, testSuite.redTests[0].testCode, 'utf8');
+        const tempFile = targetPath;
+
+        logger.info(`Wrote test to target path: ${tempFile}`);
+
+        // Helper to restore original file if this attempt fails
+        const restoreOriginal = (): void => {
+          try {
+            if (originalContent !== null) {
+              fs.writeFileSync(targetPath, originalContent, 'utf8');
+              logger.debug(`Restored original content of ${targetTestFile.path}`);
+            } else if (!hadExistingFile) {
+              fs.unlinkSync(targetPath);
+              logger.debug(`Removed generated test file: ${targetTestFile.path}`);
+            }
+          } catch (restoreErr) {
+            logger.warn(`Failed to restore original file: ${restoreErr}`);
+          }
+        };
 
         // 3. Validate syntax
         try {
@@ -1193,6 +1215,7 @@ ${tests}
           logger.info('✓ Syntax validation passed');
         } catch (syntaxError) {
           logger.warn(`✗ Syntax error on attempt ${attempt}:`, syntaxError);
+          restoreOriginal();
           previousAttempts.push({
             attempt,
             error: 'SyntaxError',
@@ -1210,6 +1233,7 @@ ${tests}
 
           if (testResult.passed) {
             logger.warn(`✗ Test passed unexpectedly on attempt ${attempt} (should fail on vulnerable code)`);
+            restoreOriginal();
             previousAttempts.push({
               attempt,
               error: 'TestPassedUnexpectedly',
@@ -1231,6 +1255,7 @@ ${tests}
               `✗ Test failure is not a genuine assertion on attempt ${attempt}: ` +
               `${classification.type} — ${classification.reason}`
             );
+            restoreOriginal();
             previousAttempts.push({
               attempt,
               error: classification.type,
@@ -1245,6 +1270,7 @@ ${tests}
           // 5. Check for regressions (existing tests should still pass)
           if (testResult.existingTestsFailed) {
             logger.warn(`✗ Existing tests failed on attempt ${attempt} (regression detected)`);
+            restoreOriginal();
             previousAttempts.push({
               attempt,
               error: 'ExistingTestsRegression',
@@ -1255,11 +1281,14 @@ ${tests}
           }
 
           // Success! Test is valid — genuine assertion failure on vulnerable code
+          // Restore original file — the final version will be written by AST integration
+          restoreOriginal();
           logger.info(`✓ Test generation successful on attempt ${attempt}`);
           return testSuite;
 
         } catch (testError) {
           logger.error(`Error running test on attempt ${attempt}:`, testError);
+          restoreOriginal();
           previousAttempts.push({
             attempt,
             error: 'TestExecutionError',
