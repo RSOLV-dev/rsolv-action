@@ -290,8 +290,10 @@ export class TestRunner {
     case 'rspec':
     case 'minitest': {
       // Ruby: bundle install (if Gemfile exists)
+      // Always run bundle install even if vendor/bundle exists — the gems may have been
+      // compiled for a different Ruby version (e.g., host runner's Ruby vs mise-installed Ruby).
+      // Bundler handles idempotency and will recompile native extensions if needed.
       if (await this.fileExists(path.join(workingDir, 'Gemfile'))) {
-        if (await this.fileExists(path.join(workingDir, 'vendor', 'bundle'))) return null;
         return 'bundle install';
       }
       return null;
