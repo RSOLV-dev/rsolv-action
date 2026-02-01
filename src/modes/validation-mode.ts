@@ -1145,6 +1145,26 @@ ${tests}
     logger.info(`Vulnerability: ${vulnerability.type} at ${vulnerability.location}`);
     logger.info(`Target test file: ${targetTestFile.path}`);
 
+    // Ensure runtime and dependencies are available before test execution
+    const frameworkNameForSetup = targetTestFile.framework?.toLowerCase() as
+      | 'jest' | 'vitest' | 'mocha' | 'rspec' | 'minitest' | 'pytest'
+      | 'phpunit' | 'junit' | 'testing' | 'exunit';
+    if (frameworkNameForSetup) {
+      try {
+        // Dynamic import to avoid module-level side effects (promisify at load time)
+        const { TestRunner: FrameworkTestRunner } = await import('../ai/test-runner.js');
+        const testRunnerSetup = new FrameworkTestRunner();
+        logger.info(`Ensuring runtime for framework: ${frameworkNameForSetup}`);
+        await testRunnerSetup.ensureRuntime(frameworkNameForSetup, this.repoPath);
+        logger.info(`Ensuring dependencies for framework: ${frameworkNameForSetup}`);
+        await testRunnerSetup.ensureDependencies(frameworkNameForSetup, this.repoPath);
+        logger.info('Runtime and dependency setup complete');
+      } catch (setupError) {
+        logger.warn(`Runtime/dependency setup warning: ${setupError instanceof Error ? setupError.message : String(setupError)}`);
+        // Continue anyway — test execution may still work (e.g., Node is always available)
+      }
+    }
+
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       logger.info(`Attempt ${attempt}/${maxAttempts}: Generating test...`);
 
