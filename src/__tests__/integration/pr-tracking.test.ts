@@ -1,11 +1,17 @@
 import { describe, it, expect, vi } from 'vitest';
 import { readFileSync } from 'fs';
-import { join } from 'path';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+// Navigate from src/__tests__/integration/ up to RSOLV-action root
+const PROJECT_ROOT = join(__dirname, '..', '..', '..');
 
 describe('Pull Request Fix Tracking', () => {
   it('should verify RsolvApiClient is imported in pr.ts', () => {
     // Read the pr.ts file
-    const prPath = join(process.cwd(), 'src/github/pr.ts');
+    const prPath = join(PROJECT_ROOT, 'src/github/pr.ts');
     const prContent = readFileSync(prPath, 'utf8');
     
     // Check if RsolvApiClient is imported
@@ -19,7 +25,7 @@ describe('Pull Request Fix Tracking', () => {
   
   it('should verify recordFixAttempt is called after PR creation', () => {
     // Read the pr.ts file
-    const prPath = join(process.cwd(), 'src/github/pr.ts');
+    const prPath = join(PROJECT_ROOT, 'src/github/pr.ts');
     const prContent = readFileSync(prPath, 'utf8');
     
     // Check if recordFixAttempt is called

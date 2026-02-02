@@ -192,13 +192,14 @@ function process(userInput) {
         expect(capturedRequest.vulnerabilities).toHaveLength(1);
         expect(capturedRequest.vulnerabilities[0]).toEqual({
           id: 'python-exec-injection-42-10',
+          type: 'python-exec-injection',
           patternId: 'python-exec-injection',
-          filePath: 'handler.py',
+          file: 'handler.py',
           line: 42,
           code: 'exec(request.form["code"])',
           severity: 'critical'
         });
-        expect(capturedRequest.files['handler.py']).toContain('exec(user_code)');
+        expect(capturedRequest.files['handler.py'].content).toContain('exec(user_code)');
       } finally {
         RsolvApiClient.prototype.validateVulnerabilities = originalValidateVulnerabilities;
       }

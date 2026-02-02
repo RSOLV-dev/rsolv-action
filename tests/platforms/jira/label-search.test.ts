@@ -1,4 +1,4 @@
-import { describe, test, expect } from 'vitest';
+import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
 import { JiraAdapter } from '../../../src/platforms/jira/jira-adapter';
 
 describe('Jira Label Search', () => {

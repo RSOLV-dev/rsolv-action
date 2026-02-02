@@ -27,6 +27,8 @@ export class ValidationMode {
   private testIntegrationClient: TestIntegrationClient | null;
   private lastTestOutput: string = '';
   private lastTestStderr: string = '';
+  /** RFC-101: AI context string from project shape detection */
+  private projectAiContext: string = '';
 
   constructor(config: ActionConfig, repoPath?: string) {
     this.config = config;
@@ -340,6 +342,35 @@ export class ValidationMode {
         vulnerablePattern: vulnerableCode.slice(0, 500), // Truncate for prompt
         source: primaryFile
       };
+
+      // RFC-101: Retrieve project shape from phase data for environment context
+      try {
+        if (this.phaseDataClient) {
+          const commitSha = this.getCurrentCommitHash();
+          const repo = issue.repository.fullName;
+          const phaseData = await this.phaseDataClient.retrievePhaseResults(repo, issue.number, commitSha);
+          const projectShape = (phaseData as Record<string, unknown> | null)?.project_shape as
+            { ecosystem?: string; ai_context?: string; setup_commands?: string[]; runtime_services?: unknown[] } | undefined;
+
+          if (projectShape) {
+            logger.info(`[RFC-101] Project shape detected: ${projectShape.ecosystem}, ${projectShape.runtime_services?.length ?? 0} service deps`);
+            this.projectAiContext = projectShape.ai_context || '';
+
+            // Execute setup commands from project shape
+            const setupCommands = projectShape.setup_commands || [];
+            for (const cmd of setupCommands) {
+              try {
+                execSync(cmd, { cwd: this.repoPath, timeout: 60000, encoding: 'utf8' });
+                logger.info(`[RFC-101] Setup command succeeded: ${cmd}`);
+              } catch (setupErr) {
+                logger.warn(`[RFC-101] Setup command warning: ${cmd} — ${setupErr instanceof Error ? setupErr.message : String(setupErr)}`);
+              }
+            }
+          }
+        }
+      } catch (shapeErr) {
+        logger.warn(`[RFC-101] Project shape retrieval warning: ${shapeErr instanceof Error ? shapeErr.message : String(shapeErr)}`);
+      }
 
       // Step 5f: Generate test with retry loop (existing RFC-060 method)
       logger.info('Generating RED test with retry loop...');
@@ -1192,12 +1223,13 @@ ${tests}
       logger.info(`Attempt ${attempt}/${maxAttempts}: Generating test...`);
 
       try {
-        // 1. Generate test with LLM (pass target file content + previous errors)
+        // 1. Generate test with LLM (pass target file content + previous errors + RFC-101 context)
         const testSuite = await this.generateTestWithLLM(
           vulnerability,
           targetTestFile,
           previousAttempts,
-          framework
+          framework,
+          this.projectAiContext || undefined
         );
 
         // 2. Write test to target test file path (framework-native directory)
@@ -1355,9 +1387,10 @@ ${tests}
     vulnerability: Vulnerability,
     targetTestFile: TestFileContext,
     previousAttempts: AttemptHistory[],
-    framework: TestFramework
+    framework: TestFramework,
+    aiContext?: string
   ): Promise<TestSuite> {
-    const prompt = this.buildLLMPrompt(vulnerability, targetTestFile, previousAttempts, framework);
+    const prompt = this.buildLLMPrompt(vulnerability, targetTestFile, previousAttempts, framework, aiContext);
 
     const aiClient = await getAiClient(this.config.aiProvider);
     const response = await aiClient.complete(prompt, {
@@ -1453,7 +1486,8 @@ ${tests}
     vulnerability: Vulnerability,
     targetTestFile: TestFileContext,
     previousAttempts: AttemptHistory[],
-    framework: TestFramework
+    framework: TestFramework,
+    aiContext?: string
   ): string {
     const realisticExamples = this.getRealisticVulnerabilityExample(vulnerability.type);
 
@@ -1465,7 +1499,7 @@ LOCATION: ${vulnerability.location}
 ATTACK VECTOR: ${vulnerability.attackVector}
 ${vulnerability.vulnerablePattern ? `VULNERABLE PATTERN: ${vulnerability.vulnerablePattern}` : ''}
 ${vulnerability.source ? `SOURCE: ${vulnerability.source}\nVULNERABLE SOURCE FILE: ${vulnerability.source}` : ''}
-
+${aiContext ? `\nENVIRONMENT CONTEXT:\n${aiContext}\n` : ''}
 ${realisticExamples}
 
 TARGET TEST FILE: ${targetTestFile.path}

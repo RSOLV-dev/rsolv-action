@@ -54,6 +54,21 @@ export class RepositoryScanner {
   ];
 
   /**
+   * RFC-101: Manifest and config files to capture for project shape detection.
+   * Contents are included in phase data so the platform can classify the project
+   * ecosystem and determine runtime service dependencies.
+   */
+  private static readonly MANIFEST_FILES = [
+    'Gemfile', 'config/database.yml',                        // Ruby
+    'package.json',                                          // JavaScript/TypeScript
+    'requirements.txt', 'pyproject.toml', 'setup.py',       // Python
+    'setup.cfg',                                             // Python
+    'mix.exs', 'config/dev.exs', 'config/test.exs',        // Elixir
+    'pom.xml', 'build.gradle',                              // Java
+    'composer.json',                                         // PHP
+  ];
+
+  /**
    * File name patterns for non-production files (test files, build configs, scripts).
    */
   private static readonly NON_PRODUCTION_FILE_PATTERNS = [
@@ -158,6 +173,9 @@ export class RepositoryScanner {
     // Log that we only scanned production application code
     logger.info('Scanned production code only (vendor/minified and non-production files excluded)');
 
+    // RFC-101: Capture manifest files for project shape detection
+    const manifestFiles = await this.captureManifestFiles(config, files);
+
     // Group vulnerabilities by type
     const groupedVulnerabilities = this.groupVulnerabilities(vulnerabilities);
 
@@ -175,7 +193,8 @@ export class RepositoryScanner {
       scannedFiles: files.filter(f => f.language && this.isSupportedLanguage(f.language)).length,
       vulnerabilities,
       groupedVulnerabilities,
-      createdIssues: [] // Will be populated if issues are created
+      createdIssues: [], // Will be populated if issues are created
+      manifestFiles: Object.keys(manifestFiles).length > 0 ? manifestFiles : undefined
     };
   }
 
@@ -340,6 +359,61 @@ export class RepositoryScanner {
       }
     }
     return vulnerabilities;
+  }
+
+  /**
+   * RFC-101: Capture manifest/config file contents for project shape detection.
+   * Checks already-fetched files first, then fetches remaining manifest files from GitHub.
+   * Files larger than 10KB are skipped to keep phase data payload reasonable.
+   */
+  private async captureManifestFiles(
+    config: ScanConfig,
+    alreadyFetched: FileToScan[]
+  ): Promise<Record<string, string>> {
+    const manifestFiles: Record<string, string> = {};
+    const MAX_FILE_SIZE = 10 * 1024; // 10KB cap per file
+
+    // Build a map of already-fetched file contents
+    const fetchedMap = new Map<string, string>();
+    for (const f of alreadyFetched) {
+      fetchedMap.set(f.path, f.content);
+    }
+
+    for (const manifestPath of RepositoryScanner.MANIFEST_FILES) {
+      // Check if we already have this file from the scan
+      const existing = fetchedMap.get(manifestPath);
+      if (existing) {
+        if (existing.length <= MAX_FILE_SIZE) {
+          manifestFiles[manifestPath] = existing;
+        }
+        continue;
+      }
+
+      // Try to fetch from GitHub
+      try {
+        const { data } = await this.github.repos.getContent({
+          owner: config.repository.owner,
+          repo: config.repository.name,
+          path: manifestPath,
+          ref: config.repository.defaultBranch
+        });
+
+        if ('content' in data && data.content && data.encoding === 'base64') {
+          const content = Buffer.from(data.content, 'base64').toString('utf-8');
+          if (content.length <= MAX_FILE_SIZE) {
+            manifestFiles[manifestPath] = content;
+          }
+        }
+      } catch {
+        // File doesn't exist in repo — silently skip
+      }
+    }
+
+    if (Object.keys(manifestFiles).length > 0) {
+      logger.info(`RFC-101: Captured ${Object.keys(manifestFiles).length} manifest files: ${Object.keys(manifestFiles).join(', ')}`);
+    }
+
+    return manifestFiles;
   }
 
   private isSupportedLanguage(language: string): boolean {

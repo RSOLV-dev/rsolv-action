@@ -29,6 +29,8 @@ export interface ScanResult {
   createdIssues: CreatedIssue[];
   skippedValidated?: number;
   skippedFalsePositive?: number;
+  /** RFC-101: Manifest/config file contents for project shape detection */
+  manifestFiles?: Record<string, string>;
 }
 
 export interface VulnerabilityGroup {

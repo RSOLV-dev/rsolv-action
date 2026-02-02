@@ -1364,7 +1364,9 @@ export class PhaseExecutor {
       phaseData.scan = {
         vulnerabilities: data.vulnerabilities || [],
         timestamp: new Date().toISOString(),
-        commitHash: metadata.commitSha
+        commitHash: metadata.commitSha,
+        // RFC-101: Include manifest files for project shape detection
+        ...(data.manifestFiles ? { manifest_files: data.manifestFiles } : {})
       };
     } else if (phase === 'validation') {
       // PhaseDataClient expects client-side key 'validate', not 'validation'
