@@ -60,9 +60,9 @@ export class RepositoryScanner {
    */
   private static readonly MANIFEST_FILES = [
     'Gemfile', 'config/database.yml',                        // Ruby
-    'package.json',                                          // JavaScript/TypeScript
+    'package.json', 'prisma/schema.prisma',                  // JavaScript/TypeScript
     'requirements.txt', 'pyproject.toml', 'setup.py',       // Python
-    'setup.cfg',                                             // Python
+    'setup.cfg', 'manage.py',                                // Python
     'mix.exs', 'config/dev.exs', 'config/test.exs',        // Elixir
     'pom.xml', 'build.gradle',                              // Java
     'composer.json',                                         // PHP
