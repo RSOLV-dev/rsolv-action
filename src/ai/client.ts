@@ -306,22 +306,14 @@ class AnthropicClient implements AiClient {
       }
       
       // Make the API call
-      // Build headers - add beta header if using extended thinking
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        'X-API-Key': apiKey,
-        'anthropic-version': '2023-06-01'
-      };
-
-      // Extended thinking requires a beta header
-      if (options.thinking) {
-        headers['anthropic-beta'] = 'interleaved-thinking-2025-05-14';
-        logger.info('[Extended Thinking] Beta header added for interleaved thinking');
-      }
-
+      // Extended thinking is stable for Claude 3.5 Sonnet - no beta header needed
       const response = await fetch(`${baseUrl}/v1/messages`, {
         method: 'POST',
-        headers,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': apiKey,
+          'anthropic-version': '2023-06-01'
+        },
         body: JSON.stringify(requestBody)
       });
       
