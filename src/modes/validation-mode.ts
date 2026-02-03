@@ -2192,14 +2192,26 @@ Return ONLY the inverted test file. No explanation, just the code block:
     }
 
     try {
-      const nameFilter = this.buildTestNameFilter(framework, testName);
-      const command = `${framework.testCommand} ${testFile}${nameFilter}`;
+      // Don't use test name filter - we write a single test per file, and the filter
+      // often doesn't match because the LLM names tests differently than our testName
+      const command = `${framework.testCommand} ${testFile}`;
       logger.info(`Running test command: ${command}`);
       const output = execSync(command, { cwd: this.repoPath, encoding: 'utf8', env: process.env });
 
       // Exit code 0 means the test runner reported all tests passed.
-      // Previous string-based check ("0 failures"/"All tests passed") missed frameworks
-      // like Mocha ("1 passing") and pytest ("1 passed"), causing false negatives.
+      // But we need to detect "0 examples" / "0 tests" which is NOT a valid pass
+      const zeroTestsPattern = /0 examples|0 tests|no tests|All examples were filtered out/i;
+      if (zeroTestsPattern.test(output)) {
+        logger.warn(`Test ran 0 tests (filter mismatch or empty file) - treating as failure`);
+        return {
+          passed: false,
+          existingTestsFailed: false,
+          output,
+          stderr: '',
+          exitCode: 0
+        };
+      }
+
       return {
         passed: true,
         existingTestsFailed: false,
