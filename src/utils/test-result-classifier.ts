@@ -84,6 +84,41 @@ export function classifyTestResult(exitCode: number, stdout: string, stderr: str
   if (/[✗✖]/.test(combined) && exitCode === 1) {
     return { type: 'test_failed', isValidFailure: true, reason: 'Test failed (checkmark) - vulnerability proven' };
   }
+
+  // === FRAMEWORK-SPECIFIC PATTERNS (RFC-101 iteration 11) ===
+
+  // pytest: "FAILED test_file.py::test_name" or "E       assert"
+  if (/FAILED\s+\S+\.py::/i.test(combined) ||
+      /^E\s+assert/m.test(combined)) {
+    return { type: 'test_failed', isValidFailure: true, reason: 'pytest assertion failed - vulnerability proven' };
+  }
+
+  // ExUnit (Elixir): "** (ExUnit.AssertionError)" or "Assertion with == failed" or "1) test"
+  if (/\(ExUnit\.AssertionError\)/i.test(combined) ||
+      /Assertion with (==|!=|=~) failed/i.test(combined) ||
+      /^\s*\d+\)\s+test\s+/m.test(combined)) {
+    return { type: 'test_failed', isValidFailure: true, reason: 'ExUnit assertion failed - vulnerability proven' };
+  }
+
+  // PHPUnit: "Failed asserting" or "FAILURES!" or "Failures: N"
+  if (/Failed asserting that/i.test(combined) ||
+      /FAILURES!/i.test(combined) ||
+      /Failures:\s*\d+/i.test(combined)) {
+    return { type: 'test_failed', isValidFailure: true, reason: 'PHPUnit assertion failed - vulnerability proven' };
+  }
+
+  // JUnit/Maven: "AssertionFailedError" or "expected:<...> but was:<...>" or "BUILD FAILURE" with test context
+  if (/AssertionFailedError/i.test(combined) ||
+      /expected:<.*?>\s+but was:<.*?>/i.test(combined) ||
+      /java\.lang\.AssertionError/i.test(combined)) {
+    return { type: 'test_failed', isValidFailure: true, reason: 'JUnit assertion failed - vulnerability proven' };
+  }
+
+  // Mocha: "N failing" with exit code 1 and actual failure (not just syntax error)
+  if (/\d+\s+failing/i.test(combined) && exitCode === 1) {
+    return { type: 'test_failed', isValidFailure: true, reason: 'Mocha test failed - vulnerability proven' };
+  }
+
   // FAIL marker with failure indicators
   if (/(FAIL|FAILED|Failures:|failed)/i.test(combined) && exitCode === 1) {
     if (/(tests?|examples?|specs?).*fail/i.test(combined) ||
