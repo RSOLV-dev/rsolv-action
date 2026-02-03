@@ -364,7 +364,8 @@ export class RepositoryScanner {
   /**
    * RFC-101: Capture manifest/config file contents for project shape detection.
    * Checks already-fetched files first, then fetches remaining manifest files from GitHub.
-   * Files larger than 10KB are skipped to keep phase data payload reasonable.
+   * Files larger than 10KB are truncated to relevant sections (e.g., <dependencies> for pom.xml)
+   * or skipped if no truncation strategy exists for that file type.
    */
   private async captureManifestFiles(
     config: ScanConfig,
@@ -385,6 +386,12 @@ export class RepositoryScanner {
       if (existing) {
         if (existing.length <= MAX_FILE_SIZE) {
           manifestFiles[manifestPath] = existing;
+        } else {
+          const truncated = RepositoryScanner.truncateManifest(manifestPath, existing);
+          if (truncated && truncated.length <= MAX_FILE_SIZE) {
+            manifestFiles[manifestPath] = truncated;
+            logger.info(`RFC-101: Truncated oversized ${manifestPath} (${existing.length} → ${truncated.length} bytes)`);
+          }
         }
         continue;
       }
@@ -402,6 +409,12 @@ export class RepositoryScanner {
           const content = Buffer.from(data.content, 'base64').toString('utf-8');
           if (content.length <= MAX_FILE_SIZE) {
             manifestFiles[manifestPath] = content;
+          } else {
+            const truncated = RepositoryScanner.truncateManifest(manifestPath, content);
+            if (truncated && truncated.length <= MAX_FILE_SIZE) {
+              manifestFiles[manifestPath] = truncated;
+              logger.info(`RFC-101: Truncated oversized ${manifestPath} (${content.length} → ${truncated.length} bytes)`);
+            }
           }
         }
       } catch {
@@ -414,6 +427,52 @@ export class RepositoryScanner {
     }
 
     return manifestFiles;
+  }
+
+  /**
+   * Extract relevant sections from oversized manifest files.
+   * For pom.xml: extracts all <dependencies>...</dependencies> blocks (the Java detector
+   * only needs <artifactId> tags). For build.gradle: extracts dependencies { } blocks.
+   * Returns null if no truncation strategy exists for the file type.
+   */
+  static truncateManifest(filePath: string, content: string): string | null {
+    const filename = filePath.split('/').pop() || '';
+
+    if (filename === 'pom.xml') {
+      // Extract all <dependencies>...</dependencies> blocks
+      const depBlocks: string[] = [];
+      const regex = /<dependencies>[\s\S]*?<\/dependencies>/g;
+      let match;
+      while ((match = regex.exec(content)) !== null) {
+        depBlocks.push(match[0]);
+      }
+      if (depBlocks.length === 0) return null;
+      return depBlocks.join('\n');
+    }
+
+    if (filename === 'build.gradle') {
+      // Extract dependencies { ... } blocks (handles nested braces)
+      const depBlocks: string[] = [];
+      const depStart = /\bdependencies\s*\{/g;
+      let match;
+      while ((match = depStart.exec(content)) !== null) {
+        let depth = 1;
+        let i = match.index + match[0].length;
+        while (i < content.length && depth > 0) {
+          if (content[i] === '{') depth++;
+          else if (content[i] === '}') depth--;
+          i++;
+        }
+        if (depth === 0) {
+          depBlocks.push(content.slice(match.index, i));
+        }
+      }
+      if (depBlocks.length === 0) return null;
+      return depBlocks.join('\n');
+    }
+
+    // No truncation strategy for this file type
+    return null;
   }
 
   private isSupportedLanguage(language: string): boolean {
