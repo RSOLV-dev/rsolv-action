@@ -1600,6 +1600,60 @@ ${tests}
   }
 
   /**
+   * Get the language identifier for a test framework (used in code block fences).
+   */
+  private getLanguageForFramework(framework: TestFramework): string {
+    const languageMap: Record<string, string> = {
+      jest: 'javascript',
+      vitest: 'javascript',
+      mocha: 'javascript',
+      rspec: 'ruby',
+      minitest: 'ruby',
+      pytest: 'python',
+      phpunit: 'php',
+      junit: 'java',
+      junit5: 'java',
+      junit4: 'java',
+      exunit: 'elixir',
+      testing: 'go'
+    };
+    return languageMap[framework.name] || framework.name;
+  }
+
+  /**
+   * Clean markdown artifacts from extracted code.
+   * AI sometimes includes formatting like **Approach 3:** or ### Headers in code blocks.
+   */
+  private cleanExtractedCode(code: string): string {
+    let cleaned = code;
+
+    // Remove markdown bold/italic: **text**, *text*, __text__, _text_
+    // But be careful not to break Python **kwargs or pointer dereference
+    // Only remove if it looks like a heading/label (followed by colon or end of line)
+    cleaned = cleaned.replace(/^\s*\*\*[^*]+\*\*:?\s*$/gm, ''); // Lines that are just **Label:**
+    cleaned = cleaned.replace(/^\s*\*[^*]+\*:?\s*$/gm, '');     // Lines that are just *Label:*
+
+    // Remove markdown headers at start of lines: ## Header, ### Header
+    cleaned = cleaned.replace(/^#{1,6}\s+.*$/gm, '');
+
+    // Remove markdown bullet points at start of lines (but keep if it's valid code indent)
+    // Only remove if line starts with `- ` followed by text (not code)
+    cleaned = cleaned.replace(/^-\s+(?=[A-Z])/gm, ''); // Bullet followed by capital letter (likely prose)
+
+    // Remove stray triple backticks that might have leaked through
+    cleaned = cleaned.replace(/^```\w*\s*$/gm, '');
+    cleaned = cleaned.replace(/^```\s*$/gm, '');
+
+    // Remove lines that are purely markdown labels like "Approach 1:", "Method:", etc.
+    cleaned = cleaned.replace(/^\s*(?:Approach|Method|Option|Solution|Step)\s*\d*:?\s*$/gim, '');
+
+    // Remove empty lines that resulted from the above removals (collapse multiple blank lines)
+    cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
+
+    return cleaned.trim();
+  }
+
+  /**
    * Parse LLM response into structured red test entries.
    * Extracts ALL code blocks (for multi-candidate) and wraps as TestSuite redTests.
    */
@@ -1609,13 +1663,17 @@ ${tests}
     framework: TestFramework
   ): TestSuite['redTests'] {
     // Extract ALL code blocks from response (multi-candidate support)
-    const codeBlockRegex = /```(?:javascript|typescript|ruby|python|js|ts|rb|py|rspec)?\s*\n([\s\S]*?)```/g;
+    const codeBlockRegex = /```(?:javascript|typescript|ruby|python|php|elixir|java|js|ts|rb|py|ex|exs)?\s*\n([\s\S]*?)```/g;
     const allCodeBlocks: string[] = [];
     let match;
     while ((match = codeBlockRegex.exec(response)) !== null) {
-      const code = match[1]?.trim();
-      if (code && code.length > 0) {
-        allCodeBlocks.push(code);
+      const rawCode = match[1]?.trim();
+      if (rawCode && rawCode.length > 0) {
+        // Clean markdown artifacts that may have leaked into code blocks
+        const cleanedCode = this.cleanExtractedCode(rawCode);
+        if (cleanedCode.length > 0) {
+          allCodeBlocks.push(cleanedCode);
+        }
       }
     }
 
@@ -1744,24 +1802,30 @@ This test FAILS because the vulnerable code does NOT use escapeHtml/sanitize.
 YOUR TASK:
 Generate 3 DIFFERENT test approaches. Each approach MUST be in its own separate code block.
 
-FORMAT YOUR RESPONSE LIKE THIS:
+OUTPUT FORMAT (IMPORTANT):
+Return ONLY valid ${this.getLanguageForFramework(framework)} code inside each code block.
+DO NOT include markdown formatting, headers, labels, or prose INSIDE the code blocks.
+Code blocks must contain ONLY executable code — no "Approach 1:" labels, no bullet points, no explanations.
 
-**Approach 1: Pattern matching**
-\`\`\`${framework.name === 'rspec' ? 'ruby' : framework.name === 'mocha' || framework.name === 'jest' || framework.name === 'vitest' ? 'javascript' : framework.name}
-# Complete standalone test file for approach 1
+Place any explanations OUTSIDE and BEFORE the code blocks, like this:
+
+First approach uses pattern matching:
+\`\`\`${this.getLanguageForFramework(framework)}
+// Actual test code here — no markdown, no labels
 \`\`\`
 
-**Approach 2: Static analysis**
-\`\`\`${framework.name === 'rspec' ? 'ruby' : framework.name === 'mocha' || framework.name === 'jest' || framework.name === 'vitest' ? 'javascript' : framework.name}
-# Complete standalone test file for approach 2
+Second approach uses static analysis:
+\`\`\`${this.getLanguageForFramework(framework)}
+// Actual test code here — no markdown, no labels
 \`\`\`
 
-**Approach 3: Behavioral/assertion**
-\`\`\`${framework.name === 'rspec' ? 'ruby' : framework.name === 'mocha' || framework.name === 'jest' || framework.name === 'vitest' ? 'javascript' : framework.name}
-# Complete standalone test file for approach 3
+Third approach uses behavioral assertions:
+\`\`\`${this.getLanguageForFramework(framework)}
+// Actual test code here — no markdown, no labels
 \`\`\`
 
-CRITICAL: Each code block must be a COMPLETE, STANDALONE test file. DO NOT put all tests in one block.
+CRITICAL: Each code block must be a COMPLETE, STANDALONE test file with valid syntax.
+DO NOT include text like "**Approach 1:**" or "### Pattern Matching" inside the code blocks — that causes syntax errors.
 
 Each test should:
 1. Use the attack vector: ${vulnerability.attackVector}
