@@ -239,8 +239,18 @@ export class TestRunner {
     console.log(`[TestRunner] Installing runtime: ${runtimeSpec} via mise`);
 
     try {
+      // For Elixir, prepend the mise shims PATH to the command so that 'erl' is found
+      // during Elixir's installation verification step (which spawns its own subprocess)
+      let installCmd = `mise install ${runtimeSpec} && mise use --global ${runtimeSpec}`;
+      if (runtime === 'elixir') {
+        const homedir = process.env.HOME || '/root';
+        const miseShims = `${homedir}/.local/share/mise/shims`;
+        installCmd = `PATH="${miseShims}:$PATH" ${installCmd}`;
+        console.log(`[TestRunner] Using PATH prefix for Elixir install: ${miseShims}`);
+      }
+
       const { stdout, stderr } = await execAsync(
-        `mise install ${runtimeSpec} && mise use --global ${runtimeSpec}`,
+        installCmd,
         { cwd: workingDir, timeout: this.RUNTIME_INSTALL_TIMEOUT, encoding: 'utf8' }
       );
       console.log(`[TestRunner] Runtime installed: ${stdout}`);
