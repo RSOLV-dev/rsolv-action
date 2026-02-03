@@ -1343,6 +1343,10 @@ ${tests}
               );
 
               if (invertedCode) {
+                // Log both original and inverted code for debugging
+                logger.info(`[Two-Phase] ORIGINAL TEST (first 800 chars):\n${candidate.testCode.slice(0, 800)}`);
+                logger.info(`[Two-Phase] INVERTED TEST (first 800 chars):\n${invertedCode.slice(0, 800)}`);
+
                 // Write and test the inverted code
                 fs.writeFileSync(targetPath, invertedCode, 'utf8');
                 logger.info(`[Two-Phase] Testing inverted code...`);
@@ -1391,6 +1395,7 @@ ${tests}
                   }
                 } else {
                   logger.warn(`[Two-Phase] Inverted test still passes — inversion didn't work`);
+                  logger.info(`[Two-Phase] Inverted test output (last 500 chars): ${(invertedResult.output || '').slice(-500)}`);
                 }
               } else {
                 logger.warn(`[Two-Phase] Inversion call returned no code`);
