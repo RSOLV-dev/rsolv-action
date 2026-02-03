@@ -1524,12 +1524,13 @@ ${tests}
     const response = await aiClient.complete(prompt, {
       temperature: 0.2,
       maxTokens: this.config.aiProvider.maxTokens,
-      model: this.config.aiProvider.model,
-      // Enable extended thinking for better reasoning about RED tests
-      thinking: {
-        type: 'enabled',
-        budget_tokens: 10000  // Give good thinking budget for complex test generation
-      }
+      model: this.config.aiProvider.model
+      // Extended thinking disabled for now - beta header compatibility issue
+      // TODO: Re-enable when Anthropic API version stabilizes
+      // thinking: {
+      //   type: 'enabled',
+      //   budget_tokens: 10000  // Give good thinking budget for complex test generation
+      // }
     });
 
     const redTests = this.parseTestResponse(response, vulnerability, framework);
@@ -1937,12 +1938,13 @@ Return ONLY the inverted test file. No explanation, just the code block:
       const response = await aiClient.complete(prompt, {
         temperature: 0.2,
         maxTokens: this.config.aiProvider.maxTokens,
-        model: this.config.aiProvider.model,
-        // Enable extended thinking for better reasoning about inversion
-        thinking: {
-          type: 'enabled',
-          budget_tokens: 8000  // Give it room to think about the inversion
-        }
+        model: this.config.aiProvider.model
+        // Extended thinking disabled for now - beta header compatibility issue
+        // TODO: Re-enable when Anthropic API version stabilizes
+        // thinking: {
+        //   type: 'enabled',
+        //   budget_tokens: 8000  // Give it room to think about the inversion
+        // }
       });
 
       // Extract code block from response
