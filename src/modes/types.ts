@@ -131,6 +131,10 @@ export interface AttemptHistory {
   error: 'SyntaxError' | 'TestPassedUnexpectedly' | 'ExistingTestsRegression' | string;
   errorMessage: string;
   timestamp: string;
+  /** Truncated test output from execution (for retry feedback) */
+  testOutput?: string;
+  /** The generated test code from this attempt (for retry feedback) */
+  generatedCode?: string;
 }
 
 // Framework information

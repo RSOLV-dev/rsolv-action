@@ -339,7 +339,7 @@ export class ValidationMode {
         description: vuln?.description || issue.title,
         location: `${primaryFile}:${vuln?.line || 0}`,
         attackVector: vuln?.type || 'unknown',
-        vulnerablePattern: vulnerableCode.slice(0, 500), // Truncate for prompt
+        vulnerablePattern: vulnerableCode.slice(0, 2000), // Truncate for prompt (increased from 500 for better AI context)
         source: primaryFile
       };
 
@@ -1324,11 +1324,16 @@ ${tests}
 
           if (testResult.passed) {
             logger.warn(`✗ Test passed unexpectedly on attempt ${attempt} (should fail on vulnerable code)`);
+            const generatedCode = testSuite.redTests[0]?.testCode || '';
+            // Include test output so the AI can see WHY the test passed
+            const outputSnippet = (testResult.output || '').slice(-500);
             restoreOriginal();
             previousAttempts.push({
               attempt,
               error: 'TestPassedUnexpectedly',
               errorMessage: 'Test passed when it should fail to demonstrate vulnerability',
+              testOutput: outputSnippet,
+              generatedCode: generatedCode.slice(0, 1500),
               timestamp: new Date().toISOString()
             });
             continue; // Retry with "make it fail" feedback
@@ -1346,6 +1351,7 @@ ${tests}
               `✗ Test failure is not a genuine assertion on attempt ${attempt}: ` +
               `${classification.type} — ${classification.reason}`
             );
+            const generatedCode = testSuite.redTests[0]?.testCode || '';
             restoreOriginal();
             // Include actual error output so the AI can understand what went wrong
             const errorDetails = (testResult.stderr || testResult.output || '')
@@ -1357,6 +1363,7 @@ ${tests}
               attempt,
               error: classification.type,
               errorMessage: `${classification.reason}${errorDetails ? ': ' + errorDetails : ''}`,
+              generatedCode: generatedCode.slice(0, 1500),
               timestamp: new Date().toISOString()
             });
             continue; // Retry with error context
@@ -1583,28 +1590,43 @@ ${(() => {
         prompt += `\n- Attempt ${attempt.attempt}: ${attempt.error} - ${attempt.errorMessage}`;
       }
 
+      // Include the last attempt's generated code and test output so the AI can see what went wrong
+      const lastAttempt = previousAttempts[previousAttempts.length - 1];
+      if (lastAttempt.generatedCode) {
+        prompt += `\n\nYOUR PREVIOUS TEST CODE (attempt ${lastAttempt.attempt}):\n\`\`\`\n${lastAttempt.generatedCode}\n\`\`\``;
+      }
+      if (lastAttempt.testOutput) {
+        prompt += `\n\nTEST OUTPUT FROM PREVIOUS ATTEMPT:\n\`\`\`\n${lastAttempt.testOutput}\n\`\`\``;
+      }
+
       // Add specific guidance based on error types
-      const lastError = previousAttempts[previousAttempts.length - 1].error;
+      const lastError = lastAttempt.error;
       if (lastError === 'SyntaxError') {
         prompt += `\n\nIMPORTANT: Fix the syntax error. Ensure valid ${framework.name} syntax.`;
       } else if (lastError === 'TestPassedUnexpectedly') {
-        prompt += '\n\nIMPORTANT: Your previous test PASSED when it must FAIL to prove the vulnerability. ' +
-          'The test must make a concrete assertion about the INSECURE behavior. Examples:\n' +
-          '- For SQL injection: assert that raw user input appears unescaped in the query string\n' +
-          '- For XSS: assert that user input is included in output WITHOUT HTML encoding\n' +
-          '- For insecure crypto: assert that the code uses MD5/SHA1/DES instead of bcrypt/argon2\n' +
-          '- For path traversal: assert that "../" sequences are NOT stripped from file paths\n' +
-          'The test MUST call the actual vulnerable function/method and assert the insecure behavior IS present. ' +
-          'Do NOT test that a fix works — test that the vulnerability EXISTS by asserting the bad behavior.';
+        prompt += '\n\nCRITICAL: Your previous test PASSED (exit code 0) when it MUST FAIL to prove the vulnerability exists. ' +
+          'A RED test must contain an assertion that FAILS because the vulnerable behavior is present.\n\n' +
+          'The key insight: assert what SHOULD be true in secure code, so the assertion FAILS on the vulnerable code.\n\n' +
+          'Examples of assertions that FAIL on vulnerable code:\n' +
+          '- SQL injection: assert that the query uses parameterized placeholders (it won\'t — it uses string interpolation)\n' +
+          '- XSS: assert that user input is HTML-escaped in the output (it won\'t — it\'s rendered raw)\n' +
+          '- Insecure crypto: assert that the password hash algorithm is bcrypt/argon2 (it won\'t — it uses MD5/SHA1)\n' +
+          '- Path traversal: assert that "../" sequences are rejected or stripped (they won\'t be)\n' +
+          '- NoSQL injection: assert that user input is sanitized before use in a query (it won\'t be)\n' +
+          '- SSRF: assert that URLs are validated against an allowlist (they won\'t be)\n\n' +
+          'Pattern: expect(actual_insecure_value).to.equal(what_secure_code_would_produce)\n' +
+          'This fails because actual_insecure_value !== what_secure_code_would_produce.\n\n' +
+          'DO NOT write assertions that check if an attack "succeeds" — those pass on vulnerable code.\n' +
+          'Instead, write assertions that check if SECURITY CONTROLS EXIST — those fail on vulnerable code.';
       } else if (lastError === 'ExistingTestsRegression') {
         prompt += '\n\nIMPORTANT: Don\'t break existing tests. Avoid modifying shared state or setup blocks.';
       } else if (lastError === 'TestExecutionError' &&
-                 previousAttempts[previousAttempts.length - 1].errorMessage?.includes('MODULE_NOT_FOUND')) {
+                 lastAttempt.errorMessage?.includes('MODULE_NOT_FOUND')) {
         prompt += `\n\nIMPORTANT: The previous attempt failed with MODULE_NOT_FOUND. ` +
           `Use path.join(process.cwd(), '${vulnerability.source}') to reference the source file. ` +
           `Do NOT use relative paths like require('../...'). process.cwd() is always the repository root.`;
       } else if (['runtime_error', 'missing_dependency', 'syntax_error'].includes(lastError)) {
-        const lastMessage = previousAttempts[previousAttempts.length - 1].errorMessage || '';
+        const lastMessage = lastAttempt.errorMessage || '';
         if (lastMessage.includes('No tests found')) {
           prompt += '\n\nPREVIOUS ATTEMPT FAILED: The test file contained no test cases. ' +
             'Ensure the file has describe()/it() blocks (for mocha) or test() blocks. ' +
@@ -1906,12 +1928,11 @@ CWE: CWE-798`
       logger.info(`Running test command: ${command}`);
       const output = execSync(command, { cwd: this.repoPath, encoding: 'utf8', env: process.env });
 
-      // Parse output to determine if test passed
-      // This is a simplified check - real implementation would parse framework-specific output
-      const passed = output.includes('0 failures') || output.includes('All tests passed');
-
+      // Exit code 0 means the test runner reported all tests passed.
+      // Previous string-based check ("0 failures"/"All tests passed") missed frameworks
+      // like Mocha ("1 passing") and pytest ("1 passed"), causing false negatives.
       return {
-        passed,
+        passed: true,
         existingTestsFailed: false,
         output,
         stderr: '',

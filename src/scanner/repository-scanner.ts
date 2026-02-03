@@ -431,23 +431,39 @@ export class RepositoryScanner {
 
   /**
    * Extract relevant sections from oversized manifest files.
-   * For pom.xml: extracts all <dependencies>...</dependencies> blocks (the Java detector
-   * only needs <artifactId> tags). For build.gradle: extracts dependencies { } blocks.
+   * For pom.xml: extracts <parent> block and all individual <dependency> elements
+   * (catches deps regardless of nesting: <dependencies>, <dependencyManagement>,
+   * plugin configs, etc.). For build.gradle: extracts dependencies { } blocks.
    * Returns null if no truncation strategy exists for the file type.
    */
   static truncateManifest(filePath: string, content: string): string | null {
     const filename = filePath.split('/').pop() || '';
 
     if (filename === 'pom.xml') {
-      // Extract all <dependencies>...</dependencies> blocks
-      const depBlocks: string[] = [];
-      const regex = /<dependencies>[\s\S]*?<\/dependencies>/g;
+      // Extract <parent> block (contains Spring Boot version, etc.)
+      const parentMatch = content.match(/<parent>[\s\S]*?<\/parent>/);
+
+      // Extract ALL individual <dependency> elements regardless of nesting level.
+      // This catches deps in <dependencies>, <dependencyManagement>, and plugin configs.
+      const allDeps: string[] = [];
+      const depRegex = /<dependency>[\s\S]*?<\/dependency>/g;
       let match;
-      while ((match = regex.exec(content)) !== null) {
-        depBlocks.push(match[0]);
+      while ((match = depRegex.exec(content)) !== null) {
+        allDeps.push(match[0]);
       }
-      if (depBlocks.length === 0) return null;
-      return depBlocks.join('\n');
+
+      if (allDeps.length === 0 && !parentMatch) return null;
+
+      // Build a synthetic pom fragment with parent + all deps wrapped in <dependencies>
+      const parts: string[] = ['<project>'];
+      if (parentMatch) parts.push(parentMatch[0]);
+      if (allDeps.length > 0) {
+        parts.push('<dependencies>');
+        parts.push(...allDeps);
+        parts.push('</dependencies>');
+      }
+      parts.push('</project>');
+      return parts.join('\n');
     }
 
     if (filename === 'build.gradle') {
