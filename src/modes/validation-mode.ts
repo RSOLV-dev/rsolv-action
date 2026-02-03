@@ -343,24 +343,57 @@ export class ValidationMode {
         source: primaryFile
       };
 
-      // RFC-101: Retrieve project shape from phase data for environment context
+      // RFC-101: Retrieve project shape(s) from phase data for environment context
       try {
         if (this.phaseDataClient) {
           const commitSha = this.getCurrentCommitHash();
           const repo = issue.repository.fullName;
           const phaseData = await this.phaseDataClient.retrievePhaseResults(repo, issue.number, commitSha);
-          const projectShape = (phaseData as Record<string, unknown> | null)?.project_shape as
-            { ecosystem?: string; ai_context?: string; setup_commands?: string[]; runtime_services?: unknown[] } | undefined;
+          const phaseRecord = phaseData as Record<string, unknown> | null;
 
-          if (projectShape) {
-            logger.info(`[RFC-101] Project shape detected: ${projectShape.ecosystem}, ${projectShape.runtime_services?.length ?? 0} service deps`);
-            this.projectAiContext = projectShape.ai_context || '';
+          // Resolve shapes array: prefer project_shapes (multi-ecosystem), fall back to project_shape (single)
+          type ShapeEntry = { ecosystem?: string; ai_context?: string; setup_commands?: string[]; runtime_services?: unknown[]; env?: Record<string, string> };
+          let shapes: ShapeEntry[] = [];
 
-            // Execute setup commands from project shape
-            const setupCommands = projectShape.setup_commands || [];
-            for (const cmd of setupCommands) {
+          if (Array.isArray(phaseRecord?.project_shapes) && (phaseRecord.project_shapes as unknown[]).length > 0) {
+            shapes = phaseRecord.project_shapes as ShapeEntry[];
+          } else if (phaseRecord?.project_shape) {
+            shapes = [phaseRecord.project_shape as ShapeEntry];
+          }
+
+          if (shapes.length > 0) {
+            const ecosystems = shapes.map(s => s.ecosystem).filter(Boolean);
+            const totalServices = shapes.reduce((sum, s) => sum + (s.runtime_services?.length ?? 0), 0);
+            logger.info(`[RFC-101] Project shape detected: ${ecosystems.length} ecosystem(s): ${ecosystems.join(', ')}, ${totalServices} total service deps`);
+
+            // Merge AI context from all shapes
+            const contextParts = shapes.map(s => s.ai_context || '').filter(Boolean);
+            this.projectAiContext = contextParts.join('\n\n');
+
+            // Merge env vars from all shapes and apply to process.env
+            const mergedEnv: Record<string, string> = {};
+            for (const shape of shapes) {
+              if (shape.env && typeof shape.env === 'object') {
+                Object.entries(shape.env).forEach(([key, value]) => {
+                  if (typeof value === 'string') {
+                    mergedEnv[key] = value;
+                  }
+                });
+              }
+            }
+            const envKeys = Object.keys(mergedEnv);
+            if (envKeys.length > 0) {
+              for (const [key, value] of Object.entries(mergedEnv)) {
+                process.env[key] = value;
+              }
+              logger.info(`[RFC-101] Applied ${envKeys.length} env var(s) from project shape`);
+            }
+
+            // Collect and execute setup commands from all shapes
+            const allSetupCommands = shapes.flatMap(s => s.setup_commands || []);
+            for (const cmd of allSetupCommands) {
               try {
-                execSync(cmd, { cwd: this.repoPath, timeout: 60000, encoding: 'utf8' });
+                execSync(cmd, { cwd: this.repoPath, timeout: 60000, encoding: 'utf8', env: { ...process.env, ...mergedEnv } });
                 logger.info(`[RFC-101] Setup command succeeded: ${cmd}`);
               } catch (setupErr) {
                 logger.warn(`[RFC-101] Setup command warning: ${cmd} — ${setupErr instanceof Error ? setupErr.message : String(setupErr)}`);
@@ -2062,10 +2095,18 @@ CWE: CWE-798`
       const packageJsonPath = path.join(this.repoPath, 'package.json');
       const gemfilePath = path.join(this.repoPath, 'Gemfile');
       const requirementsTxtPath = path.join(this.repoPath, 'requirements.txt');
+      const composerJsonPath = path.join(this.repoPath, 'composer.json');
+      const mixExsPath = path.join(this.repoPath, 'mix.exs');
+      const pomXmlPath = path.join(this.repoPath, 'pom.xml');
+      const buildGradlePath = path.join(this.repoPath, 'build.gradle');
 
       let packageJson: { devDependencies?: Record<string, string>; dependencies?: Record<string, string> } | null = null;
       let gemfile: string | null = null;
       let requirementsTxt: string | null = null;
+      let composerJson: { 'require-dev'?: Record<string, string>; require?: Record<string, string> } | null = null;
+      let mixExs: string | null = null;
+      let pomXml: string | null = null;
+      let buildGradle: string | null = null;
 
       if (fs.existsSync(packageJsonPath)) {
         try {
@@ -2080,6 +2121,22 @@ CWE: CWE-798`
       if (fs.existsSync(requirementsTxtPath)) {
         requirementsTxt = fs.readFileSync(requirementsTxtPath, 'utf8');
       }
+      if (fs.existsSync(composerJsonPath)) {
+        try {
+          composerJson = JSON.parse(fs.readFileSync(composerJsonPath, 'utf8'));
+        } catch (parseErr) {
+          logger.warn(`Could not parse composer.json: ${parseErr}`);
+        }
+      }
+      if (fs.existsSync(mixExsPath)) {
+        mixExs = fs.readFileSync(mixExsPath, 'utf8');
+      }
+      if (fs.existsSync(pomXmlPath)) {
+        pomXml = fs.readFileSync(pomXmlPath, 'utf8');
+      }
+      if (fs.existsSync(buildGradlePath)) {
+        buildGradle = fs.readFileSync(buildGradlePath, 'utf8');
+      }
 
       // Find config files in repo root that indicate frameworks
       const configPatterns = [
@@ -2087,12 +2144,14 @@ CWE: CWE-798`
         'jest.config.ts', 'jest.config.js', 'jest.config.mjs',
         '.mocharc.yml', '.mocharc.json', '.mocharc.js',
         'pytest.ini', 'setup.cfg', 'pyproject.toml',
-        '.rspec', 'spec_helper.rb'
+        '.rspec', 'spec_helper.rb',
+        'phpunit.xml', 'phpunit.xml.dist',
+        'mix.exs'
       ];
       const configFiles = configPatterns.filter(f => fs.existsSync(path.join(this.repoPath, f)));
 
       // Skip backend call if no manifest files found
-      if (!packageJson && !gemfile && !requirementsTxt && configFiles.length === 0) {
+      if (!packageJson && !gemfile && !requirementsTxt && !composerJson && !mixExs && !pomXml && !buildGradle && configFiles.length === 0) {
         logger.debug('No manifest files found — falling back to extension-based detection');
         return this.detectFrameworkFromFile(filePath);
       }
@@ -2101,6 +2160,10 @@ CWE: CWE-798`
         packageJson,
         gemfile,
         requirementsTxt,
+        composerJson,
+        mixExs,
+        pomXml,
+        buildGradle,
         configFiles
       });
 

@@ -21,6 +21,10 @@ export interface FrameworkDetectRequest {
   packageJson?: { devDependencies?: Record<string, string>; dependencies?: Record<string, string> } | null;
   gemfile?: string | null;
   requirementsTxt?: string | null;
+  composerJson?: { 'require-dev'?: Record<string, string>; require?: Record<string, string> } | null;
+  mixExs?: string | null;
+  pomXml?: string | null;
+  buildGradle?: string | null;
   configFiles?: string[];
 }
 

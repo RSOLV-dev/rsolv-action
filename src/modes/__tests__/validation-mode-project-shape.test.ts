@@ -285,7 +285,7 @@ describe('RFC-101: Project Shape Consumption in VALIDATE', () => {
 
       // Should still log project shape detection
       expect(logger.info).toHaveBeenCalledWith(
-        expect.stringContaining('Project shape detected: javascript')
+        expect.stringContaining('javascript')
       );
     });
 
@@ -335,7 +335,7 @@ describe('RFC-101: Project Shape Consumption in VALIDATE', () => {
 
       // Verify ai_context was logged (confirming it was stored)
       expect(logger.info).toHaveBeenCalledWith(
-        expect.stringContaining('Project shape detected: python, 1 service deps')
+        expect.stringContaining('1 ecosystem(s): python')
       );
 
       // Verify the projectAiContext property was set
@@ -465,6 +465,204 @@ describe('RFC-101: Project Shape Consumption in VALIDATE', () => {
       expect(logger.warn).toHaveBeenCalledWith(
         expect.stringContaining('Project shape retrieval warning')
       );
+    });
+  });
+
+  describe('multi-ecosystem project_shapes array', () => {
+    it('should merge ai_context from multiple shapes', async () => {
+      mockRetrievePhaseResults.mockResolvedValue({
+        project_shapes: [
+          {
+            ecosystem: 'php',
+            runtime_services: [{ kind: 'sql_database', package: 'laravel/framework', resolution: 'in_process_fallback' }],
+            setup_commands: ['php artisan migrate'],
+            env: {},
+            ai_context: 'PHP: Fallback PDO SQLite configured.'
+          },
+          {
+            ecosystem: 'javascript',
+            runtime_services: [{ kind: 'document_store', package: 'mongoose', resolution: 'unavailable' }],
+            setup_commands: ['npm install'],
+            env: {},
+            ai_context: 'JS: No MongoDB service running. Write STANDALONE tests.'
+          }
+        ],
+        project_shape: {
+          ecosystem: 'php',
+          runtime_services: [{ kind: 'sql_database', package: 'laravel/framework', resolution: 'in_process_fallback' }],
+          setup_commands: ['php artisan migrate'],
+          env: {},
+          ai_context: 'PHP: Fallback PDO SQLite configured.'
+        }
+      });
+
+      try {
+        await validationMode.validateVulnerability(mockIssue);
+      } catch {
+        // Expected
+      }
+
+      // ai_context should contain context from BOTH ecosystems
+      const aiContext = (validationMode as any).projectAiContext as string;
+      expect(aiContext).toContain('PHP: Fallback PDO SQLite configured.');
+      expect(aiContext).toContain('JS: No MongoDB service running.');
+    });
+
+    it('should collect and execute setup commands from all shapes', async () => {
+      mockRetrievePhaseResults.mockResolvedValue({
+        project_shapes: [
+          {
+            ecosystem: 'ruby',
+            runtime_services: [],
+            setup_commands: ['bundle exec rake db:create'],
+            env: { RAILS_ENV: 'test' },
+            ai_context: 'Ruby context'
+          },
+          {
+            ecosystem: 'javascript',
+            runtime_services: [],
+            setup_commands: ['npm install', 'npx prisma migrate deploy'],
+            env: { NODE_ENV: 'test' },
+            ai_context: 'JS context'
+          }
+        ],
+        project_shape: {
+          ecosystem: 'ruby',
+          runtime_services: [],
+          setup_commands: ['bundle exec rake db:create'],
+          env: { RAILS_ENV: 'test' },
+          ai_context: 'Ruby context'
+        }
+      });
+
+      try {
+        await validationMode.validateVulnerability(mockIssue);
+      } catch {
+        // Expected
+      }
+
+      // All 3 setup commands should have been attempted
+      const setupCalls = mockExecSync.mock.calls.filter(
+        (call: unknown[]) => typeof call[0] === 'string' && (
+          (call[0] as string).includes('bundle exec') ||
+          (call[0] as string).includes('npm install') ||
+          (call[0] as string).includes('npx prisma')
+        )
+      );
+      expect(setupCalls.length).toBe(3);
+    });
+
+    it('should merge env vars from all shapes', async () => {
+      mockRetrievePhaseResults.mockResolvedValue({
+        project_shapes: [
+          {
+            ecosystem: 'ruby',
+            runtime_services: [],
+            setup_commands: [],
+            env: { RAILS_ENV: 'test', BUNDLE_WITHOUT: 'production' },
+            ai_context: ''
+          },
+          {
+            ecosystem: 'javascript',
+            runtime_services: [],
+            setup_commands: [],
+            env: { NODE_ENV: 'test' },
+            ai_context: ''
+          }
+        ],
+        project_shape: {
+          ecosystem: 'ruby',
+          runtime_services: [],
+          setup_commands: [],
+          env: { RAILS_ENV: 'test', BUNDLE_WITHOUT: 'production' },
+          ai_context: ''
+        }
+      });
+
+      try {
+        await validationMode.validateVulnerability(mockIssue);
+      } catch {
+        // Expected
+      }
+
+      // All env vars from all shapes should be applied
+      expect(process.env.RAILS_ENV).toBe('test');
+      expect(process.env.BUNDLE_WITHOUT).toBe('production');
+      expect(process.env.NODE_ENV).toBe('test');
+    });
+
+    it('should log all detected ecosystems', async () => {
+      mockRetrievePhaseResults.mockResolvedValue({
+        project_shapes: [
+          {
+            ecosystem: 'php',
+            runtime_services: [{ kind: 'sql_database' }],
+            setup_commands: [],
+            env: {},
+            ai_context: 'PHP context'
+          },
+          {
+            ecosystem: 'javascript',
+            runtime_services: [],
+            setup_commands: [],
+            env: {},
+            ai_context: 'JS context'
+          }
+        ],
+        project_shape: {
+          ecosystem: 'php',
+          runtime_services: [{ kind: 'sql_database' }],
+          setup_commands: [],
+          env: {},
+          ai_context: 'PHP context'
+        }
+      });
+
+      try {
+        await validationMode.validateVulnerability(mockIssue);
+      } catch {
+        // Expected
+      }
+
+      // Should log multi-ecosystem detection with all ecosystems
+      expect(logger.info).toHaveBeenCalledWith(
+        expect.stringContaining('2 ecosystem(s)')
+      );
+      expect(logger.info).toHaveBeenCalledWith(
+        expect.stringContaining('php')
+      );
+      expect(logger.info).toHaveBeenCalledWith(
+        expect.stringContaining('javascript')
+      );
+    });
+
+    it('should fall back to single project_shape when project_shapes is absent', async () => {
+      // Backward compat: old phase data only has project_shape (single)
+      mockRetrievePhaseResults.mockResolvedValue({
+        project_shape: {
+          ecosystem: 'ruby',
+          runtime_services: [{ kind: 'sql_database', package: 'rails', resolution: 'in_process_native' }],
+          setup_commands: ['bundle exec rake db:create'],
+          env: { RAILS_ENV: 'test' },
+          ai_context: 'SQLite configured.'
+        }
+        // no project_shapes field
+      });
+
+      try {
+        await validationMode.validateVulnerability(mockIssue);
+      } catch {
+        // Expected
+      }
+
+      // Should still work with single shape
+      expect((validationMode as any).projectAiContext).toBe('SQLite configured.');
+      expect(process.env.RAILS_ENV).toBe('test');
+
+      const rakeCalls = mockExecSync.mock.calls.filter(
+        (call: unknown[]) => typeof call[0] === 'string' && (call[0] as string).includes('bundle exec')
+      );
+      expect(rakeCalls.length).toBe(1);
     });
   });
 });
