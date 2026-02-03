@@ -235,23 +235,31 @@ export class TestRunner {
     // For PHP and Java, try apt-get first since mise requires build dependencies
     // that may not be available in the Docker image.
     // Note: We run as root in the Docker container, so no sudo needed.
+    // Exception: If a specific PHP version is required (from composer.json), use mise.
     if (runtime === 'php') {
-      console.log(`[TestRunner] Trying apt-get for PHP + Composer (faster than building from source)`);
-      try {
-        const { stdout, stderr } = await execAsync(
-          `apt-get update && apt-get install -y php php-cli php-xml php-mbstring php-curl php-zip unzip composer`,
-          { cwd: workingDir, timeout: 120000, encoding: 'utf8' }
-        );
-        console.log(`[TestRunner] apt-get output: ${stdout}`);
-        if (stderr) console.log(`[TestRunner] apt-get stderr: ${stderr}`);
-        // Verify installation
-        await execAsync(`which php`, { encoding: 'utf8' });
-        console.log(`[TestRunner] PHP installed via apt-get`);
-        return; // Success, no need for mise
-      } catch (aptErr) {
-        const err = aptErr as { stderr?: string; message?: string };
-        console.log(`[TestRunner] apt-get PHP failed: ${err.stderr || err.message}`);
-        console.log(`[TestRunner] Will try mise as fallback`);
+      const requiredVersion = await this.detectPhpVersionFromComposer(workingDir);
+      if (requiredVersion) {
+        // Specific version required - skip apt-get, use mise for version matching
+        console.log(`[TestRunner] PHP ${requiredVersion} required by composer.json - using mise for version matching`);
+      } else {
+        // No specific version - apt-get is faster
+        console.log(`[TestRunner] Trying apt-get for PHP + Composer (faster than building from source)`);
+        try {
+          const { stdout, stderr } = await execAsync(
+            `apt-get update && apt-get install -y php php-cli php-xml php-mbstring php-curl php-zip unzip composer`,
+            { cwd: workingDir, timeout: 120000, encoding: 'utf8' }
+          );
+          console.log(`[TestRunner] apt-get output: ${stdout}`);
+          if (stderr) console.log(`[TestRunner] apt-get stderr: ${stderr}`);
+          // Verify installation
+          await execAsync(`which php`, { encoding: 'utf8' });
+          console.log(`[TestRunner] PHP installed via apt-get`);
+          return; // Success, no need for mise
+        } catch (aptErr) {
+          const err = aptErr as { stderr?: string; message?: string };
+          console.log(`[TestRunner] apt-get PHP failed: ${err.stderr || err.message}`);
+          console.log(`[TestRunner] Will try mise as fallback`);
+        }
       }
     }
 
@@ -309,6 +317,21 @@ export class TestRunner {
         process.env.PATH = `${miseShims}:${miseBin}:${currentPath}`;
         console.log(`[TestRunner] Updated PATH to include mise shims: ${miseShims}`);
       }
+
+      // For PHP installed via mise, also install Composer
+      if (runtime === 'php') {
+        console.log(`[TestRunner] Installing Composer for mise PHP`);
+        try {
+          // Install Composer via official installer
+          await execAsync(
+            `curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer`,
+            { cwd: workingDir, timeout: 60000, encoding: 'utf8' }
+          );
+          console.log(`[TestRunner] Composer installed successfully`);
+        } catch (composerErr) {
+          console.warn(`[TestRunner] Composer install warning: ${(composerErr as Error).message}`);
+        }
+      }
     } catch (error: unknown) {
       const execError = error as { stderr?: string; message?: string };
       throw new Error(
@@ -340,6 +363,42 @@ export class TestRunner {
       } catch {
         // File doesn't exist, try next
       }
+    }
+
+    // For PHP, also check composer.json for version requirements
+    if (runtime === 'php') {
+      const phpVersion = await this.detectPhpVersionFromComposer(workingDir);
+      if (phpVersion) return phpVersion;
+    }
+
+    return undefined;
+  }
+
+  /**
+   * Detect PHP version from composer.json require.php constraint.
+   * Converts constraints like "^7.1.3" or ">=7.2" to a mise-compatible version.
+   */
+  private async detectPhpVersionFromComposer(workingDir: string): Promise<string | undefined> {
+    try {
+      const composerPath = path.join(workingDir, 'composer.json');
+      const content = await fs.readFile(composerPath, 'utf8');
+      const composer = JSON.parse(content);
+      const phpConstraint = composer?.require?.php;
+
+      if (!phpConstraint) return undefined;
+
+      // Extract major.minor version from constraint
+      // "^7.1.3" -> "7.1", ">=7.2" -> "7.2", "~8.0" -> "8.0"
+      const match = phpConstraint.match(/(\d+)\.(\d+)/);
+      if (match) {
+        const major = match[1];
+        const minor = match[2];
+        // Return latest patch for this major.minor
+        console.log(`[TestRunner] Detected PHP ${major}.${minor} requirement from composer.json`);
+        return `${major}.${minor}`;
+      }
+    } catch {
+      // composer.json doesn't exist or isn't valid JSON
     }
     return undefined;
   }
