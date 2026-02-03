@@ -4,6 +4,7 @@ import { RSOLVCredentialManager } from '../credentials/manager.js';
 import { CredentialManagerSingleton } from '../credentials/singleton.js';
 import { sanitizeErrorMessage } from '../utils/error-sanitizer.js';
 import { resolveMaxTokens } from './token-utils.js';
+import { withRetry, RetryableError, isRetryableStatusCode } from '../utils/retry.js';
 
 /**
  * Interface for AI client implementations
@@ -97,17 +98,29 @@ class OpenAiClient implements AiClient {
   async complete(prompt: string, options: CompletionOptions = {}): Promise<string> {
     try {
       logger.debug('Sending request to AI provider', { prompt: prompt.substring(0, 100) + '...' });
-      
-      // Make actual API call to OpenAI
-      const response = await this.makeApiCall(prompt, options);
-      
+
+      // Make API call with automatic retry on transient failures (429, 502, 503, 529)
+      // RFC-101 Iteration 15: Mitigation M4 - Exponential backoff for API overload
+      const response = await withRetry(
+        () => this.makeApiCall(prompt, options),
+        {
+          maxRetries: 3,
+          baseDelayMs: 1000,
+          maxDelayMs: 10000,
+          onRetry: ({ attempt, error, delayMs }) => {
+            const statusCode = error instanceof RetryableError ? error.statusCode : 'unknown';
+            logger.warn(`API call failed (status: ${statusCode}), retry ${attempt}/3 after ${delayMs}ms`);
+          }
+        }
+      );
+
       return response;
     } catch (error) {
       logger.error('AI provider API error', error);
       throw new Error(sanitizeErrorMessage(`AI provider error: ${error instanceof Error ? error.message : String(error)}`));
     }
   }
-  
+
   // Make real API call to OpenAI
   private async makeApiCall(prompt: string, options: CompletionOptions): Promise<string> {
     try {
@@ -161,12 +174,18 @@ class OpenAiClient implements AiClient {
       // Handle errors
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(sanitizeErrorMessage(`AI provider error (${response.status}): ${errorData.error?.message || response.statusText}`));
+        const errorMessage = sanitizeErrorMessage(`AI provider error (${response.status}): ${errorData.error?.message || response.statusText}`);
+
+        // Throw RetryableError for transient failures (429, 502, 503, 529)
+        if (isRetryableStatusCode(response.status)) {
+          throw new RetryableError(errorMessage, response.status);
+        }
+        throw new Error(errorMessage);
       }
-      
+
       // Parse the response
       const data = await response.json();
-      
+
       // Extract the completion text
       const result = data.choices[0]?.message?.content || '';
       
@@ -230,17 +249,29 @@ class AnthropicClient implements AiClient {
   async complete(prompt: string, options: CompletionOptions = {}): Promise<string> {
     try {
       logger.debug('Sending request to AI provider', { prompt: prompt.substring(0, 100) + '...' });
-      
-      // Make actual API call to Anthropic
-      const response = await this.makeApiCall(prompt, options);
-      
+
+      // Make API call with automatic retry on transient failures (429, 502, 503, 529)
+      // RFC-101 Iteration 15: Mitigation M4 - Exponential backoff for API overload
+      const response = await withRetry(
+        () => this.makeApiCall(prompt, options),
+        {
+          maxRetries: 3,
+          baseDelayMs: 1000,
+          maxDelayMs: 10000,
+          onRetry: ({ attempt, error, delayMs }) => {
+            const statusCode = error instanceof RetryableError ? error.statusCode : 'unknown';
+            logger.warn(`API call failed (status: ${statusCode}), retry ${attempt}/3 after ${delayMs}ms`);
+          }
+        }
+      );
+
       return response;
     } catch (error) {
       logger.error('AI provider API error', error);
       throw new Error(sanitizeErrorMessage(`AI provider error: ${error instanceof Error ? error.message : String(error)}`));
     }
   }
-  
+
   // Make real API call to Anthropic
   private async makeApiCall(prompt: string, options: CompletionOptions): Promise<string> {
     try {
@@ -329,9 +360,15 @@ class AnthropicClient implements AiClient {
       // Handle errors
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(sanitizeErrorMessage(`AI provider error (${response.status}): ${errorData.error?.message || response.statusText}`));
+        const errorMessage = sanitizeErrorMessage(`AI provider error (${response.status}): ${errorData.error?.message || response.statusText}`);
+
+        // Throw RetryableError for transient failures (429, 502, 503, 529)
+        if (isRetryableStatusCode(response.status)) {
+          throw new RetryableError(errorMessage, response.status);
+        }
+        throw new Error(errorMessage);
       }
-      
+
       // Parse the response
       const data = await response.json();
 

@@ -114,6 +114,7 @@ const VERSION_FILES: Record<string, string[]> = {
 export class TestRunner {
   private readonly DEFAULT_TIMEOUT = 30000; // 30 seconds
   private readonly RUNTIME_INSTALL_TIMEOUT = 600000; // 10 minutes for runtime install (Ruby compiles from source)
+  private readonly MISE_QUICK_TIMEOUT = 120000; // 2 minutes for mise install before fallback (RFC-101 M2)
   private readonly DEP_INSTALL_TIMEOUT = 180000; // 3 minutes for dependency install
 
   /**
@@ -300,9 +301,13 @@ export class TestRunner {
         console.log(`[TestRunner] Using PATH prefix for Elixir install: ${miseShims}`);
       }
 
+      // RFC-101 Iteration 15 M2: Use shorter timeout for mise, fall back to apt-get on timeout
+      // This prevents hanging on slow builds (e.g., PHP 7.1 from source)
+      const miseTimeout = version ? this.MISE_QUICK_TIMEOUT : this.RUNTIME_INSTALL_TIMEOUT;
+
       const { stdout, stderr } = await execAsync(
         installCmd,
-        { cwd: workingDir, timeout: this.RUNTIME_INSTALL_TIMEOUT, encoding: 'utf8' }
+        { cwd: workingDir, timeout: miseTimeout, encoding: 'utf8' }
       );
       console.log(`[TestRunner] Runtime installed: ${stdout}`);
       if (stderr) console.log(`[TestRunner] Runtime install stderr: ${stderr}`);
@@ -333,7 +338,41 @@ export class TestRunner {
         }
       }
     } catch (error: unknown) {
-      const execError = error as { stderr?: string; message?: string };
+      const execError = error as { stderr?: string; message?: string; killed?: boolean };
+      const isTimeout = execError.killed || (execError.message && execError.message.includes('TIMEOUT'));
+
+      // RFC-101 Iteration 15 M2: Fall back to apt-get when mise times out
+      // This prevents getting stuck on slow builds (e.g., PHP 7.1 from source)
+      if (isTimeout && (runtime === 'php' || runtime === 'ruby' || runtime === 'python')) {
+        console.warn(`[TestRunner] mise install timed out after ${this.MISE_QUICK_TIMEOUT}ms - falling back to apt-get`);
+        console.warn(`[TestRunner] Note: System version may differ from project's required ${runtimeSpec}`);
+
+        const aptPackages: Record<string, string> = {
+          php: 'php php-cli php-xml php-mbstring php-curl php-zip unzip composer',
+          ruby: 'ruby ruby-dev bundler',
+          python: 'python3 python3-pip python3-venv'
+        };
+
+        try {
+          const { stdout, stderr } = await execAsync(
+            `apt-get update && apt-get install -y ${aptPackages[runtime]}`,
+            { cwd: workingDir, timeout: 120000, encoding: 'utf8' }
+          );
+          console.log(`[TestRunner] apt-get fallback output: ${stdout}`);
+          if (stderr) console.log(`[TestRunner] apt-get fallback stderr: ${stderr}`);
+          // Verify installation
+          await execAsync(`which ${runtime === 'python' ? 'python3' : runtime}`, { encoding: 'utf8' });
+          console.log(`[TestRunner] ${runtime} installed via apt-get fallback (may differ from project version)`);
+          return; // Success via fallback
+        } catch (aptErr) {
+          const aptError = aptErr as { stderr?: string; message?: string };
+          // Both mise and apt-get failed
+          throw new Error(
+            `mise install ${runtimeSpec} timed out and apt-get fallback failed: ${aptError.stderr || aptError.message}`
+          );
+        }
+      }
+
       throw new Error(
         `mise install ${runtimeSpec} failed: ${execError.stderr || execError.message}`
       );
