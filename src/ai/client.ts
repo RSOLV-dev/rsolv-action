@@ -24,6 +24,15 @@ export interface CompletionOptions {
   topP?: number;
   frequencyPenalty?: number;
   presencePenalty?: number;
+  /**
+   * Enable extended thinking for Claude models.
+   * When enabled, Claude will use a thinking process before responding.
+   * Requires anthropic-version 2025-01-01 or later.
+   */
+  thinking?: {
+    type: 'enabled';
+    budget_tokens: number;  // How many tokens for the thinking process (1000-32000 recommended)
+  };
 }
 
 /**
@@ -245,13 +254,24 @@ class AnthropicClient implements AiClient {
       }
       
       // Prepare the request body
-      const requestBody = {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const requestBody: Record<string, any> = {
         model,
         messages: [{ role: 'user', content: prompt }],
-        temperature,
         max_tokens: maxTokens
-        // Note: top_p removed - Anthropic API doesn't allow both temperature AND top_p
       };
+
+      // Add thinking if enabled (requires temperature to be omitted or set to 1)
+      if (options.thinking) {
+        requestBody.thinking = options.thinking;
+        // Extended thinking requires temperature=1 (or omit it)
+        // Don't set temperature when thinking is enabled
+        logger.info(`[Extended Thinking] Enabled with budget: ${options.thinking.budget_tokens} tokens`);
+      } else {
+        // Only set temperature when NOT using extended thinking
+        requestBody.temperature = temperature;
+      }
+      // Note: top_p removed - Anthropic API doesn't allow both temperature AND top_p
 
       // Log request details for debugging
       logger.info(`[API Request Debug] Model: ${model}, Temperature: ${temperature}, MaxTokens: ${maxTokens}`);
@@ -286,12 +306,13 @@ class AnthropicClient implements AiClient {
       }
       
       // Make the API call
+      // Use newer API version to support extended thinking
       const response = await fetch(`${baseUrl}/v1/messages`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'X-API-Key': apiKey,
-          'anthropic-version': '2023-06-01'
+          'anthropic-version': '2025-01-01'
         },
         body: JSON.stringify(requestBody)
       });
@@ -306,7 +327,25 @@ class AnthropicClient implements AiClient {
       const data = await response.json();
 
       // Extract the completion text
-      const result = data.content?.[0]?.text || '';
+      // When extended thinking is enabled, response has multiple content blocks:
+      // - { type: 'thinking', thinking: '...' } - the thinking process
+      // - { type: 'text', text: '...' } - the actual response
+      // We want only the text block(s)
+      let result = '';
+      if (Array.isArray(data.content)) {
+        for (const block of data.content) {
+          if (block.type === 'thinking') {
+            logger.info(`[Extended Thinking] Thinking block: ${block.thinking?.length || 0} chars`);
+            logger.debug(`[Extended Thinking] Thinking preview: ${block.thinking?.substring(0, 500) || ''}`);
+          } else if (block.type === 'text') {
+            result += block.text || '';
+          }
+        }
+      }
+      // Fallback for non-thinking responses
+      if (!result && data.content?.[0]?.text) {
+        result = data.content[0].text;
+      }
 
       // Enhanced debugging for truncation investigation
       logger.info(`[API Response Debug] Status: ${response.status}, Model: ${model}`);

@@ -1332,10 +1332,75 @@ ${tests}
               // it just checks the wrong thing (attack succeeds vs security control exists)
               logger.warn(`✗ Candidate ${candidateIdx + 1}: Test PASSED (should fail on vulnerable code)`);
               const outputSnippet = (testResult.output || '').slice(-500);
+
+              // TWO-PHASE INVERSION: Make a focused LLM call to invert the assertion
+              logger.info(`[Two-Phase] Attempting inversion for candidate ${candidateIdx + 1}...`);
+              const invertedCode = await this.invertPassingTest(
+                candidate.testCode,
+                testResult.output || '',
+                vulnerability,
+                framework
+              );
+
+              if (invertedCode) {
+                // Write and test the inverted code
+                fs.writeFileSync(targetPath, invertedCode, 'utf8');
+                logger.info(`[Two-Phase] Testing inverted code...`);
+
+                // Validate syntax of inverted code
+                try {
+                  await this.validateSyntax(targetPath, framework);
+                } catch (syntaxErr) {
+                  logger.warn(`[Two-Phase] Inverted code has syntax error: ${syntaxErr}`);
+                  // Fall through to record original failure
+                  candidateFailures.push({
+                    candidateIndex: candidateIdx,
+                    error: 'TestPassedUnexpectedly',
+                    errorMessage: 'Test passed. Inversion attempt had syntax error.',
+                    testOutput: outputSnippet,
+                    generatedCode: candidate.testCode.slice(0, 1500)
+                  });
+                  continue;
+                }
+
+                // Run the inverted test
+                const invertedResult = await this.runTest(targetPath, framework, candidate.testName);
+
+                if (!invertedResult.passed) {
+                  // Inverted test fails — classify to make sure it's a genuine assertion failure
+                  const invertedClassification = this.classifyTestResult(
+                    invertedResult.exitCode,
+                    invertedResult.output,
+                    invertedResult.stderr
+                  );
+
+                  if (invertedClassification.isValidFailure) {
+                    // SUCCESS! The inverted test produces a genuine assertion failure
+                    logger.info(`✓ [Two-Phase] SUCCESS! Inverted test produces genuine assertion failure`);
+                    successfulCandidate = {
+                      ...testSuite,
+                      redTests: [{
+                        ...candidate,
+                        testCode: invertedCode,
+                        testName: `${candidate.testName}_inverted`
+                      }]
+                    };
+                    break; // Exit candidate loop — we found a working test!
+                  } else {
+                    logger.warn(`[Two-Phase] Inverted test failed but not a valid assertion: ${invertedClassification.type}`);
+                  }
+                } else {
+                  logger.warn(`[Two-Phase] Inverted test still passes — inversion didn't work`);
+                }
+              } else {
+                logger.warn(`[Two-Phase] Inversion call returned no code`);
+              }
+
+              // Inversion didn't work — record the original failure
               candidateFailures.push({
                 candidateIndex: candidateIdx,
                 error: 'TestPassedUnexpectedly',
-                errorMessage: 'Test passed — you checked if the attack succeeds (it does). Invert: check if security controls exist (they don\'t).',
+                errorMessage: 'Test passed — you checked if the attack succeeds (it does). Inversion attempted but failed.',
                 testOutput: outputSnippet,
                 generatedCode: candidate.testCode.slice(0, 1500)
               });
@@ -1459,7 +1524,12 @@ ${tests}
     const response = await aiClient.complete(prompt, {
       temperature: 0.2,
       maxTokens: this.config.aiProvider.maxTokens,
-      model: this.config.aiProvider.model
+      model: this.config.aiProvider.model,
+      // Enable extended thinking for better reasoning about RED tests
+      thinking: {
+        type: 'enabled',
+        budget_tokens: 10000  // Give good thinking budget for complex test generation
+      }
     });
 
     const redTests = this.parseTestResponse(response, vulnerability, framework);
@@ -1792,6 +1862,102 @@ CWE: CWE-798`
     };
 
     return examples[vulnerabilityType.toLowerCase()] || `Vulnerability type: ${vulnerabilityType}`;
+  }
+
+  /**
+   * Two-phase inversion: When a test passes unexpectedly, make a focused LLM call
+   * asking specifically to INVERT the assertion.
+   *
+   * This gives the LLM a concrete transformation task rather than an abstract
+   * conceptual task about RED tests.
+   */
+  private async invertPassingTest(
+    passingTestCode: string,
+    testOutput: string,
+    vulnerability: Vulnerability,
+    framework: TestFramework
+  ): Promise<string | null> {
+    const langHint = framework.name === 'rspec' ? 'ruby' :
+      ['mocha', 'jest', 'vitest'].includes(framework.name) ? 'javascript' : framework.name;
+
+    const prompt = `Your test PASSED but it needs to FAIL on vulnerable code.
+
+HERE IS YOUR TEST THAT PASSED:
+\`\`\`${langHint}
+${passingTestCode}
+\`\`\`
+
+TEST OUTPUT (showing it PASSED):
+\`\`\`
+${testOutput.slice(-800)}
+\`\`\`
+
+THE PROBLEM:
+Your test checks if the ATTACK SUCCEEDS — and it does, so the test passes.
+But we need a RED test that FAILS on vulnerable code.
+
+YOUR TASK:
+INVERT the assertion. Instead of checking if the attack works, check if SECURITY CONTROLS EXIST.
+Since the code is vulnerable (no security controls), this inverted assertion will FAIL.
+
+INVERSION EXAMPLES:
+
+Original (PASSES on vulnerable code):
+  expect(query).to.include(userInput);  // Attack succeeds
+Inverted (FAILS on vulnerable code):
+  expect(source).to.match(/\\$[0-9]|\\?/);  // Checks for parameterized placeholders — they don't exist
+
+Original (PASSES on vulnerable code):
+  expect(output).to.include('<script>');  // XSS payload rendered
+Inverted (FAILS on vulnerable code):
+  expect(source).to.match(/escapeHtml|sanitize/);  // Checks for sanitization — it doesn't exist
+
+Original (PASSES on vulnerable code):
+  expect(hash).to.equal(md5(password));  // Weak hash used
+Inverted (FAILS on vulnerable code):
+  expect(source).to.match(/bcrypt|argon2|scrypt/);  // Checks for strong hash — it doesn't exist
+
+THE PATTERN:
+- Your test checks: "Does the attack work?" → YES → PASS
+- Inverted test checks: "Does the security control exist?" → NO → FAIL
+
+VULNERABILITY CONTEXT:
+Type: ${vulnerability.type}
+Location: ${vulnerability.location}
+
+Return ONLY the inverted test file. No explanation, just the code block:
+
+\`\`\`${langHint}
+// Your inverted test here
+\`\`\``;
+
+    try {
+      logger.info('[Two-Phase] Attempting inversion of passing test...');
+      const aiClient = await getAiClient(this.config.aiProvider);
+      const response = await aiClient.complete(prompt, {
+        temperature: 0.2,
+        maxTokens: this.config.aiProvider.maxTokens,
+        model: this.config.aiProvider.model,
+        // Enable extended thinking for better reasoning about inversion
+        thinking: {
+          type: 'enabled',
+          budget_tokens: 8000  // Give it room to think about the inversion
+        }
+      });
+
+      // Extract code block from response
+      const codeMatch = response.match(/```(?:javascript|typescript|ruby|python|js|ts|rb|py|rspec)?\s*\n([\s\S]*?)```/);
+      if (codeMatch && codeMatch[1]?.trim()) {
+        logger.info('[Two-Phase] Successfully generated inverted test');
+        return codeMatch[1].trim();
+      }
+
+      logger.warn('[Two-Phase] Failed to extract code block from inversion response');
+      return null;
+    } catch (error) {
+      logger.error('[Two-Phase] Inversion call failed:', error);
+      return null;
+    }
   }
 
   /**
