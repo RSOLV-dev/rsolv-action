@@ -19,7 +19,7 @@
 # - Creates GitHub Issues for findings with 'rsolv:detected' label
 # - Completes in under 1-2 minutes for typical repositories
 #
-# IMPORTANT: Use v3.7.47 or later. Earlier versions (v3.6.x) have infinite loop bugs.
+# IMPORTANT: Use v3.8.42 or later. Earlier versions (v3.6.x) have infinite loop bugs.
 
 name: RSOLV Security Scan
 
@@ -54,7 +54,7 @@ jobs:
       # This uses the published GitHub Action (recommended approach)
       # No Docker building required - much faster!
       - name: RSOLV Scan - Detect Vulnerabilities
-        uses: RSOLV-dev/rsolv-action@v3.7.47  # ⚠️ IMPORTANT: Use v3.7.47+
+        uses: RSOLV-dev/rsolv-action@v3.8.42  # ⚠️ IMPORTANT: Use v3.8.42+
         with:
           rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
           mode: 'scan'  # Options: scan, validate, mitigate, full
@@ -72,7 +72,7 @@ jobs:
 # TROUBLESHOOTING:
 #
 # If workflow hangs or times out:
-# - Ensure you're using v3.7.47 or later (v3.6.x has bugs)
+# - Ensure you're using v3.8.42 or later (v3.6.x has bugs)
 # - Check that RSOLV_API_KEY secret is set correctly
 # - Verify repository doesn't have excessive files (1000+)
 #

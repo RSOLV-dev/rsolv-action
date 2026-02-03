@@ -47,7 +47,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: RSOLV Scan
-        uses: RSOLV-dev/rsolv-action@v3.7.47  # IMPORTANT: Use v3.7.47+ (v3.6.x has bugs)
+        uses: RSOLV-dev/rsolv-action@v3.8.42  # IMPORTANT: Use v3.8.42+ (v3.6.x has bugs)
         with:
           rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
           mode: 'scan'
@@ -134,7 +134,7 @@ jobs:
 - `rsolv-three-phase-demo.yml` - Full SCAN → VALIDATE → MITIGATE demo
 - `rsolv-automate-orchestrator.yml` - Automated continuous security
 
-**Proven Performance (v3.7.47):**
+**Proven Performance (v3.8.42):**
 - 53 JavaScript files scanned
 - Runtime: 52 seconds total
 - 28 vulnerabilities detected
@@ -145,6 +145,17 @@ jobs:
 **Repository:** https://github.com/RSOLV-dev/railsgoat
 
 **Expected setup:** Similar workflow structure to nodegoat, adapted for Ruby
+
+### E2E Ecosystem Repos (RFC-101)
+
+Full pipeline (`TEMPLATE-rsolv-full-pipeline.yml`) deployed to these repos for multi-ecosystem verification:
+
+| Repo | Ecosystem | Manifests Captured |
+|------|-----------|--------------------|
+| [arubis/pygoat-vulnerability-demo](https://github.com/arubis/pygoat-vulnerability-demo) | Python | `requirements.txt`, `setup.py`, `manage.py` |
+| [arubis/potion-shop-vulnerability-demo](https://github.com/arubis/potion-shop-vulnerability-demo) | Elixir | `mix.exs`, `config/dev.exs`, `config/test.exs` |
+| [arubis/laravel-vulnerability-demo](https://github.com/arubis/laravel-vulnerability-demo) | PHP | `package.json`, `composer.json` |
+| [arubis/WebGoat](https://github.com/arubis/WebGoat) | Java | `pom.xml` (truncated from 30KB) |
 
 ## Deployment Steps
 
@@ -258,7 +269,7 @@ This workflow attempted to run multi-language testing FROM the RSOLV-action repo
 
 1. **One workflow per repository**: Each demo/target repository should have its own workflow
 2. **Use GitHub Action method**: Prefer `uses: RSOLV-dev/rsolv-action@VERSION` over Docker
-3. **Version pinning**: Use v3.7.47 or later (v3.6.x has infinite loop bugs)
+3. **Version pinning**: Use v3.8.42 or later (v3.6.x has infinite loop bugs)
 4. **Secret management**: Store API keys in GitHub Secrets, never commit them
 5. **Limit scope**: Use `max_issues` parameter in demos to keep runtime reasonable
 6. **Monitor execution**: Set up notifications for workflow failures
@@ -279,5 +290,5 @@ For issues or questions about workflow deployment:
 
 ---
 
-**Last Updated:** 2025-10-10
-**Related RFC:** RFC-060 Phase 4.2
+**Last Updated:** 2026-02-02
+**Related RFCs:** RFC-060 Phase 4.2, RFC-101 (manifest capture + project shape detection)
