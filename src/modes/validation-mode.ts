@@ -1253,10 +1253,11 @@ ${tests}
     }
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      logger.info(`Attempt ${attempt}/${maxAttempts}: Generating test...`);
+      logger.info(`Attempt ${attempt}/${maxAttempts}: Generating test candidates...`);
 
       try {
         // 1. Generate test with LLM (pass target file content + previous errors + RFC-101 context)
+        // LLM now generates multiple candidate approaches
         const testSuite = await this.generateTestWithLLM(
           vulnerability,
           targetTestFile,
@@ -1265,9 +1266,10 @@ ${tests}
           this.projectAiContext || undefined
         );
 
-        // 2. Write test to target test file path (framework-native directory)
-        // This ensures the test runner discovers the file and imports resolve
-        // correctly against the real project structure (not .rsolv/temp/).
+        const candidates = testSuite.redTests;
+        logger.info(`Generated ${candidates.length} test candidate(s)`);
+
+        // 2. Setup for trying candidates
         const targetPath = path.join(this.repoPath, targetTestFile.path);
         fs.mkdirSync(path.dirname(targetPath), { recursive: true });
 
@@ -1276,11 +1278,6 @@ ${tests}
         const originalContent = hadExistingFile
           ? fs.readFileSync(targetPath, 'utf8')
           : null;
-
-        fs.writeFileSync(targetPath, testSuite.redTests[0].testCode, 'utf8');
-        const tempFile = targetPath;
-
-        logger.info(`Wrote test to target path: ${tempFile}`);
 
         // Helper to restore original file if this attempt fails
         const restoreOriginal = (): void => {
@@ -1297,109 +1294,135 @@ ${tests}
           }
         };
 
-        // 3. Validate syntax
-        try {
-          await this.validateSyntax(tempFile, framework);
-          logger.info('✓ Syntax validation passed');
-        } catch (syntaxError) {
-          logger.warn(`✗ Syntax error on attempt ${attempt}:`, syntaxError);
-          restoreOriginal();
-          previousAttempts.push({
-            attempt,
-            error: 'SyntaxError',
-            errorMessage: syntaxError instanceof Error ? syntaxError.message : String(syntaxError),
-            timestamp: new Date().toISOString()
-          });
-          continue; // Retry with error context
+        // Track candidate-level failures for this attempt
+        const candidateFailures: Array<{ candidateIndex: number; error: string; errorMessage: string; generatedCode?: string; testOutput?: string }> = [];
+        let successfulCandidate: typeof testSuite | null = null;
+
+        // 3. Try each candidate until one succeeds
+        for (let candidateIdx = 0; candidateIdx < candidates.length; candidateIdx++) {
+          const candidate = candidates[candidateIdx];
+          logger.info(`Trying candidate ${candidateIdx + 1}/${candidates.length}...`);
+
+          // Write this candidate's test code
+          fs.writeFileSync(targetPath, candidate.testCode, 'utf8');
+
+          // 3a. Validate syntax
+          try {
+            await this.validateSyntax(targetPath, framework);
+            logger.info(`✓ Candidate ${candidateIdx + 1}: Syntax validation passed`);
+          } catch (syntaxError) {
+            logger.warn(`✗ Candidate ${candidateIdx + 1}: Syntax error:`, syntaxError);
+            candidateFailures.push({
+              candidateIndex: candidateIdx,
+              error: 'SyntaxError',
+              errorMessage: syntaxError instanceof Error ? syntaxError.message : String(syntaxError),
+              generatedCode: candidate.testCode.slice(0, 1500)
+            });
+            continue; // Try next candidate
+          }
+
+          // 3b. Run test (must FAIL on vulnerable code)
+          try {
+            const testResult = await this.runTest(targetPath, framework, candidate.testName);
+            this.lastTestOutput = testResult.output;
+            this.lastTestStderr = testResult.stderr;
+
+            if (testResult.passed) {
+              // Test passed but should fail — this is actually close! The test runs,
+              // it just checks the wrong thing (attack succeeds vs security control exists)
+              logger.warn(`✗ Candidate ${candidateIdx + 1}: Test PASSED (should fail on vulnerable code)`);
+              const outputSnippet = (testResult.output || '').slice(-500);
+              candidateFailures.push({
+                candidateIndex: candidateIdx,
+                error: 'TestPassedUnexpectedly',
+                errorMessage: 'Test passed — you checked if the attack succeeds (it does). Invert: check if security controls exist (they don\'t).',
+                testOutput: outputSnippet,
+                generatedCode: candidate.testCode.slice(0, 1500)
+              });
+              continue; // Try next candidate
+            }
+
+            // 3c. Classify test failure — is it a genuine assertion failure or an infrastructure crash?
+            const classification = this.classifyTestResult(
+              testResult.exitCode,
+              testResult.output,
+              testResult.stderr
+            );
+
+            if (!classification.isValidFailure) {
+              logger.warn(`✗ Candidate ${candidateIdx + 1}: ${classification.type} — ${classification.reason}`);
+              const errorDetails = (testResult.stderr || testResult.output || '')
+                .split('\n')
+                .filter(line => /error|cannot|not found|load|missing|undefined/i.test(line))
+                .slice(0, 5)
+                .join('\n');
+              candidateFailures.push({
+                candidateIndex: candidateIdx,
+                error: classification.type,
+                errorMessage: `${classification.reason}${errorDetails ? ': ' + errorDetails : ''}`,
+                generatedCode: candidate.testCode.slice(0, 1500)
+              });
+              continue; // Try next candidate
+            }
+
+            logger.info(`✓ Candidate ${candidateIdx + 1}: Genuine assertion failure: ${classification.reason}`);
+
+            // 3d. Check for regressions (existing tests should still pass)
+            if (testResult.existingTestsFailed) {
+              logger.warn(`✗ Candidate ${candidateIdx + 1}: Existing tests failed (regression)`);
+              candidateFailures.push({
+                candidateIndex: candidateIdx,
+                error: 'ExistingTestsRegression',
+                errorMessage: `Existing tests failed: ${testResult.failedTests?.join(', ')}`,
+                generatedCode: candidate.testCode.slice(0, 1500)
+              });
+              continue; // Try next candidate
+            }
+
+            // Success! This candidate is valid
+            logger.info(`✓ Candidate ${candidateIdx + 1}: SUCCESS — genuine assertion failure on vulnerable code`);
+            successfulCandidate = {
+              ...testSuite,
+              redTests: [candidate] // Return only the successful candidate
+            };
+            break; // Exit candidate loop
+
+          } catch (testError) {
+            logger.error(`✗ Candidate ${candidateIdx + 1}: Execution error:`, testError);
+            candidateFailures.push({
+              candidateIndex: candidateIdx,
+              error: 'TestExecutionError',
+              errorMessage: testError instanceof Error ? testError.message : String(testError),
+              generatedCode: candidate.testCode.slice(0, 1500)
+            });
+            continue; // Try next candidate
+          }
         }
 
-        // 4. Run test (must FAIL on vulnerable code)
-        // Pass testName to filter only the generated test — avoids running existing tests
-        // that may fail due to missing infrastructure (DATABASE_URL, etc.)
-        try {
-          const testName = testSuite.redTests[0]?.testName;
-          const testResult = await this.runTest(tempFile, framework, testName);
-          this.lastTestOutput = testResult.output;
-          this.lastTestStderr = testResult.stderr;
+        // Restore original file after trying all candidates
+        restoreOriginal();
 
-          if (testResult.passed) {
-            logger.warn(`✗ Test passed unexpectedly on attempt ${attempt} (should fail on vulnerable code)`);
-            const generatedCode = testSuite.redTests[0]?.testCode || '';
-            // Include test output so the AI can see WHY the test passed
-            const outputSnippet = (testResult.output || '').slice(-500);
-            restoreOriginal();
-            previousAttempts.push({
-              attempt,
-              error: 'TestPassedUnexpectedly',
-              errorMessage: 'Test passed when it should fail to demonstrate vulnerability',
-              testOutput: outputSnippet,
-              generatedCode: generatedCode.slice(0, 1500),
-              timestamp: new Date().toISOString()
-            });
-            continue; // Retry with "make it fail" feedback
-          }
-
-          // 4b. Classify test failure — is it a genuine assertion failure or an infrastructure crash?
-          const classification = this.classifyTestResult(
-            testResult.exitCode,
-            testResult.output,
-            testResult.stderr
-          );
-
-          if (!classification.isValidFailure) {
-            logger.warn(
-              `✗ Test failure is not a genuine assertion on attempt ${attempt}: ` +
-              `${classification.type} — ${classification.reason}`
-            );
-            const generatedCode = testSuite.redTests[0]?.testCode || '';
-            restoreOriginal();
-            // Include actual error output so the AI can understand what went wrong
-            const errorDetails = (testResult.stderr || testResult.output || '')
-              .split('\n')
-              .filter(line => /error|cannot|not found|load|missing|undefined/i.test(line))
-              .slice(0, 5)
-              .join('\n');
-            previousAttempts.push({
-              attempt,
-              error: classification.type,
-              errorMessage: `${classification.reason}${errorDetails ? ': ' + errorDetails : ''}`,
-              generatedCode: generatedCode.slice(0, 1500),
-              timestamp: new Date().toISOString()
-            });
-            continue; // Retry with error context
-          }
-
-          logger.info(`✓ Genuine test failure on attempt ${attempt}: ${classification.reason}`);
-
-          // 5. Check for regressions (existing tests should still pass)
-          if (testResult.existingTestsFailed) {
-            logger.warn(`✗ Existing tests failed on attempt ${attempt} (regression detected)`);
-            restoreOriginal();
-            previousAttempts.push({
-              attempt,
-              error: 'ExistingTestsRegression',
-              errorMessage: `Existing tests failed: ${testResult.failedTests?.join(', ')}`,
-              timestamp: new Date().toISOString()
-            });
-            continue; // Retry with regression context
-          }
-
-          // Success! Test is valid — genuine assertion failure on vulnerable code
-          // Restore original file — the final version will be written by AST integration
-          restoreOriginal();
+        // If we found a successful candidate, return it
+        if (successfulCandidate) {
           logger.info(`✓ Test generation successful on attempt ${attempt}`);
-          return testSuite;
+          return successfulCandidate;
+        }
 
-        } catch (testError) {
-          logger.error(`Error running test on attempt ${attempt}:`, testError);
-          restoreOriginal();
+        // All candidates failed — record best failure for retry feedback
+        // Prioritize TestPassedUnexpectedly (closest to success) over other errors
+        const passedButWrong = candidateFailures.find(f => f.error === 'TestPassedUnexpectedly');
+        const bestFailure = passedButWrong || candidateFailures[candidateFailures.length - 1];
+
+        if (bestFailure) {
+          logger.warn(`All ${candidates.length} candidates failed. Best attempt: ${bestFailure.error}`);
           previousAttempts.push({
             attempt,
-            error: 'TestExecutionError',
-            errorMessage: testError instanceof Error ? testError.message : String(testError),
+            error: bestFailure.error,
+            errorMessage: bestFailure.errorMessage,
+            generatedCode: bestFailure.generatedCode,
+            testOutput: bestFailure.testOutput,
             timestamp: new Date().toISOString()
           });
-          continue;
         }
 
       } catch (error) {
@@ -1576,12 +1599,19 @@ it('should escape HTML in user output', () => {
 This test FAILS because the vulnerable code does NOT use escapeHtml/sanitize.
 
 YOUR TASK:
-Generate test code that:
+Generate 3 DIFFERENT test approaches, each in a separate code block. We will try each one.
+
+Each test should:
 1. Uses the attack vector: ${vulnerability.attackVector}
 2. FAILS on vulnerable code (asserts what secure code would do — since the code is insecure, the assertion fails)
 3. PASSES after fix is applied (once the code is fixed, the assertion passes)
 4. Reuses existing setup blocks from target file
 5. Follows ${framework.name} conventions
+
+APPROACH VARIETY — use different strategies:
+- Approach 1: Pattern matching on source code (look for absence of security patterns)
+- Approach 2: Static analysis (check for dangerous function calls, missing sanitization)
+- Approach 3: Behavioral test with mocked/stubbed dependencies (if feasible)
 ${vulnerability.source ? `6. IMPORT the actual source file — do NOT inline/copy vulnerable code into the test.
    The test runs with process.cwd() set to the repository root.
    Use one of these strategies to reference the vulnerable source file:
@@ -1629,20 +1659,23 @@ ${(() => {
       if (lastError === 'SyntaxError') {
         prompt += `\n\nIMPORTANT: Fix the syntax error. Ensure valid ${framework.name} syntax.`;
       } else if (lastError === 'TestPassedUnexpectedly') {
-        prompt += '\n\nCRITICAL: Your previous test PASSED (exit code 0) when it MUST FAIL to prove the vulnerability exists. ' +
-          'A RED test must contain an assertion that FAILS because the vulnerable behavior is present.\n\n' +
-          'The key insight: assert what SHOULD be true in secure code, so the assertion FAILS on the vulnerable code.\n\n' +
-          'Examples of assertions that FAIL on vulnerable code:\n' +
-          '- SQL injection: assert that the query uses parameterized placeholders (it won\'t — it uses string interpolation)\n' +
-          '- XSS: assert that user input is HTML-escaped in the output (it won\'t — it\'s rendered raw)\n' +
-          '- Insecure crypto: assert that the password hash algorithm is bcrypt/argon2 (it won\'t — it uses MD5/SHA1)\n' +
-          '- Path traversal: assert that "../" sequences are rejected or stripped (they won\'t be)\n' +
-          '- NoSQL injection: assert that user input is sanitized before use in a query (it won\'t be)\n' +
-          '- SSRF: assert that URLs are validated against an allowlist (they won\'t be)\n\n' +
-          'Pattern: expect(actual_insecure_value).to.equal(what_secure_code_would_produce)\n' +
-          'This fails because actual_insecure_value !== what_secure_code_would_produce.\n\n' +
-          'DO NOT write assertions that check if an attack "succeeds" — those pass on vulnerable code.\n' +
-          'Instead, write assertions that check if SECURITY CONTROLS EXIST — those fail on vulnerable code.';
+        prompt += '\n\nALMOST THERE! Your test runs correctly but checks the WRONG thing.\n\n' +
+          'You wrote a test that checks if the ATTACK SUCCEEDS — that passes on vulnerable code.\n' +
+          'INVERT IT: check if SECURITY CONTROLS EXIST — that fails on vulnerable code.\n\n' +
+          'CONCRETE INVERSION EXAMPLES:\n\n' +
+          'WRONG (passes on vulnerable code):\n' +
+          '  expect(query).to.include(userInput);  // Attack succeeds — user input is in query\n' +
+          'RIGHT (fails on vulnerable code):\n' +
+          '  expect(query).to.match(/\\$[0-9]|\\?/); // Security check — parameterized placeholders exist (they don\'t)\n\n' +
+          'WRONG (passes on vulnerable code):\n' +
+          '  expect(output).to.include(maliciousScript);  // Attack succeeds — XSS payload rendered\n' +
+          'RIGHT (fails on vulnerable code):\n' +
+          '  expect(source).to.match(/escapeHtml|sanitize/); // Security check — sanitization exists (it doesn\'t)\n\n' +
+          'WRONG (passes on vulnerable code):\n' +
+          '  expect(hash).to.equal(md5(password));  // Attack succeeds — weak hash used\n' +
+          'RIGHT (fails on vulnerable code):\n' +
+          '  expect(source).to.match(/bcrypt|argon2|scrypt/); // Security check — strong hash exists (it doesn\'t)\n\n' +
+          'THE PATTERN: expect(code_or_behavior).to.have(security_property_that_is_missing)';
       } else if (lastError === 'ExistingTestsRegression') {
         prompt += '\n\nIMPORTANT: Don\'t break existing tests. Avoid modifying shared state or setup blocks.';
       } else if (lastError === 'TestExecutionError' &&
