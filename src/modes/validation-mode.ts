@@ -1550,11 +1550,36 @@ TARGET FILE CONTENT (for context):
 ${targetTestFile.content}
 \`\`\`
 
+UNDERSTANDING RED TESTS:
+A "RED" test is a test that FAILS on the current vulnerable code. The failure proves the vulnerability exists.
+The key insight: assert what SECURE code would do, so the assertion FAILS when run against INSECURE code.
+
+Example RED test for SQL injection (Mocha/JavaScript):
+\`\`\`javascript
+const source = fs.readFileSync(path.join(process.cwd(), 'routes/users.js'), 'utf8');
+it('should use parameterized queries to prevent SQL injection', () => {
+  // This assertion FAILS because the code uses string interpolation, not parameterized queries
+  expect(source).to.match(/\\$[0-9]|\\?\\s*,|:param/);  // parameterized placeholder pattern
+});
+\`\`\`
+This test FAILS because the vulnerable code uses string interpolation, not parameterized queries.
+
+Example RED test for XSS (Mocha/JavaScript):
+\`\`\`javascript
+const source = fs.readFileSync(path.join(process.cwd(), 'views/profile.js'), 'utf8');
+it('should escape HTML in user output', () => {
+  // This assertion FAILS because the code outputs user input without escaping
+  expect(source).to.not.match(/res\\.send\\([^)]*\\$\\{.*user/);  // unescaped template literal
+  expect(source).to.match(/escapeHtml|sanitize|textContent/);     // sanitization function
+});
+\`\`\`
+This test FAILS because the vulnerable code does NOT use escapeHtml/sanitize.
+
 YOUR TASK:
 Generate test code that:
 1. Uses the attack vector: ${vulnerability.attackVector}
-2. FAILS on vulnerable code (proves exploit works)
-3. PASSES after fix is applied
+2. FAILS on vulnerable code (asserts what secure code would do — since the code is insecure, the assertion fails)
+3. PASSES after fix is applied (once the code is fixed, the assertion passes)
 4. Reuses existing setup blocks from target file
 5. Follows ${framework.name} conventions
 ${vulnerability.source ? `6. IMPORT the actual source file — do NOT inline/copy vulnerable code into the test.
