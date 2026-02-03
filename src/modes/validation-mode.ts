@@ -29,6 +29,8 @@ export class ValidationMode {
   private lastTestStderr: string = '';
   /** RFC-101: AI context string from project shape detection */
   private projectAiContext: string = '';
+  /** RFC-101: Detected ecosystems from project shape (e.g., ['python', 'javascript']) */
+  private projectEcosystems: string[] = [];
 
   constructor(config: ActionConfig, repoPath?: string) {
     this.config = config;
@@ -362,9 +364,12 @@ export class ValidationMode {
           }
 
           if (shapes.length > 0) {
-            const ecosystems = shapes.map(s => s.ecosystem).filter(Boolean);
+            const ecosystems = shapes.map(s => s.ecosystem).filter(Boolean) as string[];
             const totalServices = shapes.reduce((sum, s) => sum + (s.runtime_services?.length ?? 0), 0);
             logger.info(`[RFC-101] Project shape detected: ${ecosystems.length} ecosystem(s): ${ecosystems.join(', ')}, ${totalServices} total service deps`);
+
+            // Store ecosystems for use in framework detection fallback
+            this.projectEcosystems = ecosystems;
 
             // Merge AI context from all shapes
             const contextParts = shapes.map(s => s.ai_context || '').filter(Boolean);
@@ -2480,8 +2485,60 @@ Return ONLY the inverted test file. No explanation, just the code block:
       return response.framework;
     } catch (error) {
       logger.warn(`Backend framework detection failed, falling back to extension-based: ${error}`);
-      return this.detectFrameworkFromFile(filePath);
+      return this.detectFrameworkFromFileWithEcosystemFallback(filePath);
     }
+  }
+
+  /**
+   * Detect framework with ecosystem-aware fallback.
+   * If file extension doesn't match the project's primary ecosystem, use the project's test framework.
+   * This prevents JS files in Python projects from using vitest, etc.
+   */
+  private detectFrameworkFromFileWithEcosystemFallback(filePath: string): string {
+    const ext = path.extname(filePath).toLowerCase();
+
+    // Map file extensions to their natural ecosystem
+    const extToEcosystem: Record<string, string> = {
+      '.js': 'javascript', '.ts': 'javascript', '.jsx': 'javascript', '.tsx': 'javascript', '.mjs': 'javascript',
+      '.py': 'python',
+      '.rb': 'ruby',
+      '.php': 'php',
+      '.java': 'java',
+      '.ex': 'elixir', '.exs': 'elixir',
+      '.go': 'go',
+    };
+
+    // Map ecosystem to default test framework
+    const ecosystemToFramework: Record<string, string> = {
+      'javascript': 'vitest',
+      'python': 'pytest',
+      'ruby': 'rspec',
+      'php': 'phpunit',
+      'java': 'junit5',
+      'elixir': 'exunit',
+      'go': 'testing',
+    };
+
+    const fileEcosystem = extToEcosystem[ext];
+
+    // If we have project ecosystems and the file's ecosystem doesn't match the project's primary,
+    // use the project's primary ecosystem's test framework
+    if (this.projectEcosystems.length > 0 && fileEcosystem) {
+      const primaryEcosystem = this.projectEcosystems[0]; // First ecosystem is primary
+
+      if (!this.projectEcosystems.includes(fileEcosystem)) {
+        // File's ecosystem doesn't match any project ecosystem
+        // Use the primary ecosystem's test framework
+        const framework = ecosystemToFramework[primaryEcosystem];
+        if (framework) {
+          logger.info(`[RFC-101] File ${path.basename(filePath)} (${fileEcosystem}) doesn't match project ecosystem (${primaryEcosystem}). Using ${framework}.`);
+          return framework;
+        }
+      }
+    }
+
+    // Fall back to extension-based detection
+    return this.detectFrameworkFromFile(filePath);
   }
 
   /**
