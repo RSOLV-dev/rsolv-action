@@ -307,11 +307,19 @@ function loadConfigFromEnv(): Partial<ActionConfig> {
   }
   
   // AI Provider configuration from environment
-  if (process.env.RSOLV_AI_PROVIDER) {
+  // Check for any AI provider env vars (not just RSOLV_AI_PROVIDER)
+  const hasAiProviderEnvVars = process.env.RSOLV_AI_PROVIDER ||
+                               process.env.RSOLV_AI_MODEL ||
+                               process.env.RSOLV_AI_API_KEY ||
+                               process.env.RSOLV_AI_BASE_URL ||
+                               process.env.RSOLV_AI_TEMPERATURE ||
+                               process.env.RSOLV_AI_MAX_TOKENS;
+
+  if (hasAiProviderEnvVars) {
     const providerApiKey = process.env.RSOLV_AI_API_KEY;
 
     envConfig.aiProvider = {
-      provider: process.env.RSOLV_AI_PROVIDER,
+      provider: process.env.RSOLV_AI_PROVIDER || 'claude-code',  // Default to claude-code
       providerApiKey: providerApiKey,
       model: process.env.RSOLV_AI_MODEL || 'claude-sonnet-4-5-20250929',  // Default to Sonnet 4.5
       baseUrl: process.env.RSOLV_AI_BASE_URL,
@@ -320,6 +328,11 @@ function loadConfigFromEnv(): Partial<ActionConfig> {
         process.env.RSOLV_USE_VENDED_CREDENTIALS === 'true' :
         true  // Default to true - vended credentials are the standard approach
     };
+
+    // Log the model being configured from env
+    if (process.env.RSOLV_AI_MODEL) {
+      logger.info(`AI model from environment: ${process.env.RSOLV_AI_MODEL}`);
+    }
 
     if (process.env.RSOLV_AI_TEMPERATURE) {
       envConfig.aiProvider.temperature = parseFloat(process.env.RSOLV_AI_TEMPERATURE);
