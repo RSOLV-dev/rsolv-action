@@ -1477,17 +1477,36 @@ ${tests}
 
   /**
    * Parse LLM response into structured red test entries.
-   * Extracts code blocks and wraps as TestSuite redTests.
+   * Extracts ALL code blocks (for multi-candidate) and wraps as TestSuite redTests.
    */
   private parseTestResponse(
     response: string,
     vulnerability: Vulnerability,
     framework: TestFramework
   ): TestSuite['redTests'] {
-    // Extract code blocks from response
-    const codeBlockMatch = response.match(/```(?:javascript|typescript|ruby|python|js|ts|rb|py)?\s*\n([\s\S]*?)```/);
-    const testCode = codeBlockMatch?.[1]?.trim() || response.trim();
+    // Extract ALL code blocks from response (multi-candidate support)
+    const codeBlockRegex = /```(?:javascript|typescript|ruby|python|js|ts|rb|py|rspec)?\s*\n([\s\S]*?)```/g;
+    const allCodeBlocks: string[] = [];
+    let match;
+    while ((match = codeBlockRegex.exec(response)) !== null) {
+      const code = match[1]?.trim();
+      if (code && code.length > 0) {
+        allCodeBlocks.push(code);
+      }
+    }
 
+    // If we found multiple code blocks, treat each as a separate candidate
+    if (allCodeBlocks.length > 1) {
+      return allCodeBlocks.map((code, i) => ({
+        testName: `security_${vulnerability.type}_approach_${i + 1}`,
+        testCode: code,
+        attackVector: vulnerability.attackVector,
+        expectedBehavior: 'should_fail_on_vulnerable_code' as const
+      }));
+    }
+
+    // Single code block or no code blocks — use original parsing logic
+    const testCode = allCodeBlocks[0] || response.trim();
     if (!testCode) return [];
 
     // Try structured JSON response first
@@ -1500,7 +1519,7 @@ ${tests}
       // Not JSON — treat as raw test code
     }
 
-    // Split on describe/it/test blocks if multiple tests present
+    // Split on describe/it/test blocks if multiple tests in single block
     const testBlocks = testCode.split(/\n(?=(?:describe|it|test)\s*\()/);
     if (testBlocks.length > 1) {
       // Check if first block is only imports/requires (no test structure)
@@ -1599,19 +1618,38 @@ it('should escape HTML in user output', () => {
 This test FAILS because the vulnerable code does NOT use escapeHtml/sanitize.
 
 YOUR TASK:
-Generate 3 DIFFERENT test approaches, each in a separate code block. We will try each one.
+Generate 3 DIFFERENT test approaches. Each approach MUST be in its own separate code block.
+
+FORMAT YOUR RESPONSE LIKE THIS:
+
+**Approach 1: Pattern matching**
+\`\`\`${framework.name === 'rspec' ? 'ruby' : framework.name === 'mocha' || framework.name === 'jest' || framework.name === 'vitest' ? 'javascript' : framework.name}
+# Complete standalone test file for approach 1
+\`\`\`
+
+**Approach 2: Static analysis**
+\`\`\`${framework.name === 'rspec' ? 'ruby' : framework.name === 'mocha' || framework.name === 'jest' || framework.name === 'vitest' ? 'javascript' : framework.name}
+# Complete standalone test file for approach 2
+\`\`\`
+
+**Approach 3: Behavioral/assertion**
+\`\`\`${framework.name === 'rspec' ? 'ruby' : framework.name === 'mocha' || framework.name === 'jest' || framework.name === 'vitest' ? 'javascript' : framework.name}
+# Complete standalone test file for approach 3
+\`\`\`
+
+CRITICAL: Each code block must be a COMPLETE, STANDALONE test file. DO NOT put all tests in one block.
 
 Each test should:
-1. Uses the attack vector: ${vulnerability.attackVector}
-2. FAILS on vulnerable code (asserts what secure code would do — since the code is insecure, the assertion fails)
-3. PASSES after fix is applied (once the code is fixed, the assertion passes)
-4. Reuses existing setup blocks from target file
-5. Follows ${framework.name} conventions
+1. Use the attack vector: ${vulnerability.attackVector}
+2. FAIL on vulnerable code (assert what secure code would do — since the code is insecure, the assertion fails)
+3. PASS after fix is applied (once the code is fixed, the assertion passes)
+4. Be completely standalone (no require of rails_helper, spec_helper, or app-specific helpers)
+5. Follow ${framework.name} conventions
 
-APPROACH VARIETY — use different strategies:
-- Approach 1: Pattern matching on source code (look for absence of security patterns)
-- Approach 2: Static analysis (check for dangerous function calls, missing sanitization)
-- Approach 3: Behavioral test with mocked/stubbed dependencies (if feasible)
+APPROACH STRATEGIES:
+- Approach 1: Pattern matching — read source file, check for ABSENCE of security patterns (parameterized queries, escaping, etc.)
+- Approach 2: Static analysis — read source file, check for PRESENCE of dangerous patterns (string interpolation in queries, raw output, etc.)
+- Approach 3: Different assertion style — try a fundamentally different way to prove the same vulnerability
 ${vulnerability.source ? `6. IMPORT the actual source file — do NOT inline/copy vulnerable code into the test.
    The test runs with process.cwd() set to the repository root.
    Use one of these strategies to reference the vulnerable source file:
