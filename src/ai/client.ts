@@ -27,7 +27,9 @@ export interface CompletionOptions {
   /**
    * Enable extended thinking for Claude models.
    * When enabled, Claude will use a thinking process before responding.
-   * Requires anthropic-version 2025-01-01 or later.
+   * Stable feature since anthropic-version 2023-06-01.
+   * Note: temperature must be omitted or set to 1 when thinking is enabled.
+   * Note: max_tokens must be greater than budget_tokens.
    */
   thinking?: {
     type: 'enabled';
@@ -245,7 +247,14 @@ class AnthropicClient implements AiClient {
       const baseUrl = this.config.baseUrl || 'https://api.anthropic.com';
       const model = options.model || this.config.model || 'claude-sonnet-4-5-20250929';
       const temperature = options.temperature ?? this.config.temperature ?? 0.2;
-      const maxTokens = resolveMaxTokens(options, this.config, 'STANDARD');
+      let maxTokens = resolveMaxTokens(options, this.config, 'STANDARD');
+
+      // When extended thinking is enabled, max_tokens must be greater than thinking.budget_tokens
+      // Add 8000 tokens for the actual response content on top of the thinking budget
+      if (options.thinking && options.thinking.budget_tokens >= maxTokens) {
+        maxTokens = options.thinking.budget_tokens + 8000;
+        logger.info(`[Extended Thinking] Adjusted max_tokens to ${maxTokens} (budget: ${options.thinking.budget_tokens} + 8000 for response)`);
+      }
       
       // If in test mode, fall back to mock response
       if (process.env.NODE_ENV === 'test' && !process.env.FORCE_REAL_AI) {
