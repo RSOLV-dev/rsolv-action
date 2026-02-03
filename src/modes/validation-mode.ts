@@ -59,7 +59,39 @@ export class ValidationMode {
 
     this.loadFalsePositiveCache();
   }
-  
+
+  /**
+   * Load project shape from phase data to inform framework detection.
+   * Must be called before detectFrameworkWithBackend for ecosystem-aware fallback to work.
+   */
+  private async loadProjectShapeForFrameworkDetection(issue: IssueContext): Promise<void> {
+    if (!this.phaseDataClient) return;
+
+    try {
+      const commitSha = this.getCurrentCommitHash();
+      const repo = issue.repository.fullName;
+      const phaseData = await this.phaseDataClient.retrievePhaseResults(repo, issue.number, commitSha);
+      const phaseRecord = phaseData as Record<string, unknown> | null;
+
+      type ShapeEntry = { ecosystem?: string };
+      let shapes: ShapeEntry[] = [];
+
+      if (Array.isArray(phaseRecord?.project_shapes) && (phaseRecord.project_shapes as unknown[]).length > 0) {
+        shapes = phaseRecord.project_shapes as ShapeEntry[];
+      } else if (phaseRecord?.project_shape) {
+        shapes = [phaseRecord.project_shape as ShapeEntry];
+      }
+
+      if (shapes.length > 0) {
+        const ecosystems = shapes.map(s => s.ecosystem).filter(Boolean) as string[];
+        this.projectEcosystems = ecosystems;
+        logger.debug(`[RFC-101] Pre-loaded ${ecosystems.length} ecosystem(s) for framework detection: ${ecosystems.join(', ')}`);
+      }
+    } catch (err) {
+      logger.debug(`[RFC-101] Could not pre-load project shape for framework detection: ${err}`);
+    }
+  }
+
   /**
    * Validate a single vulnerability
    */
@@ -156,6 +188,9 @@ export class ValidationMode {
       if (!this.testIntegrationClient) {
         throw new Error('TestIntegrationClient not initialized — RSOLV API key required for validation');
       }
+
+      // Pre-load project shape for ecosystem-aware framework detection fallback
+      await this.loadProjectShapeForFrameworkDetection(issue);
 
       // Step 5a: Detect framework via backend API (reads package.json/Gemfile/requirements.txt)
       const primaryFile = vulnerabilities[0]?.file || analysisData.filesToModify?.[0] || '';
