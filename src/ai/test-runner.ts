@@ -114,7 +114,9 @@ const VERSION_FILES: Record<string, string[]> = {
 export class TestRunner {
   private readonly DEFAULT_TIMEOUT = 30000; // 30 seconds
   private readonly RUNTIME_INSTALL_TIMEOUT = 600000; // 10 minutes for runtime install (Ruby compiles from source)
-  private readonly MISE_QUICK_TIMEOUT = 120000; // 2 minutes for mise install before fallback (RFC-101 M2)
+  private readonly MISE_QUICK_TIMEOUT = 300000; // 5 minutes for mise install before fallback (RFC-101 M2)
+  // Note: For faster builds, configure GitHub Actions cache for ~/.local/share/mise
+  // Or configure mise to use prebuilt binaries: mise settings set ruby_binary_url ...
   private readonly DEP_INSTALL_TIMEOUT = 180000; // 3 minutes for dependency install
 
   /**
@@ -481,8 +483,10 @@ export class TestRunner {
       // Always run bundle install even if vendor/bundle exists — the gems may have been
       // compiled for a different Ruby version (e.g., host runner's Ruby vs mise-installed Ruby).
       // Bundler handles idempotency and will recompile native extensions if needed.
+      // RFC-101 v3.8.67: Set BUNDLE_IGNORE_RUBY_VERSION=1 to handle apt-get fallback Ruby
+      // version mismatch (e.g., Gemfile says ruby "3.4.1" but system has 3.2.x)
       if (await this.fileExists(path.join(workingDir, 'Gemfile'))) {
-        return 'bundle install';
+        return 'BUNDLE_IGNORE_RUBY_VERSION=1 bundle install';
       }
       return null;
     }
@@ -568,9 +572,9 @@ export class TestRunner {
       jest: { base: 'npx jest', testNameFlag: '-t' },
       vitest: { base: 'npx vitest run', testNameFlag: '-t' },
       mocha: { base: 'npx mocha', testNameFlag: '--grep' },
-      // Ruby
-      rspec: { base: 'bundle exec rspec', testNameFlag: '-e' },
-      minitest: { base: 'ruby', testNameFlag: '-n' },
+      // Ruby (BUNDLE_IGNORE_RUBY_VERSION=1 handles apt-get fallback version mismatch)
+      rspec: { base: 'BUNDLE_IGNORE_RUBY_VERSION=1 bundle exec rspec', testNameFlag: '-e' },
+      minitest: { base: 'BUNDLE_IGNORE_RUBY_VERSION=1 ruby', testNameFlag: '-n' },
       // Python
       pytest: { base: 'pytest', testNameFlag: '-k' },
       // PHP
