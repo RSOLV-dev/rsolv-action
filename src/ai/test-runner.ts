@@ -236,10 +236,10 @@ export class TestRunner {
     // that may not be available in the Docker image.
     // Note: We run as root in the Docker container, so no sudo needed.
     if (runtime === 'php') {
-      console.log(`[TestRunner] Trying apt-get for PHP (faster than building from source)`);
+      console.log(`[TestRunner] Trying apt-get for PHP + Composer (faster than building from source)`);
       try {
         const { stdout, stderr } = await execAsync(
-          `apt-get update && apt-get install -y php php-cli php-xml php-mbstring`,
+          `apt-get update && apt-get install -y php php-cli php-xml php-mbstring php-curl php-zip unzip composer`,
           { cwd: workingDir, timeout: 120000, encoding: 'utf8' }
         );
         console.log(`[TestRunner] apt-get output: ${stdout}`);
@@ -256,17 +256,17 @@ export class TestRunner {
     }
 
     if (runtime === 'java') {
-      console.log(`[TestRunner] Trying apt-get for Java (faster than building from source)`);
+      console.log(`[TestRunner] Trying apt-get for Java + Maven (faster than building from source)`);
       try {
         const { stdout, stderr } = await execAsync(
-          `apt-get update && apt-get install -y default-jdk`,
+          `apt-get update && apt-get install -y default-jdk maven`,
           { cwd: workingDir, timeout: 180000, encoding: 'utf8' }
         );
         console.log(`[TestRunner] apt-get output: ${stdout}`);
         if (stderr) console.log(`[TestRunner] apt-get stderr: ${stderr}`);
         // Verify installation
-        await execAsync(`which javac`, { encoding: 'utf8' });
-        console.log(`[TestRunner] Java installed via apt-get`);
+        await execAsync(`which javac && which mvn`, { encoding: 'utf8' });
+        console.log(`[TestRunner] Java + Maven installed via apt-get`);
         return; // Success, no need for mise
       } catch (aptErr) {
         const err = aptErr as { stderr?: string; message?: string };
