@@ -2090,9 +2090,9 @@ Return ONLY the inverted test file. No explanation, just the code block:
       'rspec':   { name: 'rspec',   testCommand: 'bundle exec rspec',  syntaxCheckCommand: 'ruby -c' },
       'pytest':  { name: 'pytest',  testCommand: 'pytest',             syntaxCheckCommand: 'python -m py_compile' },
       'phpunit': { name: 'phpunit', testCommand: 'vendor/bin/phpunit', syntaxCheckCommand: 'php -l' },
-      'exunit':  { name: 'exunit',  testCommand: 'mix test',           syntaxCheckCommand: 'elixir -c' },
+      'exunit':  { name: 'exunit',  testCommand: 'mix test',           syntaxCheckCommand: '' }, // Elixir: syntax check via mix test
       'minitest': { name: 'minitest', testCommand: 'ruby -Itest',     syntaxCheckCommand: 'ruby -c' },
-      'junit5':  { name: 'junit5',  testCommand: 'mvn test -Dtest=',  syntaxCheckCommand: 'javac' },
+      'junit5':  { name: 'junit5',  testCommand: 'mvn test -Dtest=',  syntaxCheckCommand: '' }, // Java: syntax check via mvn compile
       'cypress':    { name: 'cypress',    testCommand: 'npx cypress run --spec', syntaxCheckCommand: 'node --check' },
       'playwright': { name: 'playwright', testCommand: 'npx playwright test',    syntaxCheckCommand: 'node --check' },
     };
@@ -2119,8 +2119,8 @@ Return ONLY the inverted test file. No explanation, just the code block:
 
     if (ext === '.py') return { name: 'pytest', syntaxCheckCommand: 'python -m py_compile', testCommand: 'pytest' };
     if (ext === '.rb') return { name: 'rspec', syntaxCheckCommand: 'ruby -c', testCommand: 'bundle exec rspec' };
-    if (ext === '.java') return { name: 'junit5', syntaxCheckCommand: 'javac', testCommand: 'mvn test' };
-    if (ext === '.ex' || ext === '.exs') return { name: 'exunit', syntaxCheckCommand: 'elixir -c', testCommand: 'mix test' };
+    if (ext === '.java') return { name: 'junit5', syntaxCheckCommand: '', testCommand: 'mvn test' }; // Java: syntax check via mvn compile
+    if (ext === '.ex' || ext === '.exs') return { name: 'exunit', syntaxCheckCommand: '', testCommand: 'mix test' }; // Elixir: syntax check via mix test
 
     // Default to generic
     return { name: 'generic', syntaxCheckCommand: 'echo "No syntax check"', testCommand: 'echo "No test runner"' };

@@ -233,36 +233,45 @@ export class TestRunner {
     }
 
     // For PHP and Java, try apt-get first since mise requires build dependencies
-    // that may not be available in the Docker image
+    // that may not be available in the Docker image.
+    // Note: We run as root in the Docker container, so no sudo needed.
     if (runtime === 'php') {
       console.log(`[TestRunner] Trying apt-get for PHP (faster than building from source)`);
       try {
-        await execAsync(
-          `apt-get update && apt-get install -y php php-cli php-xml php-mbstring 2>/dev/null || sudo apt-get update && sudo apt-get install -y php php-cli php-xml php-mbstring`,
+        const { stdout, stderr } = await execAsync(
+          `apt-get update && apt-get install -y php php-cli php-xml php-mbstring`,
           { cwd: workingDir, timeout: 120000, encoding: 'utf8' }
         );
+        console.log(`[TestRunner] apt-get output: ${stdout}`);
+        if (stderr) console.log(`[TestRunner] apt-get stderr: ${stderr}`);
         // Verify installation
         await execAsync(`which php`, { encoding: 'utf8' });
         console.log(`[TestRunner] PHP installed via apt-get`);
         return; // Success, no need for mise
       } catch (aptErr) {
-        console.log(`[TestRunner] apt-get PHP failed, will try mise: ${(aptErr as Error).message}`);
+        const err = aptErr as { stderr?: string; message?: string };
+        console.log(`[TestRunner] apt-get PHP failed: ${err.stderr || err.message}`);
+        console.log(`[TestRunner] Will try mise as fallback`);
       }
     }
 
     if (runtime === 'java') {
       console.log(`[TestRunner] Trying apt-get for Java (faster than building from source)`);
       try {
-        await execAsync(
-          `apt-get update && apt-get install -y default-jdk 2>/dev/null || sudo apt-get update && sudo apt-get install -y default-jdk`,
+        const { stdout, stderr } = await execAsync(
+          `apt-get update && apt-get install -y default-jdk`,
           { cwd: workingDir, timeout: 180000, encoding: 'utf8' }
         );
+        console.log(`[TestRunner] apt-get output: ${stdout}`);
+        if (stderr) console.log(`[TestRunner] apt-get stderr: ${stderr}`);
         // Verify installation
         await execAsync(`which javac`, { encoding: 'utf8' });
         console.log(`[TestRunner] Java installed via apt-get`);
         return; // Success, no need for mise
       } catch (aptErr) {
-        console.log(`[TestRunner] apt-get Java failed, will try mise: ${(aptErr as Error).message}`);
+        const err = aptErr as { stderr?: string; message?: string };
+        console.log(`[TestRunner] apt-get Java failed: ${err.stderr || err.message}`);
+        console.log(`[TestRunner] Will try mise as fallback`);
       }
     }
 
