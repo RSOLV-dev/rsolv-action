@@ -199,6 +199,28 @@ export class TestRunner {
       // Not found, need to install
     }
 
+    // Handle Elixir's dependency on Erlang - must install Erlang first
+    if (runtime === 'elixir') {
+      console.log(`[TestRunner] Elixir requires Erlang - installing Erlang first`);
+      try {
+        await execAsync(`which erl`, { encoding: 'utf8' });
+        console.log(`[TestRunner] Erlang already available`);
+      } catch {
+        // Install Erlang via mise
+        console.log(`[TestRunner] Installing Erlang via mise`);
+        try {
+          await execAsync(
+            `mise install erlang@latest && mise use --global erlang@latest`,
+            { cwd: workingDir, timeout: this.RUNTIME_INSTALL_TIMEOUT, encoding: 'utf8' }
+          );
+          console.log(`[TestRunner] Erlang installed successfully`);
+        } catch (erlErr) {
+          console.warn(`[TestRunner] Erlang install failed: ${(erlErr as Error).message}`);
+          // Continue anyway, maybe Elixir has a bundled Erlang or will work
+        }
+      }
+    }
+
     // Determine version from project files
     const version = await this.detectRuntimeVersion(runtime, workingDir);
     const runtimeSpec = version ? `${runtime}@${version}` : `${runtime}@latest`;
