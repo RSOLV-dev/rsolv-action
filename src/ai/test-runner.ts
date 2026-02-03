@@ -26,6 +26,8 @@ export type TestFramework =
   | 'phpunit'
   // Java
   | 'junit'
+  | 'junit5'  // JUnit 5 (also maps to java runtime)
+  | 'junit4'  // JUnit 4 (also maps to java runtime)
   // Go
   | 'testing'
   // Elixir
@@ -87,6 +89,8 @@ const FRAMEWORK_RUNTIME_MAP: Record<TestFramework, string> = {
   pytest: 'python',
   phpunit: 'php',
   junit: 'java',
+  junit5: 'java',   // JUnit 5 uses Java runtime
+  junit4: 'java',   // JUnit 4 uses Java runtime
   testing: 'go',
   exunit: 'elixir',
 };
@@ -389,6 +393,8 @@ export class TestRunner {
       phpunit: { base: 'vendor/bin/phpunit', testNameFlag: '--filter' },
       // Java
       junit: { base: 'mvn test', testNameFlag: '-Dtest' },
+      junit5: { base: 'mvn test', testNameFlag: '-Dtest' },
+      junit4: { base: 'mvn test', testNameFlag: '-Dtest' },
       // Go
       testing: { base: 'go test', testNameFlag: '-run' },
       // Elixir

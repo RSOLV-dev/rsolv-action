@@ -1212,7 +1212,7 @@ ${tests}
     // Ensure runtime and dependencies are available before test execution
     const frameworkNameForSetup = targetTestFile.framework?.toLowerCase() as
       | 'jest' | 'vitest' | 'mocha' | 'rspec' | 'minitest' | 'pytest'
-      | 'phpunit' | 'junit' | 'testing' | 'exunit';
+      | 'phpunit' | 'junit' | 'junit5' | 'junit4' | 'testing' | 'exunit';
     if (frameworkNameForSetup) {
       try {
         // Dynamic import to avoid module-level side effects (promisify at load time)
@@ -1234,7 +1234,16 @@ ${tests}
         }
         logger.info(`PATH after setup (first 300 chars): ${process.env.PATH?.substring(0, 300)}`);
         // Verify the runtime is actually available after setup
-        const runtimeBin = frameworkNameForSetup === 'rspec' || frameworkNameForSetup === 'minitest' ? 'ruby' : frameworkNameForSetup === 'pytest' ? 'python' : 'node';
+        // Map framework to runtime binary name for verification
+        const runtimeBinMap: Record<string, string> = {
+          rspec: 'ruby', minitest: 'ruby',
+          pytest: 'python',
+          phpunit: 'php',
+          junit: 'java', junit5: 'java', junit4: 'java',
+          exunit: 'elixir',
+          testing: 'go',
+        };
+        const runtimeBin = runtimeBinMap[frameworkNameForSetup] || 'node';
         try {
           const whichResult = execSync(`which ${runtimeBin}`, { encoding: 'utf8', env: process.env }).trim();
           logger.info(`Runtime binary '${runtimeBin}' found at: ${whichResult}`);
