@@ -214,6 +214,17 @@ export class TestRunner {
             { cwd: workingDir, timeout: this.RUNTIME_INSTALL_TIMEOUT, encoding: 'utf8' }
           );
           console.log(`[TestRunner] Erlang installed successfully`);
+
+          // CRITICAL: Update PATH immediately after Erlang installation
+          // so that Elixir's installation can find 'erl' for its version check
+          const homedir = process.env.HOME || '/root';
+          const miseShims = `${homedir}/.local/share/mise/shims`;
+          const miseBin = `${homedir}/.local/bin`;
+          const currentPath = process.env.PATH || '';
+          if (!currentPath.includes(miseShims)) {
+            process.env.PATH = `${miseShims}:${miseBin}:${currentPath}`;
+            console.log(`[TestRunner] Updated PATH after Erlang install: ${miseShims}`);
+          }
         } catch (erlErr) {
           console.warn(`[TestRunner] Erlang install failed: ${(erlErr as Error).message}`);
           // Continue anyway, maybe Elixir has a bundled Erlang or will work
