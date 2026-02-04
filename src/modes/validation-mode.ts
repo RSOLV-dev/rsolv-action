@@ -18,6 +18,9 @@ import { TestIntegrationClient } from './test-integration-client.js';
 import { extractVulnerabilitiesFromIssue } from '../utils/vulnerability-extraction.js';
 import { TEST_FILE_PATTERNS, EXCLUDED_DIRECTORIES } from '../constants/test-patterns.js';
 import { classifyTestResult as classifyTestResultImpl, parseTestOutputCounts } from '../utils/test-result-classifier.js';
+import { getAssertionTemplate, getAssertionTemplateForFramework } from '../prompts/vulnerability-assertion-templates.js';
+import { buildRetryFeedback, extractMissingModule } from './retry-feedback.js';
+import { extractTestLibraries as extractTestLibrariesMultiEcosystem } from './test-library-detection.js';
 
 export class ValidationMode {
   private config: ActionConfig;
@@ -1767,7 +1770,7 @@ ${vulnerability.vulnerablePattern ? `VULNERABLE PATTERN: ${vulnerability.vulnera
 ${vulnerability.source ? `SOURCE: ${vulnerability.source}\nVULNERABLE SOURCE FILE: ${vulnerability.source}` : ''}
 ${aiContext ? `\nENVIRONMENT CONTEXT:\n${aiContext}\n` : ''}
 ${realisticExamples}
-
+${this.getAssertionTemplateSection(vulnerability, framework)}
 TARGET TEST FILE: ${targetTestFile.path}
 FRAMEWORK: ${framework.name}
 ${this.availableTestLibraries.length > 0 ? `
@@ -1898,15 +1901,18 @@ ${(() => {
         prompt += `\n\nTEST OUTPUT FROM PREVIOUS ATTEMPT:\n\`\`\`\n${lastAttempt.testOutput}\n\`\`\``;
       }
 
-      // Add specific guidance based on error types
+      // RFC-103: Add specific guidance based on error types using enhanced feedback
       const lastError = lastAttempt.error;
       if (lastError === 'SyntaxError') {
-        prompt += `\n\nIMPORTANT: Fix the syntax error. Ensure valid ${framework.name} syntax.`;
+        // Use enhanced feedback for syntax errors
+        logger.info(`[RFC-103] Building retry feedback for SyntaxError (attempt ${lastAttempt.attempt})`);
+        prompt += buildRetryFeedback(lastAttempt, vulnerability, this.availableTestLibraries);
       } else if (lastError === 'TestPassedUnexpectedly') {
-        prompt += '\n\nALMOST THERE! Your test runs correctly but checks the WRONG thing.\n\n' +
-          'You wrote a test that checks if the ATTACK SUCCEEDS — that passes on vulnerable code.\n' +
-          'INVERT IT: check if SECURITY CONTROLS EXIST — that fails on vulnerable code.\n\n' +
-          'CONCRETE INVERSION EXAMPLES:\n\n' +
+        // Use enhanced feedback with assertion template guidance
+        logger.info(`[RFC-103] Building retry feedback for TestPassedUnexpectedly (attempt ${lastAttempt.attempt}, type: ${vulnerability.type || 'unknown'})`);
+        prompt += buildRetryFeedback(lastAttempt, vulnerability, this.availableTestLibraries);
+        // Also include the concrete inversion examples for additional guidance
+        prompt += '\n\nCONCRETE INVERSION EXAMPLES:\n\n' +
           'WRONG (passes on vulnerable code):\n' +
           '  expect(query).to.include(userInput);  // Attack succeeds — user input is in query\n' +
           'RIGHT (fails on vulnerable code):\n' +
@@ -1924,8 +1930,10 @@ ${(() => {
         prompt += '\n\nIMPORTANT: Don\'t break existing tests. Avoid modifying shared state or setup blocks.';
       } else if (lastError === 'TestExecutionError' &&
                  lastAttempt.errorMessage?.includes('MODULE_NOT_FOUND')) {
-        prompt += `\n\nIMPORTANT: The previous attempt failed with MODULE_NOT_FOUND. ` +
-          `Use path.join(process.cwd(), '${vulnerability.source}') to reference the source file. ` +
+        // RFC-103: Use enhanced feedback for missing module errors
+        logger.info(`[RFC-103] Building retry feedback for MODULE_NOT_FOUND error (attempt ${lastAttempt.attempt})`);
+        prompt += buildRetryFeedback(lastAttempt, vulnerability, this.availableTestLibraries);
+        prompt += `\nAlso use path.join(process.cwd(), '${vulnerability.source}') to reference the source file. ` +
           `Do NOT use relative paths like require('../...'). process.cwd() is always the repository root.`;
       } else if (['runtime_error', 'missing_dependency', 'syntax_error'].includes(lastError)) {
         const lastMessage = lastAttempt.errorMessage || '';
@@ -1938,6 +1946,10 @@ ${(() => {
             'DO NOT require rails_helper, spec_helper, or application-specific helpers. ' +
             'Write a STANDALONE test that only requires rspec and the vulnerable source file directly. ' +
             'Use require_relative or explicit paths. The test must run without Rails booting.';
+        } else if (lastMessage.includes('Cannot find module') || lastMessage.includes('No module named')) {
+          // RFC-103: Use enhanced feedback for missing dependency errors
+          logger.info(`[RFC-103] Building retry feedback for missing dependency (attempt ${lastAttempt.attempt}): ${lastMessage.slice(0, 100)}`);
+          prompt += buildRetryFeedback(lastAttempt, vulnerability, this.availableTestLibraries);
         } else {
           prompt += `\n\nPREVIOUS ATTEMPT FAILED: ${lastError} — ${lastMessage}. ` +
             'Fix the error and ensure tests can run to completion.';
@@ -1946,6 +1958,66 @@ ${(() => {
     }
 
     return prompt;
+  }
+
+  /**
+   * RFC-103: Get assertion template section for the prompt
+   * Returns a formatted section with specific assertion guidance for the vulnerability type.
+   */
+  private getAssertionTemplateSection(vulnerability: Vulnerability, framework: TestFramework): string {
+    // Extract CWE ID from vulnerability - try cweId, cwe_id, or parse from type
+    const cweId = vulnerability.cweId ||
+      vulnerability.cwe_id ||
+      this.extractCweFromType(vulnerability.type);
+
+    if (!cweId) {
+      logger.debug(`[RFC-103] No CWE ID found for vulnerability type: ${vulnerability.type || 'unknown'}`);
+      return '';
+    }
+
+    const template = getAssertionTemplateForFramework(cweId, framework.name.toLowerCase());
+    if (!template) {
+      logger.debug(`[RFC-103] No assertion template found for CWE: ${cweId}, framework: ${framework.name}`);
+      return '';
+    }
+
+    logger.info(`[RFC-103] Using assertion template for ${cweId} (${template.name}) with framework: ${framework.name}`);
+
+    return `
+## ASSERTION STRATEGY FOR ${template.name} (${cweId})
+Goal: ${template.assertionGoal}
+Attack payload to use: ${template.attackPayload}
+Strategy: ${template.testStrategy}
+Framework hint (${framework.name}): ${template.frameworkHint}
+
+`;
+  }
+
+  /**
+   * Extract CWE ID from vulnerability type string if not explicitly provided.
+   */
+  private extractCweFromType(vulnType: string): string | undefined {
+    const typeToId: Record<string, string> = {
+      'sql_injection': 'CWE-89',
+      'sql injection': 'CWE-89',
+      'xss': 'CWE-79',
+      'cross-site scripting': 'CWE-79',
+      'cross_site_scripting': 'CWE-79',
+      'path_traversal': 'CWE-22',
+      'path traversal': 'CWE-22',
+      'directory_traversal': 'CWE-22',
+      'command_injection': 'CWE-78',
+      'command injection': 'CWE-78',
+      'os_command_injection': 'CWE-78',
+      'deserialization': 'CWE-502',
+      'insecure_deserialization': 'CWE-502',
+      'hardcoded_credentials': 'CWE-798',
+      'hardcoded_secrets': 'CWE-798',
+      'hardcoded credentials': 'CWE-798',
+    };
+
+    const normalized = vulnType.toLowerCase().trim();
+    return typeToId[normalized];
   }
 
   /**
@@ -2564,7 +2636,9 @@ Return ONLY the inverted test file. No explanation, just the code block:
           // This tells the LLM what libraries are actually available (e.g., 'should' vs 'chai')
           this.availableTestLibraries = this.extractTestLibraries(packageJson);
           if (this.availableTestLibraries.length > 0) {
-            logger.info(`RFC-101: Available test libraries: ${this.availableTestLibraries.join(', ')}`);
+            logger.info(`[RFC-103] Test library detection (javascript): found ${this.availableTestLibraries.length} libraries: ${this.availableTestLibraries.join(', ')}`);
+          } else {
+            logger.debug(`[RFC-103] Test library detection (javascript): no test libraries found in package.json`);
           }
         } catch (parseErr) {
           logger.warn(`Could not parse package.json: ${parseErr}`);

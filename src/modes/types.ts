@@ -102,6 +102,10 @@ export interface Vulnerability {
   attackVector: string;
   vulnerablePattern?: string;
   source?: string;
+  /** RFC-103: CWE identifier for assertion template lookup */
+  cweId?: string;
+  /** Alternative CWE ID field (snake_case from some sources) */
+  cwe_id?: string;
 }
 
 // Target test file context for LLM
