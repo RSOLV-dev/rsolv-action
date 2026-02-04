@@ -1990,6 +1990,12 @@ ${(() => {
 Goal: ${template.assertionGoal}
 Attack payload to use: ${template.attackPayload}
 Strategy: ${template.testStrategy}
+
+**CRITICAL: Test Structure Requirement**
+Your test MUST use proper ${framework.name} test structure with describe() and it() blocks.
+All assertions MUST be inside it() callbacks, NOT at module load time.
+Tests that run assertions outside it() blocks will be rejected.
+
 Framework hint (${framework.name}): ${template.frameworkHint}
 
 `;
