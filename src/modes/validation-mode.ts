@@ -19,6 +19,7 @@ import { extractVulnerabilitiesFromIssue } from '../utils/vulnerability-extracti
 import { TEST_FILE_PATTERNS, EXCLUDED_DIRECTORIES } from '../constants/test-patterns.js';
 import { classifyTestResult as classifyTestResultImpl, parseTestOutputCounts } from '../utils/test-result-classifier.js';
 import { getAssertionTemplate, getAssertionTemplateForFramework } from '../prompts/vulnerability-assertion-templates.js';
+import { getAssertionStyleGuidance, AssertionStyleGuidance } from '../prompts/assertion-style-guidance.js';
 import { buildRetryFeedback, extractMissingModule } from './retry-feedback.js';
 import { extractTestLibraries as extractTestLibrariesMultiEcosystem } from './test-library-detection.js';
 
@@ -1778,6 +1779,7 @@ AVAILABLE TEST LIBRARIES: ${this.availableTestLibraries.join(', ')}
 IMPORTANT: Only use assertion libraries from the list above. DO NOT use libraries like 'chai' or 'expect' if they are not listed.
 If no assertion library is available, use Node's built-in 'assert' module (const assert = require('assert');).
 ` : ''}
+${this.getAssertionStyleSection(framework)}
 TARGET FILE CONTENT (for context):
 \`\`\`
 ${targetTestFile.content}
@@ -2014,10 +2016,90 @@ Framework hint (${framework.name}): ${template.frameworkHint}
       'hardcoded_credentials': 'CWE-798',
       'hardcoded_secrets': 'CWE-798',
       'hardcoded credentials': 'CWE-798',
+      'code_injection': 'CWE-94',
+      'code injection': 'CWE-94',
+      'eval_injection': 'CWE-94',
     };
 
     const normalized = vulnType.toLowerCase().trim();
     return typeToId[normalized];
+  }
+
+  /**
+   * RFC-103: Get assertion style guidance section for the LLM prompt.
+   * Tells the LLM which assertion library/style to use based on what's available.
+   */
+  private getAssertionStyleSection(framework: TestFramework): string {
+    // Determine ecosystem from framework or project shape
+    let ecosystem = this.getEcosystemFromFramework(framework);
+
+    // Get assertion style guidance based on available libraries
+    const guidance = getAssertionStyleGuidance(ecosystem, this.availableTestLibraries);
+
+    logger.info(`[RFC-103] Assertion style guidance: ${guidance.style} style with ${guidance.preferredLibrary}`);
+
+    let section = `
+## ASSERTION STYLE GUIDANCE
+Style: ${guidance.style} (${guidance.preferredLibrary})
+Import: ${guidance.importStatement || 'No import needed - globals are auto-available'}
+Example syntax:
+${guidance.syntaxExample}
+`;
+
+    // Add "do not use" warnings if there are unavailable libraries
+    if (guidance.doNotUse.length > 0) {
+      section += `
+DO NOT USE these libraries (not installed): ${guidance.doNotUse.slice(0, 5).join(', ')}${guidance.doNotUse.length > 5 ? '...' : ''}
+`;
+    }
+
+    // Add version warning for Node assert
+    if (guidance.versionWarning) {
+      section += `
+WARNING: ${guidance.versionWarning}
+`;
+    }
+
+    return section;
+  }
+
+  /**
+   * Map test framework to ecosystem name.
+   */
+  private getEcosystemFromFramework(framework: TestFramework): string {
+    const frameworkToEcosystem: Record<string, string> = {
+      jest: 'javascript',
+      vitest: 'javascript',
+      mocha: 'javascript',
+      jasmine: 'javascript',
+      tap: 'javascript',
+      ava: 'javascript',
+      bun: 'javascript',
+      pytest: 'python',
+      unittest: 'python',
+      rspec: 'ruby',
+      minitest: 'ruby',
+      exunit: 'elixir',
+      phpunit: 'php',
+      pest: 'php',
+      junit: 'java',
+      testng: 'java',
+      go_test: 'go',
+      testing: 'go',
+    };
+
+    // Try exact match first
+    const ecosystemFromFramework = frameworkToEcosystem[framework.name.toLowerCase()];
+    if (ecosystemFromFramework) {
+      return ecosystemFromFramework;
+    }
+
+    // Use project ecosystem if available
+    if (this.projectEcosystems.length > 0) {
+      return this.projectEcosystems[0];
+    }
+
+    return 'javascript'; // Default fallback
   }
 
   /**
