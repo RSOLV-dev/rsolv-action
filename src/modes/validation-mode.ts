@@ -2514,17 +2514,31 @@ Return ONLY the inverted test file. No explanation, just the code block:
     }
 
     if (missingPatterns.length > 0) {
-      // Check for common mistake: assertions at module level (outside test blocks)
-      const hasModuleLevelAssertions = this.hasModuleLevelAssertions(content, frameworkKey);
-
       let errorMsg = `Test file lacks proper ${framework.name} structure.\n`;
       errorMsg += `Missing patterns: ${missingPatterns.join(', ')}\n`;
       errorMsg += `Expected structure:\n${structureReq.description}\n`;
 
-      if (hasModuleLevelAssertions) {
-        errorMsg += `\nDETECTED: Assertions at module load time (outside test blocks).\n`;
-        errorMsg += `Move all assertions INSIDE it() or test() callback functions.`;
-      }
+      throw new Error(errorMsg);
+    }
+
+    // CRITICAL: Even if describe/it patterns exist, check for module-level assertions
+    // This catches cases where the LLM writes assertions OUTSIDE the it() callbacks
+    const hasModuleLevelAsserts = this.hasModuleLevelAssertions(content, frameworkKey);
+    if (hasModuleLevelAsserts) {
+      let errorMsg = `Test file has ASSERTIONS OUTSIDE test callbacks.\n`;
+      errorMsg += `Mocha found describe/it blocks but assertions run at module load time.\n`;
+      errorMsg += `CRITICAL: Move ALL assertions INSIDE the it() callback function.\n\n`;
+      errorMsg += `WRONG (assertions at module level):\n`;
+      errorMsg += `  const sourceCode = fs.readFileSync(file);\n`;
+      errorMsg += `  assert(hasVulnerability); // Runs at module load!\n`;
+      errorMsg += `  describe('Test', function() { it('test', function() {}); });\n\n`;
+      errorMsg += `CORRECT (assertions inside it()):\n`;
+      errorMsg += `  describe('Test', function() {\n`;
+      errorMsg += `    it('should detect vulnerability', function() {\n`;
+      errorMsg += `      const sourceCode = fs.readFileSync(file);\n`;
+      errorMsg += `      assert(hasVulnerability); // Runs when test executes\n`;
+      errorMsg += `    });\n`;
+      errorMsg += `  });`;
 
       throw new Error(errorMsg);
     }
@@ -2534,34 +2548,79 @@ Return ONLY the inverted test file. No explanation, just the code block:
 
   /**
    * Check if the test file has assertions at module level (outside test callbacks)
+   * This is a more sophisticated check that looks for assertions outside of it() blocks.
    */
   private hasModuleLevelAssertions(content: string, framework: string): boolean {
+    // Only check JS-based frameworks that use describe/it
+    if (!['mocha', 'jest', 'vitest'].includes(framework)) return false;
+
     // Common assertion patterns
     const assertionPatterns = [
-      /assert\s*\./,           // assert.strictEqual, etc.
-      /expect\s*\(/,           // expect(...).to...
-      /assert\s*\(/,           // assert(...)
-      /should\./,              // should.equal
-      /\.should\./,            // value.should.equal
+      /assert\s*\.\s*\w+\s*\(/g,  // assert.strictEqual(...), assert.ok(...)
+      /assert\s*\([^)]+\)/g,       // assert(...)
+      /expect\s*\([^)]+\)/g,       // expect(...)
+      /\.should\.\w+/g,            // value.should.equal
     ];
 
-    // Check if there are assertions but no proper test blocks
-    const hasAssertions = assertionPatterns.some(p => p.test(content));
+    // Find all assertions in the file
+    const assertions: Array<{ match: string; index: number }> = [];
+    for (const pattern of assertionPatterns) {
+      let match;
+      const regex = new RegExp(pattern.source, 'g');
+      while ((match = regex.exec(content)) !== null) {
+        assertions.push({ match: match[0], index: match.index });
+      }
+    }
 
-    if (!hasAssertions) return false;
+    if (assertions.length === 0) return false;
 
-    // Framework-specific test block patterns
-    const testBlockPatterns: Record<string, RegExp> = {
-      mocha: /it\s*\(\s*['"`][^'"`]+['"`]\s*,\s*(function|\()/,
-      jest: /(it|test)\s*\(\s*['"`][^'"`]+['"`]\s*,\s*(function|\()/,
-      vitest: /(it|test)\s*\(\s*['"`][^'"`]+['"`]\s*,\s*(function|\()/,
-    };
+    // Find all it() block ranges (simplified: find it() and look for corresponding closing brace)
+    // This regex finds it('...', function() { or it('...', () => {
+    const itBlockStarts = Array.from(content.matchAll(/it\s*\(\s*['"`][^'"`]+['"`]\s*,\s*(?:function\s*\(\)|async\s+function\s*\(\)|\(\s*\)\s*=>|\s*async\s*\(\s*\)\s*=>)\s*\{/g))
+      .map(m => m.index!);
 
-    const testBlockPattern = testBlockPatterns[framework];
-    if (!testBlockPattern) return false;
+    if (itBlockStarts.length === 0) return true; // Has assertions but no it blocks
 
-    // If there are assertions but no test blocks, assertions are at module level
-    return !testBlockPattern.test(content);
+    // Check each assertion to see if it's inside an it() block
+    for (const assertion of assertions) {
+      let isInsideItBlock = false;
+
+      for (const itStart of itBlockStarts) {
+        if (assertion.index > itStart) {
+          // Find the end of this it() block by counting braces
+          const blockContent = content.slice(itStart);
+          let braceCount = 0;
+          let blockEnd = itStart;
+          let foundStart = false;
+
+          for (let i = 0; i < blockContent.length; i++) {
+            if (blockContent[i] === '{') {
+              braceCount++;
+              foundStart = true;
+            } else if (blockContent[i] === '}') {
+              braceCount--;
+              if (foundStart && braceCount === 0) {
+                blockEnd = itStart + i;
+                break;
+              }
+            }
+          }
+
+          if (assertion.index >= itStart && assertion.index < blockEnd) {
+            isInsideItBlock = true;
+            break;
+          }
+        }
+      }
+
+      // If any assertion is outside all it() blocks, return true
+      if (!isInsideItBlock) {
+        logger.debug(`Module-level assertion found: "${assertion.match}" at index ${assertion.index}`);
+        return true;
+      }
+    }
+
+    return false;
   }
 
   /**
