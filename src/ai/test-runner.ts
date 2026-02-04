@@ -518,7 +518,8 @@ export class TestRunner {
     case 'phpunit': {
       if (await this.fileExists(path.join(workingDir, 'composer.json'))) {
         if (await this.fileExists(path.join(workingDir, 'vendor', 'autoload.php'))) return null;
-        return 'composer install --no-dev';
+        // Note: Don't use --no-dev because phpunit is typically in require-dev
+        return 'composer install';
       }
       return null;
     }

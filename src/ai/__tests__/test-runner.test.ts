@@ -132,8 +132,10 @@ describe('TestRunner', () => {
         workingDir: '/tmp/rails-repo'
       });
 
+      // RFC-101 v3.8.67+: BUNDLE_IGNORE_RUBY_VERSION=1 added to allow bundler
+      // to install gems despite Ruby version mismatch from apt-get fallback
       expect(mockExecAsync).toHaveBeenCalledWith(
-        'ruby "test/user_test.rb" -n "test_xss_vulnerability"',
+        'BUNDLE_IGNORE_RUBY_VERSION=1 ruby "test/user_test.rb" -n "test_xss_vulnerability"',
         expect.objectContaining({
           cwd: '/tmp/rails-repo',
           timeout: 30000
@@ -201,8 +203,10 @@ describe('TestRunner', () => {
         workingDir: '/tmp/java-repo'
       });
 
+      // RFC-101 v3.8.70: Maven uses ClassName#methodName format, not file path
+      // This is the standard Maven Surefire pattern for running specific tests
       expect(mockExecAsync).toHaveBeenCalledWith(
-        'mvn test "src/test/java/SecurityTest.java" -Dtest "testSqlInjection"',
+        'mvn test -Dtest="SecurityTest#testSqlInjection"',
         expect.objectContaining({
           cwd: '/tmp/java-repo',
           timeout: 30000

@@ -1,6 +1,6 @@
 {
   "name": "rsolv-action",
-  "version": "3.8.69",
+  "version": "3.8.70",
   "description": "GitHub Action for automating issue fixes with AI",
   "main": "src/index.ts",
   "type": "module",
