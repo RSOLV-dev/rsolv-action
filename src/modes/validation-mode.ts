@@ -1361,12 +1361,13 @@ ${tests}
           // Write this candidate's test code
           fs.writeFileSync(targetPath, candidate.testCode, 'utf8');
 
-          // 3a. Validate syntax
+          // 3a. Validate syntax and structure
           try {
             await this.validateSyntax(targetPath, framework);
-            logger.info(`✓ Candidate ${candidateIdx + 1}: Syntax validation passed`);
+            this.validateTestStructure(targetPath, framework);
+            logger.info(`✓ Candidate ${candidateIdx + 1}: Syntax and structure validation passed`);
           } catch (syntaxError) {
-            logger.warn(`✗ Candidate ${candidateIdx + 1}: Syntax error:`, syntaxError);
+            logger.warn(`✗ Candidate ${candidateIdx + 1}: Validation error:`, syntaxError);
             candidateFailures.push({
               candidateIndex: candidateIdx,
               error: 'SyntaxError',
@@ -1406,11 +1407,12 @@ ${tests}
                 fs.writeFileSync(targetPath, invertedCode, 'utf8');
                 logger.info(`[Two-Phase] Testing inverted code...`);
 
-                // Validate syntax of inverted code
+                // Validate syntax and structure of inverted code
                 try {
                   await this.validateSyntax(targetPath, framework);
+                  this.validateTestStructure(targetPath, framework);
                 } catch (syntaxErr) {
-                  logger.warn(`[Two-Phase] Inverted code has syntax error: ${syntaxErr}`);
+                  logger.warn(`[Two-Phase] Inverted code validation failed: ${syntaxErr}`);
                   // Fall through to record original failure
                   candidateFailures.push({
                     candidateIndex: candidateIdx,
@@ -2425,6 +2427,141 @@ Return ONLY the inverted test file. No explanation, just the code block:
       const message = error instanceof Error ? error.message : String(error);
       throw new Error(`Syntax validation failed: ${message}`);
     }
+  }
+
+  /**
+   * Validate that the test file has proper test framework structure.
+   * This catches cases where the LLM generates assertions at module load time
+   * instead of inside describe/it blocks, which causes "no tests found" errors.
+   */
+  private validateTestStructure(testFile: string, framework: TestFramework): void {
+    const content = fs.readFileSync(testFile, 'utf8');
+
+    // Define required patterns for each framework
+    const structurePatterns: Record<string, { patterns: RegExp[]; description: string }> = {
+      mocha: {
+        patterns: [
+          /describe\s*\(\s*['"`]/,  // describe('...')
+          /it\s*\(\s*['"`]/,         // it('...')
+        ],
+        description: "describe('...', function() { it('...', function() { /* assertions */ }); });"
+      },
+      jest: {
+        patterns: [
+          /describe\s*\(\s*['"`]/,
+          /(it|test)\s*\(\s*['"`]/,
+        ],
+        description: "describe('...', () => { it('...', () => { /* assertions */ }); });"
+      },
+      vitest: {
+        patterns: [
+          /describe\s*\(\s*['"`]/,
+          /(it|test)\s*\(\s*['"`]/,
+        ],
+        description: "describe('...', () => { it('...', () => { /* assertions */ }); });"
+      },
+      pytest: {
+        patterns: [
+          /def\s+test_\w+\s*\(/,  // def test_something():
+        ],
+        description: "def test_vulnerability():\n    assert condition, 'message'"
+      },
+      rspec: {
+        patterns: [
+          /describe\s+['"`\w]/,
+          /it\s+['"`]/,
+        ],
+        description: "describe 'Subject' do\n  it 'tests something' do\n    expect(...).to ...\n  end\nend"
+      },
+      exunit: {
+        patterns: [
+          /describe\s+['"`]/,
+          /test\s+['"`]/,
+        ],
+        description: 'describe "Subject" do\n  test "tests something" do\n    assert ...\n  end\nend'
+      },
+      phpunit: {
+        patterns: [
+          /class\s+\w+.*extends.*TestCase/,
+          /function\s+test\w+\s*\(/,
+        ],
+        description: "class MyTest extends TestCase {\n  public function testSomething() { ... }\n}"
+      },
+      junit: {
+        patterns: [
+          /@Test/,
+          /void\s+test\w*\s*\(/,
+        ],
+        description: "@Test\npublic void testSomething() { ... }"
+      },
+    };
+
+    const frameworkKey = framework.name.toLowerCase();
+    const structureReq = structurePatterns[frameworkKey];
+
+    if (!structureReq) {
+      // Unknown framework, skip structural validation
+      logger.debug(`No structural validation rules for framework: ${framework.name}`);
+      return;
+    }
+
+    // Check if all required patterns are present
+    const missingPatterns: string[] = [];
+    for (const pattern of structureReq.patterns) {
+      if (!pattern.test(content)) {
+        missingPatterns.push(pattern.source);
+      }
+    }
+
+    if (missingPatterns.length > 0) {
+      // Check for common mistake: assertions at module level (outside test blocks)
+      const hasModuleLevelAssertions = this.hasModuleLevelAssertions(content, frameworkKey);
+
+      let errorMsg = `Test file lacks proper ${framework.name} structure.\n`;
+      errorMsg += `Missing patterns: ${missingPatterns.join(', ')}\n`;
+      errorMsg += `Expected structure:\n${structureReq.description}\n`;
+
+      if (hasModuleLevelAssertions) {
+        errorMsg += `\nDETECTED: Assertions at module load time (outside test blocks).\n`;
+        errorMsg += `Move all assertions INSIDE it() or test() callback functions.`;
+      }
+
+      throw new Error(errorMsg);
+    }
+
+    logger.debug(`Test structure validation passed for ${framework.name}`);
+  }
+
+  /**
+   * Check if the test file has assertions at module level (outside test callbacks)
+   */
+  private hasModuleLevelAssertions(content: string, framework: string): boolean {
+    // Common assertion patterns
+    const assertionPatterns = [
+      /assert\s*\./,           // assert.strictEqual, etc.
+      /expect\s*\(/,           // expect(...).to...
+      /assert\s*\(/,           // assert(...)
+      /should\./,              // should.equal
+      /\.should\./,            // value.should.equal
+    ];
+
+    // Check if there are assertions but no proper test blocks
+    const hasAssertions = assertionPatterns.some(p => p.test(content));
+
+    if (!hasAssertions) return false;
+
+    // Framework-specific test block patterns
+    const testBlockPatterns: Record<string, RegExp> = {
+      mocha: /it\s*\(\s*['"`][^'"`]+['"`]\s*,\s*(function|\()/,
+      jest: /(it|test)\s*\(\s*['"`][^'"`]+['"`]\s*,\s*(function|\()/,
+      vitest: /(it|test)\s*\(\s*['"`][^'"`]+['"`]\s*,\s*(function|\()/,
+    };
+
+    const testBlockPattern = testBlockPatterns[framework];
+    if (!testBlockPattern) return false;
+
+    // If there are assertions but no test blocks, assertions are at module level
+    return !testBlockPattern.test(content);
   }
 
   /**
