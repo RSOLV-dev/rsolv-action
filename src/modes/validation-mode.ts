@@ -1941,10 +1941,35 @@ ${(() => {
           `Do NOT use relative paths like require('../...'). process.cwd() is always the repository root.`;
       } else if (['runtime_error', 'missing_dependency', 'syntax_error'].includes(lastError)) {
         const lastMessage = lastAttempt.errorMessage || '';
-        if (lastMessage.includes('No tests found')) {
+        if (lastMessage.includes('Module-level assertions')) {
+          // RFC-103: Very specific feedback for the most common failure mode
+          prompt += '\n\n## CRITICAL ERROR: YOUR ASSERTIONS RAN OUTSIDE it() BLOCKS\n' +
+            'Your test had assertions that executed at module load time, before mocha could discover any tests.\n' +
+            'This happens when you put logic INSIDE describe() but OUTSIDE it().\n\n' +
+            '**WRONG** (assertions in describe scope — runs at load time):\n' +
+            '```\n' +
+            "describe('Test', function() {\n" +
+            "  const source = fs.readFileSync(file, 'utf8');\n" +
+            "  const hasVuln = /pattern/.test(source);\n" +
+            "  assert.strictEqual(hasVuln, false, 'Vulnerability found'); // RUNS AT LOAD TIME!\n" +
+            "  it('should detect vulnerability', function() { }); // EMPTY!\n" +
+            '});\n' +
+            '```\n\n' +
+            '**CORRECT** (ALL logic inside it() callback):\n' +
+            '```\n' +
+            "describe('Hardcoded Credentials', function() {\n" +
+            "  it('should detect hardcoded secrets in config', function() {\n" +
+            "    const source = fs.readFileSync(filePath, 'utf8');\n" +
+            "    const hasHardcoded = /['\"]\\w{20,}['\"]/.test(source);\n" +
+            "    assert.strictEqual(hasHardcoded, false, 'Hardcoded credential found');\n" +
+            '  });\n' +
+            '});\n' +
+            '```\n\n' +
+            'PUT EVERYTHING — file reads, regex checks, AND assertions — INSIDE the it() function body.';
+        } else if (lastMessage.includes('No tests found')) {
           prompt += '\n\nPREVIOUS ATTEMPT FAILED: The test file contained no test cases. ' +
             'Ensure the file has describe()/it() blocks (for mocha) or test() blocks. ' +
-            'require() and import statements must be at the top of the file, NOT inside test blocks.';
+            'ALL logic (file reads, variable assignments, assertions) MUST be inside the it() callback, not at module scope or describe scope.';
         } else if (lastMessage.includes('cannot load such file') || lastMessage.includes('LoadError')) {
           prompt += `\n\nPREVIOUS ATTEMPT FAILED: ${lastMessage}. ` +
             'DO NOT require rails_helper, spec_helper, or application-specific helpers. ' +
@@ -2521,26 +2546,17 @@ Return ONLY the inverted test file. No explanation, just the code block:
       throw new Error(errorMsg);
     }
 
-    // CRITICAL: Even if describe/it patterns exist, check for module-level assertions
-    // This catches cases where the LLM writes assertions OUTSIDE the it() callbacks
-    const hasModuleLevelAsserts = this.hasModuleLevelAssertions(content, frameworkKey);
-    if (hasModuleLevelAsserts) {
-      let errorMsg = `Test file has ASSERTIONS OUTSIDE test callbacks.\n`;
-      errorMsg += `Mocha found describe/it blocks but assertions run at module load time.\n`;
-      errorMsg += `CRITICAL: Move ALL assertions INSIDE the it() callback function.\n\n`;
-      errorMsg += `WRONG (assertions at module level):\n`;
-      errorMsg += `  const sourceCode = fs.readFileSync(file);\n`;
-      errorMsg += `  assert(hasVulnerability); // Runs at module load!\n`;
-      errorMsg += `  describe('Test', function() { it('test', function() {}); });\n\n`;
-      errorMsg += `CORRECT (assertions inside it()):\n`;
-      errorMsg += `  describe('Test', function() {\n`;
-      errorMsg += `    it('should detect vulnerability', function() {\n`;
-      errorMsg += `      const sourceCode = fs.readFileSync(file);\n`;
-      errorMsg += `      assert(hasVulnerability); // Runs when test executes\n`;
-      errorMsg += `    });\n`;
-      errorMsg += `  });`;
+    // CRITICAL: For JS-based frameworks, verify assertions are inside it() blocks
+    // This catches cases where the LLM writes assertions in describe scope or at module level
+    if (['mocha', 'jest', 'vitest'].includes(frameworkKey)) {
+      const hasModuleLevelAsserts = this.hasModuleLevelAssertions(content, frameworkKey);
+      if (hasModuleLevelAsserts) {
+        let errorMsg = `Test file has ASSERTIONS OUTSIDE it() callbacks.\n`;
+        errorMsg += `Assertions in describe() scope or at module level run at load time, not during test execution.\n`;
+        errorMsg += `CRITICAL: Move ALL logic (file reads, variable assignments, AND assertions) INSIDE the it() callback function.`;
 
-      throw new Error(errorMsg);
+        throw new Error(errorMsg);
+      }
     }
 
     logger.debug(`Test structure validation passed for ${framework.name}`);
@@ -2575,8 +2591,8 @@ Return ONLY the inverted test file. No explanation, just the code block:
     if (assertions.length === 0) return false;
 
     // Find all it() block ranges (simplified: find it() and look for corresponding closing brace)
-    // This regex finds it('...', function() { or it('...', () => {
-    const itBlockStarts = Array.from(content.matchAll(/it\s*\(\s*['"`][^'"`]+['"`]\s*,\s*(?:function\s*\(\)|async\s+function\s*\(\)|\(\s*\)\s*=>|\s*async\s*\(\s*\)\s*=>)\s*\{/g))
+    // Use a relaxed regex that matches it('...', function() { or it('...', () => { or variations
+    const itBlockStarts = Array.from(content.matchAll(/it\s*\(\s*['"`][^'"`]+['"`]\s*,\s*(?:async\s+)?(?:function\s*\([^)]*\)|\([^)]*\)\s*=>)\s*\{/g))
       .map(m => m.index!);
 
     if (itBlockStarts.length === 0) return true; // Has assertions but no it blocks

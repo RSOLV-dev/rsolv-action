@@ -76,8 +76,17 @@ export function classifyTestResult(exitCode: number, stdout: string, stderr: str
   if (/0 examples?,\s*0 failures?/i.test(combined)) {
     return { type: 'runtime_error', isValidFailure: false, reason: 'No test examples executed (RSpec error outside examples)' };
   }
+  // RFC-103: Detect module-level assertions — "0 passing" WITH assertion errors means
+  // assertions ran at module load time (outside it() blocks), not inside test callbacks
   if (/0 passing|0 tests?\b|no tests? found|test suite empty/i.test(combined) &&
       !/[1-9]\d*\s+(passing|pass|passed)/i.test(combined)) {
+    if (/AssertionError|assert\.|expect\(|should\./i.test(combined)) {
+      return {
+        type: 'runtime_error',
+        isValidFailure: false,
+        reason: 'Module-level assertions detected: Assertions ran at load time outside it() blocks. Move ALL assertions inside it() callback functions.'
+      };
+    }
     return { type: 'runtime_error', isValidFailure: false, reason: 'No tests found or executed in test file' };
   }
 
