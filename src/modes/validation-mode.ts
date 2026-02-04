@@ -2088,7 +2088,7 @@ Return ONLY the inverted test file. No explanation, just the code block:
       'jest':    { name: 'jest',    testCommand: 'npx jest',            syntaxCheckCommand: 'node --check' },
       'vitest':  { name: 'vitest',  testCommand: 'npx vitest run',     syntaxCheckCommand: 'node --check' },
       'rspec':   { name: 'rspec',   testCommand: 'bundle exec rspec',  syntaxCheckCommand: 'ruby -c' },
-      'pytest':  { name: 'pytest',  testCommand: 'pytest',             syntaxCheckCommand: 'python -m py_compile' },
+      'pytest':  { name: 'pytest',  testCommand: 'python3 -m pytest',  syntaxCheckCommand: 'python3 -m py_compile' },
       'phpunit': { name: 'phpunit', testCommand: 'vendor/bin/phpunit', syntaxCheckCommand: 'php -l' },
       'exunit':  { name: 'exunit',  testCommand: 'mix test',           syntaxCheckCommand: '' }, // Elixir: syntax check via mix test
       'minitest': { name: 'minitest', testCommand: 'ruby -Itest',     syntaxCheckCommand: 'ruby -c' },
@@ -2117,7 +2117,7 @@ Return ONLY the inverted test file. No explanation, just the code block:
       if (ext === '.php') return { name: 'phpunit', syntaxCheckCommand: 'php -l', testCommand: 'vendor/bin/phpunit' };
     }
 
-    if (ext === '.py') return { name: 'pytest', syntaxCheckCommand: 'python -m py_compile', testCommand: 'pytest' };
+    if (ext === '.py') return { name: 'pytest', syntaxCheckCommand: 'python3 -m py_compile', testCommand: 'python3 -m pytest' };
     if (ext === '.rb') return { name: 'rspec', syntaxCheckCommand: 'ruby -c', testCommand: 'bundle exec rspec' };
     if (ext === '.java') return { name: 'junit5', syntaxCheckCommand: '', testCommand: 'mvn test' }; // Java: syntax check via mvn compile
     if (ext === '.ex' || ext === '.exs') return { name: 'exunit', syntaxCheckCommand: '', testCommand: 'mix test' }; // Elixir: syntax check via mix test
@@ -2305,7 +2305,24 @@ Return ONLY the inverted test file. No explanation, just the code block:
     try {
       // Don't use test name filter - we write a single test per file, and the filter
       // often doesn't match because the LLM names tests differently than our testName
-      const command = `${framework.testCommand} ${testFile}`;
+      let command: string;
+
+      // RFC-101 v3.8.69: Maven/JUnit expects class name, not file path
+      // e.g., "mvn test -Dtest=MyTest" not "mvn test /path/to/MyTest.java"
+      if (framework.testCommand.startsWith('mvn ')) {
+        // Extract class name from file path: /path/to/MyTest.java -> MyTest
+        const fileName = path.basename(testFile);
+        const className = fileName.replace(/\.java$/, '');
+        // Check if testCommand already ends with -Dtest= (from frameworkFromName)
+        if (framework.testCommand.includes('-Dtest=')) {
+          command = `${framework.testCommand}${className}`;
+        } else {
+          command = `${framework.testCommand} -Dtest=${className}`;
+        }
+      } else {
+        command = `${framework.testCommand} ${testFile}`;
+      }
+
       logger.info(`Running test command: ${command}`);
       const output = execSync(command, { cwd: this.repoPath, encoding: 'utf8', env: process.env });
 

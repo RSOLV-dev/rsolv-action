@@ -498,17 +498,19 @@ export class TestRunner {
       // Python: pip install
       // RFC-101 v3.8.68: Install system libs commonly needed by Python packages (Pillow, etc.)
       // before pip install to prevent build failures. Also ensure pytest is installed.
+      // RFC-101 v3.8.69: Use python3 -m pip (not bare pip) because apt-get installs pip3, not pip
       const sysDeps = 'apt-get update && apt-get install -y --no-install-recommends libjpeg-dev libpng-dev libfreetype-dev 2>/dev/null || true';
-      const ensurePytest = 'pip install pytest';
+      const pip = 'python3 -m pip';
+      const ensurePytest = `${pip} install pytest`;
       if (await this.fileExists(path.join(workingDir, 'requirements.txt'))) {
         // Install deps first (may fail on some packages), then ensure pytest is available
-        return `${sysDeps} && (pip install -r requirements.txt || echo "Some deps failed, continuing...") && ${ensurePytest}`;
+        return `${sysDeps} && (${pip} install -r requirements.txt || echo "Some deps failed, continuing...") && ${ensurePytest}`;
       }
       if (await this.fileExists(path.join(workingDir, 'pyproject.toml'))) {
-        return `${sysDeps} && (pip install -e . || echo "Install failed, continuing...") && ${ensurePytest}`;
+        return `${sysDeps} && (${pip} install -e . || echo "Install failed, continuing...") && ${ensurePytest}`;
       }
       if (await this.fileExists(path.join(workingDir, 'setup.py'))) {
-        return `${sysDeps} && (pip install -e . || echo "Install failed, continuing...") && ${ensurePytest}`;
+        return `${sysDeps} && (${pip} install -e . || echo "Install failed, continuing...") && ${ensurePytest}`;
       }
       // No manifest - just install pytest
       return ensurePytest;
