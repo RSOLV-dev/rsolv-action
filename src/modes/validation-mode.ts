@@ -31,6 +31,8 @@ export class ValidationMode {
   private projectAiContext: string = '';
   /** RFC-101: Detected ecosystems from project shape (e.g., ['python', 'javascript']) */
   private projectEcosystems: string[] = [];
+  /** RFC-101 v3.8.72: Available test/assertion libraries from package.json devDependencies */
+  private availableTestLibraries: string[] = [];
 
   constructor(config: ActionConfig, repoPath?: string) {
     this.config = config;
@@ -1768,7 +1770,11 @@ ${realisticExamples}
 
 TARGET TEST FILE: ${targetTestFile.path}
 FRAMEWORK: ${framework.name}
-
+${this.availableTestLibraries.length > 0 ? `
+AVAILABLE TEST LIBRARIES: ${this.availableTestLibraries.join(', ')}
+IMPORTANT: Only use assertion libraries from the list above. DO NOT use libraries like 'chai' or 'expect' if they are not listed.
+If no assertion library is available, use Node's built-in 'assert' module (const assert = require('assert');).
+` : ''}
 TARGET FILE CONTENT (for context):
 \`\`\`
 ${targetTestFile.content}
@@ -1778,26 +1784,38 @@ UNDERSTANDING RED TESTS:
 A "RED" test is a test that FAILS on the current vulnerable code. The failure proves the vulnerability exists.
 The key insight: assert what SECURE code would do, so the assertion FAILS when run against INSECURE code.
 
-Example RED test for SQL injection (Mocha/JavaScript):
+Example RED test for SQL injection (Mocha/JavaScript using Node's built-in assert):
 \`\`\`javascript
+const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
 const source = fs.readFileSync(path.join(process.cwd(), 'routes/users.js'), 'utf8');
-it('should use parameterized queries to prevent SQL injection', () => {
-  // This assertion FAILS because the code uses string interpolation, not parameterized queries
-  expect(source).to.match(/\\$[0-9]|\\?\\s*,|:param/);  // parameterized placeholder pattern
+describe('SQL Injection Prevention', function() {
+  it('should use parameterized queries to prevent SQL injection', function() {
+    // This assertion FAILS because the code uses string interpolation, not parameterized queries
+    assert.match(source, /\\$[0-9]|\\?\\s*,|:param/);  // parameterized placeholder pattern
+  });
 });
 \`\`\`
 This test FAILS because the vulnerable code uses string interpolation, not parameterized queries.
 
-Example RED test for XSS (Mocha/JavaScript):
+Example RED test for XSS (Mocha/JavaScript using Node's built-in assert):
 \`\`\`javascript
+const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
 const source = fs.readFileSync(path.join(process.cwd(), 'views/profile.js'), 'utf8');
-it('should escape HTML in user output', () => {
-  // This assertion FAILS because the code outputs user input without escaping
-  expect(source).to.not.match(/res\\.send\\([^)]*\\$\\{.*user/);  // unescaped template literal
-  expect(source).to.match(/escapeHtml|sanitize|textContent/);     // sanitization function
+describe('XSS Prevention', function() {
+  it('should escape HTML in user output', function() {
+    // This assertion FAILS because the code outputs user input without escaping
+    assert.doesNotMatch(source, /res\\.send\\([^)]*\\$\\{.*user/);  // unescaped template literal
+    assert.match(source, /escapeHtml|sanitize|textContent/);     // sanitization function
+  });
 });
 \`\`\`
 This test FAILS because the vulnerable code does NOT use escapeHtml/sanitize.
+
+NOTE: The examples above use Node's built-in assert. If other assertion libraries are listed in AVAILABLE TEST LIBRARIES, you may use them instead.
 
 YOUR TASK:
 Generate 3 DIFFERENT test approaches. Each approach MUST be in its own separate code block.
@@ -2542,6 +2560,12 @@ Return ONLY the inverted test file. No explanation, just the code block:
       if (fs.existsSync(packageJsonPath)) {
         try {
           packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+          // RFC-101 v3.8.72: Extract available test/assertion libraries from devDependencies
+          // This tells the LLM what libraries are actually available (e.g., 'should' vs 'chai')
+          this.availableTestLibraries = this.extractTestLibraries(packageJson);
+          if (this.availableTestLibraries.length > 0) {
+            logger.info(`RFC-101: Available test libraries: ${this.availableTestLibraries.join(', ')}`);
+          }
         } catch (parseErr) {
           logger.warn(`Could not parse package.json: ${parseErr}`);
         }
@@ -2604,6 +2628,51 @@ Return ONLY the inverted test file. No explanation, just the code block:
       logger.warn(`Backend framework detection failed, falling back to extension-based: ${error}`);
       return this.detectFrameworkFromFileWithEcosystemFallback(filePath);
     }
+  }
+
+  /**
+   * RFC-101 v3.8.72: Extract test/assertion libraries from package.json devDependencies.
+   * Returns library names that the LLM should know about when generating tests.
+   *
+   * Common assertion libraries: chai, should, expect, expect.js, assert, power-assert
+   * Common test utilities: sinon, testdouble, nock, supertest, enzyme, testing-library
+   */
+  private extractTestLibraries(packageJson: { devDependencies?: Record<string, string>; dependencies?: Record<string, string> } | null): string[] {
+    if (!packageJson) return [];
+
+    const testLibraryPatterns = [
+      // Assertion libraries
+      'chai', 'should', 'expect', 'expect.js', 'power-assert', 'assert',
+      // Test runners (useful context)
+      'mocha', 'jest', 'vitest', 'ava', 'tape', 'jasmine',
+      // Mocking/stubbing
+      'sinon', 'testdouble', 'nock', 'msw',
+      // HTTP testing
+      'supertest', 'superagent',
+      // React testing
+      '@testing-library/react', '@testing-library/jest-dom', 'enzyme',
+      // General utilities that affect test writing
+      'faker', '@faker-js/faker', 'chance'
+    ];
+
+    const allDeps = {
+      ...packageJson.dependencies,
+      ...packageJson.devDependencies
+    };
+
+    const found: string[] = [];
+    for (const pattern of testLibraryPatterns) {
+      if (allDeps[pattern]) {
+        found.push(pattern);
+      }
+    }
+
+    // Always include Node's built-in assert as available
+    if (found.length > 0 && !found.includes('assert')) {
+      found.push('assert (Node built-in)');
+    }
+
+    return found;
   }
 
   /**

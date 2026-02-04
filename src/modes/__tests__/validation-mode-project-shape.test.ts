@@ -665,4 +665,76 @@ describe('RFC-101: Project Shape Consumption in VALIDATE', () => {
       expect(rakeCalls.length).toBe(1);
     });
   });
+
+  describe('RFC-101 v3.8.72: Available Test Libraries Extraction', () => {
+    it('should extract test libraries from package.json devDependencies', () => {
+      const vm = new ValidationMode(makeConfig());
+
+      // Access private method via type casting
+      const extractTestLibraries = (vm as unknown as { extractTestLibraries: (pkg: unknown) => string[] }).extractTestLibraries.bind(vm);
+
+      const packageJson = {
+        dependencies: {
+          'express': '^4.18.0'
+        },
+        devDependencies: {
+          'mocha': '^10.0.0',
+          'should': '^13.0.0',
+          'sinon': '^15.0.0'
+        }
+      };
+
+      const result = extractTestLibraries(packageJson);
+
+      expect(result).toContain('mocha');
+      expect(result).toContain('should');
+      expect(result).toContain('sinon');
+      expect(result).toContain('assert (Node built-in)');
+      expect(result).not.toContain('express');
+    });
+
+    it('should return empty array for null package.json', () => {
+      const vm = new ValidationMode(makeConfig());
+      const extractTestLibraries = (vm as unknown as { extractTestLibraries: (pkg: unknown) => string[] }).extractTestLibraries.bind(vm);
+
+      const result = extractTestLibraries(null);
+      expect(result).toEqual([]);
+    });
+
+    it('should detect chai when present', () => {
+      const vm = new ValidationMode(makeConfig());
+      const extractTestLibraries = (vm as unknown as { extractTestLibraries: (pkg: unknown) => string[] }).extractTestLibraries.bind(vm);
+
+      const packageJson = {
+        devDependencies: {
+          'mocha': '^10.0.0',
+          'chai': '^4.0.0'
+        }
+      };
+
+      const result = extractTestLibraries(packageJson);
+
+      expect(result).toContain('chai');
+      expect(result).toContain('mocha');
+    });
+
+    it('should detect jest and testing-library packages', () => {
+      const vm = new ValidationMode(makeConfig());
+      const extractTestLibraries = (vm as unknown as { extractTestLibraries: (pkg: unknown) => string[] }).extractTestLibraries.bind(vm);
+
+      const packageJson = {
+        devDependencies: {
+          'jest': '^29.0.0',
+          '@testing-library/react': '^14.0.0',
+          '@testing-library/jest-dom': '^6.0.0'
+        }
+      };
+
+      const result = extractTestLibraries(packageJson);
+
+      expect(result).toContain('jest');
+      expect(result).toContain('@testing-library/react');
+      expect(result).toContain('@testing-library/jest-dom');
+    });
+  });
 });
