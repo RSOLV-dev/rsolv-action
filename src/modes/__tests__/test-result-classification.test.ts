@@ -342,6 +342,42 @@ FAIL tests/security.test.js
       expect(result.type).toBe('runtime_error');
     });
 
+    it('should classify mocha "0 passing, 1 failing" with AssertionError as VALID failure', () => {
+      // Mocha output for a genuine test failure: 0 pass, 1 fail, with assertion error
+      // This is NOT module-level assertions — mocha discovered and ran the test
+      const stdout = `
+  CWE-798 Hardcoded Credentials
+    1) should detect hardcoded password in source
+
+  0 passing (8ms)
+  1 failing
+
+  1) CWE-798 Hardcoded Credentials
+       should detect hardcoded password in source:
+     AssertionError [ERR_ASSERTION]: Found hardcoded password in source code
+      at Context.<anonymous> (test/security/cwe-798.test.js:12:14)
+      `;
+      const result = validationMode.classifyTestResult(1, stdout, '');
+      expect(result.isValidFailure).toBe(true);
+      expect(result.type).toBe('test_failed');
+    });
+
+    it('should classify mocha "0 passing" with AssertionError but NO failing count as module-level', () => {
+      // Module-level assertions: assertion runs at load time, mocha never discovers tests
+      // Output has "0 passing" and AssertionError but NO "N failing" line
+      const stdout = `
+  0 passing (0ms)
+`;
+      const stderr = `
+AssertionError [ERR_ASSERTION]: Found hardcoded password
+    at Object.<anonymous> (test.js:5:1)
+      `;
+      const result = validationMode.classifyTestResult(1, stdout, stderr);
+      expect(result.isValidFailure).toBe(false);
+      expect(result.type).toBe('runtime_error');
+      expect(result.reason).toMatch(/module-level/i);
+    });
+
     it('should classify RSpec "0 examples, 0 failures" with error as not valid', () => {
       // RSpec output when test crashes during load (e.g., LoadError outside examples)
       const stdout = `Finished in 0.00023 seconds (files took 0.5 seconds to load)

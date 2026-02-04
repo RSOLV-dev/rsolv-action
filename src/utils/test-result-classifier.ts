@@ -77,9 +77,13 @@ export function classifyTestResult(exitCode: number, stdout: string, stderr: str
     return { type: 'runtime_error', isValidFailure: false, reason: 'No test examples executed (RSpec error outside examples)' };
   }
   // RFC-103: Detect module-level assertions — "0 passing" WITH assertion errors means
-  // assertions ran at module load time (outside it() blocks), not inside test callbacks
+  // assertions ran at module load time (outside it() blocks), not inside test callbacks.
+  // IMPORTANT: Exclude cases where "N failing" (N>=1) is present — that means mocha
+  // DID discover and run tests. "0 passing, 1 failing" is a genuine test failure, not
+  // module-level assertions. Module-level assertions produce "0 passing" with NO "failing" count.
   if (/0 passing|0 tests?\b|no tests? found|test suite empty/i.test(combined) &&
-      !/[1-9]\d*\s+(passing|pass|passed)/i.test(combined)) {
+      !/[1-9]\d*\s+(passing|pass|passed)/i.test(combined) &&
+      !/[1-9]\d*\s+failing/i.test(combined)) {
     if (/AssertionError|assert\.|expect\(|should\./i.test(combined)) {
       return {
         type: 'runtime_error',
