@@ -342,11 +342,15 @@ export class TestRunner {
     } catch (error: unknown) {
       const execError = error as { stderr?: string; message?: string; killed?: boolean };
       const isTimeout = execError.killed || (execError.message && execError.message.includes('TIMEOUT'));
+      const errorMsg = execError.stderr || execError.message || String(error);
+      console.warn(`[TestRunner] mise install failed: ${errorMsg.slice(0, 200)}`);
 
-      // RFC-101 Iteration 15 M2: Fall back to apt-get when mise times out
-      // This prevents getting stuck on slow builds (e.g., PHP 7.1 from source)
-      if (isTimeout && (runtime === 'php' || runtime === 'ruby' || runtime === 'python')) {
-        console.warn(`[TestRunner] mise install timed out after ${this.MISE_QUICK_TIMEOUT}ms - falling back to apt-get`);
+      // RFC-101 v3.8.68: Fall back to apt-get for ANY mise failure (not just timeout)
+      // Common failures: no prebuilt binary, build fails, missing deps, timeout
+      // This ensures runtimes are available even when mise can't provide them
+      if (runtime === 'php' || runtime === 'ruby' || runtime === 'python') {
+        const reason = isTimeout ? `timed out after ${this.MISE_QUICK_TIMEOUT}ms` : 'failed';
+        console.warn(`[TestRunner] mise install ${reason} - falling back to apt-get`);
         console.warn(`[TestRunner] Note: System version may differ from project's required ${runtimeSpec}`);
 
         const aptPackages: Record<string, string> = {
@@ -492,16 +496,22 @@ export class TestRunner {
     }
     case 'pytest': {
       // Python: pip install
+      // RFC-101 v3.8.68: Install system libs commonly needed by Python packages (Pillow, etc.)
+      // before pip install to prevent build failures. Also ensure pytest is installed.
+      const sysDeps = 'apt-get update && apt-get install -y --no-install-recommends libjpeg-dev libpng-dev libfreetype-dev 2>/dev/null || true';
+      const ensurePytest = 'pip install pytest';
       if (await this.fileExists(path.join(workingDir, 'requirements.txt'))) {
-        return 'pip install -r requirements.txt';
+        // Install deps first (may fail on some packages), then ensure pytest is available
+        return `${sysDeps} && (pip install -r requirements.txt || echo "Some deps failed, continuing...") && ${ensurePytest}`;
       }
       if (await this.fileExists(path.join(workingDir, 'pyproject.toml'))) {
-        return 'pip install -e .';
+        return `${sysDeps} && (pip install -e . || echo "Install failed, continuing...") && ${ensurePytest}`;
       }
       if (await this.fileExists(path.join(workingDir, 'setup.py'))) {
-        return 'pip install -e .';
+        return `${sysDeps} && (pip install -e . || echo "Install failed, continuing...") && ${ensurePytest}`;
       }
-      return null;
+      // No manifest - just install pytest
+      return ensurePytest;
     }
     case 'phpunit': {
       if (await this.fileExists(path.join(workingDir, 'composer.json'))) {
@@ -598,12 +608,29 @@ export class TestRunner {
 
   /**
    * Build command from pattern
+   * RFC-101 v3.8.68: Special handling for Maven/JUnit - use -Dtest=ClassName format
    */
   private buildCommandFromPattern(
     pattern: CommandPattern,
     testFile: string,
     testName?: string
   ): string {
+    // Special handling for Maven-based frameworks (JUnit)
+    // Maven expects: mvn test -Dtest=ClassName, not mvn test /path/to/Test.java
+    if (pattern.base.startsWith('mvn ')) {
+      // Extract class name from file path
+      // e.g., src/test/java/org/example/MyTest.java -> MyTest
+      // e.g., src/it/java/org/owasp/webgoat/integration/ChallengeIntegrationTest.java -> ChallengeIntegrationTest
+      const fileName = testFile.split('/').pop() || testFile;
+      const className = fileName.replace(/\.java$/, '');
+      let cmd = `${pattern.base} ${pattern.testNameFlag}="${className}"`;
+      if (testName) {
+        // For specific test method: -Dtest=ClassName#methodName
+        cmd = `${pattern.base} ${pattern.testNameFlag}="${className}#${testName}"`;
+      }
+      return cmd;
+    }
+
     let cmd = `${pattern.base} "${testFile}"`;
     if (testName) {
       cmd += ` ${pattern.testNameFlag} "${testName}"`;
