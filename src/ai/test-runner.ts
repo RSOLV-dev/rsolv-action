@@ -519,7 +519,9 @@ export class TestRunner {
       if (await this.fileExists(path.join(workingDir, 'composer.json'))) {
         if (await this.fileExists(path.join(workingDir, 'vendor', 'autoload.php'))) return null;
         // Note: Don't use --no-dev because phpunit is typically in require-dev
-        return 'composer install';
+        // RFC-101 v3.8.71: Use --ignore-platform-reqs to handle PHP version mismatches
+        // when apt-get fallback installs a different PHP version than composer.lock expects
+        return 'composer install --ignore-platform-reqs';
       }
       return null;
     }
@@ -529,7 +531,10 @@ export class TestRunner {
     }
     case 'exunit': {
       if (await this.fileExists(path.join(workingDir, 'mix.exs'))) {
-        return 'mix deps.get && mix deps.compile';
+        // RFC-101 v3.8.71: Set MIX_ENV=test to ensure test config is used.
+        // This allows apps configured with SQLite fallback in config/test.exs to work.
+        // Also compiles deps for the test environment specifically.
+        return 'MIX_ENV=test mix deps.get && MIX_ENV=test mix deps.compile';
       }
       return null;
     }

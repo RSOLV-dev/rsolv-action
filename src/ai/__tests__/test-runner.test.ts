@@ -7,6 +7,7 @@ import { describe, test, expect, beforeEach, vi } from 'vitest';
 
 // Mock exec function using vi.hoisted
 const mockExecAsync = vi.hoisted(() => vi.fn());
+const mockFsAccess = vi.hoisted(() => vi.fn());
 
 vi.mock('child_process', () => ({
   exec: vi.fn()
@@ -14,6 +15,11 @@ vi.mock('child_process', () => ({
 
 vi.mock('util', () => ({
   promisify: () => mockExecAsync
+}));
+
+vi.mock('fs/promises', () => ({
+  access: mockFsAccess,
+  readFile: vi.fn().mockResolvedValue('')
 }));
 
 import { TestRunner, type TestRunResult } from '../test-runner.js';
@@ -417,6 +423,66 @@ describe('TestRunner', () => {
 
       expect(result.passed).toBe(false);
       expect(result.exitCode).toBe(127);
+    });
+  });
+
+  describe('Dependency Install Commands (RFC-101 v3.8.71)', () => {
+    beforeEach(() => {
+      // Reset fs mock - default to file not existing
+      mockFsAccess.mockRejectedValue(new Error('ENOENT'));
+    });
+
+    test('PHP: should use --ignore-platform-reqs for composer install', async () => {
+      // Mock: composer.json exists, vendor/autoload.php doesn't
+      mockFsAccess.mockImplementation((filePath: string) => {
+        if (filePath.endsWith('composer.json')) return Promise.resolve();
+        if (filePath.endsWith('autoload.php')) return Promise.reject(new Error('ENOENT'));
+        return Promise.reject(new Error('ENOENT'));
+      });
+
+      mockExecAsync.mockResolvedValue({ stdout: '', stderr: '' });
+
+      await runner.runTests({
+        framework: 'phpunit',
+        testFile: 'tests/SecurityTest.php',
+        testName: 'testVulnerability',
+        workingDir: '/tmp/php-repo'
+      });
+
+      // Verify composer install includes --ignore-platform-reqs
+      const calls = mockExecAsync.mock.calls;
+      const composerCall = calls.find((call: unknown[]) =>
+        typeof call[0] === 'string' && call[0].includes('composer install')
+      );
+      expect(composerCall).toBeDefined();
+      expect(composerCall![0]).toContain('--ignore-platform-reqs');
+    });
+
+    test('Elixir: should set MIX_ENV=test for proper test isolation', async () => {
+      // Mock: mix.exs exists
+      mockFsAccess.mockImplementation((filePath: string) => {
+        if (filePath.endsWith('mix.exs')) return Promise.resolve();
+        return Promise.reject(new Error('ENOENT'));
+      });
+
+      mockExecAsync.mockResolvedValue({ stdout: '', stderr: '' });
+
+      await runner.runTests({
+        framework: 'exunit',
+        testFile: 'test/security_test.exs',
+        testName: 'test vulnerability',
+        workingDir: '/tmp/elixir-repo'
+      });
+
+      // Verify mix deps command sets MIX_ENV=test for proper test isolation
+      // This ensures deps are compiled for test environment and test config is used
+      const calls = mockExecAsync.mock.calls;
+      const mixDepsCall = calls.find((call: unknown[]) =>
+        typeof call[0] === 'string' && call[0].includes('mix deps')
+      );
+      expect(mixDepsCall).toBeDefined();
+      // MIX_ENV=test ensures test config is used (which may configure SQLite fallback)
+      expect(mixDepsCall![0]).toContain('MIX_ENV=test');
     });
   });
 });

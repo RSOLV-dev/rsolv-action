@@ -145,6 +145,34 @@ ReferenceError: undefinedVariable is not defined
       expect(result.type).toBe('runtime_error');
       expect(result.isValidFailure).toBe(false);
     });
+
+    // RFC-101 v3.8.71: Database unavailable patterns
+    it('should detect Ecto database creation failure (Elixir)', () => {
+      const stderr = '** (Mix) The database for Carafe.Repo couldn\'t be created: killed';
+      const result = validationMode.classifyTestResult(1, '', stderr);
+
+      expect(result.type).toBe('runtime_error');
+      expect(result.isValidFailure).toBe(false);
+      expect(result.reason).toMatch(/database|PostgreSQL/i);
+    });
+
+    it('should detect PostgreSQL connection refused', () => {
+      const stderr = 'could not connect to server: Connection refused\n\tIs the server running on host "localhost"?';
+      const result = validationMode.classifyTestResult(1, '', stderr);
+
+      expect(result.type).toBe('runtime_error');
+      expect(result.isValidFailure).toBe(false);
+      expect(result.reason).toMatch(/PostgreSQL|connection/i);
+    });
+
+    it('should detect MySQL connection failure', () => {
+      const stderr = "Can't connect to MySQL server on 'localhost'";
+      const result = validationMode.classifyTestResult(1, '', stderr);
+
+      expect(result.type).toBe('runtime_error');
+      expect(result.isValidFailure).toBe(false);
+      expect(result.reason).toMatch(/MySQL/i);
+    });
   });
 
   describe('Missing Dependency Detection', () => {

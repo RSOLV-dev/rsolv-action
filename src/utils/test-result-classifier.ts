@@ -57,6 +57,20 @@ export function classifyTestResult(exitCode: number, stdout: string, stderr: str
     return { type: 'command_not_found', isValidFailure: false, reason: 'Command or file not found' };
   }
 
+  // RFC-101 v3.8.71: Database unavailable patterns (infrastructure errors)
+  // Elixir/Ecto: "The database for ... couldn't be created: killed"
+  // PostgreSQL: "could not connect to server" or "Connection refused"
+  // MySQL: "Can't connect to MySQL server" or "Access denied"
+  if (/database.*couldn't be created|couldn't be created.*killed/i.test(combined)) {
+    return { type: 'runtime_error', isValidFailure: false, reason: 'Database unavailable - PostgreSQL service required' };
+  }
+  if (/could not connect to server|Connection refused.*postgres|ECONNREFUSED.*5432/i.test(combined)) {
+    return { type: 'runtime_error', isValidFailure: false, reason: 'PostgreSQL connection refused - service not running' };
+  }
+  if (/Can't connect to MySQL server|Access denied for user.*@/i.test(combined)) {
+    return { type: 'runtime_error', isValidFailure: false, reason: 'MySQL unavailable - service not running or access denied' };
+  }
+
   // Check for empty test runs BEFORE failure patterns — "0 examples, 0 failures" in RSpec
   // or "0 passing" in Mocha should NOT be classified as valid failures
   if (/0 examples?,\s*0 failures?/i.test(combined)) {
