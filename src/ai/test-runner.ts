@@ -499,18 +499,21 @@ export class TestRunner {
       // RFC-101 v3.8.68: Install system libs commonly needed by Python packages (Pillow, etc.)
       // before pip install to prevent build failures. Also ensure pytest is installed.
       // RFC-101 v3.8.69: Use python3 -m pip (not bare pip) because apt-get installs pip3, not pip
+      // RFC-103 v3.8.88: Add --break-system-packages for Python 3.12+ (PEP 668).
+      // Debian Trixie / Ubuntu 24.04+ enforce externally-managed-environment which blocks
+      // pip install into system Python without this flag. Safe in our Docker/CI context.
       const sysDeps = 'apt-get update && apt-get install -y --no-install-recommends libjpeg-dev libpng-dev libfreetype-dev 2>/dev/null || true';
-      const pip = 'python3 -m pip';
-      const ensurePytest = `${pip} install pytest`;
+      const pipInstall = 'python3 -m pip install --break-system-packages';
+      const ensurePytest = `${pipInstall} pytest`;
       if (await this.fileExists(path.join(workingDir, 'requirements.txt'))) {
         // Install deps first (may fail on some packages), then ensure pytest is available
-        return `${sysDeps} && (${pip} install -r requirements.txt || echo "Some deps failed, continuing...") && ${ensurePytest}`;
+        return `${sysDeps} && (${pipInstall} -r requirements.txt || echo "Some deps failed, continuing...") && ${ensurePytest}`;
       }
       if (await this.fileExists(path.join(workingDir, 'pyproject.toml'))) {
-        return `${sysDeps} && (${pip} install -e . || echo "Install failed, continuing...") && ${ensurePytest}`;
+        return `${sysDeps} && (${pipInstall} -e . || echo "Install failed, continuing...") && ${ensurePytest}`;
       }
       if (await this.fileExists(path.join(workingDir, 'setup.py'))) {
-        return `${sysDeps} && (${pip} install -e . || echo "Install failed, continuing...") && ${ensurePytest}`;
+        return `${sysDeps} && (${pipInstall} -e . || echo "Install failed, continuing...") && ${ensurePytest}`;
       }
       // No manifest - just install pytest
       return ensurePytest;

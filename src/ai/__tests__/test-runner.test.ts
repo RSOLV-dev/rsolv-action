@@ -458,6 +458,54 @@ describe('TestRunner', () => {
       expect(composerCall![0]).toContain('--ignore-platform-reqs');
     });
 
+    test('Python: should use --break-system-packages for PEP 668 compatibility', async () => {
+      // Mock: no requirements.txt/pyproject.toml/setup.py (bare pytest install)
+      mockFsAccess.mockRejectedValue(new Error('ENOENT'));
+      mockExecAsync.mockResolvedValue({ stdout: '', stderr: '' });
+
+      await runner.runTests({
+        framework: 'pytest',
+        testFile: 'tests/test_security.py',
+        testName: 'test_vulnerability',
+        workingDir: '/tmp/python-repo'
+      });
+
+      // Verify pip install includes --break-system-packages (PEP 668)
+      const calls = mockExecAsync.mock.calls;
+      const pipCall = calls.find((call: unknown[]) =>
+        typeof call[0] === 'string' && call[0].includes('pip install')
+      );
+      expect(pipCall).toBeDefined();
+      expect(pipCall![0]).toContain('--break-system-packages');
+      expect(pipCall![0]).toContain('pytest');
+    });
+
+    test('Python: should include --break-system-packages with requirements.txt', async () => {
+      // Mock: requirements.txt exists
+      mockFsAccess.mockImplementation((filePath: string) => {
+        if (filePath.endsWith('requirements.txt')) return Promise.resolve();
+        return Promise.reject(new Error('ENOENT'));
+      });
+      mockExecAsync.mockResolvedValue({ stdout: '', stderr: '' });
+
+      await runner.runTests({
+        framework: 'pytest',
+        testFile: 'tests/test_security.py',
+        testName: 'test_vulnerability',
+        workingDir: '/tmp/python-repo'
+      });
+
+      // Verify both requirements.txt install and pytest install use --break-system-packages
+      const calls = mockExecAsync.mock.calls;
+      const pipCall = calls.find((call: unknown[]) =>
+        typeof call[0] === 'string' && call[0].includes('pip install') && call[0].includes('requirements.txt')
+      );
+      expect(pipCall).toBeDefined();
+      expect(pipCall![0]).toContain('--break-system-packages');
+      // Should also install pytest separately
+      expect(pipCall![0]).toContain('install --break-system-packages pytest');
+    });
+
     test('Elixir: should set MIX_ENV=test for proper test isolation', async () => {
       // Mock: mix.exs exists
       mockFsAccess.mockImplementation((filePath: string) => {
