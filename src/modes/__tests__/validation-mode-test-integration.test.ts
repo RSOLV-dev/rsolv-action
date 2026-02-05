@@ -28,8 +28,10 @@ vi.mock('../../ai/analyzer');
 vi.mock('../../ai/client.js', () => ({
   getAiClient: vi.fn().mockResolvedValue({
     complete: vi.fn().mockResolvedValue(`\`\`\`ruby
-it "detects vulnerability" do
-  # test code
+describe 'Vulnerability test' do
+  it "detects vulnerability" do
+    expect(true).to eq(false)
+  end
 end
 \`\`\``)
   })
@@ -91,11 +93,19 @@ describe('ValidationMode - Test Integration Workflow', () => {
 
     validationMode = new ValidationMode(mockConfig);
 
-    // Mock file system operations
+    // Mock file system operations with in-memory store
+    // validateTestStructure() reads back what writeFileSync stored,
+    // so we need reads and writes to be consistent
+    const fileStore: Record<string, string> = {};
     (fs.existsSync as any).mockReturnValue(true);
-    (fs.readFileSync as any).mockReturnValue('describe UsersController do\nend');
-    (fs.writeFileSync as any).mockImplementation(() => {});
+    (fs.readFileSync as any).mockImplementation((filePath: string) => {
+      return fileStore[filePath] || "describe 'UsersController' do\n  it 'placeholder' do\n  end\nend";
+    });
+    (fs.writeFileSync as any).mockImplementation((filePath: string, content: string) => {
+      fileStore[filePath] = content;
+    });
     (fs.mkdirSync as any).mockImplementation(() => {});
+    (fs.unlinkSync as any).mockImplementation(() => {});
 
     // Mock git operations
     (execSync as any).mockImplementation((cmd: string) => {

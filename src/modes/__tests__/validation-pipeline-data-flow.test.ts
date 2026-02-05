@@ -16,7 +16,7 @@ import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { Vulnerability, TestFileContext, TestFramework } from '../types.js';
 
 // Hoisted mocks and shared state — must be in vi.hoisted so vi.mock factories can access them
-const { mockAiComplete, mockGetAiClient, mockExecSync, execCommandLog } = vi.hoisted(() => {
+const { mockAiComplete, mockGetAiClient, mockExecSync, execCommandLog, _fileStore, _mockReadFileSync, _mockWriteFileSync } = vi.hoisted(() => {
   const mockAiComplete = vi.fn();
   const mockGetAiClient = vi.fn();
   const execCommandLog: string[] = [];
@@ -32,7 +32,16 @@ const { mockAiComplete, mockGetAiClient, mockExecSync, execCommandLog } = vi.hoi
     if (cmd.includes('echo "No test runner"')) return 'No test runner';
     return '';
   });
-  return { mockAiComplete, mockGetAiClient, mockExecSync, execCommandLog };
+  // In-memory file store so readFileSync returns what writeFileSync stored
+  // (needed by validateTestStructure which reads back the generated test file)
+  const _fileStore: Record<string, string> = {};
+  const _mockReadFileSync = vi.fn().mockImplementation((filePath: string) => {
+    return _fileStore[filePath] || '// test file content';
+  });
+  const _mockWriteFileSync = vi.fn().mockImplementation((filePath: string, content: string) => {
+    _fileStore[filePath] = content;
+  });
+  return { mockAiComplete, mockGetAiClient, mockExecSync, execCommandLog, _fileStore, _mockReadFileSync, _mockWriteFileSync };
 });
 
 // Track prompt sent to AI
@@ -80,16 +89,18 @@ vi.mock('child_process', () => ({
 vi.mock('fs', () => ({
   default: {
     existsSync: vi.fn().mockReturnValue(true),
-    readFileSync: vi.fn().mockReturnValue('// test file content'),
-    writeFileSync: vi.fn(),
+    readFileSync: _mockReadFileSync,
+    writeFileSync: _mockWriteFileSync,
     mkdirSync: vi.fn(),
-    readdirSync: vi.fn().mockReturnValue([])
+    readdirSync: vi.fn().mockReturnValue([]),
+    unlinkSync: vi.fn()
   },
   existsSync: vi.fn().mockReturnValue(true),
-  readFileSync: vi.fn().mockReturnValue('// test file content'),
-  writeFileSync: vi.fn(),
+  readFileSync: _mockReadFileSync,
+  writeFileSync: _mockWriteFileSync,
   mkdirSync: vi.fn(),
-  readdirSync: vi.fn().mockReturnValue([])
+  readdirSync: vi.fn().mockReturnValue([]),
+  unlinkSync: vi.fn()
 }));
 
 vi.mock('../vendor-utils.js', () => ({
@@ -143,7 +154,17 @@ describe('Contributions', function() {
   beforeEach(() => {
     capturedPrompt = null;
     execCommandLog.length = 0;
+    // Clear in-memory file store between tests
+    for (const key of Object.keys(_fileStore)) delete _fileStore[key];
     vi.clearAllMocks();
+
+    // Re-apply fs implementations after clearAllMocks
+    _mockReadFileSync.mockImplementation((filePath: string) => {
+      return _fileStore[filePath] || '// test file content';
+    });
+    _mockWriteFileSync.mockImplementation((filePath: string, content: string) => {
+      _fileStore[filePath] = content;
+    });
 
     // Re-apply execSync implementation after clearAllMocks
     mockExecSync.mockImplementation((cmd: string) => {

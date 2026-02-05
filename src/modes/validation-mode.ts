@@ -313,8 +313,7 @@ export class ValidationMode {
               'exunit': 'test'
             };
             const testDir = testDirMap[frameworkName] || 'test/unit';
-            const ext = this.getLanguageExtension(frameworkName);
-            const fallbackPath = `${testDir}/vulnerability_validation${ext}`;
+            const fallbackPath = `${testDir}/${this.getTestFileName(frameworkName)}`;
             targetTestFile = {
               path: fallbackPath,
               content: '',
@@ -345,9 +344,8 @@ export class ValidationMode {
             };
           } else {
             const testDir = 'test/unit';
-            const ext = this.getLanguageExtension(frameworkName);
             targetTestFile = {
-              path: `${testDir}/vulnerability_validation${ext}`,
+              path: `${testDir}/${this.getTestFileName(frameworkName)}`,
               content: '',
               framework: frameworkName
             };
@@ -365,8 +363,7 @@ export class ValidationMode {
           'exunit': 'test'
         };
         const testDir = testDirMap[frameworkName] || 'test';
-        const ext = this.getLanguageExtension(frameworkName);
-        const fallbackPath = `${testDir}/vulnerability_validation${ext}`;
+        const fallbackPath = `${testDir}/${this.getTestFileName(frameworkName)}`;
         logger.info(`No test files found — using fallback path: ${fallbackPath}`);
 
         targetTestFile = {
@@ -2402,6 +2399,34 @@ Return ONLY the inverted test file. No explanation, just the code block:
     };
 
     return extensions[frameworkName.toLowerCase()] || '.js';
+  }
+
+  /**
+   * Get the properly-named test file for a given framework.
+   *
+   * Each framework has naming conventions that affect test discovery:
+   * - vitest/jest: Require *.test.ts / *.test.js (include pattern enforced)
+   * - rspec: Convention is *_spec.rb
+   * - pytest: Convention is test_*.py or *_test.py
+   * - phpunit: Convention is *Test.php
+   * - exunit: Convention is *_test.exs
+   */
+  private getTestFileName(frameworkName: string): string {
+    const fileNames: Record<string, string> = {
+      'rspec': 'vulnerability_validation_spec.rb',
+      'minitest': 'vulnerability_validation_test.rb',
+      'pytest': 'test_vulnerability_validation.py',
+      'phpunit': 'VulnerabilityValidationTest.php',
+      'pest': 'VulnerabilityValidationTest.php',
+      'jest': 'vulnerability_validation.test.js',
+      'vitest': 'vulnerability_validation.test.ts',
+      'mocha': 'vulnerability_validation.test.js',
+      'junit5': 'VulnerabilityValidationTest.java',
+      'testng': 'VulnerabilityValidationTest.java',
+      'exunit': 'vulnerability_validation_test.exs'
+    };
+
+    return fileNames[frameworkName.toLowerCase()] || 'vulnerability_validation.test.js';
   }
 
   /**

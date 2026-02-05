@@ -56,6 +56,10 @@ export function classifyTestResult(exitCode: number, stdout: string, stderr: str
   if (/command not found|ENOENT/i.test(combined)) {
     return { type: 'command_not_found', isValidFailure: false, reason: 'Command or file not found' };
   }
+  // Vitest/Jest: "No test files found" — test file name doesn't match include pattern
+  if (/No test files found/i.test(combined)) {
+    return { type: 'runtime_error', isValidFailure: false, reason: 'No test files found — file naming may not match framework include pattern' };
+  }
 
   // RFC-101 v3.8.71: Database unavailable patterns (infrastructure errors)
   // Elixir/Ecto: "The database for ... couldn't be created: killed"

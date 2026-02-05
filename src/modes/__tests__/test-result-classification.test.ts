@@ -175,6 +175,17 @@ ReferenceError: undefinedVariable is not defined
     });
   });
 
+  describe('Test File Discovery Errors', () => {
+    it('should detect vitest "No test files found" as runtime_error', () => {
+      const stdout = `No test files found, exiting with code 1\n\nfilter: /github/workspace/__tests__/vulnerability_validation.ts\ninclude: **/*.{test,spec}.?(c|m)[jt]s?(x)`;
+      const result = validationMode.classifyTestResult(1, stdout, '');
+
+      expect(result.type).toBe('runtime_error');
+      expect(result.isValidFailure).toBe(false);
+      expect(result.reason).toMatch(/No test files found/i);
+    });
+  });
+
   describe('Missing Dependency Detection', () => {
     it('should detect Cannot find module error (Node.js)', () => {
       const stderr = `
