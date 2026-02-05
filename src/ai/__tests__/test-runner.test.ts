@@ -8,6 +8,7 @@ import { describe, test, expect, beforeEach, vi } from 'vitest';
 // Mock exec function using vi.hoisted
 const mockExecAsync = vi.hoisted(() => vi.fn());
 const mockFsAccess = vi.hoisted(() => vi.fn());
+const mockFsReadFile = vi.hoisted(() => vi.fn().mockResolvedValue(''));
 
 vi.mock('child_process', () => ({
   exec: vi.fn()
@@ -19,7 +20,7 @@ vi.mock('util', () => ({
 
 vi.mock('fs/promises', () => ({
   access: mockFsAccess,
-  readFile: vi.fn().mockResolvedValue('')
+  readFile: mockFsReadFile
 }));
 
 import { TestRunner, type TestRunResult } from '../test-runner.js';
@@ -714,6 +715,204 @@ describe('TestRunner', () => {
         typeof call[0] === 'string' && call[0].includes('uv pip install --system --break-system-packages poetry')
       );
       expect(installCall).toBeDefined();
+    });
+  });
+
+  describe('PostgreSQL Provisioning (RFC-103 B1)', () => {
+    beforeEach(() => {
+      mockFsAccess.mockRejectedValue(new Error('ENOENT'));
+      mockFsReadFile.mockResolvedValue('');
+    });
+
+    test('needsPostgresql returns true when mix.exs contains {:postgrex', async () => {
+      mockFsAccess.mockImplementation((filePath: string) => {
+        if (filePath.endsWith('mix.exs')) return Promise.resolve();
+        return Promise.reject(new Error('ENOENT'));
+      });
+      mockFsReadFile.mockImplementation((filePath: string) => {
+        if (filePath.endsWith('mix.exs')) {
+          return Promise.resolve(`
+            defp deps do
+              [{:phoenix, "~> 1.7"}, {:postgrex, ">= 0.0.0"}, {:ecto_sql, "~> 3.10"}]
+            end
+          `);
+        }
+        return Promise.resolve('');
+      });
+
+      const result = await runner.needsPostgresql('/tmp/elixir-repo');
+      expect(result).toBe(true);
+    });
+
+    test('needsPostgresql returns true when mix.exs contains {:ecto_sql', async () => {
+      mockFsAccess.mockImplementation((filePath: string) => {
+        if (filePath.endsWith('mix.exs')) return Promise.resolve();
+        return Promise.reject(new Error('ENOENT'));
+      });
+      mockFsReadFile.mockImplementation((filePath: string) => {
+        if (filePath.endsWith('mix.exs')) {
+          return Promise.resolve(`
+            defp deps do
+              [{:phoenix, "~> 1.7"}, {:ecto_sql, "~> 3.10"}]
+            end
+          `);
+        }
+        return Promise.resolve('');
+      });
+
+      const result = await runner.needsPostgresql('/tmp/elixir-repo');
+      expect(result).toBe(true);
+    });
+
+    test('needsPostgresql returns false when mix.exs has no database deps', async () => {
+      mockFsAccess.mockImplementation((filePath: string) => {
+        if (filePath.endsWith('mix.exs')) return Promise.resolve();
+        return Promise.reject(new Error('ENOENT'));
+      });
+      mockFsReadFile.mockImplementation((filePath: string) => {
+        if (filePath.endsWith('mix.exs')) {
+          return Promise.resolve(`
+            defp deps do
+              [{:phoenix, "~> 1.7"}, {:jason, "~> 1.4"}]
+            end
+          `);
+        }
+        return Promise.resolve('');
+      });
+
+      const result = await runner.needsPostgresql('/tmp/elixir-repo');
+      expect(result).toBe(false);
+    });
+
+    test('needsPostgresql returns false for non-Elixir projects', async () => {
+      // No mix.exs file
+      mockFsAccess.mockRejectedValue(new Error('ENOENT'));
+
+      const result = await runner.needsPostgresql('/tmp/node-repo');
+      expect(result).toBe(false);
+    });
+
+    test('ensurePostgresql starts PostgreSQL and creates test database', async () => {
+      mockFsAccess.mockImplementation((filePath: string) => {
+        if (filePath.endsWith('mix.exs')) return Promise.resolve();
+        return Promise.reject(new Error('ENOENT'));
+      });
+      mockFsReadFile.mockImplementation((filePath: string) => {
+        if (filePath.endsWith('mix.exs')) {
+          return Promise.resolve(`
+            def project do
+              [app: :potion_shop, version: "0.1.0"]
+            end
+          `);
+        }
+        return Promise.resolve('');
+      });
+
+      // pg_isready fails first (PostgreSQL not running), then succeeds after start
+      let pgReadyCalls = 0;
+      mockExecAsync.mockImplementation((cmd: string) => {
+        if (typeof cmd === 'string' && cmd.includes('pg_isready')) {
+          pgReadyCalls++;
+          if (pgReadyCalls === 1) return Promise.reject(new Error('not running'));
+          return Promise.resolve({ stdout: 'accepting connections', stderr: '' });
+        }
+        return Promise.resolve({ stdout: '', stderr: '' });
+      });
+
+      await runner.ensurePostgresql('/tmp/elixir-repo');
+
+      const calls = mockExecAsync.mock.calls.map((c: unknown[]) => c[0] as string);
+
+      // Should check pg_isready
+      expect(calls.some((c: string) => c.includes('pg_isready'))).toBe(true);
+      // Should start PostgreSQL
+      expect(calls.some((c: string) => c.includes('pg_ctlcluster') || c.includes('pg_ctl'))).toBe(true);
+      // Should create user and database
+      expect(calls.some((c: string) => c.includes('createuser'))).toBe(true);
+      expect(calls.some((c: string) => c.includes('createdb') && c.includes('potion_shop_test'))).toBe(true);
+
+      // Should set DATABASE_URL
+      expect(process.env.DATABASE_URL).toContain('potion_shop_test');
+      expect(process.env.MIX_ENV).toBe('test');
+    });
+
+    test('ensurePostgresql skips start if PostgreSQL is already running', async () => {
+      mockFsReadFile.mockImplementation((filePath: string) => {
+        if (filePath.endsWith('mix.exs')) {
+          return Promise.resolve('def project do [app: :my_app] end');
+        }
+        return Promise.resolve('');
+      });
+
+      // pg_isready succeeds immediately
+      mockExecAsync.mockResolvedValue({ stdout: 'accepting connections', stderr: '' });
+
+      await runner.ensurePostgresql('/tmp/elixir-repo');
+
+      const calls = mockExecAsync.mock.calls.map((c: unknown[]) => c[0] as string);
+
+      // Should NOT start PostgreSQL (already running)
+      expect(calls.some((c: string) => c.includes('pg_ctlcluster'))).toBe(false);
+      // Should still create user and database
+      expect(calls.some((c: string) => c.includes('createuser'))).toBe(true);
+    });
+
+    test('ensurePostgresql sets DATABASE_URL in process.env', async () => {
+      const originalDbUrl = process.env.DATABASE_URL;
+      const originalMixEnv = process.env.MIX_ENV;
+
+      mockFsReadFile.mockImplementation((filePath: string) => {
+        if (filePath.endsWith('mix.exs')) {
+          return Promise.resolve('def project do [app: :test_app] end');
+        }
+        return Promise.resolve('');
+      });
+      mockExecAsync.mockResolvedValue({ stdout: '', stderr: '' });
+
+      await runner.ensurePostgresql('/tmp/elixir-repo');
+
+      expect(process.env.DATABASE_URL).toBe('postgresql://postgres:postgres@localhost/test_app_test');
+      expect(process.env.MIX_ENV).toBe('test');
+
+      // Cleanup
+      if (originalDbUrl) process.env.DATABASE_URL = originalDbUrl;
+      else delete process.env.DATABASE_URL;
+      if (originalMixEnv) process.env.MIX_ENV = originalMixEnv;
+      else delete process.env.MIX_ENV;
+    });
+
+    test('Elixir ensureDependencies calls ensurePostgresql when project needs it', async () => {
+      mockFsAccess.mockImplementation((filePath: string) => {
+        if (filePath.endsWith('mix.exs')) return Promise.resolve();
+        return Promise.reject(new Error('ENOENT'));
+      });
+      mockFsReadFile.mockImplementation((filePath: string) => {
+        if (filePath.endsWith('mix.exs')) {
+          return Promise.resolve(`
+            def project do [app: :my_app] end
+            defp deps do [{:postgrex, ">= 0.0.0"}] end
+          `);
+        }
+        return Promise.resolve('');
+      });
+      mockExecAsync.mockResolvedValue({ stdout: '', stderr: '' });
+
+      await runner.runTests({
+        framework: 'exunit',
+        testFile: 'test/security_test.exs',
+        testName: 'test vulnerability',
+        workingDir: '/tmp/elixir-repo'
+      });
+
+      const calls = mockExecAsync.mock.calls.map((c: unknown[]) => c[0] as string);
+
+      // Should have called pg_isready (PostgreSQL provisioning)
+      expect(calls.some((c: string) => c.includes('pg_isready'))).toBe(true);
+      // Should include ecto.create and ecto.migrate in dep command
+      const mixCall = calls.find((c: string) => c.includes('mix deps'));
+      expect(mixCall).toBeDefined();
+      expect(mixCall).toContain('ecto.create');
+      expect(mixCall).toContain('ecto.migrate');
     });
   });
 });

@@ -2256,7 +2256,9 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
             branchName: vmValidationResult.branchName, // RFC-058 feature
             redTests: vmValidationResult.redTests,
             testResults: vmValidationResult.testResults,
-            falsePositive: !vmValidationResult.validated,
+            // RFC-103 B4: Distinguish false positives from infrastructure failures
+            falsePositive: !vmValidationResult.validated && !vmValidationResult.infrastructureFailure,
+            infrastructureFailure: !vmValidationResult.validated && !!vmValidationResult.infrastructureFailure,
             falsePositiveReason: vmValidationResult.falsePositiveReason,
             existingTests: existing?.hasTests,
             testFramework: existing?.framework,
@@ -2326,6 +2328,16 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
                   'rsolv:detected'
                 );
               }
+            } else if (validationData.infrastructureFailure) {
+              // RFC-103 B4: Infrastructure failure — vulnerability may be real, we just couldn't prove it
+              logger.info(`[VALIDATE] Adding 'rsolv:validation-inconclusive' label to issue #${issue.number} (infrastructure limitation)`);
+              await addLabels(
+                issue.repository.owner,
+                issue.repository.name,
+                issue.number,
+                ['rsolv:validation-inconclusive']
+              );
+              // Keep 'rsolv:detected' — the vulnerability may still be real
             } else if (validationData.falsePositive) {
               // Add 'rsolv:false-positive' label for false positives
               logger.info(`[VALIDATE] Adding 'rsolv:false-positive' label to issue #${issue.number}`);

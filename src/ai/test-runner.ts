@@ -648,6 +648,105 @@ export class TestRunner {
   }
 
   /**
+   * RFC-103 B1: Check if an Elixir project needs PostgreSQL.
+   * Detects {:postgrex or {:ecto_sql in mix.exs.
+   */
+  async needsPostgresql(workingDir: string): Promise<boolean> {
+    try {
+      const mixPath = path.join(workingDir, 'mix.exs');
+      await fs.access(mixPath);
+      const content = await fs.readFile(mixPath, 'utf8');
+      return /\{:postgrex\b|\{:ecto_sql\b/.test(content);
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * RFC-103 B1: Start PostgreSQL and create a test database.
+   * PostgreSQL is installed in the Docker image but not running by default.
+   * This starts it on-demand for Elixir/Phoenix projects that need it.
+   */
+  async ensurePostgresql(workingDir: string): Promise<void> {
+    // Parse app name from mix.exs
+    let appName = 'app';
+    try {
+      const mixPath = path.join(workingDir, 'mix.exs');
+      const content = await fs.readFile(mixPath, 'utf8');
+      const appMatch = content.match(/app:\s*:(\w+)/);
+      if (appMatch) appName = appMatch[1];
+    } catch {
+      // Fallback to 'app'
+    }
+
+    const dbName = `${appName}_test`;
+    console.log(`[TestRunner] Provisioning PostgreSQL for ${appName} (database: ${dbName})`);
+
+    // Check if PostgreSQL is already running
+    let pgRunning = false;
+    try {
+      await execAsync('pg_isready', { encoding: 'utf8', timeout: 5000 });
+      pgRunning = true;
+      console.log('[TestRunner] PostgreSQL already running');
+    } catch {
+      // Not running, need to start
+    }
+
+    if (!pgRunning) {
+      // Start PostgreSQL — Debian uses pg_ctlcluster
+      console.log('[TestRunner] Starting PostgreSQL...');
+      try {
+        // Try pg_ctlcluster first (Debian/Ubuntu pattern)
+        await execAsync(
+          'pg_ctlcluster 17 main start || pg_ctlcluster 16 main start || pg_ctlcluster 15 main start',
+          { encoding: 'utf8', timeout: 30000 }
+        );
+      } catch {
+        // Fallback: try pg_ctl directly
+        try {
+          await execAsync(
+            'pg_ctl start -D /var/lib/postgresql/data -l /var/log/postgresql/startup.log',
+            { encoding: 'utf8', timeout: 30000 }
+          );
+        } catch (pgErr) {
+          console.warn(`[TestRunner] PostgreSQL start failed: ${(pgErr as Error).message}`);
+          throw new Error('Failed to start PostgreSQL');
+        }
+      }
+
+      // Wait for readiness with retry
+      for (let attempt = 0; attempt < 5; attempt++) {
+        try {
+          await execAsync('pg_isready', { encoding: 'utf8', timeout: 5000 });
+          pgRunning = true;
+          console.log(`[TestRunner] PostgreSQL ready (attempt ${attempt + 1})`);
+          break;
+        } catch {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+
+      if (!pgRunning) {
+        throw new Error('PostgreSQL failed to become ready after 5 attempts');
+      }
+    }
+
+    // Create postgres superuser (idempotent) and test database
+    try {
+      await execAsync('createuser -s postgres 2>/dev/null || true', { encoding: 'utf8', timeout: 10000 });
+      await execAsync(`createdb -U postgres ${dbName} 2>/dev/null || true`, { encoding: 'utf8', timeout: 10000 });
+      console.log(`[TestRunner] Database ${dbName} ready`);
+    } catch (dbErr) {
+      console.warn(`[TestRunner] Database setup warning: ${(dbErr as Error).message}`);
+    }
+
+    // Set environment for Ecto
+    process.env.DATABASE_URL = `postgresql://postgres:postgres@localhost/${dbName}`;
+    process.env.MIX_ENV = 'test';
+    console.log(`[TestRunner] DATABASE_URL set to postgresql://postgres:postgres@localhost/${dbName}`);
+  }
+
+  /**
    * Install project dependencies for the given framework.
    * Runs the appropriate package manager command from the repo root.
    */
@@ -760,9 +859,15 @@ export class TestRunner {
     }
     case 'exunit': {
       if (await this.fileExists(path.join(workingDir, 'mix.exs'))) {
+        // RFC-103 B1: Check if project needs PostgreSQL and provision it
+        if (await this.needsPostgresql(workingDir)) {
+          await this.ensurePostgresql(workingDir);
+          // RFC-101 v3.8.71: Set MIX_ENV=test for proper test isolation.
+          // Include ecto.create + ecto.migrate for database-dependent projects.
+          return 'MIX_ENV=test mix deps.get && MIX_ENV=test mix deps.compile && MIX_ENV=test mix ecto.create && MIX_ENV=test mix ecto.migrate';
+        }
         // RFC-101 v3.8.71: Set MIX_ENV=test to ensure test config is used.
         // This allows apps configured with SQLite fallback in config/test.exs to work.
-        // Also compiles deps for the test environment specifically.
         return 'MIX_ENV=test mix deps.get && MIX_ENV=test mix deps.compile';
       }
       return null;

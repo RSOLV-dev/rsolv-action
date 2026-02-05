@@ -32,6 +32,8 @@ export interface ValidationResult {
   testExecutionResult?: TestExecutionResult; // RFC-060 Phase 2.2: Test execution metadata
   vulnerabilities?: ValidationVulnerability[]; // Extracted vulnerabilities from issue body
   falsePositiveReason?: string;
+  /** RFC-103 B4: True if validation failed due to infrastructure issues, not false positive */
+  infrastructureFailure?: boolean;
   testingMode?: boolean; // RFC-059: Indicates testing mode is enabled
   testingModeNote?: string; // RFC-059: Explanation when testing mode overrides validation
   timestamp: string;

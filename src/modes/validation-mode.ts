@@ -17,7 +17,7 @@ import { PhaseDataClient } from './phase-data-client/index.js';
 import { TestIntegrationClient } from './test-integration-client.js';
 import { extractVulnerabilitiesFromIssue } from '../utils/vulnerability-extraction.js';
 import { TEST_FILE_PATTERNS, EXCLUDED_DIRECTORIES } from '../constants/test-patterns.js';
-import { classifyTestResult as classifyTestResultImpl, parseTestOutputCounts } from '../utils/test-result-classifier.js';
+import { classifyTestResult as classifyTestResultImpl, parseTestOutputCounts, isInfrastructureFailure } from '../utils/test-result-classifier.js';
 import { getAssertionTemplate, getAssertionTemplateForFramework } from '../prompts/vulnerability-assertion-templates.js';
 import { getAssertionStyleGuidance, AssertionStyleGuidance } from '../prompts/assertion-style-guidance.js';
 import { buildRetryFeedback, extractMissingModule } from './retry-feedback.js';
@@ -37,6 +37,8 @@ export class ValidationMode {
   private projectEcosystems: string[] = [];
   /** RFC-101 v3.8.72: Available test/assertion libraries from package.json devDependencies */
   private availableTestLibraries: string[] = [];
+  /** RFC-103 B4: Last classification type from test execution (for infrastructure failure detection) */
+  private lastFailureClassificationType: string = '';
 
   constructor(config: ActionConfig, repoPath?: string) {
     this.config = config;
@@ -457,11 +459,19 @@ export class ValidationMode {
       );
 
       if (!testSuite) {
-        logger.warn(`Failed to generate valid RED test after retries for issue #${issue.number}`);
+        // RFC-103 B4: Check if failure was due to infrastructure issues
+        const isInfra = this.lastFailureClassificationType &&
+          isInfrastructureFailure({ type: this.lastFailureClassificationType as 'runtime_error', isValidFailure: false, reason: '' });
+        if (isInfra) {
+          logger.warn(`Failed to validate issue #${issue.number} due to infrastructure limitation (${this.lastFailureClassificationType})`);
+        } else {
+          logger.warn(`Failed to generate valid RED test after retries for issue #${issue.number}`);
+        }
         return {
           issueId: issue.number,
           validated: false,
           falsePositiveReason: 'Unable to generate valid RED test after 3 attempts',
+          infrastructureFailure: isInfra || undefined,
           vulnerabilities,
           timestamp: new Date().toISOString(),
           commitHash: this.getCurrentCommitHash()
@@ -1475,6 +1485,8 @@ ${tests}
 
             if (!classification.isValidFailure) {
               logger.warn(`✗ Candidate ${candidateIdx + 1}: ${classification.type} — ${classification.reason}`);
+              // RFC-103 B4: Track last failure type for infrastructure failure detection
+              this.lastFailureClassificationType = classification.type;
               const errorDetails = (testResult.stderr || testResult.output || '')
                 .split('\n')
                 .filter(line => /error|cannot|not found|load|missing|undefined/i.test(line))

@@ -389,6 +389,106 @@ function getUser(id) {
       expect(modifiedFiles).toEqual([]);
     });
 
+    it('should exclude .github/workflows/ files from modified files list', async () => {
+      const { ClaudeAgentSDKAdapter } = await import('../../../ai/adapters/claude-agent-sdk.js');
+
+      const adapter = new ClaudeAgentSDKAdapter({
+        repoPath: testRepoPath,
+        model: 'claude-sonnet-4-5-20250929'
+      });
+
+      // Create and commit a workflow file first
+      fs.mkdirSync(path.join(testRepoPath, '.github', 'workflows'), { recursive: true });
+      fs.writeFileSync(path.join(testRepoPath, '.github', 'workflows', 'test.yml'), 'name: test');
+      execSync('git add .', { cwd: testRepoPath });
+      execSync('git commit -m "Add workflow"', { cwd: testRepoPath });
+
+      // Modify both a source file and a workflow file
+      fs.writeFileSync(path.join(testRepoPath, 'vulnerable.js'), '// Fixed code');
+      fs.writeFileSync(path.join(testRepoPath, '.github', 'workflows', 'test.yml'), 'name: modified');
+
+      const modifiedFiles = adapter.getModifiedFiles();
+
+      expect(modifiedFiles).toContain('vulnerable.js');
+      expect(modifiedFiles).not.toContain('.github/workflows/test.yml');
+    });
+
+    it('should exclude .github/actions/ files from modified files list', async () => {
+      const { ClaudeAgentSDKAdapter } = await import('../../../ai/adapters/claude-agent-sdk.js');
+
+      const adapter = new ClaudeAgentSDKAdapter({
+        repoPath: testRepoPath,
+        model: 'claude-sonnet-4-5-20250929'
+      });
+
+      // Create and commit an action file first
+      fs.mkdirSync(path.join(testRepoPath, '.github', 'actions', 'custom'), { recursive: true });
+      fs.writeFileSync(path.join(testRepoPath, '.github', 'actions', 'custom', 'action.yml'), 'name: custom');
+      execSync('git add .', { cwd: testRepoPath });
+      execSync('git commit -m "Add action"', { cwd: testRepoPath });
+
+      // Modify both a source file and an action file
+      fs.writeFileSync(path.join(testRepoPath, 'vulnerable.js'), '// Fixed code');
+      fs.writeFileSync(path.join(testRepoPath, '.github', 'actions', 'custom', 'action.yml'), 'name: modified');
+
+      const modifiedFiles = adapter.getModifiedFiles();
+
+      expect(modifiedFiles).toContain('vulnerable.js');
+      expect(modifiedFiles).not.toContain('.github/actions/custom/action.yml');
+    });
+
+    it('should revert excluded files after filtering', async () => {
+      const { ClaudeAgentSDKAdapter } = await import('../../../ai/adapters/claude-agent-sdk.js');
+
+      const adapter = new ClaudeAgentSDKAdapter({
+        repoPath: testRepoPath,
+        model: 'claude-sonnet-4-5-20250929'
+      });
+
+      // Create and commit a workflow file
+      fs.mkdirSync(path.join(testRepoPath, '.github', 'workflows'), { recursive: true });
+      fs.writeFileSync(path.join(testRepoPath, '.github', 'workflows', 'ci.yml'), 'name: CI');
+      execSync('git add .', { cwd: testRepoPath });
+      execSync('git commit -m "Add CI"', { cwd: testRepoPath });
+
+      // Modify the workflow file
+      fs.writeFileSync(path.join(testRepoPath, '.github', 'workflows', 'ci.yml'), 'name: Modified CI');
+
+      // Call getModifiedFiles which should revert the workflow file
+      adapter.getModifiedFiles();
+
+      // Verify the workflow file was reverted (no longer in git diff)
+      const diffOutput = execSync('git diff --name-only', {
+        cwd: testRepoPath,
+        encoding: 'utf-8'
+      }).trim();
+
+      expect(diffOutput).not.toContain('.github/workflows/ci.yml');
+    });
+
+    it('should preserve all non-excluded files unchanged', async () => {
+      const { ClaudeAgentSDKAdapter } = await import('../../../ai/adapters/claude-agent-sdk.js');
+
+      const adapter = new ClaudeAgentSDKAdapter({
+        repoPath: testRepoPath,
+        model: 'claude-sonnet-4-5-20250929'
+      });
+
+      // Modify only source files (no workflow files)
+      fs.writeFileSync(path.join(testRepoPath, 'vulnerable.js'), '// Fixed code');
+      fs.mkdirSync(path.join(testRepoPath, 'lib'), { recursive: true });
+      fs.writeFileSync(path.join(testRepoPath, 'lib', 'helper.js'), '// helper');
+      execSync('git add lib/helper.js', { cwd: testRepoPath });
+      execSync('git commit -m "Add helper"', { cwd: testRepoPath });
+      fs.writeFileSync(path.join(testRepoPath, 'lib', 'helper.js'), '// modified helper');
+
+      const modifiedFiles = adapter.getModifiedFiles();
+
+      expect(modifiedFiles).toContain('vulnerable.js');
+      expect(modifiedFiles).toContain('lib/helper.js');
+      expect(modifiedFiles.length).toBe(2);
+    });
+
     it('should create proper commit message with issue reference', async () => {
       const { ClaudeAgentSDKAdapter } = await import('../../../ai/adapters/claude-agent-sdk.js');
 

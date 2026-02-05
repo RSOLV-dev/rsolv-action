@@ -11,7 +11,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { ValidationMode } from '../validation-mode.js';
-import { parseTestOutputCounts } from '../../utils/test-result-classifier.js';
+import { parseTestOutputCounts, isInfrastructureFailure } from '../../utils/test-result-classifier.js';
 import { createTestConfig, type TestResultClassification } from './test-fixtures.js';
 
 describe('Test Result Classification', () => {
@@ -553,5 +553,52 @@ describe('parseTestOutputCounts', () => {
   it('should return zeros for unparseable output', () => {
     const counts = parseTestOutputCounts('some random output');
     expect(counts).toEqual({ passed: 0, failed: 0, total: 0 });
+  });
+});
+
+describe('isInfrastructureFailure (RFC-103 B4)', () => {
+  it('should return true for runtime_error type', () => {
+    const result = { type: 'runtime_error' as const, isValidFailure: false, reason: 'PostgreSQL connection refused' };
+    expect(isInfrastructureFailure(result)).toBe(true);
+  });
+
+  it('should return true for missing_dependency type', () => {
+    const result = { type: 'missing_dependency' as const, isValidFailure: false, reason: 'Cannot find module' };
+    expect(isInfrastructureFailure(result)).toBe(true);
+  });
+
+  it('should return true for command_not_found type', () => {
+    const result = { type: 'command_not_found' as const, isValidFailure: false, reason: 'Test runner not installed' };
+    expect(isInfrastructureFailure(result)).toBe(true);
+  });
+
+  it('should return true for oom_killed type', () => {
+    const result = { type: 'oom_killed' as const, isValidFailure: false, reason: 'Process killed' };
+    expect(isInfrastructureFailure(result)).toBe(true);
+  });
+
+  it('should return true for terminated type', () => {
+    const result = { type: 'terminated' as const, isValidFailure: false, reason: 'Process terminated' };
+    expect(isInfrastructureFailure(result)).toBe(true);
+  });
+
+  it('should return false for test_failed type', () => {
+    const result = { type: 'test_failed' as const, isValidFailure: true, reason: 'Assertion failed' };
+    expect(isInfrastructureFailure(result)).toBe(false);
+  });
+
+  it('should return false for test_passed type', () => {
+    const result = { type: 'test_passed' as const, isValidFailure: false, reason: 'Tests passed' };
+    expect(isInfrastructureFailure(result)).toBe(false);
+  });
+
+  it('should return false for unknown type', () => {
+    const result = { type: 'unknown' as const, isValidFailure: false, reason: 'Manual review needed' };
+    expect(isInfrastructureFailure(result)).toBe(false);
+  });
+
+  it('should return false for syntax_error type', () => {
+    const result = { type: 'syntax_error' as const, isValidFailure: false, reason: 'Syntax error in test' };
+    expect(isInfrastructureFailure(result)).toBe(false);
   });
 });

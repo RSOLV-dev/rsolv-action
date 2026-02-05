@@ -412,7 +412,17 @@ export class ClaudeAgentSDKAdapter {
   }
 
   /**
-   * Get list of modified files using git
+   * RFC-103 B3: Path patterns excluded from fix commits.
+   * Workflow files must not be staged because GITHUB_TOKEN lacks `workflows` permission.
+   */
+  static readonly EXCLUDED_PATH_PATTERNS: RegExp[] = [
+    /^\.github\/workflows\//,
+    /^\.github\/actions\//,
+  ];
+
+  /**
+   * Get list of modified files using git, excluding paths that should not be committed.
+   * RFC-103 B3: Filters out .github/workflows/ and .github/actions/ files and reverts them.
    */
   getModifiedFiles(): string[] {
     try {
@@ -421,10 +431,41 @@ export class ClaudeAgentSDKAdapter {
         encoding: 'utf-8'
       }).trim();
 
-      return output ? output.split('\n') : [];
+      if (!output) return [];
+
+      const allFiles = output.split('\n');
+      const excluded = allFiles.filter(f =>
+        ClaudeAgentSDKAdapter.EXCLUDED_PATH_PATTERNS.some(p => p.test(f))
+      );
+      const included = allFiles.filter(f =>
+        !ClaudeAgentSDKAdapter.EXCLUDED_PATH_PATTERNS.some(p => p.test(f))
+      );
+
+      if (excluded.length > 0) {
+        logger.warn(`[MITIGATE] Excluding ${excluded.length} files from commit: ${excluded.join(', ')}`);
+        this.revertExcludedFiles(excluded);
+      }
+
+      return included;
     } catch (error) {
       logger.error('Failed to get modified files', error as Error);
       return [];
+    }
+  }
+
+  /**
+   * Revert excluded files so they don't appear in subsequent diffs.
+   */
+  private revertExcludedFiles(files: string[]): void {
+    for (const file of files) {
+      try {
+        execSync(`git checkout -- "${file}"`, {
+          cwd: this.repoPath,
+          encoding: 'utf-8'
+        });
+      } catch (error) {
+        logger.warn(`[MITIGATE] Failed to revert excluded file ${file}: ${(error as Error).message}`);
+      }
     }
   }
 

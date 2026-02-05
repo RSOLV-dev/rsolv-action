@@ -172,6 +172,31 @@ export function classifyTestResult(exitCode: number, stdout: string, stderr: str
 }
 
 /**
+ * RFC-103 B4: Infrastructure failure types — these indicate the validation
+ * infrastructure couldn't run, NOT that the vulnerability is a false positive.
+ */
+const INFRASTRUCTURE_FAILURE_TYPES: TestResultClassification['type'][] = [
+  'runtime_error',
+  'missing_dependency',
+  'command_not_found',
+  'oom_killed',
+  'terminated',
+];
+
+/**
+ * RFC-103 B4: Check if a test result classification represents an infrastructure
+ * failure rather than a genuine false positive.
+ *
+ * When validation fails due to infrastructure issues (wrong runtime version,
+ * missing database, etc.), the vulnerability may still be real — we just
+ * couldn't prove it. These should be labeled 'rsolv:validation-inconclusive'
+ * instead of 'rsolv:false-positive'.
+ */
+export function isInfrastructureFailure(result: TestResultClassification): boolean {
+  return INFRASTRUCTURE_FAILURE_TYPES.includes(result.type);
+}
+
+/**
  * Parse test output to extract pass/fail counts.
  * Handles Mocha, Jest/Vitest, pytest, and RSpec output formats.
  */
