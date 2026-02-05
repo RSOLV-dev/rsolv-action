@@ -2049,6 +2049,8 @@ Framework hint (${framework.name}): ${template.frameworkHint}
       'code_injection': 'CWE-94',
       'code injection': 'CWE-94',
       'eval_injection': 'CWE-94',
+      'prototype_pollution': 'CWE-1321',
+      'prototype pollution': 'CWE-1321',
     };
 
     const normalized = vulnType.toLowerCase().trim();
@@ -2941,6 +2943,7 @@ Return ONLY the inverted test file. No explanation, just the code block:
       const packageJsonPath = path.join(this.repoPath, 'package.json');
       const gemfilePath = path.join(this.repoPath, 'Gemfile');
       const requirementsTxtPath = path.join(this.repoPath, 'requirements.txt');
+      const pyprojectTomlPath = path.join(this.repoPath, 'pyproject.toml');
       const composerJsonPath = path.join(this.repoPath, 'composer.json');
       const mixExsPath = path.join(this.repoPath, 'mix.exs');
       const pomXmlPath = path.join(this.repoPath, 'pom.xml');
@@ -2949,6 +2952,7 @@ Return ONLY the inverted test file. No explanation, just the code block:
       let packageJson: { devDependencies?: Record<string, string>; dependencies?: Record<string, string> } | null = null;
       let gemfile: string | null = null;
       let requirementsTxt: string | null = null;
+      let pyprojectToml: string | null = null;
       let composerJson: { 'require-dev'?: Record<string, string>; require?: Record<string, string> } | null = null;
       let mixExs: string | null = null;
       let pomXml: string | null = null;
@@ -2957,14 +2961,6 @@ Return ONLY the inverted test file. No explanation, just the code block:
       if (fs.existsSync(packageJsonPath)) {
         try {
           packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-          // RFC-101 v3.8.72: Extract available test/assertion libraries from devDependencies
-          // This tells the LLM what libraries are actually available (e.g., 'should' vs 'chai')
-          this.availableTestLibraries = this.extractTestLibraries(packageJson);
-          if (this.availableTestLibraries.length > 0) {
-            logger.info(`[RFC-103] Test library detection (javascript): found ${this.availableTestLibraries.length} libraries: ${this.availableTestLibraries.join(', ')}`);
-          } else {
-            logger.debug(`[RFC-103] Test library detection (javascript): no test libraries found in package.json`);
-          }
         } catch (parseErr) {
           logger.warn(`Could not parse package.json: ${parseErr}`);
         }
@@ -2974,6 +2970,9 @@ Return ONLY the inverted test file. No explanation, just the code block:
       }
       if (fs.existsSync(requirementsTxtPath)) {
         requirementsTxt = fs.readFileSync(requirementsTxtPath, 'utf8');
+      }
+      if (fs.existsSync(pyprojectTomlPath)) {
+        pyprojectToml = fs.readFileSync(pyprojectTomlPath, 'utf8');
       }
       if (fs.existsSync(composerJsonPath)) {
         try {
@@ -2992,6 +2991,27 @@ Return ONLY the inverted test file. No explanation, just the code block:
         buildGradle = fs.readFileSync(buildGradlePath, 'utf8');
       }
 
+      // RFC-103 v3.8.83: Multi-ecosystem test library detection
+      // Build manifests record for the multi-ecosystem detector
+      const manifestsRecord: Record<string, string> = {};
+      if (packageJson) manifestsRecord['package.json'] = JSON.stringify(packageJson);
+      if (gemfile) manifestsRecord['Gemfile'] = gemfile;
+      if (requirementsTxt) manifestsRecord['requirements.txt'] = requirementsTxt;
+      if (pyprojectToml) manifestsRecord['pyproject.toml'] = pyprojectToml;
+      if (composerJson) manifestsRecord['composer.json'] = JSON.stringify(composerJson);
+      if (mixExs) manifestsRecord['mix.exs'] = mixExs;
+      if (pomXml) manifestsRecord['pom.xml'] = pomXml;
+      if (buildGradle) manifestsRecord['build.gradle'] = buildGradle;
+
+      // Detect ecosystem from file extension and run multi-ecosystem library detection
+      const ecosystem = this.detectLanguage(filePath);
+      this.availableTestLibraries = extractTestLibrariesMultiEcosystem(ecosystem, manifestsRecord);
+      if (this.availableTestLibraries.length > 0) {
+        logger.info(`[RFC-103] Test library detection (${ecosystem}): found ${this.availableTestLibraries.length} libraries: ${this.availableTestLibraries.join(', ')}`);
+      } else {
+        logger.debug(`[RFC-103] Test library detection (${ecosystem}): no test libraries found`);
+      }
+
       // Find config files in repo root that indicate frameworks
       const configPatterns = [
         'vitest.config.ts', 'vitest.config.js', 'vitest.config.mts',
@@ -3005,7 +3025,7 @@ Return ONLY the inverted test file. No explanation, just the code block:
       const configFiles = configPatterns.filter(f => fs.existsSync(path.join(this.repoPath, f)));
 
       // Skip backend call if no manifest files found
-      if (!packageJson && !gemfile && !requirementsTxt && !composerJson && !mixExs && !pomXml && !buildGradle && configFiles.length === 0) {
+      if (!packageJson && !gemfile && !requirementsTxt && !pyprojectToml && !composerJson && !mixExs && !pomXml && !buildGradle && configFiles.length === 0) {
         logger.debug('No manifest files found — falling back to extension-based detection');
         return this.detectFrameworkFromFile(filePath);
       }
