@@ -546,52 +546,51 @@ export class TestRunner {
     case 'pytest': {
       // RFC-103: Detect and respect the project's documented Python installer.
       // Priority: (1) use project's lock file tool, (2) default to uv, (3) fall back to pip.
-      // uv is PEP 668 safe, 10-100x faster than pip, and handles venvs gracefully.
+      // uv is 10-100x faster than pip. Both need --break-system-packages for PEP 668
+      // (Python 3.12+ on Debian Trixie / Ubuntu 24.04+ enforce externally-managed-environment).
       const sysDeps = 'apt-get update && apt-get install -y --no-install-recommends libjpeg-dev libpng-dev libfreetype-dev 2>/dev/null || true';
       const installer = await this.detectPythonInstaller(workingDir);
       const hasUv = await this.ensureUv();
 
       console.log(`[TestRunner] Python installer: ${installer}${!hasUv ? ' (uv unavailable, using pip)' : ''}`);
 
-      // uv-managed project (has uv.lock)
+      // System install command — both uv and pip need --break-system-packages for PEP 668
+      const sysInstall = hasUv
+        ? 'uv pip install --system --break-system-packages'
+        : 'python3 -m pip install --break-system-packages';
+
+      // uv-managed project (has uv.lock) — uv sync creates its own venv, no PEP 668 issue
       if (installer === 'uv-project') {
         this.pythonTestPrefix = 'uv run ';
         return `${sysDeps} && uv sync && uv pip install pytest`;
       }
 
-      // Poetry-managed project (has poetry.lock)
+      // Poetry-managed project (has poetry.lock) — poetry manages its own venv
       if (installer === 'poetry') {
         this.pythonTestPrefix = 'poetry run ';
-        const ensureTool = hasUv
-          ? '(which poetry > /dev/null 2>&1 || uv pip install --system poetry)'
-          : '(which poetry > /dev/null 2>&1 || python3 -m pip install --break-system-packages poetry)';
+        const ensureTool = `(which poetry > /dev/null 2>&1 || ${sysInstall} poetry)`;
         return `${sysDeps} && ${ensureTool} && poetry install && poetry run pip install pytest`;
       }
 
-      // Pipenv-managed project (has Pipfile or Pipfile.lock)
+      // Pipenv-managed project (has Pipfile or Pipfile.lock) — pipenv manages its own venv
       if (installer === 'pipenv') {
         this.pythonTestPrefix = 'pipenv run ';
-        const ensureTool = hasUv
-          ? '(which pipenv > /dev/null 2>&1 || uv pip install --system pipenv)'
-          : '(which pipenv > /dev/null 2>&1 || python3 -m pip install --break-system-packages pipenv)';
+        const ensureTool = `(which pipenv > /dev/null 2>&1 || ${sysInstall} pipenv)`;
         return `${sysDeps} && ${ensureTool} && pipenv install && pipenv run pip install pytest`;
       }
 
-      // Default: uv pip install --system (or pip --break-system-packages fallback)
+      // Default: install to system Python (uv or pip, both with --break-system-packages)
       this.pythonTestPrefix = '';
-      const install = hasUv
-        ? 'uv pip install --system'
-        : 'python3 -m pip install --break-system-packages';
-      const ensurePytest = `${install} pytest`;
+      const ensurePytest = `${sysInstall} pytest`;
 
       if (await this.fileExists(path.join(workingDir, 'requirements.txt'))) {
-        return `${sysDeps} && (${install} -r requirements.txt || echo "Some deps failed, continuing...") && ${ensurePytest}`;
+        return `${sysDeps} && (${sysInstall} -r requirements.txt || echo "Some deps failed, continuing...") && ${ensurePytest}`;
       }
       if (await this.fileExists(path.join(workingDir, 'pyproject.toml'))) {
-        return `${sysDeps} && (${install} -e . || echo "Install failed, continuing...") && ${ensurePytest}`;
+        return `${sysDeps} && (${sysInstall} -e . || echo "Install failed, continuing...") && ${ensurePytest}`;
       }
       if (await this.fileExists(path.join(workingDir, 'setup.py'))) {
-        return `${sysDeps} && (${install} -e . || echo "Install failed, continuing...") && ${ensurePytest}`;
+        return `${sysDeps} && (${sysInstall} -e . || echo "Install failed, continuing...") && ${ensurePytest}`;
       }
       return ensurePytest;
     }

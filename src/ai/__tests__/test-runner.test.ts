@@ -489,7 +489,7 @@ describe('TestRunner', () => {
       mockFsAccess.mockRejectedValue(new Error('ENOENT'));
     });
 
-    test('should use uv pip install --system as default when no lock files exist', async () => {
+    test('should use uv pip install --system --break-system-packages as default', async () => {
       // All file checks fail (no lock files, no manifests)
       mockFsAccess.mockRejectedValue(new Error('ENOENT'));
       // Default mock: which python, which uv, and install all succeed
@@ -507,11 +507,11 @@ describe('TestRunner', () => {
         typeof call[0] === 'string' && call[0].includes('uv pip install')
       );
       expect(installCall).toBeDefined();
-      expect(installCall![0]).toContain('uv pip install --system');
+      expect(installCall![0]).toContain('uv pip install --system --break-system-packages');
       expect(installCall![0]).toContain('pytest');
     });
 
-    test('should use uv pip install --system with requirements.txt', async () => {
+    test('should use uv pip install with requirements.txt', async () => {
       mockFsAccess.mockImplementation((filePath: string) => {
         if (filePath.endsWith('requirements.txt')) return Promise.resolve();
         return Promise.reject(new Error('ENOENT'));
@@ -530,11 +530,11 @@ describe('TestRunner', () => {
         typeof call[0] === 'string' && call[0].includes('requirements.txt')
       );
       expect(installCall).toBeDefined();
-      expect(installCall![0]).toContain('uv pip install --system -r requirements.txt');
-      expect(installCall![0]).toContain('uv pip install --system pytest');
+      expect(installCall![0]).toContain('uv pip install --system --break-system-packages -r requirements.txt');
+      expect(installCall![0]).toContain('uv pip install --system --break-system-packages pytest');
     });
 
-    test('should use uv pip install --system with pyproject.toml', async () => {
+    test('should use uv pip install with pyproject.toml', async () => {
       mockFsAccess.mockImplementation((filePath: string) => {
         if (filePath.endsWith('pyproject.toml')) return Promise.resolve();
         return Promise.reject(new Error('ENOENT'));
@@ -550,10 +550,10 @@ describe('TestRunner', () => {
 
       const calls = mockExecAsync.mock.calls;
       const installCall = calls.find((call: unknown[]) =>
-        typeof call[0] === 'string' && call[0].includes('uv pip install --system -e .')
+        typeof call[0] === 'string' && call[0].includes('uv pip install --system --break-system-packages -e .')
       );
       expect(installCall).toBeDefined();
-      expect(installCall![0]).toContain('uv pip install --system pytest');
+      expect(installCall![0]).toContain('uv pip install --system --break-system-packages pytest');
     });
 
     test('should detect poetry.lock and use poetry install', async () => {
@@ -711,7 +711,7 @@ describe('TestRunner', () => {
 
       const calls = mockExecAsync.mock.calls;
       const installCall = calls.find((call: unknown[]) =>
-        typeof call[0] === 'string' && call[0].includes('uv pip install --system poetry')
+        typeof call[0] === 'string' && call[0].includes('uv pip install --system --break-system-packages poetry')
       );
       expect(installCall).toBeDefined();
     });
