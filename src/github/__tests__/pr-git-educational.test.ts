@@ -397,6 +397,110 @@ describe('Educational PR Creation', () => {
       expect(globalPRBody).toContain('RSOLV Security Patterns');
     });
 
+    test('should use correct education content for prototype_pollution vulnerability type', async () => {
+      const issue = {
+        id: '404',
+        number: 222,
+        title: 'Prototype Pollution in loader.js',
+        body: 'Unsafe property assignment',
+        repository: {
+          fullName: 'user/repo',
+          defaultBranch: 'main'
+        }
+      };
+
+      const summary = {
+        title: 'Fix Prototype Pollution',
+        description: 'Added __proto__ guard',
+        vulnerabilityType: 'prototype_pollution',
+        severity: 'high',
+        cwe: '1321'
+      };
+
+      const result = await createEducationalPullRequest(
+        issue,
+        'proto123',
+        summary,
+        { rsolvApiKey: 'test' }
+      );
+
+      expect(result.success).toBe(true);
+
+      // Should use Prototype Pollution education, NOT XSS fallback
+      expect(globalPRBody).toContain('Prototype Pollution');
+      expect(globalPRBody).not.toContain('What is Cross-Site Scripting');
+      expect(globalPRBody).toContain('__proto__');
+    });
+
+    test('should use correct education content for code_injection vulnerability type', async () => {
+      const issue = {
+        id: '505',
+        number: 333,
+        title: 'Code Injection via eval()',
+        body: 'eval with user input',
+        repository: {
+          fullName: 'user/repo',
+          defaultBranch: 'main'
+        }
+      };
+
+      const summary = {
+        title: 'Fix Code Injection',
+        description: 'Replaced eval with safe parsing',
+        vulnerabilityType: 'code_injection',
+        severity: 'critical',
+        cwe: '94'
+      };
+
+      const result = await createEducationalPullRequest(
+        issue,
+        'eval456',
+        summary,
+        { rsolvApiKey: 'test' }
+      );
+
+      expect(result.success).toBe(true);
+
+      // Should use Code Injection education, NOT XSS fallback
+      expect(globalPRBody).toContain('Code Injection');
+      expect(globalPRBody).toContain('eval()');
+      expect(globalPRBody).not.toContain('What is Cross-Site Scripting');
+    });
+
+    test('should use correct education content for hardcoded_secrets vulnerability type', async () => {
+      const issue = {
+        id: '606',
+        number: 444,
+        title: 'Hardcoded API key',
+        body: 'API key in source',
+        repository: {
+          fullName: 'user/repo',
+          defaultBranch: 'main'
+        }
+      };
+
+      const summary = {
+        title: 'Fix Hardcoded Credentials',
+        description: 'Moved secrets to env vars',
+        vulnerabilityType: 'hardcoded_secrets',
+        severity: 'high',
+        cwe: '798'
+      };
+
+      const result = await createEducationalPullRequest(
+        issue,
+        'secret789',
+        summary,
+        { rsolvApiKey: 'test' }
+      );
+
+      expect(result.success).toBe(true);
+
+      // Should use Hardcoded Credentials education
+      expect(globalPRBody).toContain('Hardcoded Credentials');
+      expect(globalPRBody).toContain('environment variables');
+    });
+
     test('should work without validationData (backward compatibility)', async () => {
       const issue = {
         id: '303',

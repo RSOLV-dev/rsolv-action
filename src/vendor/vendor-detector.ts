@@ -68,13 +68,18 @@ export class VendorDetector {
       return true;
     }
 
-    // Check if file is minified
+    // Check if file is minified by filename
     if (this.isMinified(filePath)) {
       return true;
     }
 
     // Check if filename matches known vendor libraries
     if (this.matchesKnownLibrary(filePath)) {
+      return true;
+    }
+
+    // Check if content is minified (long lines = bundled/minified vendor code)
+    if (content && this.isContentMinified(content)) {
       return true;
     }
 
@@ -155,9 +160,43 @@ export class VendorDetector {
   
   private isMinified(filePath: string): boolean {
     const filename = path.basename(filePath).toLowerCase();
-    return this.MINIFIED_PATTERNS.some(pattern => 
+    return this.MINIFIED_PATTERNS.some(pattern =>
       filename.includes(pattern)
     );
+  }
+
+  /**
+   * Detect minified/bundled content by analyzing line lengths.
+   * Minified files typically have very long lines (1000+ chars avg)
+   * because whitespace and newlines are stripped during minification.
+   */
+  private isContentMinified(content: string): boolean {
+    // Only check JS/CSS files by content analysis
+    const lines = content.split('\n');
+    if (lines.length === 0) return false;
+
+    // Single-line files over 1KB are almost certainly minified
+    if (lines.length <= 3 && content.length > 1000) {
+      return true;
+    }
+
+    // Check average line length (excluding empty lines and short comment lines)
+    const significantLines = lines.filter(l => l.length > 10);
+    if (significantLines.length === 0) return false;
+
+    const avgLineLength = significantLines.reduce((sum, l) => sum + l.length, 0) / significantLines.length;
+
+    // Average line length > 500 chars strongly indicates minified code
+    if (avgLineLength > 500) {
+      return true;
+    }
+
+    // Any single line over 5000 chars is a strong minification signal
+    if (lines.some(l => l.length > 5000)) {
+      return true;
+    }
+
+    return false;
   }
   
   private matchesKnownLibrary(filePath: string): boolean {

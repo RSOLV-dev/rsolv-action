@@ -3016,7 +3016,7 @@ ${validation.falsePositive ?
       const summary = {
         title: `Fix: ${issue.title}`,
         description: solution.summary?.description || issue.body || 'Security fix applied',
-        vulnerabilityType: validation.analysisData?.issueType || solution.summary?.vulnerabilityType || 'security',
+        vulnerabilityType: validation.analysisData?.vulnerabilityType || solution.summary?.vulnerabilityType || 'security',
         severity: validation.analysisData?.severity || solution.summary?.severity || 'medium',
         cwe: validation.analysisData?.cwe || solution.summary?.cwe,
         tests: validation.tests || solution.summary?.tests,

@@ -58,6 +58,26 @@ describe('RFC-047: Vendor Library Detection', () => {
       const isVendor = await detector.containsVendorIndicators('any/path/file.js', mockFileContent);
       expect(isVendor).toBe(true);
     });
+
+    it('should detect content-minified files by long lines', async () => {
+      // A file with very long lines (avg > 500 chars) is likely minified/bundled
+      const longLine = 'var a=' + 'x'.repeat(2000) + ';';
+      const isVendor = await detector.isVendorFile('app/static/loader.js', longLine);
+      expect(isVendor).toBe(true);
+    });
+
+    it('should not flag normal source files as minified by content', async () => {
+      const normalContent = 'function hello() {\n  console.log("world");\n}\n';
+      const isVendor = await detector.isVendorFile('app/static/app.js', normalContent);
+      expect(isVendor).toBe(false);
+    });
+
+    it('should detect very large single-line files as minified', async () => {
+      // Google Charts loader.js is 107KB on few lines
+      const singleLine = 'var goog={};' + 'goog.define=function(a,b){return b};'.repeat(500);
+      const isVendor = await detector.isVendorFile('static/loader.js', singleLine);
+      expect(isVendor).toBe(true);
+    });
   });
 
   describe('Library Identification', () => {
