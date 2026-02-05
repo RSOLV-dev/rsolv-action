@@ -693,10 +693,30 @@ export class TestRunner {
     }
 
     if (!pgRunning) {
+      // Configure pg_hba.conf for trust authentication (no password required).
+      // Ecto connects via TCP (localhost:5432), which defaults to scram-sha-256.
+      // Trust auth is safe in ephemeral Docker containers used for test execution.
+      console.log('[TestRunner] Configuring PostgreSQL trust authentication...');
+      try {
+        // Find and update pg_hba.conf — Debian puts it under /etc/postgresql/<ver>/main/
+        await execAsync(
+          `for f in /etc/postgresql/*/main/pg_hba.conf; do
+            if [ -f "$f" ]; then
+              echo "local all all trust" > "$f"
+              echo "host all all 127.0.0.1/32 trust" >> "$f"
+              echo "host all all ::1/128 trust" >> "$f"
+            fi
+          done`,
+          { encoding: 'utf8', timeout: 10000 }
+        );
+      } catch (hbaErr) {
+        console.warn(`[TestRunner] pg_hba.conf update warning: ${(hbaErr as Error).message}`);
+      }
+
       // Start PostgreSQL — Debian uses pg_ctlcluster
       console.log('[TestRunner] Starting PostgreSQL...');
       try {
-        // Try pg_ctlcluster first (Debian/Ubuntu pattern)
+        // pg_ctlcluster handles running as the postgres user internally
         await execAsync(
           'pg_ctlcluster 17 main start || pg_ctlcluster 16 main start || pg_ctlcluster 15 main start',
           { encoding: 'utf8', timeout: 30000 }
