@@ -40,6 +40,23 @@ export class VendorDetector {
     '-min.css'
   ];
   
+  /**
+   * Directories that commonly hold static assets (vendor code when combined with size heuristic).
+   * Files > LARGE_FILE_THRESHOLD in these dirs are likely third-party libraries.
+   */
+  private readonly STATIC_ASSET_DIRS = [
+    '/static/',
+    '/assets/',
+    '/public/',
+    '/wwwroot/',
+    '/resources/',
+  ];
+
+  /**
+   * Files larger than this (in bytes) in static asset directories are likely vendor libraries.
+   */
+  private readonly LARGE_FILE_THRESHOLD = 50_000;
+
   private readonly VENDOR_INDICATORS = {
     filePatterns: [
       /jquery[.-]?([\d.]+)?(?:\.min)?\.js$/i,
@@ -48,7 +65,18 @@ export class VendorDetector {
       /react[.-]?([\d.]+)?(?:\.min)?\.js$/i,
       /vue[.-]?([\d.]+)?(?:\.min)?\.js$/i,
       /lodash[.-]?([\d.]+)?(?:\.min)?\.js$/i,
-      /moment[.-]?([\d.]+)?(?:\.min)?\.js$/i
+      /moment[.-]?([\d.]+)?(?:\.min)?\.js$/i,
+      /d3[.-]?([\d.]+)?(?:\.min)?\.js$/i,
+      /chart[.-]?([\d.]+)?(?:\.min)?\.js$/i,
+      /raphael[.-]?([\d.]+)?(?:\.min)?\.js$/i,
+      /backbone[.-]?([\d.]+)?(?:\.min)?\.js$/i,
+      /underscore[.-]?([\d.]+)?(?:\.min)?\.js$/i,
+      /ember[.-]?([\d.]+)?(?:\.min)?\.js$/i,
+      /handlebars[.-]?([\d.]+)?(?:\.min)?\.js$/i,
+      /axios[.-]?([\d.]+)?(?:\.min)?\.js$/i,
+      /three[.-]?([\d.]+)?(?:\.min)?\.js$/i,
+      /popper[.-]?([\d.]+)?(?:\.min)?\.js$/i,
+      /leaflet[.-]?([\d.]+)?(?:\.min)?\.js$/i,
     ],
     headerComments: [
       /\/\*!?\s*jQuery\s+v?([\d.]+)/i,
@@ -58,6 +86,10 @@ export class VendorDetector {
       /\/\*!?\s*Vue\.js\s+v?([\d.]+)/i,
       /Copyright\s+\(c\)\s+.*\s+Foundation/i,
       /Licensed\s+under\s+MIT/i,
+      /Licensed\s+under\s+the\s+Apache\s+License/i,
+      /Copyright\s+\d{4}\s+Google/i,
+      /Copyright\s+The\s+Closure\s+Library/i,
+      /google\.charts|google\.load|goog\.provide/i,
       /\/\*!?\s*\w+\.js\s+v?\d+\.\d+\.\d+/
     ]
   };
@@ -85,6 +117,11 @@ export class VendorDetector {
 
     // Check file content headers (license headers, library banners)
     if (await this.containsVendorIndicators(filePath, content)) {
+      return true;
+    }
+
+    // Large files in static asset directories are likely vendor libraries
+    if (content && this.isLargeStaticAsset(filePath, content)) {
       return true;
     }
 
@@ -199,6 +236,22 @@ export class VendorDetector {
     return false;
   }
   
+  /**
+   * Detect large files in static asset directories as likely vendor libraries.
+   * A 107KB JS file in /static/ is almost certainly a third-party library,
+   * not hand-written application code.
+   */
+  private isLargeStaticAsset(filePath: string, content: string): boolean {
+    const normalizedPath = filePath.replace(/\\/g, '/');
+    const isJsOrCss = /\.(js|css)$/.test(normalizedPath);
+    if (!isJsOrCss) return false;
+
+    const inStaticDir = this.STATIC_ASSET_DIRS.some(dir => normalizedPath.includes(dir));
+    if (!inStaticDir) return false;
+
+    return content.length > this.LARGE_FILE_THRESHOLD;
+  }
+
   private matchesKnownLibrary(filePath: string): boolean {
     const filename = path.basename(filePath);
     return this.VENDOR_INDICATORS.filePatterns.some(pattern => 

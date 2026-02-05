@@ -25,6 +25,7 @@ const VULNERABILITY_TYPE_NAMES: Record<string, string> = {
   'weak_cryptography': 'Weak Cryptography',
   'weak-crypto': 'Weak Cryptography',
   'hardcoded_secrets': 'Hardcoded Secrets',
+  'hardcoded_secret': 'Hardcoded Secrets',
   'hardcoded-secret': 'Hardcoded Secrets',
   'insecure-random': 'Insecure Random Number Generation',
   'open_redirect': 'Open Redirect',
@@ -45,7 +46,22 @@ const VULNERABILITY_TYPE_NAMES: Record<string, string> = {
   'prototype_pollution': 'Prototype Pollution',
   'prototype-pollution': 'Prototype Pollution',
   'code_injection': 'Code Injection',
-  'code-injection': 'Code Injection'
+  'code-injection': 'Code Injection',
+  'template_injection': 'Server-Side Template Injection (SSTI)',
+  'template-injection': 'Server-Side Template Injection (SSTI)',
+  'insecure_jwt': 'Insecure JWT Configuration',
+  'debug_mode': 'Debug Mode Enabled',
+  'broken_access_control': 'Broken Access Control',
+  'broken_authentication': 'Broken Authentication',
+  'security_misconfiguration': 'Security Misconfiguration',
+  'sensitive_data_exposure': 'Sensitive Data Exposure',
+  'mass_assignment': 'Mass Assignment',
+  'log_injection': 'Log Injection',
+  'information_disclosure': 'Information Disclosure',
+  'improper_input_validation': 'Improper Input Validation',
+  'cross_site_request_forgery': 'Cross-Site Request Forgery (CSRF)',
+  'csrf': 'Cross-Site Request Forgery (CSRF)',
+  'denial_of_service': 'Denial of Service',
 };
 
 /**
