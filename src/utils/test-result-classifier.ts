@@ -75,6 +75,15 @@ export function classifyTestResult(exitCode: number, stdout: string, stderr: str
     return { type: 'runtime_error', isValidFailure: false, reason: 'MySQL unavailable - service not running or access denied' };
   }
 
+  // Maven/Java compilation errors (version mismatch, missing symbols, etc.)
+  if (/Fatal error compiling|release version \d+ not supported/i.test(combined)) {
+    return { type: 'runtime_error', isValidFailure: false, reason: 'Java compilation error - version mismatch or unsupported release' };
+  }
+  // PHP Fatal errors (version mismatch, incompatible code)
+  if (/PHP Fatal error/i.test(combined)) {
+    return { type: 'runtime_error', isValidFailure: false, reason: 'PHP fatal error - version or compatibility issue' };
+  }
+
   // Check for empty test runs BEFORE failure patterns — "0 examples, 0 failures" in RSpec
   // or "0 passing" in Mocha should NOT be classified as valid failures
   if (/0 examples?,\s*0 failures?/i.test(combined)) {

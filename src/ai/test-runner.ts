@@ -271,7 +271,47 @@ export class TestRunner {
     }
 
     if (runtime === 'java') {
-      console.log(`[TestRunner] Trying apt-get for Java + Maven (faster than building from source)`);
+      // Detect required Java version from pom.xml or build.gradle
+      const javaVersion = await this.detectJavaVersionFromManifest(workingDir);
+
+      if (javaVersion) {
+        // Use mise for project-specific Java version (prebuilt binaries, fast download)
+        console.log(`[TestRunner] Java ${javaVersion} required by project - using mise (prebuilt binaries)`);
+        try {
+          const runtimeSpec = `java@${javaVersion}`;
+          const { stdout, stderr } = await execAsync(
+            `mise install ${runtimeSpec} && mise use --global ${runtimeSpec}`,
+            { cwd: workingDir, timeout: this.MISE_QUICK_TIMEOUT, encoding: 'utf8' }
+          );
+          console.log(`[TestRunner] mise Java installed: ${stdout}`);
+          if (stderr) console.log(`[TestRunner] mise Java stderr: ${stderr}`);
+
+          // Ensure mise shims are on PATH
+          const homedir = process.env.HOME || '/root';
+          const miseShims = `${homedir}/.local/share/mise/shims`;
+          const miseBin = `${homedir}/.local/bin`;
+          const currentPath = process.env.PATH || '';
+          if (!currentPath.includes(miseShims)) {
+            process.env.PATH = `${miseShims}:${miseBin}:${currentPath}`;
+            console.log(`[TestRunner] Updated PATH to include mise shims: ${miseShims}`);
+          }
+
+          // Also ensure Maven is available
+          await this.ensureMaven(workingDir);
+
+          // Verify installation
+          await execAsync(`javac -version && mvn --version`, { encoding: 'utf8' });
+          console.log(`[TestRunner] Java ${javaVersion} + Maven installed via mise`);
+          return;
+        } catch (miseErr) {
+          const err = miseErr as { stderr?: string; message?: string };
+          console.log(`[TestRunner] mise Java install failed: ${err.stderr || err.message}`);
+          console.log(`[TestRunner] Falling back to apt-get`);
+        }
+      }
+
+      // Fallback: apt-get default-jdk (system version)
+      console.log(`[TestRunner] Trying apt-get for Java + Maven${javaVersion ? ` (mise failed for ${javaVersion})` : ' (no version detected)'}`);
       try {
         const { stdout, stderr } = await execAsync(
           `apt-get update && apt-get install -y default-jdk maven`,
@@ -282,7 +322,10 @@ export class TestRunner {
         // Verify installation
         await execAsync(`which javac && which mvn`, { encoding: 'utf8' });
         console.log(`[TestRunner] Java + Maven installed via apt-get`);
-        return; // Success, no need for mise
+        if (javaVersion) {
+          console.log(`[TestRunner] Note: System version may differ from project's required java@${javaVersion}`);
+        }
+        return;
       } catch (aptErr) {
         const err = aptErr as { stderr?: string; message?: string };
         console.log(`[TestRunner] apt-get Java failed: ${err.stderr || err.message}`);
@@ -450,6 +493,113 @@ export class TestRunner {
       // composer.json doesn't exist or isn't valid JSON
     }
     return undefined;
+  }
+
+  /**
+   * Detect Java version from pom.xml or build.gradle manifest files.
+   * Checks: <java.version>, <maven.compiler.source>, <release> in pom.xml
+   * and sourceCompatibility in build.gradle.
+   */
+  private async detectJavaVersionFromManifest(workingDir: string): Promise<string | undefined> {
+    // Try pom.xml first
+    try {
+      const pomPath = path.join(workingDir, 'pom.xml');
+      const content = await fs.readFile(pomPath, 'utf8');
+
+      // Check <java.version>25</java.version>
+      const javaVersionMatch = content.match(/<java\.version>\s*(\d+)\s*<\/java\.version>/);
+      if (javaVersionMatch) {
+        console.log(`[TestRunner] Detected Java ${javaVersionMatch[1]} from pom.xml <java.version>`);
+        return javaVersionMatch[1];
+      }
+
+      // Check <maven.compiler.source>25</maven.compiler.source> (if not a property reference)
+      const compilerSourceMatch = content.match(/<maven\.compiler\.source>\s*(\d+)\s*<\/maven\.compiler\.source>/);
+      if (compilerSourceMatch) {
+        console.log(`[TestRunner] Detected Java ${compilerSourceMatch[1]} from pom.xml <maven.compiler.source>`);
+        return compilerSourceMatch[1];
+      }
+
+      // Check <release>25</release> in maven-compiler-plugin configuration
+      const releaseMatch = content.match(/<release>\s*(\d+)\s*<\/release>/);
+      if (releaseMatch) {
+        console.log(`[TestRunner] Detected Java ${releaseMatch[1]} from pom.xml <release>`);
+        return releaseMatch[1];
+      }
+    } catch {
+      // pom.xml doesn't exist
+    }
+
+    // Try build.gradle
+    try {
+      const gradlePath = path.join(workingDir, 'build.gradle');
+      const content = await fs.readFile(gradlePath, 'utf8');
+
+      // Check sourceCompatibility = JavaVersion.VERSION_21 or sourceCompatibility = '21'
+      const gradleMatch = content.match(/sourceCompatibility\s*=\s*(?:JavaVersion\.VERSION_)?['"]*(\d+)['"']*/);
+      if (gradleMatch) {
+        console.log(`[TestRunner] Detected Java ${gradleMatch[1]} from build.gradle sourceCompatibility`);
+        return gradleMatch[1];
+      }
+
+      // Check java { toolchain { languageVersion = JavaLanguageVersion.of(21) } }
+      const toolchainMatch = content.match(/JavaLanguageVersion\.of\((\d+)\)/);
+      if (toolchainMatch) {
+        console.log(`[TestRunner] Detected Java ${toolchainMatch[1]} from build.gradle toolchain`);
+        return toolchainMatch[1];
+      }
+    } catch {
+      // build.gradle doesn't exist
+    }
+
+    // Try build.gradle.kts (Kotlin DSL)
+    try {
+      const ktsPath = path.join(workingDir, 'build.gradle.kts');
+      const content = await fs.readFile(ktsPath, 'utf8');
+
+      const ktsMatch = content.match(/JavaLanguageVersion\.of\((\d+)\)/);
+      if (ktsMatch) {
+        console.log(`[TestRunner] Detected Java ${ktsMatch[1]} from build.gradle.kts toolchain`);
+        return ktsMatch[1];
+      }
+
+      const ktsCompatMatch = content.match(/sourceCompatibility\s*=\s*JavaVersion\.VERSION_(\d+)/);
+      if (ktsCompatMatch) {
+        console.log(`[TestRunner] Detected Java ${ktsCompatMatch[1]} from build.gradle.kts sourceCompatibility`);
+        return ktsCompatMatch[1];
+      }
+    } catch {
+      // build.gradle.kts doesn't exist
+    }
+
+    return undefined;
+  }
+
+  /**
+   * Ensure Maven is available (install via apt-get if not present).
+   * Called after mise installs Java, since mise only installs JDK, not Maven.
+   */
+  private async ensureMaven(workingDir: string): Promise<void> {
+    try {
+      await execAsync(`which mvn`, { encoding: 'utf8' });
+      console.log(`[TestRunner] Maven already available`);
+      return;
+    } catch {
+      // Maven not found, install it
+    }
+
+    console.log(`[TestRunner] Installing Maven via apt-get`);
+    try {
+      await execAsync(
+        `apt-get update && apt-get install -y maven`,
+        { cwd: workingDir, timeout: 120000, encoding: 'utf8' }
+      );
+      await execAsync(`which mvn`, { encoding: 'utf8' });
+      console.log(`[TestRunner] Maven installed via apt-get`);
+    } catch (err) {
+      const error = err as { stderr?: string; message?: string };
+      console.log(`[TestRunner] Maven install failed: ${error.stderr || error.message}`);
+    }
   }
 
   /**
