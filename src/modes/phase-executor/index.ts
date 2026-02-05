@@ -2248,6 +2248,8 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
           }
 
           // Store validation results with RFC-058 data
+          // Include analysisData so MITIGATE can access vulnerabilityType for educational PRs
+          const analysisDataForStorage = 'analysisData' in scanData ? (scanData as { analysisData: AnalysisData }).analysisData : undefined;
           const validationData = {
             issueNumber: issue.number,
             validated: vmValidationResult.validated,
@@ -2264,7 +2266,15 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
             // RFC-058 enhanced fields
             hasSpecificVulnerabilities: vmValidationResult.validated,
             vulnerabilities: [],
-            confidence: vmValidationResult.validated ? 'high' as const : 'low' as const
+            confidence: vmValidationResult.validated ? 'high' as const : 'low' as const,
+            // Carry forward scan analysis data for MITIGATE educational PR generation
+            analysisData: analysisDataForStorage ? {
+              vulnerabilityType: analysisDataForStorage.vulnerabilityType,
+              severity: analysisDataForStorage.severity,
+              cwe: analysisDataForStorage.cwe,
+              issueType: analysisDataForStorage.issueType,
+              isAiGenerated: analysisDataForStorage.isAiGenerated
+            } : undefined
           };
 
           await this.phaseDataClient.storePhaseResults(
@@ -3012,11 +3022,29 @@ ${validation.falsePositive ?
     if (options.prType === 'educational') {
       logger.info('[MITIGATE] Creating educational PR with comprehensive security education');
 
+      // Extract vulnerability type from issue title as fallback
+      // RSOLV issue titles follow pattern: "🔒 <VulnType> vulnerabilities found in N file(s)"
+      const extractVulnTypeFromTitle = (title: string): string | undefined => {
+        const match = title.match(/🔒\s*(.+?)\s+vulnerabilit/i);
+        return match?.[1];
+      };
+
       // Prepare summary data for educational PR
+      const vulnType = validation.analysisData?.vulnerabilityType
+        || solution.summary?.vulnerabilityType
+        || extractVulnTypeFromTitle(issue.title)
+        || 'security';
+
+      logger.info(`[MITIGATE] Educational PR vulnerability type: "${vulnType}" (from: ${
+        validation.analysisData?.vulnerabilityType ? 'analysisData' :
+        solution.summary?.vulnerabilityType ? 'solution.summary' :
+        extractVulnTypeFromTitle(issue.title) ? 'issue.title' : 'fallback'
+      })`);
+
       const summary = {
         title: `Fix: ${issue.title}`,
         description: solution.summary?.description || issue.body || 'Security fix applied',
-        vulnerabilityType: validation.analysisData?.vulnerabilityType || solution.summary?.vulnerabilityType || 'security',
+        vulnerabilityType: vulnType,
         severity: validation.analysisData?.severity || solution.summary?.severity || 'medium',
         cwe: validation.analysisData?.cwe || solution.summary?.cwe,
         tests: validation.tests || solution.summary?.tests,
