@@ -232,6 +232,16 @@ Error: Cannot find module 'express'
       expect(result.type).toBe('missing_dependency');
       expect(result.isValidFailure).toBe(false);
     });
+
+    it('should detect Bundler GemNotFound error (Ruby)', () => {
+      const stderr = `bundler: failed to load command: rspec (/github/home/.local/share/mise/installs/ruby/3.2.1/bin/rspec)
+/github/home/.local/share/mise/installs/ruby/3.2.1/lib/ruby/gems/3.2.0/gems/bundler-2.7.2/lib/bundler/definition.rb:691:in \`materialize': Could not find rails-6.0.0, coffee-rails-5.0.0, rspec-rails-4.0.0.beta3 in locally installed gems (Bundler::GemNotFound)`;
+      const result = validationMode.classifyTestResult(1, '', stderr);
+
+      expect(result.type).toBe('missing_dependency');
+      expect(result.isValidFailure).toBe(false);
+      expect(result.reason).toMatch(/dependency|module/i);
+    });
   });
 
   describe('Valid Test Failure Detection', () => {

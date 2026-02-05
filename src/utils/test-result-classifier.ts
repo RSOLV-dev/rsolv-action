@@ -50,7 +50,7 @@ export function classifyTestResult(exitCode: number, stdout: string, stderr: str
   if (/TypeError:.*is not a function/i.test(combined)) {
     return { type: 'runtime_error', isValidFailure: false, reason: 'Type error - function not found' };
   }
-  if (/Cannot find module|ModuleNotFoundError|No module named|cannot load such file|LoadError/i.test(combined)) {
+  if (/Cannot find module|ModuleNotFoundError|No module named|cannot load such file|LoadError|GemNotFound|Could not find.*in locally installed gems/i.test(combined)) {
     return { type: 'missing_dependency', isValidFailure: false, reason: 'Missing dependency or module' };
   }
   if (/command not found|ENOENT/i.test(combined)) {
