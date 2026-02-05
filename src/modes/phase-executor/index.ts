@@ -169,8 +169,8 @@ export class PhaseExecutor {
         // Auto-detect issues by label when no specific issues provided
         logger.info('[MITIGATE] No specific issues provided, detecting issues by label');
 
-        // Use the configured label (should be 'rsolv:validated' for mitigation)
-        const labelToUse = this.config.issueLabel || 'rsolv:validated';
+        // MITIGATE always targets validated issues — override config default of 'rsolv:detected'
+        const labelToUse = 'rsolv:validated';
         const maxIssues = this.config.maxIssues || 5;
         logger.info(`[MITIGATE] Detecting up to ${maxIssues} issues with label '${labelToUse}'`);
 
