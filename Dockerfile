@@ -81,6 +81,10 @@ RUN apt-get update && \
 RUN curl https://mise.run | sh
 ENV PATH="/root/.local/share/mise/shims:/root/.local/bin:${PATH}"
 
+# Install uv for fast Python package management (PEP 668 safe, 10-100x faster than pip)
+# RFC-103: Default Python installer — respects project lock files, falls back to uv pip install
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh && uv --version
+
 # Copy Node.js and npm toolchain from builder
 # node binary
 COPY --from=builder /usr/bin/node /usr/bin/node

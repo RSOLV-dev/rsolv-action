@@ -119,6 +119,10 @@ export class TestRunner {
   // Or configure mise to use prebuilt binaries: mise settings set ruby_binary_url ...
   private readonly DEP_INSTALL_TIMEOUT = 180000; // 3 minutes for dependency install
 
+  // RFC-103: Python test command prefix, set by detectPythonInstaller()
+  // e.g., 'poetry run ' for poetry projects, 'uv run ' for uv-managed projects
+  private pythonTestPrefix: string = '';
+
   /**
    * Run tests using specified framework
    */
@@ -449,6 +453,51 @@ export class TestRunner {
   }
 
   /**
+   * Detect which Python package installer the project uses.
+   * RFC-103: (1) Use whatever installer the repo documents, (2) default to uv.
+   * Detection is based on lock files which indicate the project's documented toolchain.
+   */
+  private async detectPythonInstaller(workingDir: string): Promise<'uv-project' | 'poetry' | 'pipenv' | 'uv'> {
+    if (await this.fileExists(path.join(workingDir, 'uv.lock'))) return 'uv-project';
+    if (await this.fileExists(path.join(workingDir, 'poetry.lock'))) return 'poetry';
+    if (await this.fileExists(path.join(workingDir, 'Pipfile.lock'))) return 'pipenv';
+    if (await this.fileExists(path.join(workingDir, 'Pipfile'))) return 'pipenv';
+    return 'uv';
+  }
+
+  /**
+   * Ensure uv is available for Python package management.
+   * Returns true if uv is available (pre-installed or just installed), false if unavailable.
+   * When false, callers should fall back to pip with --break-system-packages.
+   */
+  async ensureUv(): Promise<boolean> {
+    try {
+      await execAsync('which uv', { encoding: 'utf8' });
+      return true;
+    } catch {
+      // uv not found in PATH, try to install it
+      try {
+        console.log('[TestRunner] Installing uv for Python package management...');
+        await execAsync(
+          'curl -LsSf https://astral.sh/uv/install.sh | sh',
+          { timeout: 60000, encoding: 'utf8' }
+        );
+        // Ensure uv is in PATH for child processes
+        const uvPath = '/root/.local/bin';
+        if (!process.env.PATH?.includes(uvPath)) {
+          process.env.PATH = `${uvPath}:${process.env.PATH}`;
+        }
+        await execAsync('uv --version', { encoding: 'utf8' });
+        console.log('[TestRunner] uv installed successfully');
+        return true;
+      } catch (installErr) {
+        console.warn(`[TestRunner] Failed to install uv: ${(installErr as Error).message}`);
+        return false;
+      }
+    }
+  }
+
+  /**
    * Install project dependencies for the given framework.
    * Runs the appropriate package manager command from the repo root.
    */
@@ -495,27 +544,55 @@ export class TestRunner {
       return null;
     }
     case 'pytest': {
-      // Python: pip install
-      // RFC-101 v3.8.68: Install system libs commonly needed by Python packages (Pillow, etc.)
-      // before pip install to prevent build failures. Also ensure pytest is installed.
-      // RFC-101 v3.8.69: Use python3 -m pip (not bare pip) because apt-get installs pip3, not pip
-      // RFC-103 v3.8.88: Add --break-system-packages for Python 3.12+ (PEP 668).
-      // Debian Trixie / Ubuntu 24.04+ enforce externally-managed-environment which blocks
-      // pip install into system Python without this flag. Safe in our Docker/CI context.
+      // RFC-103: Detect and respect the project's documented Python installer.
+      // Priority: (1) use project's lock file tool, (2) default to uv, (3) fall back to pip.
+      // uv is PEP 668 safe, 10-100x faster than pip, and handles venvs gracefully.
       const sysDeps = 'apt-get update && apt-get install -y --no-install-recommends libjpeg-dev libpng-dev libfreetype-dev 2>/dev/null || true';
-      const pipInstall = 'python3 -m pip install --break-system-packages';
-      const ensurePytest = `${pipInstall} pytest`;
+      const installer = await this.detectPythonInstaller(workingDir);
+      const hasUv = await this.ensureUv();
+
+      console.log(`[TestRunner] Python installer: ${installer}${!hasUv ? ' (uv unavailable, using pip)' : ''}`);
+
+      // uv-managed project (has uv.lock)
+      if (installer === 'uv-project') {
+        this.pythonTestPrefix = 'uv run ';
+        return `${sysDeps} && uv sync && uv pip install pytest`;
+      }
+
+      // Poetry-managed project (has poetry.lock)
+      if (installer === 'poetry') {
+        this.pythonTestPrefix = 'poetry run ';
+        const ensureTool = hasUv
+          ? '(which poetry > /dev/null 2>&1 || uv pip install --system poetry)'
+          : '(which poetry > /dev/null 2>&1 || python3 -m pip install --break-system-packages poetry)';
+        return `${sysDeps} && ${ensureTool} && poetry install && poetry run pip install pytest`;
+      }
+
+      // Pipenv-managed project (has Pipfile or Pipfile.lock)
+      if (installer === 'pipenv') {
+        this.pythonTestPrefix = 'pipenv run ';
+        const ensureTool = hasUv
+          ? '(which pipenv > /dev/null 2>&1 || uv pip install --system pipenv)'
+          : '(which pipenv > /dev/null 2>&1 || python3 -m pip install --break-system-packages pipenv)';
+        return `${sysDeps} && ${ensureTool} && pipenv install && pipenv run pip install pytest`;
+      }
+
+      // Default: uv pip install --system (or pip --break-system-packages fallback)
+      this.pythonTestPrefix = '';
+      const install = hasUv
+        ? 'uv pip install --system'
+        : 'python3 -m pip install --break-system-packages';
+      const ensurePytest = `${install} pytest`;
+
       if (await this.fileExists(path.join(workingDir, 'requirements.txt'))) {
-        // Install deps first (may fail on some packages), then ensure pytest is available
-        return `${sysDeps} && (${pipInstall} -r requirements.txt || echo "Some deps failed, continuing...") && ${ensurePytest}`;
+        return `${sysDeps} && (${install} -r requirements.txt || echo "Some deps failed, continuing...") && ${ensurePytest}`;
       }
       if (await this.fileExists(path.join(workingDir, 'pyproject.toml'))) {
-        return `${sysDeps} && (${pipInstall} -e . || echo "Install failed, continuing...") && ${ensurePytest}`;
+        return `${sysDeps} && (${install} -e . || echo "Install failed, continuing...") && ${ensurePytest}`;
       }
       if (await this.fileExists(path.join(workingDir, 'setup.py'))) {
-        return `${sysDeps} && (${pipInstall} -e . || echo "Install failed, continuing...") && ${ensurePytest}`;
+        return `${sysDeps} && (${install} -e . || echo "Install failed, continuing...") && ${ensurePytest}`;
       }
-      // No manifest - just install pytest
       return ensurePytest;
     }
     case 'phpunit': {
@@ -596,8 +673,8 @@ export class TestRunner {
       // Ruby (BUNDLE_IGNORE_RUBY_VERSION=1 handles apt-get fallback version mismatch)
       rspec: { base: 'BUNDLE_IGNORE_RUBY_VERSION=1 bundle exec rspec', testNameFlag: '-e' },
       minitest: { base: 'BUNDLE_IGNORE_RUBY_VERSION=1 ruby', testNameFlag: '-n' },
-      // Python
-      pytest: { base: 'pytest', testNameFlag: '-k' },
+      // Python (prefix set by detectPythonInstaller: 'poetry run ', 'uv run ', etc.)
+      pytest: { base: `${this.pythonTestPrefix}pytest`, testNameFlag: '-k' },
       // PHP
       phpunit: { base: 'vendor/bin/phpunit', testNameFlag: '--filter' },
       // Java

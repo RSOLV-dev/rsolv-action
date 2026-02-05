@@ -458,54 +458,6 @@ describe('TestRunner', () => {
       expect(composerCall![0]).toContain('--ignore-platform-reqs');
     });
 
-    test('Python: should use --break-system-packages for PEP 668 compatibility', async () => {
-      // Mock: no requirements.txt/pyproject.toml/setup.py (bare pytest install)
-      mockFsAccess.mockRejectedValue(new Error('ENOENT'));
-      mockExecAsync.mockResolvedValue({ stdout: '', stderr: '' });
-
-      await runner.runTests({
-        framework: 'pytest',
-        testFile: 'tests/test_security.py',
-        testName: 'test_vulnerability',
-        workingDir: '/tmp/python-repo'
-      });
-
-      // Verify pip install includes --break-system-packages (PEP 668)
-      const calls = mockExecAsync.mock.calls;
-      const pipCall = calls.find((call: unknown[]) =>
-        typeof call[0] === 'string' && call[0].includes('pip install')
-      );
-      expect(pipCall).toBeDefined();
-      expect(pipCall![0]).toContain('--break-system-packages');
-      expect(pipCall![0]).toContain('pytest');
-    });
-
-    test('Python: should include --break-system-packages with requirements.txt', async () => {
-      // Mock: requirements.txt exists
-      mockFsAccess.mockImplementation((filePath: string) => {
-        if (filePath.endsWith('requirements.txt')) return Promise.resolve();
-        return Promise.reject(new Error('ENOENT'));
-      });
-      mockExecAsync.mockResolvedValue({ stdout: '', stderr: '' });
-
-      await runner.runTests({
-        framework: 'pytest',
-        testFile: 'tests/test_security.py',
-        testName: 'test_vulnerability',
-        workingDir: '/tmp/python-repo'
-      });
-
-      // Verify both requirements.txt install and pytest install use --break-system-packages
-      const calls = mockExecAsync.mock.calls;
-      const pipCall = calls.find((call: unknown[]) =>
-        typeof call[0] === 'string' && call[0].includes('pip install') && call[0].includes('requirements.txt')
-      );
-      expect(pipCall).toBeDefined();
-      expect(pipCall![0]).toContain('--break-system-packages');
-      // Should also install pytest separately
-      expect(pipCall![0]).toContain('install --break-system-packages pytest');
-    });
-
     test('Elixir: should set MIX_ENV=test for proper test isolation', async () => {
       // Mock: mix.exs exists
       mockFsAccess.mockImplementation((filePath: string) => {
@@ -523,14 +475,245 @@ describe('TestRunner', () => {
       });
 
       // Verify mix deps command sets MIX_ENV=test for proper test isolation
-      // This ensures deps are compiled for test environment and test config is used
       const calls = mockExecAsync.mock.calls;
       const mixDepsCall = calls.find((call: unknown[]) =>
         typeof call[0] === 'string' && call[0].includes('mix deps')
       );
       expect(mixDepsCall).toBeDefined();
-      // MIX_ENV=test ensures test config is used (which may configure SQLite fallback)
       expect(mixDepsCall![0]).toContain('MIX_ENV=test');
+    });
+  });
+
+  describe('Python Dependency Install — uv default (RFC-103)', () => {
+    beforeEach(() => {
+      mockFsAccess.mockRejectedValue(new Error('ENOENT'));
+    });
+
+    test('should use uv pip install --system as default when no lock files exist', async () => {
+      // All file checks fail (no lock files, no manifests)
+      mockFsAccess.mockRejectedValue(new Error('ENOENT'));
+      // Default mock: which python, which uv, and install all succeed
+      mockExecAsync.mockResolvedValue({ stdout: '', stderr: '' });
+
+      await runner.runTests({
+        framework: 'pytest',
+        testFile: 'tests/test_security.py',
+        testName: 'test_vulnerability',
+        workingDir: '/tmp/python-repo'
+      });
+
+      const calls = mockExecAsync.mock.calls;
+      const installCall = calls.find((call: unknown[]) =>
+        typeof call[0] === 'string' && call[0].includes('uv pip install')
+      );
+      expect(installCall).toBeDefined();
+      expect(installCall![0]).toContain('uv pip install --system');
+      expect(installCall![0]).toContain('pytest');
+    });
+
+    test('should use uv pip install --system with requirements.txt', async () => {
+      mockFsAccess.mockImplementation((filePath: string) => {
+        if (filePath.endsWith('requirements.txt')) return Promise.resolve();
+        return Promise.reject(new Error('ENOENT'));
+      });
+      mockExecAsync.mockResolvedValue({ stdout: '', stderr: '' });
+
+      await runner.runTests({
+        framework: 'pytest',
+        testFile: 'tests/test_security.py',
+        testName: 'test_vulnerability',
+        workingDir: '/tmp/python-repo'
+      });
+
+      const calls = mockExecAsync.mock.calls;
+      const installCall = calls.find((call: unknown[]) =>
+        typeof call[0] === 'string' && call[0].includes('requirements.txt')
+      );
+      expect(installCall).toBeDefined();
+      expect(installCall![0]).toContain('uv pip install --system -r requirements.txt');
+      expect(installCall![0]).toContain('uv pip install --system pytest');
+    });
+
+    test('should use uv pip install --system with pyproject.toml', async () => {
+      mockFsAccess.mockImplementation((filePath: string) => {
+        if (filePath.endsWith('pyproject.toml')) return Promise.resolve();
+        return Promise.reject(new Error('ENOENT'));
+      });
+      mockExecAsync.mockResolvedValue({ stdout: '', stderr: '' });
+
+      await runner.runTests({
+        framework: 'pytest',
+        testFile: 'tests/test_security.py',
+        testName: 'test_vulnerability',
+        workingDir: '/tmp/python-repo'
+      });
+
+      const calls = mockExecAsync.mock.calls;
+      const installCall = calls.find((call: unknown[]) =>
+        typeof call[0] === 'string' && call[0].includes('uv pip install --system -e .')
+      );
+      expect(installCall).toBeDefined();
+      expect(installCall![0]).toContain('uv pip install --system pytest');
+    });
+
+    test('should detect poetry.lock and use poetry install', async () => {
+      mockFsAccess.mockImplementation((filePath: string) => {
+        if (filePath.endsWith('poetry.lock')) return Promise.resolve();
+        return Promise.reject(new Error('ENOENT'));
+      });
+      mockExecAsync.mockResolvedValue({ stdout: '', stderr: '' });
+
+      await runner.runTests({
+        framework: 'pytest',
+        testFile: 'tests/test_security.py',
+        testName: 'test_vulnerability',
+        workingDir: '/tmp/python-repo'
+      });
+
+      const calls = mockExecAsync.mock.calls;
+      const installCall = calls.find((call: unknown[]) =>
+        typeof call[0] === 'string' && call[0].includes('poetry install')
+      );
+      expect(installCall).toBeDefined();
+      // Should use poetry run for test execution
+      const testCall = calls.find((call: unknown[]) =>
+        typeof call[0] === 'string' && call[0].includes('poetry run pytest')
+      );
+      expect(testCall).toBeDefined();
+    });
+
+    test('should detect Pipfile.lock and use pipenv install', async () => {
+      mockFsAccess.mockImplementation((filePath: string) => {
+        if (filePath.endsWith('Pipfile.lock')) return Promise.resolve();
+        return Promise.reject(new Error('ENOENT'));
+      });
+      mockExecAsync.mockResolvedValue({ stdout: '', stderr: '' });
+
+      await runner.runTests({
+        framework: 'pytest',
+        testFile: 'tests/test_security.py',
+        testName: 'test_vulnerability',
+        workingDir: '/tmp/python-repo'
+      });
+
+      const calls = mockExecAsync.mock.calls;
+      const installCall = calls.find((call: unknown[]) =>
+        typeof call[0] === 'string' && call[0].includes('pipenv install')
+      );
+      expect(installCall).toBeDefined();
+      // Should use pipenv run for test execution
+      const testCall = calls.find((call: unknown[]) =>
+        typeof call[0] === 'string' && call[0].includes('pipenv run pytest')
+      );
+      expect(testCall).toBeDefined();
+    });
+
+    test('should detect uv.lock and use uv sync', async () => {
+      mockFsAccess.mockImplementation((filePath: string) => {
+        if (filePath.endsWith('uv.lock')) return Promise.resolve();
+        return Promise.reject(new Error('ENOENT'));
+      });
+      mockExecAsync.mockResolvedValue({ stdout: '', stderr: '' });
+
+      await runner.runTests({
+        framework: 'pytest',
+        testFile: 'tests/test_security.py',
+        testName: 'test_vulnerability',
+        workingDir: '/tmp/python-repo'
+      });
+
+      const calls = mockExecAsync.mock.calls;
+      const installCall = calls.find((call: unknown[]) =>
+        typeof call[0] === 'string' && call[0].includes('uv sync')
+      );
+      expect(installCall).toBeDefined();
+      // Should use uv run for test execution
+      const testCall = calls.find((call: unknown[]) =>
+        typeof call[0] === 'string' && call[0].includes('uv run pytest')
+      );
+      expect(testCall).toBeDefined();
+    });
+
+    test('should fall back to pip with --break-system-packages when uv unavailable', async () => {
+      // No lock files, no manifests
+      mockFsAccess.mockRejectedValue(new Error('ENOENT'));
+      // Make 'which uv' fail and curl install fail — forces pip fallback
+      mockExecAsync.mockImplementation((cmd: string) => {
+        if (typeof cmd === 'string' && cmd === 'which uv') {
+          return Promise.reject(new Error('not found'));
+        }
+        if (typeof cmd === 'string' && cmd.includes('astral.sh/uv')) {
+          return Promise.reject(new Error('curl failed'));
+        }
+        return Promise.resolve({ stdout: '', stderr: '' });
+      });
+
+      await runner.runTests({
+        framework: 'pytest',
+        testFile: 'tests/test_security.py',
+        testName: 'test_vulnerability',
+        workingDir: '/tmp/python-repo'
+      });
+
+      const calls = mockExecAsync.mock.calls;
+      const installCall = calls.find((call: unknown[]) =>
+        typeof call[0] === 'string' && call[0].includes('pip install') && call[0].includes('pytest')
+      );
+      expect(installCall).toBeDefined();
+      expect(installCall![0]).toContain('--break-system-packages');
+      expect(installCall![0]).not.toContain('uv');
+    });
+
+    test('should fall back to pip with requirements.txt when uv unavailable', async () => {
+      mockFsAccess.mockImplementation((filePath: string) => {
+        if (filePath.endsWith('requirements.txt')) return Promise.resolve();
+        return Promise.reject(new Error('ENOENT'));
+      });
+      mockExecAsync.mockImplementation((cmd: string) => {
+        if (typeof cmd === 'string' && cmd === 'which uv') {
+          return Promise.reject(new Error('not found'));
+        }
+        if (typeof cmd === 'string' && cmd.includes('astral.sh/uv')) {
+          return Promise.reject(new Error('curl failed'));
+        }
+        return Promise.resolve({ stdout: '', stderr: '' });
+      });
+
+      await runner.runTests({
+        framework: 'pytest',
+        testFile: 'tests/test_security.py',
+        testName: 'test_vulnerability',
+        workingDir: '/tmp/python-repo'
+      });
+
+      const calls = mockExecAsync.mock.calls;
+      const installCall = calls.find((call: unknown[]) =>
+        typeof call[0] === 'string' && call[0].includes('requirements.txt') && call[0].includes('pip install')
+      );
+      expect(installCall).toBeDefined();
+      expect(installCall![0]).toContain('--break-system-packages');
+      expect(installCall![0]).toContain('--break-system-packages pytest');
+    });
+
+    test('should install poetry via uv when poetry.lock detected but poetry not available', async () => {
+      mockFsAccess.mockImplementation((filePath: string) => {
+        if (filePath.endsWith('poetry.lock')) return Promise.resolve();
+        return Promise.reject(new Error('ENOENT'));
+      });
+      mockExecAsync.mockResolvedValue({ stdout: '', stderr: '' });
+
+      await runner.runTests({
+        framework: 'pytest',
+        testFile: 'tests/test_security.py',
+        testName: 'test_vulnerability',
+        workingDir: '/tmp/python-repo'
+      });
+
+      const calls = mockExecAsync.mock.calls;
+      const installCall = calls.find((call: unknown[]) =>
+        typeof call[0] === 'string' && call[0].includes('uv pip install --system poetry')
+      );
+      expect(installCall).toBeDefined();
     });
   });
 });
