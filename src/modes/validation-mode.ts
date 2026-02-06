@@ -379,7 +379,11 @@ export class ValidationMode {
           'rspec': 'spec',
           'pytest': 'tests',
           'phpunit': 'tests',
-          'exunit': 'test'
+          'exunit': 'test',
+          'junit': 'src/test/java',
+          'junit4': 'src/test/java',
+          'junit5': 'src/test/java',
+          'testng': 'src/test/java'
         };
         const testDir = testDirMap[frameworkName] || 'test';
         const fallbackPath = `${testDir}/${this.getTestFileName(frameworkName)}`;
@@ -2485,11 +2489,14 @@ Return ONLY the inverted test file. No explanation, just the code block:
       'jest': 'vulnerability_validation.test.js',
       'vitest': 'vulnerability_validation.test.ts',
       'mocha': 'vulnerability_validation.test.js',
+      'junit': 'VulnerabilityValidationTest.java',
+      'junit4': 'VulnerabilityValidationTest.java',
       'junit5': 'VulnerabilityValidationTest.java',
       'testng': 'VulnerabilityValidationTest.java',
       'exunit': 'vulnerability_validation_test.exs'
     };
 
+    // RFC-103 v3.8.95: Default based on detected ecosystem, not hardcoded to JS
     return fileNames[frameworkName.toLowerCase()] || 'vulnerability_validation.test.js';
   }
 
