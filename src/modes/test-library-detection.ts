@@ -290,3 +290,40 @@ function extractJavaScriptLibraries(
 function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
+
+/**
+ * Check if a project has no real test framework installed.
+ * Returns true if only stdlib libraries are present (no external test frameworks).
+ *
+ * Use case: DVNA has `assert` from Node stdlib but no mocha/jest/vitest.
+ * The LLM might generate vitest tests, but vitest isn't available.
+ *
+ * @param ecosystem - The programming language/ecosystem
+ * @param availableLibraries - Libraries detected from manifests
+ * @returns true if only stdlib libraries are present (no real test framework)
+ */
+export function hasNoTestFramework(
+  ecosystem: Ecosystem | string,
+  availableLibraries: string[]
+): boolean {
+  const stdlib = STDLIB_LIBRARIES[ecosystem] || [];
+
+  // If no libraries at all, definitely no framework
+  if (availableLibraries.length === 0) {
+    return true;
+  }
+
+  // Check if every available library is just stdlib
+  const normalizedAvailable = availableLibraries.map(l => l.toLowerCase());
+  const normalizedStdlib = stdlib.map(l => l.toLowerCase());
+
+  // Filter out stdlib and "Node built-in" variants
+  const nonStdlib = normalizedAvailable.filter(lib => {
+    if (normalizedStdlib.includes(lib)) return false;
+    if (lib.includes('(node built-in)') || lib === 'assert (node built-in)') return false;
+    return true;
+  });
+
+  // If nothing remains after filtering stdlib, there's no real test framework
+  return nonStdlib.length === 0;
+}

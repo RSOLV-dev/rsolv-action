@@ -34,6 +34,8 @@ export interface ValidationResult {
   falsePositiveReason?: string;
   /** RFC-103 B4: True if validation failed due to infrastructure issues, not false positive */
   infrastructureFailure?: boolean;
+  /** RFC-103 v3.8.94: True if project has no test framework (only stdlib libraries) */
+  noTestFramework?: boolean;
   testingMode?: boolean; // RFC-059: Indicates testing mode is enabled
   testingModeNote?: string; // RFC-059: Explanation when testing mode overrides validation
   timestamp: string;

@@ -190,6 +190,9 @@ describe('RFC-101: Project Shape Consumption in VALIDATE', () => {
     vi.spyOn(validationMode as any, 'ensureCleanGitState').mockImplementation(() => {});
     vi.spyOn(validationMode as any, 'loadFalsePositiveCache').mockImplementation(() => {});
     vi.spyOn(validationMode as any, 'detectFrameworkFromFile').mockReturnValue('jest');
+    vi.spyOn(validationMode as any, 'detectFrameworkWithBackend').mockResolvedValue('jest');
+    // RFC-103 v3.8.94: Ensure noTestFrameworkAvailable is false for tests
+    (validationMode as any).noTestFrameworkAvailable = false;
     vi.spyOn(validationMode as any, 'scanTestFiles').mockResolvedValue(['test/auth.test.js']);
     vi.spyOn(validationMode as any, 'addGitHubLabel').mockResolvedValue(undefined);
   });

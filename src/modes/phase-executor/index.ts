@@ -2257,8 +2257,10 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
             redTests: vmValidationResult.redTests,
             testResults: vmValidationResult.testResults,
             // RFC-103 B4: Distinguish false positives from infrastructure failures
-            falsePositive: !vmValidationResult.validated && !vmValidationResult.infrastructureFailure,
+            falsePositive: !vmValidationResult.validated && !vmValidationResult.infrastructureFailure && !vmValidationResult.noTestFramework,
             infrastructureFailure: !vmValidationResult.validated && !!vmValidationResult.infrastructureFailure,
+            // RFC-103 v3.8.94: Track when project has no test framework
+            noTestFramework: !vmValidationResult.validated && !!vmValidationResult.noTestFramework,
             falsePositiveReason: vmValidationResult.falsePositiveReason,
             existingTests: existing?.hasTests,
             testFramework: existing?.framework,
@@ -2328,6 +2330,16 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
                   'rsolv:detected'
                 );
               }
+            } else if (validationData.noTestFramework) {
+              // RFC-103 v3.8.94: No test framework — cannot validate but vulnerability may be real
+              logger.info(`[VALIDATE] Adding 'rsolv:validation-unavailable' label to issue #${issue.number} (no test framework)`);
+              await addLabels(
+                issue.repository.owner,
+                issue.repository.name,
+                issue.number,
+                ['rsolv:validation-unavailable']
+              );
+              // Keep 'rsolv:detected' — the vulnerability may still be real
             } else if (validationData.infrastructureFailure) {
               // RFC-103 B4: Infrastructure failure — vulnerability may be real, we just couldn't prove it
               logger.info(`[VALIDATE] Adding 'rsolv:validation-inconclusive' label to issue #${issue.number} (infrastructure limitation)`);

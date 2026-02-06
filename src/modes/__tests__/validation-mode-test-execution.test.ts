@@ -201,6 +201,9 @@ describe('RFC-060-AMENDMENT-001: ValidationMode Test Execution Integration', () 
     vi.spyOn(validationMode as any, 'ensureCleanGitState').mockImplementation(() => {});
     vi.spyOn(validationMode as any, 'loadFalsePositiveCache').mockImplementation(() => {});
     vi.spyOn(validationMode as any, 'detectFrameworkFromFile').mockReturnValue('jest');
+    vi.spyOn(validationMode as any, 'detectFrameworkWithBackend').mockResolvedValue('jest');
+    // RFC-103 v3.8.94: Ensure noTestFrameworkAvailable is false for tests
+    (validationMode as any).noTestFrameworkAvailable = false;
     vi.spyOn(validationMode as any, 'scanTestFiles').mockResolvedValue(['test/auth.test.js']);
     vi.spyOn(validationMode as any, 'integrateTestsWithBackendRetry').mockResolvedValue({
       targetFile: 'test/auth.test.js',
@@ -390,9 +393,9 @@ describe('RFC-060-AMENDMENT-001: ValidationMode Test Execution Integration', () 
       expect(generateSpy).not.toHaveBeenCalled();
     });
 
-    test('should call detectFrameworkFromFile with primary vulnerable file', async () => {
+    test('should call detectFrameworkWithBackend with primary vulnerable file', async () => {
       vi.spyOn(validationMode as any, 'generateTestWithRetry').mockResolvedValue(successTestSuite);
-      const frameworkSpy = vi.spyOn(validationMode as any, 'detectFrameworkFromFile');
+      const frameworkSpy = vi.spyOn(validationMode as any, 'detectFrameworkWithBackend');
 
       await validationMode.validateVulnerability(mockIssue);
 

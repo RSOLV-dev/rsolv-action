@@ -21,7 +21,7 @@ import { classifyTestResult as classifyTestResultImpl, parseTestOutputCounts, is
 import { getAssertionTemplate, getAssertionTemplateForFramework } from '../prompts/vulnerability-assertion-templates.js';
 import { getAssertionStyleGuidance, AssertionStyleGuidance } from '../prompts/assertion-style-guidance.js';
 import { buildRetryFeedback, extractMissingModule } from './retry-feedback.js';
-import { extractTestLibraries as extractTestLibrariesMultiEcosystem } from './test-library-detection.js';
+import { extractTestLibraries as extractTestLibrariesMultiEcosystem, hasNoTestFramework } from './test-library-detection.js';
 
 export class ValidationMode {
   private config: ActionConfig;
@@ -39,6 +39,8 @@ export class ValidationMode {
   private availableTestLibraries: string[] = [];
   /** RFC-103 B4: Last classification type from test execution (for infrastructure failure detection) */
   private lastFailureClassificationType: string = '';
+  /** RFC-103 v3.8.94: Flag indicating project has no test framework (only stdlib) */
+  private noTestFrameworkAvailable: boolean = false;
 
   constructor(config: ActionConfig, repoPath?: string) {
     this.config = config;
@@ -207,6 +209,21 @@ export class ValidationMode {
         primaryFile.replace(/\.(js|ts|rb|py|java|php|ex|exs)$/, '.test.$1')
       );
       logger.info(`Detected framework: ${frameworkName} for ${primaryFile}`);
+
+      // RFC-103 v3.8.94: Early exit if no test framework is available
+      if (this.noTestFrameworkAvailable) {
+        logger.error(`[RFC-103] Cannot validate issue #${issue.number}: project has no test framework (only stdlib libraries available)`);
+        logger.error('[RFC-103] Validation requires a test framework (e.g., jest, vitest, pytest, rspec, phpunit, junit)');
+        return {
+          issueId: issue.number,
+          validated: false,
+          falsePositiveReason: 'Project has no test framework installed — cannot run validation tests',
+          noTestFramework: true,
+          vulnerabilities,
+          timestamp: new Date().toISOString(),
+          commitHash: this.getCurrentCommitHash()
+        };
+      }
 
       // Step 5b: Scan for existing test files
       const candidateTestFiles = await this.scanTestFiles(frameworkName);
@@ -3055,6 +3072,12 @@ Return ONLY the inverted test file. No explanation, just the code block:
         logger.info(`[RFC-103] Test library detection (${ecosystem}): found ${this.availableTestLibraries.length} libraries: ${this.availableTestLibraries.join(', ')}`);
       } else {
         logger.debug(`[RFC-103] Test library detection (${ecosystem}): no test libraries found`);
+      }
+
+      // RFC-103 v3.8.94: Detect if project has no real test framework (only stdlib)
+      this.noTestFrameworkAvailable = hasNoTestFramework(ecosystem, this.availableTestLibraries);
+      if (this.noTestFrameworkAvailable) {
+        logger.warn(`[RFC-103] No test framework detected for ${ecosystem} project (only stdlib: ${this.availableTestLibraries.join(', ')})`);
       }
 
       // Find config files in repo root that indicate frameworks

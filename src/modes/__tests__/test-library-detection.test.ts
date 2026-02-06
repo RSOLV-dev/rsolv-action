@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { extractTestLibraries, STDLIB_LIBRARIES } from '../test-library-detection.js';
+import { extractTestLibraries, STDLIB_LIBRARIES, hasNoTestFramework } from '../test-library-detection.js';
 
 describe('extractTestLibraries', () => {
   describe('Python', () => {
@@ -124,6 +124,91 @@ end`
       expect(STDLIB_LIBRARIES.ruby).toContain('minitest');
       expect(STDLIB_LIBRARIES.elixir).toContain('ExUnit');
       expect(STDLIB_LIBRARIES.javascript).toContain('assert');
+    });
+  });
+});
+
+describe('hasNoTestFramework', () => {
+  describe('JavaScript', () => {
+    it('returns true when only assert (stdlib) is present', () => {
+      expect(hasNoTestFramework('javascript', ['assert'])).toBe(true);
+    });
+
+    it('returns true when only assert (Node built-in) is present', () => {
+      expect(hasNoTestFramework('javascript', ['assert', 'assert (Node built-in)'])).toBe(true);
+    });
+
+    it('returns false when mocha is present', () => {
+      expect(hasNoTestFramework('javascript', ['assert', 'mocha'])).toBe(false);
+    });
+
+    it('returns false when vitest is present', () => {
+      expect(hasNoTestFramework('javascript', ['vitest'])).toBe(false);
+    });
+  });
+
+  describe('Python', () => {
+    it('returns true when only unittest (stdlib) is present', () => {
+      expect(hasNoTestFramework('python', ['unittest'])).toBe(true);
+    });
+
+    it('returns false when pytest is present', () => {
+      expect(hasNoTestFramework('python', ['unittest', 'pytest'])).toBe(false);
+    });
+  });
+
+  describe('Ruby', () => {
+    it('returns true when only minitest/test-unit (stdlib) is present', () => {
+      expect(hasNoTestFramework('ruby', ['minitest', 'test/unit'])).toBe(true);
+    });
+
+    it('returns false when rspec is present', () => {
+      expect(hasNoTestFramework('ruby', ['minitest', 'rspec'])).toBe(false);
+    });
+
+    it('returns false when capybara (minitest helper) is present', () => {
+      expect(hasNoTestFramework('ruby', ['minitest', 'capybara'])).toBe(false);
+    });
+  });
+
+  describe('PHP', () => {
+    it('returns true when no libraries present (PHP has no stdlib test framework)', () => {
+      expect(hasNoTestFramework('php', [])).toBe(true);
+    });
+
+    it('returns false when phpunit is present', () => {
+      expect(hasNoTestFramework('php', ['phpunit'])).toBe(false);
+    });
+  });
+
+  describe('Java', () => {
+    it('returns true when no libraries present (Java has no stdlib test framework)', () => {
+      expect(hasNoTestFramework('java', [])).toBe(true);
+    });
+
+    it('returns false when junit is present', () => {
+      expect(hasNoTestFramework('java', ['junit-jupiter'])).toBe(false);
+    });
+  });
+
+  describe('Elixir', () => {
+    it('returns true when only ExUnit (stdlib) is present', () => {
+      expect(hasNoTestFramework('elixir', ['ExUnit'])).toBe(true);
+    });
+
+    it('returns false when mox is present', () => {
+      expect(hasNoTestFramework('elixir', ['ExUnit', 'mox'])).toBe(false);
+    });
+  });
+
+  describe('Edge cases', () => {
+    it('returns true when empty array', () => {
+      expect(hasNoTestFramework('javascript', [])).toBe(true);
+    });
+
+    it('handles case insensitivity', () => {
+      expect(hasNoTestFramework('ruby', ['MINITEST'])).toBe(true);
+      expect(hasNoTestFramework('ruby', ['RSpec'])).toBe(false);
     });
   });
 });
