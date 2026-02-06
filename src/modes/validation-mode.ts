@@ -1262,6 +1262,18 @@ ${tests}
     logger.info(`Vulnerability: ${vulnerability.type} at ${vulnerability.location}`);
     logger.info(`Target test file: ${targetTestFile.path}`);
 
+    // RFC-103 v3.8.93: Detect when no valid test framework is available
+    // This can happen for cross-ecosystem files (JS in Java project) or projects without test infra
+    if (framework.name === 'generic') {
+      const fileExt = targetTestFile.path?.split('.').pop() || 'unknown';
+      logger.error(`[RFC-103] No test framework available for ${targetTestFile.path} (extension: .${fileExt})`);
+      logger.error('[RFC-103] This may be a cross-ecosystem vulnerability or the project lacks test infrastructure');
+      // Set the failure classification type so the caller knows this is an infrastructure failure
+      // This will result in rsolv:validation-inconclusive label instead of false-positive
+      this.lastFailureClassificationType = 'command_not_found';
+      return null;
+    }
+
     // Ensure runtime and dependencies are available before test execution
     const frameworkNameForSetup = targetTestFile.framework?.toLowerCase() as
       | 'jest' | 'vitest' | 'mocha' | 'rspec' | 'minitest' | 'pytest'
@@ -3146,17 +3158,6 @@ Return ONLY the inverted test file. No explanation, just the code block:
       '.go': 'go',
     };
 
-    // Map ecosystem to default test framework
-    const ecosystemToFramework: Record<string, string> = {
-      'javascript': 'vitest',
-      'python': 'pytest',
-      'ruby': 'rspec',
-      'php': 'phpunit',
-      'java': 'junit5',
-      'elixir': 'exunit',
-      'go': 'testing',
-    };
-
     const fileEcosystem = extToEcosystem[ext];
 
     // If we have project ecosystems and the file's ecosystem doesn't match the project's primary,
@@ -3166,8 +3167,8 @@ Return ONLY the inverted test file. No explanation, just the code block:
 
       if (!this.projectEcosystems.includes(fileEcosystem)) {
         // File's ecosystem doesn't match any project ecosystem
-        // Use the primary ecosystem's test framework
-        const framework = ecosystemToFramework[primaryEcosystem];
+        // Use the primary ecosystem's test framework (informed by detected libraries)
+        const framework = this.getFrameworkForEcosystem(primaryEcosystem);
         if (framework) {
           logger.info(`[RFC-101] File ${path.basename(filePath)} (${fileEcosystem}) doesn't match project ecosystem (${primaryEcosystem}). Using ${framework}.`);
           return framework;
@@ -3175,19 +3176,83 @@ Return ONLY the inverted test file. No explanation, just the code block:
       }
     }
 
-    // Fall back to extension-based detection
+    // Fall back to library-informed detection, then extension-based
     return this.detectFrameworkFromFile(filePath);
   }
 
   /**
-   * Detect test framework from source file extension
+   * RFC-103 v3.8.93: Get the appropriate test framework for an ecosystem,
+   * informed by the detected test libraries (availableTestLibraries).
+   * This ensures that if minitest is detected but not rspec, we use minitest.
+   *
+   * IMPORTANT: Ruby's stdlib includes minitest/test-unit, so those are always
+   * in availableTestLibraries. We only use minitest if:
+   * 1. rspec is NOT detected, AND
+   * 2. Other minitest-related gems are present (capybara without rspec, etc.)
+   *
+   * If only stdlib is detected (no explicit test gems), default to rspec
+   * since it's most common for Rails/web projects.
+   */
+  private getFrameworkForEcosystem(ecosystem: string): string | null {
+    // Check if we have detected libraries that inform the framework choice
+    const libs = this.availableTestLibraries.map(l => l.toLowerCase());
+
+    switch (ecosystem) {
+      case 'ruby':
+        // If rspec/rspec-rails is detected from Gemfile, use rspec
+        if (libs.includes('rspec') || libs.includes('rspec-rails')) {
+          return 'rspec';
+        }
+        // Only use minitest if we have evidence the project actually uses it:
+        // - database_cleaner without rspec (common minitest helper)
+        // - factory_bot without rspec-rails (factory_bot_rails implies rspec-rails)
+        // - capybara without rspec (used for integration tests)
+        // - simplecov by itself (works with any framework)
+        // BUT: minitest/test-unit are in stdlib, so just having those doesn't count
+        const minitestIndicators = ['database_cleaner', 'factory_bot', 'shoulda-matchers', 'simplecov', 'capybara'];
+        const hasMinitestHelper = minitestIndicators.some(ind => libs.includes(ind));
+        // If we have minitest helpers but NO rspec, project probably uses minitest
+        if (hasMinitestHelper && !libs.includes('rspec') && !libs.includes('rspec-rails')) {
+          logger.info(`[RFC-103] Ruby project has minitest helpers (${minitestIndicators.filter(i => libs.includes(i)).join(', ')}) but no rspec — using minitest`);
+          return 'minitest';
+        }
+        // Default to rspec for Ruby projects (most common for Rails)
+        return 'rspec';
+      case 'javascript':
+        if (libs.includes('vitest')) return 'vitest';
+        if (libs.includes('jest')) return 'jest';
+        if (libs.includes('mocha')) return 'mocha';
+        return 'vitest';
+      case 'python':
+        return 'pytest';
+      case 'php':
+        return 'phpunit';
+      case 'java':
+        return 'junit5';
+      case 'elixir':
+        return 'exunit';
+      case 'go':
+        return 'testing';
+      default:
+        return null;
+    }
+  }
+
+  /**
+   * Detect test framework from source file extension.
+   * RFC-103 v3.8.93: Uses detected test libraries to inform Ruby framework choice.
    */
   private detectFrameworkFromFile(filePath: string): string {
     const ext = path.extname(filePath).toLowerCase();
 
+    // RFC-103: For Ruby, use library-informed detection
+    if (ext === '.rb') {
+      const framework = this.getFrameworkForEcosystem('ruby');
+      return framework || 'rspec';
+    }
+
     // Map source file extensions to likely test frameworks
     const frameworkMap: Record<string, string> = {
-      '.rb': 'rspec',
       '.js': 'vitest',
       '.ts': 'vitest',
       '.py': 'pytest',
