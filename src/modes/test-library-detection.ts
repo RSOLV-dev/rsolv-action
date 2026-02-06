@@ -292,15 +292,30 @@ function escapeRegex(str: string): string {
 }
 
 /**
+ * Stdlib libraries that ARE real test frameworks (can run tests natively).
+ * These should NOT trigger "no test framework available" errors.
+ *
+ * - Python's unittest: `python -m unittest discover` runs tests
+ * - Ruby's minitest/test-unit: `ruby -Ilib:test test/*.rb` runs tests
+ * - Elixir's ExUnit: `mix test` runs tests
+ *
+ * Contrast with Node's `assert`: it's just assertions, no test runner.
+ */
+const STDLIB_TEST_FRAMEWORKS = ['unittest', 'minitest', 'test/unit', 'exunit'];
+
+/**
  * Check if a project has no real test framework installed.
- * Returns true if only stdlib libraries are present (no external test frameworks).
+ * Returns true if only assertion libraries are present (no test runner capability).
  *
  * Use case: DVNA has `assert` from Node stdlib but no mocha/jest/vitest.
  * The LLM might generate vitest tests, but vitest isn't available.
  *
+ * IMPORTANT: stdlib test frameworks (unittest, ExUnit, minitest) ARE real frameworks
+ * and should NOT trigger this check. Only pure assertion libraries (Node's assert) should.
+ *
  * @param ecosystem - The programming language/ecosystem
  * @param availableLibraries - Libraries detected from manifests
- * @returns true if only stdlib libraries are present (no real test framework)
+ * @returns true if only assertion libraries are present (no test framework/runner)
  */
 export function hasNoTestFramework(
   ecosystem: Ecosystem | string,
@@ -313,17 +328,26 @@ export function hasNoTestFramework(
     return true;
   }
 
-  // Check if every available library is just stdlib
+  // Check if any available library is a real test framework (stdlib or external)
   const normalizedAvailable = availableLibraries.map(l => l.toLowerCase());
+
+  // If any stdlib test framework is present, we CAN run tests
+  for (const stdlibFramework of STDLIB_TEST_FRAMEWORKS) {
+    if (normalizedAvailable.includes(stdlibFramework)) {
+      return false; // This stdlib IS a real test framework
+    }
+  }
+
+  // Check for external test frameworks (anything not in stdlib assertions)
   const normalizedStdlib = stdlib.map(l => l.toLowerCase());
 
-  // Filter out stdlib and "Node built-in" variants
+  // Filter out stdlib assertions and "Node built-in" variants
   const nonStdlib = normalizedAvailable.filter(lib => {
     if (normalizedStdlib.includes(lib)) return false;
     if (lib.includes('(node built-in)') || lib === 'assert (node built-in)') return false;
     return true;
   });
 
-  // If nothing remains after filtering stdlib, there's no real test framework
+  // If nothing remains after filtering stdlib assertions, there's no real test framework
   return nonStdlib.length === 0;
 }

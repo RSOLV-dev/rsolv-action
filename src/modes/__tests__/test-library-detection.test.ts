@@ -147,9 +147,13 @@ describe('hasNoTestFramework', () => {
     });
   });
 
+  // RFC-103 v3.9.0: unittest/minitest/ExUnit ARE real test frameworks
+  // They can run tests natively, unlike Node's `assert` which is just assertions
+
   describe('Python', () => {
-    it('returns true when only unittest (stdlib) is present', () => {
-      expect(hasNoTestFramework('python', ['unittest'])).toBe(true);
+    it('returns false when unittest (stdlib framework) is present', () => {
+      // unittest IS a real test framework - can run: python -m unittest discover
+      expect(hasNoTestFramework('python', ['unittest'])).toBe(false);
     });
 
     it('returns false when pytest is present', () => {
@@ -158,8 +162,9 @@ describe('hasNoTestFramework', () => {
   });
 
   describe('Ruby', () => {
-    it('returns true when only minitest/test-unit (stdlib) is present', () => {
-      expect(hasNoTestFramework('ruby', ['minitest', 'test/unit'])).toBe(true);
+    it('returns false when minitest/test-unit (stdlib framework) is present', () => {
+      // minitest IS a real test framework - can run: ruby -Ilib:test test/*.rb
+      expect(hasNoTestFramework('ruby', ['minitest', 'test/unit'])).toBe(false);
     });
 
     it('returns false when rspec is present', () => {
@@ -192,8 +197,9 @@ describe('hasNoTestFramework', () => {
   });
 
   describe('Elixir', () => {
-    it('returns true when only ExUnit (stdlib) is present', () => {
-      expect(hasNoTestFramework('elixir', ['ExUnit'])).toBe(true);
+    it('returns false when ExUnit (stdlib framework) is present', () => {
+      // ExUnit IS a real test framework - can run: mix test
+      expect(hasNoTestFramework('elixir', ['ExUnit'])).toBe(false);
     });
 
     it('returns false when mox is present', () => {
@@ -206,8 +212,9 @@ describe('hasNoTestFramework', () => {
       expect(hasNoTestFramework('javascript', [])).toBe(true);
     });
 
-    it('handles case insensitivity', () => {
-      expect(hasNoTestFramework('ruby', ['MINITEST'])).toBe(true);
+    it('handles case insensitivity for stdlib frameworks', () => {
+      // MINITEST (uppercase) should still be recognized as a real framework
+      expect(hasNoTestFramework('ruby', ['MINITEST'])).toBe(false);
       expect(hasNoTestFramework('ruby', ['RSpec'])).toBe(false);
     });
   });

@@ -3113,15 +3113,25 @@ Return ONLY the inverted test file. No explanation, just the code block:
       const hasBundledRunner = BUNDLED_RUNNERS[ecosystem] !== undefined;
 
       // RFC-103 v3.8.94: Detect if project has no real test framework (only stdlib)
-      // BUT: For cross-ecosystem with bundled runners, we CAN still validate
+      // RFC-103 v3.9.0: Bundled runners can be used for BOTH cross-ecosystem AND primary ecosystem
+      const projectHasNoFramework = hasNoTestFramework(ecosystem, this.availableTestLibraries);
+
       if (isCrossEcosystem && hasBundledRunner) {
+        // Cross-ecosystem: JS in Java project, Python in Node project, etc.
         logger.info(`[RFC-103] Cross-ecosystem detected: ${ecosystem} file in ${this.projectEcosystems.join('/')} project. Using bundled ${BUNDLED_RUNNERS[ecosystem]}.`);
         this.noTestFrameworkAvailable = false;  // We have a bundled runner
+      } else if (projectHasNoFramework && hasBundledRunner) {
+        // Primary ecosystem but no framework installed: use bundled runner
+        // e.g., Flask (Python) with no pytest in requirements.txt → use bundled pytest
+        logger.info(`[RFC-103] No test framework in project, using bundled ${BUNDLED_RUNNERS[ecosystem]} from Docker image.`);
+        this.noTestFrameworkAvailable = false;  // Bundled runner available
+      } else if (projectHasNoFramework) {
+        // No framework and no bundled runner available (shouldn't happen for supported ecosystems)
+        logger.warn(`[RFC-103] No test framework detected for ${ecosystem} project (only stdlib: ${this.availableTestLibraries.join(', ')})`);
+        this.noTestFrameworkAvailable = true;
       } else {
-        this.noTestFrameworkAvailable = hasNoTestFramework(ecosystem, this.availableTestLibraries);
-        if (this.noTestFrameworkAvailable) {
-          logger.warn(`[RFC-103] No test framework detected for ${ecosystem} project (only stdlib: ${this.availableTestLibraries.join(', ')})`);
-        }
+        // Project has a real test framework
+        this.noTestFrameworkAvailable = false;
       }
 
       // Find config files in repo root that indicate frameworks

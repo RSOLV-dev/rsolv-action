@@ -79,6 +79,10 @@ export function classifyTestResult(exitCode: number, stdout: string, stderr: str
   if (/Fatal error compiling|release version \d+ not supported/i.test(combined)) {
     return { type: 'runtime_error', isValidFailure: false, reason: 'Java compilation error - version mismatch or unsupported release' };
   }
+  // Gradle class version mismatch: "Unsupported class file major version 65" (Java 21 on old Gradle)
+  if (/Unsupported class file major version|Could not open settings generic class cache/i.test(combined)) {
+    return { type: 'runtime_error', isValidFailure: false, reason: 'Gradle version incompatible with installed Java - upgrade Gradle wrapper required' };
+  }
   // PHP Fatal errors (version mismatch, incompatible code)
   if (/PHP Fatal error/i.test(combined)) {
     return { type: 'runtime_error', isValidFailure: false, reason: 'PHP fatal error - version or compatibility issue' };
