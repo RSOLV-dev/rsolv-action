@@ -535,8 +535,9 @@ export class TestRunner {
       const gradlePath = path.join(workingDir, 'build.gradle');
       const content = await fs.readFile(gradlePath, 'utf8');
 
-      // Check sourceCompatibility = JavaVersion.VERSION_21 or sourceCompatibility = '21'
-      const gradleMatch = content.match(/sourceCompatibility\s*=\s*(?:JavaVersion\.VERSION_)?['"]*(\d+)['"']*/);
+      // Check sourceCompatibility = JavaVersion.VERSION_21 or sourceCompatibility = '21' or sourceCompatibility = 1.8
+      // Java 8 and below used 1.X format (1.8 = Java 8), Java 9+ uses just the number
+      const gradleMatch = content.match(/sourceCompatibility\s*=\s*(?:JavaVersion\.VERSION_)?['"]*(?:1\.)?(\d+)['"']*/);
       if (gradleMatch) {
         console.log(`[TestRunner] Detected Java ${gradleMatch[1]} from build.gradle sourceCompatibility`);
         return gradleMatch[1];

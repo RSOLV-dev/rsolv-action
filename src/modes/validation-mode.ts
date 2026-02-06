@@ -2816,8 +2816,11 @@ Return ONLY the inverted test file. No explanation, just the code block:
         // Gradle: extract class name for --tests flag
         const fileName = path.basename(testFile);
         const className = fileName.replace(/\.java$/, '');
-        // testCommand ends with "--tests " so just append class name
-        command = `${framework.testCommand}${className}`;
+        // RFC-103 v3.8.99: Set GRADLE_USER_HOME to workspace-local dir to avoid cache permission issues
+        // In Docker containers running as root, /root/.gradle/caches can have permission conflicts
+        // Also use --no-daemon since daemon provides no benefit in ephemeral containers
+        const gradleHome = `GRADLE_USER_HOME="${this.repoPath}/.gradle"`;
+        command = `${gradleHome} ${framework.testCommand}${className} --no-daemon`;
       } else {
         command = `${framework.testCommand} ${testFile}`;
       }
