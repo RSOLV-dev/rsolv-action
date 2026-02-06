@@ -2800,6 +2800,8 @@ Return ONLY the inverted test file. No explanation, just the code block:
 
       // RFC-101 v3.8.69: Maven/JUnit expects class name, not file path
       // e.g., "mvn test -Dtest=MyTest" not "mvn test /path/to/MyTest.java"
+      // RFC-103 v3.8.98: Gradle also expects class name with --tests flag
+      // e.g., "./gradlew test --tests MyTest" not "./gradlew test --tests /path/to/MyTest.java"
       if (framework.testCommand.startsWith('mvn ')) {
         // Extract class name from file path: /path/to/MyTest.java -> MyTest
         const fileName = path.basename(testFile);
@@ -2810,6 +2812,12 @@ Return ONLY the inverted test file. No explanation, just the code block:
         } else {
           command = `${framework.testCommand} -Dtest=${className}`;
         }
+      } else if (framework.testCommand.includes('gradlew') && framework.testCommand.includes('--tests')) {
+        // Gradle: extract class name for --tests flag
+        const fileName = path.basename(testFile);
+        const className = fileName.replace(/\.java$/, '');
+        // testCommand ends with "--tests " so just append class name
+        command = `${framework.testCommand}${className}`;
       } else {
         command = `${framework.testCommand} ${testFile}`;
       }
