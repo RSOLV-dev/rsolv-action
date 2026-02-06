@@ -1818,11 +1818,7 @@ ${realisticExamples}
 ${this.getAssertionTemplateSection(vulnerability, framework)}
 TARGET TEST FILE: ${targetTestFile.path}
 FRAMEWORK: ${framework.name}
-${this.availableTestLibraries.length > 0 ? `
-AVAILABLE TEST LIBRARIES: ${this.availableTestLibraries.join(', ')}
-IMPORTANT: Only use assertion libraries from the list above. DO NOT use libraries like 'chai' or 'expect' if they are not listed.
-If no assertion library is available, use Node's built-in 'assert' module (const assert = require('assert');).
-` : ''}
+${this.getAvailableLibrariesSection(framework)}
 ${this.getAssertionStyleSection(framework)}
 TARGET FILE CONTENT (for context):
 \`\`\`
@@ -2124,6 +2120,52 @@ Framework hint (${framework.name}): ${template.frameworkHint}
   }
 
   /**
+   * RFC-103 v3.9.1: Get available libraries section for the LLM prompt.
+   * When using bundled runners, include them in the list and provide
+   * framework-specific import guidance.
+   */
+  private getAvailableLibrariesSection(framework: TestFramework): string {
+    const bundledRunners = ['vitest', 'pytest', 'phpunit', 'rspec', 'exunit'];
+    const isBundledRunner = bundledRunners.includes(framework.name);
+
+    // Build the list of available libraries, including bundled runner if applicable
+    let libraries = [...this.availableTestLibraries];
+    if (isBundledRunner && !libraries.includes(framework.name)) {
+      libraries.push(framework.name);
+    }
+
+    if (libraries.length === 0) {
+      return '';
+    }
+
+    let section = `
+AVAILABLE TEST LIBRARIES: ${libraries.join(', ')}
+IMPORTANT: Only use assertion libraries from the list above. DO NOT use libraries like 'chai' or 'expect' if they are not listed.
+`;
+
+    // Add framework-specific import guidance for bundled runners
+    if (framework.name === 'vitest') {
+      section += `
+VITEST IMPORT SYNTAX (CRITICAL - vitest requires ES modules):
+Use ES module imports: import { describe, it, expect } from 'vitest';
+DO NOT use require() syntax with vitest - it will fail.
+`;
+    } else if (isBundledRunner) {
+      // For other bundled runners, just note they're available
+      section += `
+NOTE: ${framework.name} is available as a bundled test runner in the execution environment.
+`;
+    } else if (!isBundledRunner) {
+      // Only suggest Node's assert for non-bundled runners
+      section += `
+If no assertion library is available, use Node's built-in 'assert' module (const assert = require('assert');).
+`;
+    }
+
+    return section;
+  }
+
+  /**
    * RFC-103: Get assertion style guidance section for the LLM prompt.
    * Tells the LLM which assertion library/style to use based on what's available.
    */
@@ -2131,8 +2173,18 @@ Framework hint (${framework.name}): ${template.frameworkHint}
     // Determine ecosystem from framework or project shape
     let ecosystem = this.getEcosystemFromFramework(framework);
 
+    // RFC-103 v3.9.1: When using a bundled runner (vitest, pytest, etc.), include it
+    // in the available libraries so the guidance reflects the correct import syntax.
+    // This is critical for vitest which requires ES module imports.
+    const bundledRunners = ['vitest', 'pytest', 'phpunit', 'rspec', 'exunit'];
+    let librariesForGuidance = [...this.availableTestLibraries];
+    if (bundledRunners.includes(framework.name) && !librariesForGuidance.includes(framework.name)) {
+      librariesForGuidance.push(framework.name);
+      logger.info(`[RFC-103] Adding bundled runner '${framework.name}' to available libraries for assertion guidance`);
+    }
+
     // Get assertion style guidance based on available libraries
-    const guidance = getAssertionStyleGuidance(ecosystem, this.availableTestLibraries);
+    const guidance = getAssertionStyleGuidance(ecosystem, librariesForGuidance);
 
     logger.info(`[RFC-103] Assertion style guidance: ${guidance.style} style with ${guidance.preferredLibrary}`);
 
