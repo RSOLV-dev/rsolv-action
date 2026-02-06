@@ -276,9 +276,11 @@ export class TestRunner {
 
       if (javaVersion) {
         // Use mise for project-specific Java version (prebuilt binaries, fast download)
+        // RFC-103: Use temurin vendor prefix for better version coverage (Java 8+)
+        // Plain `java@8` often fails with "no metadata found", but `java@temurin-8` works
         console.log(`[TestRunner] Java ${javaVersion} required by project - using mise (prebuilt binaries)`);
         try {
-          const runtimeSpec = `java@${javaVersion}`;
+          const runtimeSpec = `java@temurin-${javaVersion}`;
           const { stdout, stderr } = await execAsync(
             `mise install ${runtimeSpec} && mise use --global ${runtimeSpec}`,
             { cwd: workingDir, timeout: this.MISE_QUICK_TIMEOUT, encoding: 'utf8' }
@@ -311,7 +313,8 @@ export class TestRunner {
       }
 
       // Fallback: apt-get default-jdk (system version)
-      console.log(`[TestRunner] Trying apt-get for Java + Maven${javaVersion ? ` (mise failed for ${javaVersion})` : ' (no version detected)'}`);
+      // RFC-103: This may cause Gradle compatibility issues if system Java is too new
+      console.log(`[TestRunner] Trying apt-get for Java + Maven${javaVersion ? ` (mise failed for temurin-${javaVersion})` : ' (no version detected)'}`);
       try {
         const { stdout, stderr } = await execAsync(
           `apt-get update && apt-get install -y default-jdk maven`,
@@ -323,7 +326,7 @@ export class TestRunner {
         await execAsync(`which javac && which mvn`, { encoding: 'utf8' });
         console.log(`[TestRunner] Java + Maven installed via apt-get`);
         if (javaVersion) {
-          console.log(`[TestRunner] Note: System version may differ from project's required java@${javaVersion}`);
+          console.log(`[TestRunner] WARNING: System Java may be incompatible with project's Gradle version (needed Java ${javaVersion})`);
         }
         return;
       } catch (aptErr) {
@@ -500,7 +503,8 @@ export class TestRunner {
    * Checks: <java.version>, <maven.compiler.source>, <release> in pom.xml
    * and sourceCompatibility in build.gradle.
    */
-  private async detectJavaVersionFromManifest(workingDir: string): Promise<string | undefined> {
+  /** Detect Java version from pom.xml or build.gradle manifests */
+  async detectJavaVersionFromManifest(workingDir: string): Promise<string | undefined> {
     // Try pom.xml first
     try {
       const pomPath = path.join(workingDir, 'pom.xml');
@@ -533,7 +537,13 @@ export class TestRunner {
     // Try build.gradle
     try {
       const gradlePath = path.join(workingDir, 'build.gradle');
-      const content = await fs.readFile(gradlePath, 'utf8');
+      let content = await fs.readFile(gradlePath, 'utf8');
+
+      // RFC-103: Strip comments before matching to avoid matching commented-out code
+      // Remove block comments (/* ... */) and single-line comments (// ...)
+      content = content
+        .replace(/\/\*[\s\S]*?\*\//g, '') // block comments
+        .replace(/\/\/.*$/gm, '');         // single-line comments
 
       // Check sourceCompatibility = JavaVersion.VERSION_21 or sourceCompatibility = '21' or sourceCompatibility = 1.8
       // Java 8 and below used 1.X format (1.8 = Java 8), Java 9+ uses just the number

@@ -718,6 +718,155 @@ describe('TestRunner', () => {
     });
   });
 
+  describe('Java Version Detection (RFC-103)', () => {
+    beforeEach(() => {
+      mockFsAccess.mockRejectedValue(new Error('ENOENT'));
+      mockFsReadFile.mockResolvedValue('');
+    });
+
+    test('should detect sourceCompatibility from build.gradle', async () => {
+      mockFsAccess.mockImplementation((filePath: string) => {
+        if (filePath.endsWith('build.gradle')) return Promise.resolve();
+        return Promise.reject(new Error('ENOENT'));
+      });
+      mockFsReadFile.mockImplementation((filePath: string) => {
+        if (filePath.endsWith('build.gradle')) {
+          return Promise.resolve(`
+            plugins {
+              id 'java'
+            }
+            sourceCompatibility = 11
+            targetCompatibility = 11
+          `);
+        }
+        return Promise.resolve('');
+      });
+
+      const version = await runner.detectJavaVersionFromManifest('/tmp/java-repo');
+      expect(version).toBe('11');
+    });
+
+    test('should detect JavaVersion.VERSION_X format', async () => {
+      mockFsAccess.mockImplementation((filePath: string) => {
+        if (filePath.endsWith('build.gradle')) return Promise.resolve();
+        return Promise.reject(new Error('ENOENT'));
+      });
+      mockFsReadFile.mockImplementation((filePath: string) => {
+        if (filePath.endsWith('build.gradle')) {
+          return Promise.resolve(`
+            sourceCompatibility = JavaVersion.VERSION_17
+          `);
+        }
+        return Promise.resolve('');
+      });
+
+      const version = await runner.detectJavaVersionFromManifest('/tmp/java-repo');
+      expect(version).toBe('17');
+    });
+
+    test('should ignore sourceCompatibility in block comments', async () => {
+      mockFsAccess.mockImplementation((filePath: string) => {
+        if (filePath.endsWith('build.gradle')) return Promise.resolve();
+        return Promise.reject(new Error('ENOENT'));
+      });
+      mockFsReadFile.mockImplementation((filePath: string) => {
+        if (filePath.endsWith('build.gradle')) {
+          // Simulates the JavaSpringVulny case: commented-out Java 8, actual Java 11
+          return Promise.resolve(`
+            plugins {
+              id 'java'
+            }
+            /*
+             * Legacy settings for Java 8
+             * sourceCompatibility = 1.8
+             */
+            sourceCompatibility = 11
+          `);
+        }
+        return Promise.resolve('');
+      });
+
+      const version = await runner.detectJavaVersionFromManifest('/tmp/java-repo');
+      // Should match 11, not 8 from the comment
+      expect(version).toBe('11');
+    });
+
+    test('should ignore sourceCompatibility in single-line comments', async () => {
+      mockFsAccess.mockImplementation((filePath: string) => {
+        if (filePath.endsWith('build.gradle')) return Promise.resolve();
+        return Promise.reject(new Error('ENOENT'));
+      });
+      mockFsReadFile.mockImplementation((filePath: string) => {
+        if (filePath.endsWith('build.gradle')) {
+          return Promise.resolve(`
+            // sourceCompatibility = 1.8
+            sourceCompatibility = 17
+          `);
+        }
+        return Promise.resolve('');
+      });
+
+      const version = await runner.detectJavaVersionFromManifest('/tmp/java-repo');
+      expect(version).toBe('17');
+    });
+
+    test('should detect Java version from pom.xml java.version property', async () => {
+      mockFsAccess.mockImplementation((filePath: string) => {
+        if (filePath.endsWith('pom.xml')) return Promise.resolve();
+        return Promise.reject(new Error('ENOENT'));
+      });
+      mockFsReadFile.mockImplementation((filePath: string) => {
+        if (filePath.endsWith('pom.xml')) {
+          return Promise.resolve(`
+            <project>
+              <properties>
+                <java.version>21</java.version>
+              </properties>
+            </project>
+          `);
+        }
+        return Promise.resolve('');
+      });
+
+      const version = await runner.detectJavaVersionFromManifest('/tmp/java-repo');
+      expect(version).toBe('21');
+    });
+
+    test('should use temurin vendor prefix for mise Java installation', async () => {
+      mockFsAccess.mockImplementation((filePath: string) => {
+        if (filePath.endsWith('build.gradle')) return Promise.resolve();
+        return Promise.reject(new Error('ENOENT'));
+      });
+      mockFsReadFile.mockImplementation((filePath: string) => {
+        if (filePath.endsWith('build.gradle')) {
+          return Promise.resolve('sourceCompatibility = 11');
+        }
+        return Promise.resolve('');
+      });
+      // Make 'which java' fail first (so ensureRuntime triggers installation)
+      // then make everything else succeed
+      mockExecAsync.mockImplementation((cmd: string) => {
+        if (typeof cmd === 'string' && cmd === 'which java') {
+          return Promise.reject(new Error('not found'));
+        }
+        return Promise.resolve({ stdout: '', stderr: '' });
+      });
+
+      await runner.runTests({
+        framework: 'junit4',
+        testFile: 'src/test/java/SecurityTest.java',
+        testName: 'testVulnerability',
+        workingDir: '/tmp/java-repo'
+      });
+
+      const calls = mockExecAsync.mock.calls.map((c: unknown[]) => c[0] as string);
+      // Should use temurin vendor prefix for mise installation
+      const miseCall = calls.find((c: string) => c.includes('mise install java@temurin-'));
+      expect(miseCall).toBeDefined();
+      expect(miseCall).toContain('java@temurin-11');
+    });
+  });
+
   describe('PostgreSQL Provisioning (RFC-103 B1)', () => {
     beforeEach(() => {
       mockFsAccess.mockRejectedValue(new Error('ENOENT'));
