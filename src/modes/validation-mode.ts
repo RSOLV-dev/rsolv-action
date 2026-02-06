@@ -3074,10 +3074,31 @@ Return ONLY the inverted test file. No explanation, just the code block:
         logger.debug(`[RFC-103] Test library detection (${ecosystem}): no test libraries found`);
       }
 
+      // RFC-103 v3.8.95: Check if this is cross-ecosystem (vuln file language ≠ project primary)
+      // Cross-ecosystem scenarios can use bundled test runners (vitest, pytest, etc.)
+      const isCrossEcosystem = this.projectEcosystems.length > 0 &&
+                               !this.projectEcosystems.includes(ecosystem);
+
+      // Bundled test runners available in Docker image for source-code analysis
+      const BUNDLED_RUNNERS: Record<string, string> = {
+        'javascript': 'vitest',  // Available via npx vitest
+        'python': 'pytest',      // Installed via pip in Docker
+        'php': 'phpunit',        // Available if composer installed
+        'ruby': 'rspec',         // Available via bundle exec or gem
+      };
+
+      const hasBundledRunner = BUNDLED_RUNNERS[ecosystem] !== undefined;
+
       // RFC-103 v3.8.94: Detect if project has no real test framework (only stdlib)
-      this.noTestFrameworkAvailable = hasNoTestFramework(ecosystem, this.availableTestLibraries);
-      if (this.noTestFrameworkAvailable) {
-        logger.warn(`[RFC-103] No test framework detected for ${ecosystem} project (only stdlib: ${this.availableTestLibraries.join(', ')})`);
+      // BUT: For cross-ecosystem with bundled runners, we CAN still validate
+      if (isCrossEcosystem && hasBundledRunner) {
+        logger.info(`[RFC-103] Cross-ecosystem detected: ${ecosystem} file in ${this.projectEcosystems.join('/')} project. Using bundled ${BUNDLED_RUNNERS[ecosystem]}.`);
+        this.noTestFrameworkAvailable = false;  // We have a bundled runner
+      } else {
+        this.noTestFrameworkAvailable = hasNoTestFramework(ecosystem, this.availableTestLibraries);
+        if (this.noTestFrameworkAvailable) {
+          logger.warn(`[RFC-103] No test framework detected for ${ecosystem} project (only stdlib: ${this.availableTestLibraries.join(', ')})`);
+        }
       }
 
       // Find config files in repo root that indicate frameworks
@@ -3164,8 +3185,9 @@ Return ONLY the inverted test file. No explanation, just the code block:
 
   /**
    * Detect framework with ecosystem-aware fallback.
-   * If file extension doesn't match the project's primary ecosystem, use the project's test framework.
-   * This prevents JS files in Python projects from using vitest, etc.
+   * RFC-103 v3.8.95: For cross-ecosystem files (JS in Java project, etc.),
+   * use the BUNDLED test runner for the file's ecosystem, not the project's framework.
+   * This enables source-code analysis on vendored JS files using vitest, etc.
    */
   private detectFrameworkFromFileWithEcosystemFallback(filePath: string): string {
     const ext = path.extname(filePath).toLowerCase();
@@ -3181,20 +3203,27 @@ Return ONLY the inverted test file. No explanation, just the code block:
       '.go': 'go',
     };
 
+    // Bundled test runners available in Docker image for source-code analysis
+    const BUNDLED_RUNNERS: Record<string, string> = {
+      'javascript': 'vitest',
+      'python': 'pytest',
+      'php': 'phpunit',
+      'ruby': 'rspec',
+      'elixir': 'exunit',
+      'java': 'junit5',
+    };
+
     const fileEcosystem = extToEcosystem[ext];
 
-    // If we have project ecosystems and the file's ecosystem doesn't match the project's primary,
-    // use the project's primary ecosystem's test framework
+    // RFC-103 v3.8.95: For cross-ecosystem files, use the bundled runner for the file's ecosystem
+    // This allows source-code analysis on vendored JS in Java/Python projects using vitest
     if (this.projectEcosystems.length > 0 && fileEcosystem) {
-      const primaryEcosystem = this.projectEcosystems[0]; // First ecosystem is primary
-
       if (!this.projectEcosystems.includes(fileEcosystem)) {
-        // File's ecosystem doesn't match any project ecosystem
-        // Use the primary ecosystem's test framework (informed by detected libraries)
-        const framework = this.getFrameworkForEcosystem(primaryEcosystem);
-        if (framework) {
-          logger.info(`[RFC-101] File ${path.basename(filePath)} (${fileEcosystem}) doesn't match project ecosystem (${primaryEcosystem}). Using ${framework}.`);
-          return framework;
+        // Cross-ecosystem: file's language differs from project's language
+        const bundledRunner = BUNDLED_RUNNERS[fileEcosystem];
+        if (bundledRunner) {
+          logger.info(`[RFC-103] Cross-ecosystem: ${path.basename(filePath)} (${fileEcosystem}) in ${this.projectEcosystems.join('/')} project. Using bundled ${bundledRunner}.`);
+          return bundledRunner;
         }
       }
     }
