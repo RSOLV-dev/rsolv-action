@@ -255,7 +255,41 @@ export class ValidationMode {
 
       // Step 5d: Select or create target test file (with E2E framework filtering)
       let targetTestFile: TestFileContext;
-      if (candidateTestFiles.length > 0) {
+
+      // RFC-103 v3.9.2: Detect cross-ecosystem scenario early
+      // When vulnerability is in a file with different ecosystem than the project,
+      // we MUST create a new test file for the vulnerability's ecosystem, not reuse existing tests
+      const vulnEcosystem = this.detectLanguage(primaryFile);
+      const isCrossEcosystem = this.projectEcosystems.length > 0 &&
+                               !this.projectEcosystems.includes(vulnEcosystem);
+
+      if (isCrossEcosystem) {
+        // Cross-ecosystem: Create new test file for the vulnerability's language
+        // Don't use existing Java test files for a JavaScript vulnerability
+        logger.info(`[RFC-103] Cross-ecosystem validation: ${vulnEcosystem} file in ${this.projectEcosystems.join('/')} project`);
+        logger.info(`[RFC-103] Creating new ${frameworkName} test file (not reusing existing ${this.projectEcosystems.join('/')} test files)`);
+
+        const testDirMap: Record<string, string> = {
+          'mocha': 'test/unit',
+          'jest': '__tests__',
+          'vitest': '__tests__',
+          'rspec': 'spec',
+          'pytest': 'tests',
+          'phpunit': 'tests',
+          'exunit': 'test',
+          'junit5': 'src/test/java',
+          'junit4': 'src/test/java',
+          'testng': 'src/test/java'
+        };
+        const testDir = testDirMap[frameworkName] || '__tests__';
+        const fallbackPath = `${testDir}/${this.getTestFileName(frameworkName)}`;
+        targetTestFile = {
+          path: fallbackPath,
+          content: '',
+          framework: frameworkName
+        };
+        logger.info(`[RFC-103] Cross-ecosystem test file: ${fallbackPath}`);
+      } else if (candidateTestFiles.length > 0) {
         try {
           // Use backend to score and select the best target test file
           const analysis = await this.testIntegrationClient.analyze({
