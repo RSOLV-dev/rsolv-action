@@ -2362,7 +2362,12 @@ Return ONLY the inverted test file. No explanation, just the code block:
       'phpunit': { name: 'phpunit', testCommand: 'vendor/bin/phpunit', syntaxCheckCommand: 'php -l' },
       'exunit':  { name: 'exunit',  testCommand: 'mix test',           syntaxCheckCommand: '' }, // Elixir: syntax check via mix test
       'minitest': { name: 'minitest', testCommand: 'ruby -Itest',     syntaxCheckCommand: 'ruby -c' },
-      'junit5':  { name: 'junit5',  testCommand: 'mvn test -Dtest=',  syntaxCheckCommand: '' }, // Java: syntax check via mvn compile
+      // Java frameworks: JUnit 4, JUnit 5 (Jupiter), TestNG
+      // Gradle: ./gradlew test --tests, Maven: mvn test -Dtest=
+      'junit':   { name: 'junit',   testCommand: './gradlew test --tests ', syntaxCheckCommand: '' },
+      'junit4':  { name: 'junit4',  testCommand: './gradlew test --tests ', syntaxCheckCommand: '' },
+      'junit5':  { name: 'junit5',  testCommand: 'mvn test -Dtest=',  syntaxCheckCommand: '' },
+      'testng':  { name: 'testng',  testCommand: 'mvn test -Dtest=',  syntaxCheckCommand: '' },
       'cypress':    { name: 'cypress',    testCommand: 'npx cypress run --spec', syntaxCheckCommand: 'node --check' },
       'playwright': { name: 'playwright', testCommand: 'npx playwright test',    syntaxCheckCommand: 'node --check' },
     };
