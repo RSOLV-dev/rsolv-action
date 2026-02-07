@@ -104,9 +104,9 @@ describe('Retry Feedback', () => {
 
       const feedback = buildRetryFeedback(attempt, vulnerability, []);
 
-      // Should include assertion strategy from template
+      // Should include assertion strategy from template (behavioral)
       expect(feedback).toContain('ASSERTION STRATEGY');
-      expect(feedback).toContain('UNESCAPED');
+      expect(feedback).toContain('mock the database layer');
     });
 
     it('skips assertion template for unsupported CWE', () => {

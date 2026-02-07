@@ -37,10 +37,10 @@ describe('CWE-94 Code Injection Template', () => {
     expect(template!.attackPayload).toMatch(/require|process|child_process|exec/i);
   });
 
-  it('test strategy captures the vulnerable pattern', () => {
+  it('test strategy includes tiered approach', () => {
     const template = getAssertionTemplate('CWE-94');
 
-    expect(template!.testStrategy).toMatch(/source.*code|regex|pattern|detect/i);
+    expect(template!.testStrategy).toMatch(/Tier 1|PREFERRED|behavioral|import/i);
   });
 
   describe('framework hints', () => {
@@ -51,21 +51,20 @@ describe('CWE-94 Code Injection Template', () => {
       expect(template!.frameworkHints.jest).toBeDefined();
     });
 
-    it('mocha hint works without sinon/chai', () => {
+    it('mocha hint includes behavioral guidance', () => {
       const template = getAssertionTemplate('CWE-94');
       const mochaHint = template!.frameworkHints.mocha;
 
-      // Should NOT require sinon or chai - use what's available
-      expect(mochaHint).toMatch(/fs\.readFileSync|source code|regex/i);
-      // Should mention using available assertion libraries
-      expect(mochaHint).toMatch(/assert|should|expect/i);
+      // Should include behavioral mock/import guidance
+      expect(mochaHint).toMatch(/BEHAVIORAL|mock|Mock/i);
     });
 
-    it('jest hint uses native Jest assertions', () => {
+    it('jest hint includes behavioral guidance', () => {
       const template = getAssertionTemplate('CWE-94');
       const jestHint = template!.frameworkHints.jest;
 
-      expect(jestHint).toMatch(/expect\(|toMatch|toContain/i);
+      // Should include behavioral mock/import guidance
+      expect(jestHint).toMatch(/BEHAVIORAL|mock|Mock|vi\.mock/i);
     });
 
     it('has hints for non-JS ecosystems too', () => {

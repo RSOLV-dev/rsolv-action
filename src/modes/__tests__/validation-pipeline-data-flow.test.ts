@@ -751,8 +751,8 @@ describe('test2', function() {
       expect(capturedPrompt).not.toBeNull();
       expect(capturedPrompt).toContain('require(');
       expect(capturedPrompt).toContain('fs.readFileSync(');
-      expect(capturedPrompt).toContain('Strategy A');
-      expect(capturedPrompt).toContain('Strategy B');
+      expect(capturedPrompt).toContain('PREFERRED (Tier 1');
+      expect(capturedPrompt).toContain('FALLBACK (Tier 3');
     });
 
     test('falls back to self-contained mode when source is not set', async () => {
@@ -847,7 +847,7 @@ describe('test2', function() {
     });
   });
 
-  describe('buildLLMPrompt Strategy A/B file-type hints', () => {
+  describe('buildLLMPrompt behavioral file-type hints', () => {
     const sourceVulnerability: Vulnerability = {
       type: 'hardcoded_secrets',
       description: 'Hardcoded cryptographic key in development config (CWE-798)',
@@ -857,25 +857,25 @@ describe('test2', function() {
       source: 'config/env/development.js'
     };
 
-    test('prompt includes Strategy A hint for config files', async () => {
+    test('prompt includes behavioral hint for config files', async () => {
       const configVuln: Vulnerability = {
         ...sourceVulnerability,
         source: 'config/env/development.js'
       };
       await (validationMode as any).generateTestWithRetry(configVuln, mochaTestFile, 1);
       expect(capturedPrompt).not.toBeNull();
-      expect(capturedPrompt).toContain('prefer Strategy A');
+      expect(capturedPrompt).toContain('require() should work directly');
       expect(capturedPrompt).toContain('CONFIG file');
     });
 
-    test('prompt includes Strategy B hint for route files', async () => {
+    test('prompt includes behavioral hint for route files', async () => {
       const routeVuln: Vulnerability = {
         ...sourceVulnerability,
         source: 'app/routes/contributions.js'
       };
       await (validationMode as any).generateTestWithRetry(routeVuln, mochaTestFile, 1);
       expect(capturedPrompt).not.toBeNull();
-      expect(capturedPrompt).toContain('prefer Strategy B');
+      expect(capturedPrompt).toContain('mock database/HTTP BEFORE requiring');
       expect(capturedPrompt).toContain('route/model file');
     });
 
