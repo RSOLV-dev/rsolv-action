@@ -545,15 +545,36 @@ export class ValidationMode {
         // AST-integrate the test into the target file via backend
         let targetFile = testSuite.testFile;
         let integratedContent = testSuite.redTests[0]?.testCode || '';
+        let integrationSucceeded = false;
 
         try {
           const integration = await this.integrateTestsWithBackendRetry(testSuite, issue, targetTestFile);
           targetFile = integration.targetFile;
           integratedContent = integration.content;
-          logger.info(`AST integration succeeded: ${targetFile}`);
+
+          // Phase 2.1c: Detect broken content from backend (error messages committed as code)
+          if (this.isBackendErrorContent(integratedContent)) {
+            logger.warn(`AST integration returned error content, treating as failure`);
+            integratedContent = testSuite.redTests[0]?.testCode || '';
+          } else {
+            integrationSucceeded = true;
+            logger.info(`AST integration succeeded: ${targetFile}`);
+          }
         } catch (integrationError) {
-          logger.warn(`AST integration failed, writing test directly: ${integrationError}`);
-          // Write to the target test file path directly
+          logger.warn(`AST integration failed: ${integrationError}`);
+        }
+
+        // Phase 2.1b: When AST integration fails and target file already exists,
+        // create a NEW file alongside instead of overwriting existing test content.
+        if (!integrationSucceeded) {
+          const fullTargetPath = path.join(this.repoPath, targetFile);
+          if (fs.existsSync(fullTargetPath)) {
+            const ext = path.extname(targetFile);
+            const dir = path.dirname(targetFile);
+            const newFileName = `vulnerability_validation_issue_${issue.number}${ext}`;
+            targetFile = path.join(dir, newFileName);
+            logger.info(`Target file exists, creating new file: ${targetFile}`);
+          }
         }
 
         // Write integrated test to the repo's test directory (not .rsolv/tests/)
@@ -1863,38 +1884,78 @@ UNDERSTANDING RED TESTS:
 A "RED" test is a test that FAILS on the current vulnerable code. The failure proves the vulnerability exists.
 The key insight: assert what SECURE code would do, so the assertion FAILS when run against INSECURE code.
 
-Example RED test for SQL injection (Mocha/JavaScript using Node's built-in assert):
+## TEST APPROACH — BEHAVIORAL FIRST
+
+Your test MUST exercise the vulnerable code at runtime, not just scan source files.
+
+PREFERRED (Tier 1 — Direct function call):
+Import the vulnerable module, mock/stub side effects (database, HTTP, exec), call the function with
+attacker-controlled input, and assert that the dangerous behavior occurs.
+
+ACCEPTABLE (Tier 2 — HTTP test client):
+Use the framework's test client to send HTTP requests with attack payloads to the vulnerable endpoint.
+Assert the response shows the vulnerability was triggered.
+
+LAST RESORT (Tier 3 — Source analysis):
+Read the source file and check for the vulnerable pattern via regex. Only use this if importing the module
+fails due to complex initialization (database connections, missing config, etc.).
+If using Tier 3, add a comment: "// Source analysis fallback — could not import module because: <reason>"
+
+DO NOT default to reading source files with fs.readFileSync/File.read/open(). That is a linter, not a proof
+of exploitability. Import the actual code and exercise it.
+
+Example RED test for SQL injection — BEHAVIORAL (Tier 1):
 \`\`\`javascript
 const assert = require('assert');
-const fs = require('fs');
+const { mock } = require('node:test');
 const path = require('path');
-const source = fs.readFileSync(path.join(process.cwd(), 'routes/users.js'), 'utf8');
+
+// Mock the database to capture the SQL query
+const capturedQueries = [];
+mock.method(require('pg').Pool.prototype, 'query', (sql) => {
+  capturedQueries.push(sql);
+  return Promise.resolve({ rows: [] });
+});
+
 describe('SQL Injection Prevention', function() {
-  it('should use parameterized queries to prevent SQL injection', function() {
-    // This assertion FAILS because the code uses string interpolation, not parameterized queries
-    assert.match(source, /\\$[0-9]|\\?\\s*,|:param/);  // parameterized placeholder pattern
+  it('should not pass unsanitized input to SQL query', async function() {
+    const handler = require(path.join(process.cwd(), 'routes/users.js'));
+    const maliciousInput = "' OR '1'='1";
+    // Call the vulnerable function with attacker-controlled input
+    await handler.searchUsers({ query: maliciousInput });
+    // Assert: the malicious payload should NOT appear literally in the query
+    const lastQuery = capturedQueries[capturedQueries.length - 1];
+    assert.ok(!lastQuery.includes(maliciousInput),
+      'SQL injection: user input appears unescaped in query');
   });
 });
 \`\`\`
-This test FAILS because the vulnerable code uses string interpolation, not parameterized queries.
+This test FAILS because the vulnerable code interpolates user input directly into the SQL string.
 
-Example RED test for XSS (Mocha/JavaScript using Node's built-in assert):
+Example RED test for Command Injection — BEHAVIORAL (Tier 1):
 \`\`\`javascript
 const assert = require('assert');
-const fs = require('fs');
+const { mock } = require('node:test');
+const cp = require('child_process');
 const path = require('path');
-const source = fs.readFileSync(path.join(process.cwd(), 'views/profile.js'), 'utf8');
-describe('XSS Prevention', function() {
-  it('should escape HTML in user output', function() {
-    // This assertion FAILS because the code outputs user input without escaping
-    assert.doesNotMatch(source, /res\\.send\\([^)]*\\$\\{.*user/);  // unescaped template literal
-    assert.match(source, /escapeHtml|sanitize|textContent/);     // sanitization function
+
+const executedCommands = [];
+mock.method(cp, 'exec', (cmd) => { executedCommands.push(cmd); });
+
+describe('Command Injection Prevention', function() {
+  it('should not pass unsanitized input to exec()', function() {
+    const handler = require(path.join(process.cwd(), 'core/appHandler.js'));
+    handler.ping({ body: { address: '127.0.0.1; cat /etc/passwd' } }, { render: () => {} });
+    const lastCmd = executedCommands[executedCommands.length - 1];
+    // RED: exec() receives the semicolon injection — proves command injection
+    assert.ok(!lastCmd.includes('; cat /etc/passwd'),
+      'Command injection: unsanitized input reaches exec()');
   });
 });
 \`\`\`
-This test FAILS because the vulnerable code does NOT use escapeHtml/sanitize.
+This test FAILS because the vulnerable code passes user input directly to exec().
 
-NOTE: The examples above use Node's built-in assert. If other assertion libraries are listed in AVAILABLE TEST LIBRARIES, you may use them instead.
+NOTE: The examples above use Node's built-in assert and node:test mock. If other assertion libraries are listed in AVAILABLE TEST LIBRARIES, you may use them instead. Adapt the import/mock patterns to your framework (sinon, unittest.mock, Mox, Mockery, Mockito, etc.).
 
 YOUR TASK:
 Generate 3 DIFFERENT test approaches. Each approach MUST be in its own separate code block.
@@ -1906,17 +1967,17 @@ Code blocks must contain ONLY executable code — no "Approach 1:" labels, no bu
 
 Place any explanations OUTSIDE and BEFORE the code blocks, like this:
 
-First approach uses pattern matching:
+First approach — behavioral test with mocked dependencies:
 \`\`\`${this.getLanguageForFramework(framework)}
 // Actual test code here — no markdown, no labels
 \`\`\`
 
-Second approach uses static analysis:
+Second approach — behavioral test with different mock strategy:
 \`\`\`${this.getLanguageForFramework(framework)}
 // Actual test code here — no markdown, no labels
 \`\`\`
 
-Third approach uses behavioral assertions:
+Third approach — alternative (source analysis fallback if behavioral not possible):
 \`\`\`${this.getLanguageForFramework(framework)}
 // Actual test code here — no markdown, no labels
 \`\`\`
@@ -1931,32 +1992,35 @@ Each test should:
 4. Be completely standalone (no require of rails_helper, spec_helper, or app-specific helpers)
 5. Follow ${framework.name} conventions
 
-APPROACH STRATEGIES:
-- Approach 1: Pattern matching — read source file, check for ABSENCE of security patterns (parameterized queries, escaping, etc.)
-- Approach 2: Static analysis — read source file, check for PRESENCE of dangerous patterns (string interpolation in queries, raw output, etc.)
-- Approach 3: Different assertion style — try a fundamentally different way to prove the same vulnerability
+APPROACH STRATEGIES (behavioral first — DO NOT default to reading source files):
+- Approach 1: BEHAVIORAL — import/require the vulnerable module, mock side effects (DB, exec, HTTP), call the function with attack payload, assert dangerous behavior occurs
+- Approach 2: BEHAVIORAL — use a different mock strategy or test a different code path that exercises the same vulnerability
+- Approach 3: SOURCE ANALYSIS FALLBACK — if importing fails, read source file and check for vulnerable patterns (only if Approaches 1-2 are truly impossible)
 ${vulnerability.source ? `6. IMPORT the actual source file — do NOT inline/copy vulnerable code into the test.
    The test runs with process.cwd() set to the repository root.
-   Use one of these strategies to reference the vulnerable source file:
 
-   Strategy A — require() (for modules that export values without side effects):
+   PREFERRED (Tier 1 — behavioral): require/import the module and call its functions with attack input:
+   const target = require(path.join(process.cwd(), '${vulnerability.source}'));
+   Mock external dependencies (database, child_process, HTTP) to capture dangerous behavior.
+   Then call the vulnerable function with attacker-controlled input and assert.
+
+   If require() triggers side effects (DB connections, HTTP servers), mock those side effects BEFORE requiring:
+   const { mock } = require('node:test');
+   mock.method(require('pg').Pool.prototype, 'query', () => Promise.resolve({ rows: [] }));
    const target = require(path.join(process.cwd(), '${vulnerability.source}'));
 
-   Strategy B — fs.readFileSync() (for files with side effects like DB connections, HTTP servers):
+   FALLBACK (Tier 3 — source analysis): Only if importing truly fails after trying mocks:
    const sourceCode = fs.readFileSync(path.join(process.cwd(), '${vulnerability.source}'), 'utf8');
-   Then use pattern matching, regex, or parsing to test the source content.
-
-   Choose Strategy A when the file exports testable values (configs, utilities, pure functions).
-   Choose Strategy B when requiring the file would trigger side effects (route handlers, middleware, DB models).
+   Add comment: // Source analysis fallback — could not import because: <specific reason>
 ${(() => {
   const src = vulnerability.source || '';
   const isLikelyConfig = /config|settings|env|\.config\./i.test(src);
   const isLikelyRouteHandler = /routes?|controllers?|middleware|handlers?/i.test(src);
   const isLikelyModel = /models?|dao|data|schema/i.test(src);
   if (isLikelyConfig) {
-    return `\n   HINT: '${src}' appears to be a CONFIG file — prefer Strategy A (require()).`;
+    return `\n   HINT: '${src}' appears to be a CONFIG file — require() should work directly without mocking.`;
   } else if (isLikelyRouteHandler || isLikelyModel) {
-    return `\n   HINT: '${src}' appears to be a route/model file — prefer Strategy B (readFileSync()).`;
+    return `\n   HINT: '${src}' appears to be a route/model file — mock database/HTTP BEFORE requiring, then call the exported handler with attack input.`;
   }
   return '';
 })()}
@@ -2098,6 +2162,31 @@ Tests that run assertions outside it() blocks will be rejected.
 Framework hint (${framework.name}): ${template.frameworkHint}
 
 `;
+  }
+
+  /**
+   * Phase 2.1c: Detect broken content from backend AST integration.
+   * Returns true if the content looks like an error message rather than valid test code.
+   * This prevents committing error messages as test files (e.g., "Failed to format test").
+   */
+  private isBackendErrorContent(content: string): boolean {
+    const errorPatterns = [
+      /Failed to format test/i,
+      /manual integration required/i,
+      /Error formatting test/i,
+      /Integration error/i,
+      /Failed to parse/i,
+    ];
+    const trimmed = content.trim();
+    // If the content is very short and matches an error pattern, it's broken
+    if (trimmed.length < 200) {
+      return errorPatterns.some(pattern => pattern.test(trimmed));
+    }
+    // If the content starts with a comment containing error text
+    if (/^\/\/\s*(Failed|Error|Integration)/i.test(trimmed)) {
+      return true;
+    }
+    return false;
   }
 
   /**
