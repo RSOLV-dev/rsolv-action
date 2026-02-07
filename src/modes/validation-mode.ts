@@ -1622,16 +1622,36 @@ ${tests}
                   );
 
                   if (invertedClassification.isValidFailure) {
-                    // SUCCESS! The inverted test produces a genuine assertion failure
-                    // Classification (static vs behavioral) happens later via platform API
+                    // RFC-103 Phase 4: Classify inverted test as static vs behavioral BEFORE accepting
+                    // Without this check, inverted tests bypass in-loop classification
+                    if (this.registryClient) {
+                      const classifyCweId = vulnerability.cweId || vulnerability.cwe_id;
+                      const fwName = framework?.name;
+                      const invertedClassResult = await this.registryClient.classifyTest(
+                        invertedCode, classifyCweId, fwName
+                      );
+                      if (invertedClassResult?.is_static && invertedClassResult?.static_acceptable !== true) {
+                        logger.warn(`✗ [Two-Phase] Inverted test is STATIC — rejected (${invertedClassResult.reason})`);
+                        candidateFailures.push({
+                          candidateIndex: candidateIdx,
+                          error: 'StaticTestNotAcceptable',
+                          errorMessage: `Inverted test uses static source analysis — not acceptable for ${classifyCweId || 'unknown CWE'}`,
+                          generatedCode: invertedCode.slice(0, 1500),
+                          retryGuidance: invertedClassResult.retry_guidance || undefined
+                        });
+                        continue; // Reject this candidate, try next
+                      }
+                    }
+
                     logger.info(`✓ [Two-Phase] SUCCESS! Inverted test with genuine assertion failure`);
+                    const invertedCandidate = {
+                      ...candidate,
+                      testCode: invertedCode,
+                      testName: `${candidate.testName}_inverted`
+                    };
                     successfulCandidate = {
                       ...testSuite,
-                      redTests: [{
-                        ...candidate,
-                        testCode: invertedCode,
-                        testName: `${candidate.testName}_inverted`
-                      }]
+                      redTests: [invertedCandidate]
                     };
                     break; // Exit candidate loop — we found a working test!
                   } else {
