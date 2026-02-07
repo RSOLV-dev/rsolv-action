@@ -778,7 +778,7 @@ describe('test2', function() {
         }
       ];
 
-      const prompt = (validationMode as any).buildLLMPrompt(
+      const prompt = await (validationMode as any).buildLLMPrompt(
         sourceVulnerability,
         mochaTestFile,
         previousAttempts,

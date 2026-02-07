@@ -22,6 +22,7 @@ import { getAssertionTemplate, getAssertionTemplateForFramework } from '../promp
 import { getAssertionStyleGuidance, AssertionStyleGuidance } from '../prompts/assertion-style-guidance.js';
 import { buildRetryFeedback, extractMissingModule } from './retry-feedback.js';
 import { extractTestLibraries as extractTestLibrariesMultiEcosystem, hasNoTestFramework } from './test-library-detection.js';
+import { VulnerabilityRegistryClient } from '../external/vulnerability-registry-client.js';
 
 export class ValidationMode {
   private config: ActionConfig;
@@ -29,6 +30,8 @@ export class ValidationMode {
   private repoPath: string;
   private phaseDataClient: PhaseDataClient | null;
   private testIntegrationClient: TestIntegrationClient | null;
+  /** RFC-104: Platform vulnerability type registry client */
+  private registryClient: VulnerabilityRegistryClient | null;
   private lastTestOutput: string = '';
   private lastTestStderr: string = '';
   /** RFC-101: AI context string from project shape detection */
@@ -55,6 +58,11 @@ export class ValidationMode {
     // Initialize TestIntegrationClient if API key is available
     this.testIntegrationClient = config.rsolvApiKey
       ? new TestIntegrationClient(config.rsolvApiKey)
+      : null;
+
+    // RFC-104: Initialize VulnerabilityRegistryClient for platform-first templates
+    this.registryClient = config.rsolvApiKey
+      ? new VulnerabilityRegistryClient(config.rsolvApiKey)
       : null;
 
     // Apply environment variables from config
@@ -1677,7 +1685,7 @@ ${tests}
     framework: TestFramework,
     aiContext?: string
   ): Promise<TestSuite> {
-    const prompt = this.buildLLMPrompt(vulnerability, targetTestFile, previousAttempts, framework, aiContext);
+    const prompt = await this.buildLLMPrompt(vulnerability, targetTestFile, previousAttempts, framework, aiContext);
 
     const aiClient = await getAiClient(this.config.aiProvider);
     const response = await aiClient.complete(prompt, {
@@ -1851,14 +1859,16 @@ ${tests}
   /**
    * Build LLM prompt with vulnerability context and retry feedback
    */
-  private buildLLMPrompt(
+  private async buildLLMPrompt(
     vulnerability: Vulnerability,
     targetTestFile: TestFileContext,
     previousAttempts: AttemptHistory[],
     framework: TestFramework,
     aiContext?: string
-  ): string {
+  ): Promise<string> {
     const realisticExamples = this.getRealisticVulnerabilityExample(vulnerability.type);
+    // RFC-104: Fetch assertion template (async — may call platform API)
+    const assertionTemplateSection = await this.getAssertionTemplateSection(vulnerability, framework);
 
     let prompt = `Generate a RED test for a security vulnerability.
 
@@ -1870,7 +1880,7 @@ ${vulnerability.vulnerablePattern ? `VULNERABLE PATTERN: ${vulnerability.vulnera
 ${vulnerability.source ? `SOURCE: ${vulnerability.source}\nVULNERABLE SOURCE FILE: ${vulnerability.source}` : ''}
 ${aiContext ? `\nENVIRONMENT CONTEXT:\n${aiContext}\n` : ''}
 ${realisticExamples}
-${this.getAssertionTemplateSection(vulnerability, framework)}
+${assertionTemplateSection}
 TARGET TEST FILE: ${targetTestFile.path}
 FRAMEWORK: ${framework.name}
 ${this.getAvailableLibrariesSection(framework)}
@@ -2126,10 +2136,11 @@ ${(() => {
   }
 
   /**
-   * RFC-103: Get assertion template section for the prompt
+   * RFC-103/104: Get assertion template section for the prompt.
+   * Tries the platform registry API first (RFC-104), falls back to local templates (RFC-103).
    * Returns a formatted section with specific assertion guidance for the vulnerability type.
    */
-  private getAssertionTemplateSection(vulnerability: Vulnerability, framework: TestFramework): string {
+  private async getAssertionTemplateSection(vulnerability: Vulnerability, framework: TestFramework): Promise<string> {
     // Extract CWE ID from vulnerability - try cweId, cwe_id, or parse from type
     const cweId = vulnerability.cweId ||
       vulnerability.cwe_id ||
@@ -2140,13 +2151,25 @@ ${(() => {
       return '';
     }
 
-    const template = getAssertionTemplateForFramework(cweId, framework.name.toLowerCase());
+    const frameworkName = framework.name.toLowerCase();
+
+    // RFC-104: Try platform registry first for richer data (few-shot examples)
+    if (this.registryClient) {
+      const entry = await this.registryClient.getEntry(cweId, frameworkName);
+      if (entry?.assertion_template) {
+        logger.info(`[RFC-104] Using platform registry entry for ${cweId} (${entry.name}) with framework: ${framework.name}`);
+        return this.formatPlatformTemplateSection(entry, cweId, framework, frameworkName);
+      }
+    }
+
+    // Fallback to local templates (RFC-103)
+    const template = getAssertionTemplateForFramework(cweId, frameworkName);
     if (!template) {
       logger.debug(`[RFC-103] No assertion template found for CWE: ${cweId}, framework: ${framework.name}`);
       return '';
     }
 
-    logger.info(`[RFC-103] Using assertion template for ${cweId} (${template.name}) with framework: ${framework.name}`);
+    logger.info(`[RFC-103] Using local assertion template for ${cweId} (${template.name}) with framework: ${framework.name}`);
 
     return `
 ## ASSERTION STRATEGY FOR ${template.name} (${cweId})
@@ -2162,6 +2185,60 @@ Tests that run assertions outside it() blocks will be rejected.
 Framework hint (${framework.name}): ${template.frameworkHint}
 
 `;
+  }
+
+  /**
+   * RFC-104: Format a platform registry entry into the prompt section.
+   * Injects the few-shot example prominently above strategy text.
+   */
+  private formatPlatformTemplateSection(
+    entry: import('../external/vulnerability-registry-client.js').VulnerabilityTypeEntry,
+    cweId: string,
+    framework: TestFramework,
+    frameworkName: string
+  ): string {
+    const tmpl = entry.assertion_template!;
+    const fewShotExample = VulnerabilityRegistryClient.getFewShotExample(entry, frameworkName);
+    const frameworkHint = entry.framework_hint ||
+      tmpl.framework_hints[frameworkName] ||
+      tmpl.framework_hints['mocha'] ||
+      '';
+
+    let section = `
+## ASSERTION STRATEGY FOR ${entry.name} (${cweId})
+`;
+
+    // Inject few-shot example prominently — this is the key behavioral shift
+    if (fewShotExample) {
+      const lang = this.getLanguageForFramework(framework);
+      section += `
+### EXAMPLE TEST — Adapt to this project:
+\`\`\`${lang}
+${fewShotExample.trim()}
+\`\`\`
+
+INSTRUCTIONS: Adapt the above example to this project:
+- Change import paths to match the actual vulnerable file${entry.ecosystems?.length ? ` (this is a ${entry.ecosystems.join('/')} project)` : ''}
+- Change mock targets to match the actual library used in the project
+- Keep the same assertion pattern (mock → call → capture → assert)
+- DO NOT copy the example verbatim — adapt it to the specific vulnerable code
+
+`;
+    }
+
+    section += `Goal: ${tmpl.assertion_goal}
+Attack payload to use: ${tmpl.attack_payload}
+Strategy: ${tmpl.test_strategy}
+
+**CRITICAL: Test Structure Requirement**
+Your test MUST use proper ${framework.name} test structure with describe() and it() blocks.
+All assertions MUST be inside it() callbacks, NOT at module load time.
+Tests that run assertions outside it() blocks will be rejected.
+
+Framework hint (${framework.name}): ${frameworkHint}
+
+`;
+    return section;
   }
 
   /**
