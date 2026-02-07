@@ -17,7 +17,7 @@ import { PhaseDataClient } from './phase-data-client/index.js';
 import { TestIntegrationClient } from './test-integration-client.js';
 import { extractVulnerabilitiesFromIssue } from '../utils/vulnerability-extraction.js';
 import { TEST_FILE_PATTERNS, EXCLUDED_DIRECTORIES } from '../constants/test-patterns.js';
-import { classifyTestResult as classifyTestResultImpl, parseTestOutputCounts, isInfrastructureFailure, isStaticTest } from '../utils/test-result-classifier.js';
+import { classifyTestResult as classifyTestResultImpl, parseTestOutputCounts, isInfrastructureFailure } from '../utils/test-result-classifier.js';
 import { getAssertionTemplate, getAssertionTemplateForFramework } from '../prompts/vulnerability-assertion-templates.js';
 import { getAssertionStyleGuidance, AssertionStyleGuidance } from '../prompts/assertion-style-guidance.js';
 import { buildRetryFeedback, extractMissingModule } from './retry-feedback.js';
@@ -44,8 +44,6 @@ export class ValidationMode {
   private lastFailureClassificationType: string = '';
   /** RFC-103 v3.8.94: Flag indicating project has no test framework (only stdlib) */
   private noTestFrameworkAvailable: boolean = false;
-  /** RFC-103 Phase 3: True if generateTestWithRetry returned a static-only test (no behavioral found) */
-  private lastTestWasStaticOnly: boolean = false;
 
   constructor(config: ActionConfig, repoPath?: string) {
     this.config = config;
@@ -544,13 +542,30 @@ export class ValidationMode {
         };
       }
 
-      // RFC-103 Phase 3: Detect if this is a static-only result
-      const isStaticOnly = this.lastTestWasStaticOnly;
-      if (isStaticOnly) {
-        logger.info(`[RFC-103] Static-only test generated: ${testSuite.testFile} — pattern found but exploitability not proven`);
+      // RFC-103 Phase 3.5: Classify test via platform API (static vs behavioral)
+      const testCode = testSuite.redTests[0]?.testCode || '';
+      const cweId = vulnerabilityDescriptor?.cweId;
+      let classificationResult = this.registryClient
+        ? await this.registryClient.classifyTest(testCode, cweId)
+        : null;
+
+      // Determine if this is a static-only result that is NOT acceptable for this CWE
+      const isStaticOnly = classificationResult?.is_static === true
+        && classificationResult?.static_acceptable !== true;
+
+      if (classificationResult) {
+        if (isStaticOnly) {
+          logger.info(`[RFC-103] Platform classified test as static (not acceptable for ${cweId || 'unknown CWE'}): ${classificationResult.reason}`);
+        } else if (classificationResult.is_static && classificationResult.static_acceptable) {
+          logger.info(`[RFC-103] Platform classified test as static (acceptable for ${cweId}): ${classificationResult.reason}`);
+        } else {
+          logger.info(`[RFC-103] Platform classified test as behavioral: ${classificationResult.reason}`);
+        }
       } else {
-        logger.info(`✅ RED test generated: ${testSuite.testFile} (framework: ${testSuite.framework})`);
+        logger.info(`[RFC-103] Platform classification unavailable — accepting test as-is`);
       }
+      logger.info(`✅ RED test generated: ${testSuite.testFile} (framework: ${testSuite.framework})`);
+
 
       // Step 6: Create validation branch and commit integrated test
       logger.info('Creating validation branch for test persistence');
@@ -649,8 +664,13 @@ export class ValidationMode {
       };
 
       // Step 8: Determine validation result based on test type (behavioral vs static)
+      // Derive testType from platform classification
+      const testType: 'behavioral' | 'static' | undefined = classificationResult
+        ? (classificationResult.is_static ? 'static' as const : 'behavioral' as const)
+        : undefined;
+
       if (isStaticOnly) {
-        // RFC-103 Phase 3: Static test detected pattern but did NOT prove exploitability
+        // RFC-103 Phase 3.5: Static test detected pattern but NOT acceptable for this CWE
         logger.info(`[RFC-103] Static analysis detected vulnerability pattern but could not prove exploitability via behavioral test`);
         logger.info(`[RFC-103] Marking validation-inconclusive (pattern found, exploitability not proven)`);
 
@@ -664,7 +684,7 @@ export class ValidationMode {
           issueId: issue.number,
           validated: false,
           validationInconclusive: true,
-          testType: 'static' as const,
+          testType,
           branchName: branchName || undefined,
           redTests: testSuite,
           testResults: testResultsForDisplay,
@@ -675,8 +695,8 @@ export class ValidationMode {
         };
       }
 
-      // Behavioral test — vulnerability proven via runtime behavior
-      logger.info('✅ Vulnerability validated! Behavioral RED tests failed as expected');
+      // Test is either behavioral, or static-but-acceptable (e.g., CWE-798), or unclassified
+      logger.info('✅ Vulnerability validated! RED tests failed as expected');
 
       // Add validated label
       await this.addGitHubLabel(issue, 'rsolv:validated');
@@ -687,7 +707,7 @@ export class ValidationMode {
       return {
         issueId: issue.number,
         validated: true,
-        testType: 'behavioral' as const,
+        testType,
         branchName: branchName || undefined,
         redTests: testSuite,
         testResults: testResultsForDisplay,
@@ -1379,9 +1399,6 @@ ${tests}
     const previousAttempts: AttemptHistory[] = [];
     const framework = this.frameworkFromName(targetTestFile.framework);
 
-    // RFC-103 Phase 3: Reset static-only flag
-    this.lastTestWasStaticOnly = false;
-
     logger.info(`Starting test generation with retry (max ${maxAttempts} attempts)`);
     logger.info(`Vulnerability: ${vulnerability.type} at ${vulnerability.location}`);
     logger.info(`Target test file: ${targetTestFile.path}`);
@@ -1450,11 +1467,6 @@ ${tests}
       }
     }
 
-    // RFC-103 Phase 3: Track best static fallback across ALL retry attempts
-    // If no behavioral test is found after all retries, we return the static fallback
-    // with _staticOnly flag so the caller marks it as validation-inconclusive
-    let bestStaticFallback: TestSuite | null = null;
-
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       logger.info(`Attempt ${attempt}/${maxAttempts}: Generating test candidates...`);
 
@@ -1500,9 +1512,6 @@ ${tests}
         // Track candidate-level failures for this attempt
         const candidateFailures: Array<{ candidateIndex: number; error: string; errorMessage: string; generatedCode?: string; testOutput?: string }> = [];
         let successfulCandidate: typeof testSuite | null = null;
-        // RFC-103 Phase 3: Track static fallback separately — behavioral candidates take priority
-        let staticFallbackCandidate: typeof testSuite | null = null;
-        // Note: bestStaticFallback (outer scope) persists across retry attempts
 
         // 3. Try each candidate until one succeeds
         for (let candidateIdx = 0; candidateIdx < candidates.length; candidateIdx++) {
@@ -1588,35 +1597,17 @@ ${tests}
 
                   if (invertedClassification.isValidFailure) {
                     // SUCCESS! The inverted test produces a genuine assertion failure
-                    const invertedTestCode = invertedCode;
-                    const invertedStaticCheck = isStaticTest(invertedTestCode);
-
-                    if (invertedStaticCheck.isStatic) {
-                      logger.info(`[RFC-103] [Two-Phase] Inverted test is static — ${invertedStaticCheck.reason}`);
-                      if (!staticFallbackCandidate) {
-                        staticFallbackCandidate = {
-                          ...testSuite,
-                          redTests: [{
-                            ...candidate,
-                            testCode: invertedTestCode,
-                            testName: `${candidate.testName}_inverted`
-                          }]
-                        };
-                      }
-                      logger.info(`[RFC-103] Continuing to search for behavioral candidates...`);
-                      // Don't break — keep looking for behavioral candidates
-                    } else {
-                      logger.info(`✓ [Two-Phase] SUCCESS! Behavioral inverted test with genuine assertion failure`);
-                      successfulCandidate = {
-                        ...testSuite,
-                        redTests: [{
-                          ...candidate,
-                          testCode: invertedTestCode,
-                          testName: `${candidate.testName}_inverted`
-                        }]
-                      };
-                      break; // Exit candidate loop — we found a working behavioral test!
-                    }
+                    // Classification (static vs behavioral) happens later via platform API
+                    logger.info(`✓ [Two-Phase] SUCCESS! Inverted test with genuine assertion failure`);
+                    successfulCandidate = {
+                      ...testSuite,
+                      redTests: [{
+                        ...candidate,
+                        testCode: invertedCode,
+                        testName: `${candidate.testName}_inverted`
+                      }]
+                    };
+                    break; // Exit candidate loop — we found a working test!
                   } else {
                     logger.warn(`[Two-Phase] Inverted test failed but not a valid assertion: ${invertedClassification.type}`);
                   }
@@ -1678,23 +1669,9 @@ ${tests}
               continue; // Try next candidate
             }
 
-            // RFC-103 Phase 3: Check if this is a static (source analysis) test or behavioral
-            const staticCheck = isStaticTest(candidate.testCode);
-            if (staticCheck.isStatic) {
-              logger.info(`[RFC-103] Candidate ${candidateIdx + 1}: Static test detected — ${staticCheck.reason}`);
-              // Save as static fallback but keep looking for behavioral candidates
-              if (!staticFallbackCandidate) {
-                staticFallbackCandidate = {
-                  ...testSuite,
-                  redTests: [candidate]
-                };
-              }
-              logger.info(`[RFC-103] Continuing to search for behavioral candidates...`);
-              continue; // Try next candidate — prefer behavioral
-            }
-
-            // Success! This candidate is a behavioral test with valid assertion
-            logger.info(`✓ Candidate ${candidateIdx + 1}: SUCCESS — behavioral test with genuine assertion failure`);
+            // Success! This candidate has a genuine assertion failure
+            // Classification (static vs behavioral) happens later via platform API
+            logger.info(`✓ Candidate ${candidateIdx + 1}: SUCCESS — genuine assertion failure, vulnerability proven`);
             successfulCandidate = {
               ...testSuite,
               redTests: [candidate] // Return only the successful candidate
@@ -1716,17 +1693,10 @@ ${tests}
         // Restore original file after trying all candidates
         restoreOriginal();
 
-        // If we found a successful behavioral candidate, return it
+        // If we found a successful candidate, return it
         if (successfulCandidate) {
-          logger.info(`✓ Test generation successful on attempt ${attempt} — behavioral test`);
+          logger.info(`✓ Test generation successful on attempt ${attempt}`);
           return successfulCandidate;
-        }
-
-        // RFC-103 Phase 3: If only static candidates succeeded, save as fallback
-        // but continue to next attempt — give the LLM another chance to generate behavioral tests
-        if (staticFallbackCandidate && !bestStaticFallback) {
-          bestStaticFallback = staticFallbackCandidate;
-          logger.info(`[RFC-103] Attempt ${attempt}: Only static candidates found — saved as fallback, will retry for behavioral`);
         }
 
         // All candidates failed — record best failure for retry feedback
@@ -1757,16 +1727,8 @@ ${tests}
       }
     }
 
-    // All retries exhausted — check if we have a static fallback
-    if (bestStaticFallback) {
-      logger.info(`[RFC-103] All ${maxAttempts} attempts exhausted without behavioral test — returning static fallback`);
-      logger.info(`[RFC-103] Static test detected pattern but could not prove exploitability`);
-      // Signal to caller that this is a static-only result
-      this.lastTestWasStaticOnly = true;
-      return bestStaticFallback;
-    }
-
-    // No tests at all (neither behavioral nor static) - tag issue and return null
+    // All retries exhausted — no valid test found
+    // Classification (static vs behavioral) is done in validateIssue() via platform API
     logger.warn(`Failed to generate valid test after ${maxAttempts} attempts`);
     await this.tagIssueNotValidated(vulnerability, previousAttempts);
     return null;
