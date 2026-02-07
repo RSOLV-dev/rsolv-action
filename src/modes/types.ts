@@ -36,6 +36,10 @@ export interface ValidationResult {
   infrastructureFailure?: boolean;
   /** RFC-103 v3.8.94: True if project has no test framework (only stdlib libraries) */
   noTestFramework?: boolean;
+  /** RFC-103 Phase 3: True if only static tests passed — pattern found but exploitability not proven */
+  validationInconclusive?: boolean;
+  /** RFC-103 Phase 3: Whether the passing test was behavioral or static */
+  testType?: 'behavioral' | 'static';
   testingMode?: boolean; // RFC-059: Indicates testing mode is enabled
   testingModeNote?: string; // RFC-059: Explanation when testing mode overrides validation
   timestamp: string;
