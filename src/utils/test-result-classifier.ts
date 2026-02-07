@@ -201,6 +201,87 @@ export function isInfrastructureFailure(result: TestResultClassification): boole
 }
 
 /**
+ * RFC-103 Phase 3 (Step 3.2): Result of static test analysis.
+ */
+export interface StaticTestResult {
+  isStatic: boolean;
+  reason: string;
+}
+
+/**
+ * RFC-103 Phase 3 (Step 3.2): Detect whether generated test code is a static
+ * source analysis test (reads file + regex) rather than a behavioral test
+ * (imports module, calls functions, mocks side effects).
+ *
+ * Static tests prove a pattern exists in source code but do NOT prove
+ * exploitability. Only behavioral tests can demonstrate that malicious
+ * input actually reaches a dangerous sink at runtime.
+ *
+ * @param testCode The generated test code to analyze
+ * @returns StaticTestResult indicating whether the test is static and why
+ */
+export function isStaticTest(testCode: string): StaticTestResult {
+  if (!testCode || typeof testCode !== 'string') {
+    return { isStatic: false, reason: 'No test code provided' };
+  }
+
+  // Pattern 1: JavaScript/Node fs.readFileSync / readFileSync + regex/includes/match
+  // Also matches bare `readFileSync(` from destructured imports: `import { readFileSync } from 'fs'`
+  const jsFileRead = /(?:fs\.)?readFileSync\s*\(/i.test(testCode);
+  const jsStringCheck = /\.(includes|match|search|indexOf|test)\s*\(/i.test(testCode) ||
+    /new RegExp\s*\(/i.test(testCode) ||
+    /\/[^/]+\/\.(test|exec)\s*\(/i.test(testCode);
+
+  if (jsFileRead && jsStringCheck) {
+    return { isStatic: true, reason: 'Uses fs.readFileSync with string pattern matching — static source analysis' };
+  }
+
+  // Pattern 2: PHP file_get_contents + regex
+  const phpFileRead = /file_get_contents\s*\(/i.test(testCode);
+  const phpStringCheck = /preg_match|assertMatchesRegularExpression|assertStringContains|strpos/i.test(testCode);
+
+  if (phpFileRead && phpStringCheck) {
+    return { isStatic: true, reason: 'Uses file_get_contents with regex matching — static source analysis' };
+  }
+
+  // Pattern 3: Python open() / Path.read_text() + re.search/re.match/in
+  const pyFileRead = /open\s*\([^)]*['"][^'"]*['"]/.test(testCode) ||
+    /Path\s*\([^)]*\)\.read_text\s*\(/i.test(testCode) ||
+    /\.read\s*\(\s*\)/i.test(testCode);
+  const pyStringCheck = /re\.(search|match|findall)\s*\(/i.test(testCode) ||
+    /\bin\s+source|in\s+content|in\s+code/i.test(testCode);
+
+  if (pyFileRead && pyStringCheck) {
+    return { isStatic: true, reason: 'Uses file read with regex/string matching — static source analysis' };
+  }
+
+  // Pattern 4: Ruby File.read / File.open + regex/match
+  // Also matches RSpec `to match(...)` syntax
+  const rubyFileRead = /File\.(read|open|readlines)\s*\(/i.test(testCode);
+  const rubyStringCheck = /=~|\.match\s*\(|\.include\?\s*\(|to match\s*\(/i.test(testCode);
+
+  if (rubyFileRead && rubyStringCheck) {
+    return { isStatic: true, reason: 'Uses File.read with pattern matching — static source analysis' };
+  }
+
+  // Pattern 5: Elixir File.read! + Regex.match?
+  const elixirFileRead = /File\.read!\s*\(/i.test(testCode);
+  const elixirStringCheck = /Regex\.match\?|=~/i.test(testCode) ||
+    /String\.contains\?\s*\(/i.test(testCode);
+
+  if (elixirFileRead && elixirStringCheck) {
+    return { isStatic: true, reason: 'Uses File.read! with Regex matching — static source analysis' };
+  }
+
+  // Pattern 6: Explicit source analysis fallback comment
+  if (/source analysis fallback/i.test(testCode)) {
+    return { isStatic: true, reason: 'Contains "Source analysis fallback" comment — explicitly static' };
+  }
+
+  return { isStatic: false, reason: 'Test appears to be behavioral' };
+}
+
+/**
  * Parse test output to extract pass/fail counts.
  * Handles Mocha, Jest/Vitest, pytest, and RSpec output formats.
  */

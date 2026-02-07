@@ -17,7 +17,7 @@ import { PhaseDataClient } from './phase-data-client/index.js';
 import { TestIntegrationClient } from './test-integration-client.js';
 import { extractVulnerabilitiesFromIssue } from '../utils/vulnerability-extraction.js';
 import { TEST_FILE_PATTERNS, EXCLUDED_DIRECTORIES } from '../constants/test-patterns.js';
-import { classifyTestResult as classifyTestResultImpl, parseTestOutputCounts, isInfrastructureFailure } from '../utils/test-result-classifier.js';
+import { classifyTestResult as classifyTestResultImpl, parseTestOutputCounts, isInfrastructureFailure, isStaticTest } from '../utils/test-result-classifier.js';
 import { getAssertionTemplate, getAssertionTemplateForFramework } from '../prompts/vulnerability-assertion-templates.js';
 import { getAssertionStyleGuidance, AssertionStyleGuidance } from '../prompts/assertion-style-guidance.js';
 import { buildRetryFeedback, extractMissingModule } from './retry-feedback.js';
@@ -44,6 +44,8 @@ export class ValidationMode {
   private lastFailureClassificationType: string = '';
   /** RFC-103 v3.8.94: Flag indicating project has no test framework (only stdlib) */
   private noTestFrameworkAvailable: boolean = false;
+  /** RFC-103 Phase 3: True if generateTestWithRetry returned a static-only test (no behavioral found) */
+  private lastTestWasStaticOnly: boolean = false;
 
   constructor(config: ActionConfig, repoPath?: string) {
     this.config = config;
@@ -445,7 +447,8 @@ export class ValidationMode {
         location: `${primaryFile}:${vuln?.line || 0}`,
         attackVector: vuln?.type || 'unknown',
         vulnerablePattern: vulnerableCode.slice(0, 2000), // Truncate for prompt (increased from 500 for better AI context)
-        source: primaryFile
+        source: primaryFile,
+        cweId: vuln?.cweId // RFC-103 Phase 3: Propagate CWE ID from issue body for registry lookup
       };
 
       // RFC-101: Retrieve project shape(s) from phase data for environment context
@@ -541,7 +544,13 @@ export class ValidationMode {
         };
       }
 
-      logger.info(`✅ RED test generated: ${testSuite.testFile} (framework: ${testSuite.framework})`);
+      // RFC-103 Phase 3: Detect if this is a static-only result
+      const isStaticOnly = this.lastTestWasStaticOnly;
+      if (isStaticOnly) {
+        logger.info(`[RFC-103] Static-only test generated: ${testSuite.testFile} — pattern found but exploitability not proven`);
+      } else {
+        logger.info(`✅ RED test generated: ${testSuite.testFile} (framework: ${testSuite.framework})`);
+      }
 
       // Step 6: Create validation branch and commit integrated test
       logger.info('Creating validation branch for test persistence');
@@ -639,8 +648,35 @@ export class ValidationMode {
         exitCode: 1
       };
 
-      // Step 8: Vulnerability validated — RED test failed on vulnerable code
-      logger.info('✅ Vulnerability validated! RED tests failed as expected');
+      // Step 8: Determine validation result based on test type (behavioral vs static)
+      if (isStaticOnly) {
+        // RFC-103 Phase 3: Static test detected pattern but did NOT prove exploitability
+        logger.info(`[RFC-103] Static analysis detected vulnerability pattern but could not prove exploitability via behavioral test`);
+        logger.info(`[RFC-103] Marking validation-inconclusive (pattern found, exploitability not proven)`);
+
+        // Label as inconclusive — keep rsolv:detected, do NOT add rsolv:validated
+        await this.addGitHubLabel(issue, 'rsolv:validation-inconclusive');
+
+        // Store phase data — still useful context for MITIGATE
+        await this.storeTestExecutionInPhaseData(issue, testExecutionResult, false, branchName || undefined, vulnerabilities);
+
+        return {
+          issueId: issue.number,
+          validated: false,
+          validationInconclusive: true,
+          testType: 'static' as const,
+          branchName: branchName || undefined,
+          redTests: testSuite,
+          testResults: testResultsForDisplay,
+          testExecutionResult,
+          vulnerabilities,
+          timestamp: new Date().toISOString(),
+          commitHash: this.getCurrentCommitHash()
+        };
+      }
+
+      // Behavioral test — vulnerability proven via runtime behavior
+      logger.info('✅ Vulnerability validated! Behavioral RED tests failed as expected');
 
       // Add validated label
       await this.addGitHubLabel(issue, 'rsolv:validated');
@@ -651,6 +687,7 @@ export class ValidationMode {
       return {
         issueId: issue.number,
         validated: true,
+        testType: 'behavioral' as const,
         branchName: branchName || undefined,
         redTests: testSuite,
         testResults: testResultsForDisplay,
@@ -1342,6 +1379,9 @@ ${tests}
     const previousAttempts: AttemptHistory[] = [];
     const framework = this.frameworkFromName(targetTestFile.framework);
 
+    // RFC-103 Phase 3: Reset static-only flag
+    this.lastTestWasStaticOnly = false;
+
     logger.info(`Starting test generation with retry (max ${maxAttempts} attempts)`);
     logger.info(`Vulnerability: ${vulnerability.type} at ${vulnerability.location}`);
     logger.info(`Target test file: ${targetTestFile.path}`);
@@ -1410,6 +1450,11 @@ ${tests}
       }
     }
 
+    // RFC-103 Phase 3: Track best static fallback across ALL retry attempts
+    // If no behavioral test is found after all retries, we return the static fallback
+    // with _staticOnly flag so the caller marks it as validation-inconclusive
+    let bestStaticFallback: TestSuite | null = null;
+
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       logger.info(`Attempt ${attempt}/${maxAttempts}: Generating test candidates...`);
 
@@ -1455,6 +1500,9 @@ ${tests}
         // Track candidate-level failures for this attempt
         const candidateFailures: Array<{ candidateIndex: number; error: string; errorMessage: string; generatedCode?: string; testOutput?: string }> = [];
         let successfulCandidate: typeof testSuite | null = null;
+        // RFC-103 Phase 3: Track static fallback separately — behavioral candidates take priority
+        let staticFallbackCandidate: typeof testSuite | null = null;
+        // Note: bestStaticFallback (outer scope) persists across retry attempts
 
         // 3. Try each candidate until one succeeds
         for (let candidateIdx = 0; candidateIdx < candidates.length; candidateIdx++) {
@@ -1540,16 +1588,35 @@ ${tests}
 
                   if (invertedClassification.isValidFailure) {
                     // SUCCESS! The inverted test produces a genuine assertion failure
-                    logger.info(`✓ [Two-Phase] SUCCESS! Inverted test produces genuine assertion failure`);
-                    successfulCandidate = {
-                      ...testSuite,
-                      redTests: [{
-                        ...candidate,
-                        testCode: invertedCode,
-                        testName: `${candidate.testName}_inverted`
-                      }]
-                    };
-                    break; // Exit candidate loop — we found a working test!
+                    const invertedTestCode = invertedCode;
+                    const invertedStaticCheck = isStaticTest(invertedTestCode);
+
+                    if (invertedStaticCheck.isStatic) {
+                      logger.info(`[RFC-103] [Two-Phase] Inverted test is static — ${invertedStaticCheck.reason}`);
+                      if (!staticFallbackCandidate) {
+                        staticFallbackCandidate = {
+                          ...testSuite,
+                          redTests: [{
+                            ...candidate,
+                            testCode: invertedTestCode,
+                            testName: `${candidate.testName}_inverted`
+                          }]
+                        };
+                      }
+                      logger.info(`[RFC-103] Continuing to search for behavioral candidates...`);
+                      // Don't break — keep looking for behavioral candidates
+                    } else {
+                      logger.info(`✓ [Two-Phase] SUCCESS! Behavioral inverted test with genuine assertion failure`);
+                      successfulCandidate = {
+                        ...testSuite,
+                        redTests: [{
+                          ...candidate,
+                          testCode: invertedTestCode,
+                          testName: `${candidate.testName}_inverted`
+                        }]
+                      };
+                      break; // Exit candidate loop — we found a working behavioral test!
+                    }
                   } else {
                     logger.warn(`[Two-Phase] Inverted test failed but not a valid assertion: ${invertedClassification.type}`);
                   }
@@ -1611,8 +1678,23 @@ ${tests}
               continue; // Try next candidate
             }
 
-            // Success! This candidate is valid
-            logger.info(`✓ Candidate ${candidateIdx + 1}: SUCCESS — genuine assertion failure on vulnerable code`);
+            // RFC-103 Phase 3: Check if this is a static (source analysis) test or behavioral
+            const staticCheck = isStaticTest(candidate.testCode);
+            if (staticCheck.isStatic) {
+              logger.info(`[RFC-103] Candidate ${candidateIdx + 1}: Static test detected — ${staticCheck.reason}`);
+              // Save as static fallback but keep looking for behavioral candidates
+              if (!staticFallbackCandidate) {
+                staticFallbackCandidate = {
+                  ...testSuite,
+                  redTests: [candidate]
+                };
+              }
+              logger.info(`[RFC-103] Continuing to search for behavioral candidates...`);
+              continue; // Try next candidate — prefer behavioral
+            }
+
+            // Success! This candidate is a behavioral test with valid assertion
+            logger.info(`✓ Candidate ${candidateIdx + 1}: SUCCESS — behavioral test with genuine assertion failure`);
             successfulCandidate = {
               ...testSuite,
               redTests: [candidate] // Return only the successful candidate
@@ -1634,10 +1716,17 @@ ${tests}
         // Restore original file after trying all candidates
         restoreOriginal();
 
-        // If we found a successful candidate, return it
+        // If we found a successful behavioral candidate, return it
         if (successfulCandidate) {
-          logger.info(`✓ Test generation successful on attempt ${attempt}`);
+          logger.info(`✓ Test generation successful on attempt ${attempt} — behavioral test`);
           return successfulCandidate;
+        }
+
+        // RFC-103 Phase 3: If only static candidates succeeded, save as fallback
+        // but continue to next attempt — give the LLM another chance to generate behavioral tests
+        if (staticFallbackCandidate && !bestStaticFallback) {
+          bestStaticFallback = staticFallbackCandidate;
+          logger.info(`[RFC-103] Attempt ${attempt}: Only static candidates found — saved as fallback, will retry for behavioral`);
         }
 
         // All candidates failed — record best failure for retry feedback
@@ -1668,7 +1757,16 @@ ${tests}
       }
     }
 
-    // All retries exhausted - tag issue and return null
+    // All retries exhausted — check if we have a static fallback
+    if (bestStaticFallback) {
+      logger.info(`[RFC-103] All ${maxAttempts} attempts exhausted without behavioral test — returning static fallback`);
+      logger.info(`[RFC-103] Static test detected pattern but could not prove exploitability`);
+      // Signal to caller that this is a static-only result
+      this.lastTestWasStaticOnly = true;
+      return bestStaticFallback;
+    }
+
+    // No tests at all (neither behavioral nor static) - tag issue and return null
     logger.warn(`Failed to generate valid test after ${maxAttempts} attempts`);
     await this.tagIssueNotValidated(vulnerability, previousAttempts);
     return null;
@@ -1914,6 +2012,16 @@ If using Tier 3, add a comment: "// Source analysis fallback — could not impor
 DO NOT default to reading source files with fs.readFileSync/File.read/open(). That is a linter, not a proof
 of exploitability. Import the actual code and exercise it.
 
+BAD EXAMPLE — DO NOT generate tests like this:
+\`\`\`javascript
+// ❌ REJECTED: This is a LINTER, not a test. It proves nothing about runtime behavior.
+const source = fs.readFileSync('vulnerable-file.js', 'utf8');
+assert(source.includes('parameterized'));  // Just checks text in source code
+\`\`\`
+Tests that ONLY read source files and run regex/string matching will be DEPRIORITIZED in candidate selection.
+They do NOT prove exploitability. A static source scan cannot demonstrate that malicious input actually reaches
+a dangerous sink at runtime. Generate BEHAVIORAL tests that import and call the vulnerable code instead.
+
 Example RED test for SQL injection — BEHAVIORAL (Tier 1):
 \`\`\`javascript
 const assert = require('assert');
@@ -1977,17 +2085,17 @@ Code blocks must contain ONLY executable code — no "Approach 1:" labels, no bu
 
 Place any explanations OUTSIDE and BEFORE the code blocks, like this:
 
-First approach — behavioral test with mocked dependencies:
+Approach 1 — BEHAVIORAL (required): Import the vulnerable module, mock dangerous operations, call with malicious input:
 \`\`\`${this.getLanguageForFramework(framework)}
 // Actual test code here — no markdown, no labels
 \`\`\`
 
-Second approach — behavioral test with different mock strategy:
+Approach 2 — BEHAVIORAL (required): Different behavioral strategy (different mock target or HTTP test client):
 \`\`\`${this.getLanguageForFramework(framework)}
 // Actual test code here — no markdown, no labels
 \`\`\`
 
-Third approach — alternative (source analysis fallback if behavioral not possible):
+Approach 3 — BEHAVIORAL (strongly preferred) or source analysis ONLY if all behavioral approaches are truly impossible:
 \`\`\`${this.getLanguageForFramework(framework)}
 // Actual test code here — no markdown, no labels
 \`\`\`
@@ -2158,7 +2266,7 @@ ${(() => {
       const entry = await this.registryClient.getEntry(cweId, frameworkName);
       if (entry?.assertion_template) {
         logger.info(`[RFC-104] Using platform registry entry for ${cweId} (${entry.name}) with framework: ${framework.name}`);
-        return this.formatPlatformTemplateSection(entry, cweId, framework, frameworkName);
+        return this.formatPlatformTemplateSection(entry, cweId, framework, frameworkName, vulnerability);
       }
     }
 
@@ -2190,12 +2298,14 @@ Framework hint (${framework.name}): ${template.frameworkHint}
   /**
    * RFC-104: Format a platform registry entry into the prompt section.
    * Injects the few-shot example prominently above strategy text.
+   * RFC-103 Phase 3 (Step 3.4): Injects vulnerable code context for import path discovery.
    */
   private formatPlatformTemplateSection(
     entry: import('../external/vulnerability-registry-client.js').VulnerabilityTypeEntry,
     cweId: string,
     framework: TestFramework,
-    frameworkName: string
+    frameworkName: string,
+    vulnerability?: Vulnerability
   ): string {
     const tmpl = entry.assertion_template!;
     const fewShotExample = VulnerabilityRegistryClient.getFewShotExample(entry, frameworkName);
@@ -2217,8 +2327,24 @@ Framework hint (${framework.name}): ${template.frameworkHint}
 ${fewShotExample.trim()}
 \`\`\`
 
-INSTRUCTIONS: Adapt the above example to this project:
-- Change import paths to match the actual vulnerable file${entry.ecosystems?.length ? ` (this is a ${entry.ecosystems.join('/')} project)` : ''}
+INSTRUCTIONS: Adapt the above example to this project:`;
+
+      // RFC-103 Phase 3 (Step 3.4): Inject actual vulnerable file context
+      if (vulnerability?.source) {
+        section += `
+- The vulnerable file is: ${vulnerability.source}
+- Import the vulnerable module: require(path.join(process.cwd(), '${vulnerability.source}')) or equivalent for your language`;
+      }
+      if (vulnerability?.vulnerablePattern) {
+        section += `
+- The vulnerable code pattern is:
+\`\`\`
+${vulnerability.vulnerablePattern.slice(0, 500)}
+\`\`\`
+- Mock the dangerous operation visible in the pattern above`;
+      }
+
+      section += `
 - Change mock targets to match the actual library used in the project
 - Keep the same assertion pattern (mock → call → capture → assert)
 - DO NOT copy the example verbatim — adapt it to the specific vulnerable code
