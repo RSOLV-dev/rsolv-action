@@ -2257,10 +2257,13 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
             redTests: vmValidationResult.redTests,
             testResults: vmValidationResult.testResults,
             // RFC-103 B4: Distinguish false positives from infrastructure failures
-            falsePositive: !vmValidationResult.validated && !vmValidationResult.infrastructureFailure && !vmValidationResult.noTestFramework,
+            falsePositive: !vmValidationResult.validated && !vmValidationResult.infrastructureFailure && !vmValidationResult.noTestFramework && !vmValidationResult.validationInconclusive,
             infrastructureFailure: !vmValidationResult.validated && !!vmValidationResult.infrastructureFailure,
             // RFC-103 v3.8.94: Track when project has no test framework
             noTestFramework: !vmValidationResult.validated && !!vmValidationResult.noTestFramework,
+            // RFC-103 Phase 3: Static-only test detected pattern but didn't prove exploitability
+            validationInconclusive: !vmValidationResult.validated && !!vmValidationResult.validationInconclusive,
+            testType: vmValidationResult.testType,
             falsePositiveReason: vmValidationResult.falsePositiveReason,
             existingTests: existing?.hasTests,
             testFramework: existing?.framework,
@@ -2340,6 +2343,11 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
                 ['rsolv:validation-unavailable']
               );
               // Keep 'rsolv:detected' — the vulnerability may still be real
+            } else if (validationData.validationInconclusive) {
+              // RFC-103 Phase 3: Static test detected pattern but didn't prove exploitability
+              // validation-mode.ts already added rsolv:validation-inconclusive label
+              logger.info(`[VALIDATE] Static-only test for issue #${issue.number} — validation-inconclusive (label already applied by validation-mode)`);
+              // Keep 'rsolv:detected' — the vulnerability pattern was found, behavioral test needed
             } else if (validationData.infrastructureFailure) {
               // RFC-103 B4: Infrastructure failure — vulnerability may be real, we just couldn't prove it
               logger.info(`[VALIDATE] Adding 'rsolv:validation-inconclusive' label to issue #${issue.number} (infrastructure limitation)`);
