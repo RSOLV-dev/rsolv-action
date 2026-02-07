@@ -42,6 +42,8 @@ export class ValidationMode {
   private availableTestLibraries: string[] = [];
   /** RFC-103 B4: Last classification type from test execution (for infrastructure failure detection) */
   private lastFailureClassificationType: string = '';
+  /** RFC-101: Deferred setup commands from project shape — execute AFTER runtime/deps installed */
+  private deferredSetupCommands: Array<{ cmd: string; env: Record<string, string> }> = [];
   /** RFC-103 v3.8.94: Flag indicating project has no test framework (only stdlib) */
   private noTestFrameworkAvailable: boolean = false;
 
@@ -498,15 +500,19 @@ export class ValidationMode {
               logger.info(`[RFC-101] Applied ${envKeys.length} env var(s) from project shape`);
             }
 
-            // Collect and execute setup commands from all shapes
+            // Collect setup commands from all shapes — defer execution until after runtime installation
+            // (Commands like `bundle exec rake db:create` require Ruby/Bundler to be installed first)
             const allSetupCommands = shapes.flatMap(s => s.setup_commands || []);
-            for (const cmd of allSetupCommands) {
-              try {
-                execSync(cmd, { cwd: this.repoPath, timeout: 60000, encoding: 'utf8', env: { ...process.env, ...mergedEnv } });
-                logger.info(`[RFC-101] Setup command succeeded: ${cmd}`);
-              } catch (setupErr) {
-                logger.warn(`[RFC-101] Setup command warning: ${cmd} — ${setupErr instanceof Error ? setupErr.message : String(setupErr)}`);
+            if (allSetupCommands.length > 0) {
+              const snapshotEnv: Record<string, string> = {};
+              for (const [k, v] of Object.entries({ ...process.env, ...mergedEnv })) {
+                if (v !== undefined) snapshotEnv[k] = v;
               }
+              this.deferredSetupCommands = allSetupCommands.map(cmd => ({
+                cmd,
+                env: snapshotEnv
+              }));
+              logger.info(`[RFC-101] Deferred ${this.deferredSetupCommands.length} setup command(s) until after runtime installation`);
             }
           }
         }
@@ -1465,6 +1471,21 @@ ${tests}
         logger.warn(`Runtime/dependency setup warning: ${setupError instanceof Error ? setupError.message : String(setupError)}`);
         // Continue anyway — test execution may still work (e.g., Node is always available)
       }
+    }
+
+    // Execute deferred RFC-101 setup commands now that runtime + dependencies are installed
+    // (e.g., `bundle exec rake db:create` requires Ruby/Bundler from ensureRuntime/ensureDependencies)
+    if (this.deferredSetupCommands.length > 0) {
+      logger.info(`[RFC-101] Executing ${this.deferredSetupCommands.length} deferred setup command(s) after runtime installation`);
+      for (const { cmd, env } of this.deferredSetupCommands) {
+        try {
+          execSync(cmd, { cwd: this.repoPath, timeout: 60000, encoding: 'utf8', env });
+          logger.info(`[RFC-101] Setup command succeeded: ${cmd}`);
+        } catch (setupErr) {
+          logger.warn(`[RFC-101] Setup command warning: ${cmd} — ${setupErr instanceof Error ? setupErr.message : String(setupErr)}`);
+        }
+      }
+      this.deferredSetupCommands = [];
     }
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {

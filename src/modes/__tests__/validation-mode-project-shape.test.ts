@@ -421,6 +421,33 @@ describe('RFC-101: Project Shape Consumption in VALIDATE', () => {
         expect.stringContaining('Setup command succeeded: bundle exec rake db:schema:load')
       );
     });
+
+    it('should defer setup commands until after runtime installation, not execute immediately', async () => {
+      mockRetrievePhaseResults.mockResolvedValue({
+        project_shape: {
+          ecosystem: 'ruby',
+          runtime_services: [],
+          setup_commands: ['bundle exec rake db:create', 'bundle exec rake db:schema:load'],
+          env: { RAILS_ENV: 'test' },
+          ai_context: 'SQLite configured.'
+        }
+      });
+
+      try {
+        await validationMode.validateVulnerability(mockIssue);
+      } catch {
+        // Expected — fails downstream
+      }
+
+      // Verify commands were deferred (log message confirms deferral)
+      expect(logger.info).toHaveBeenCalledWith(
+        expect.stringContaining('Deferred 2 setup command(s) until after runtime installation')
+      );
+
+      // Verify the deferredSetupCommands property was populated
+      // (may be cleared after execution, so check via log messages)
+      // Setup commands should still eventually execute (verified by existing tests)
+    });
   });
 
   describe('no phase data graceful degradation', () => {
