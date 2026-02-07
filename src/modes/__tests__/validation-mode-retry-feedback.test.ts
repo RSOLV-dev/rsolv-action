@@ -124,6 +124,77 @@ describe('Retry Feedback', () => {
       // But not the specific assertion strategy
       expect(feedback).not.toContain('ASSERTION STRATEGY');
     });
+
+    it('provides static test rejection feedback for StaticTestNotAcceptable', () => {
+      const attempt = {
+        attempt: 1,
+        error: 'StaticTestNotAcceptable',
+        errorMessage: 'Static source analysis — not acceptable for CWE-89',
+        retryGuidance: {
+          feedback: 'STATIC TEST REJECTED: Your test reads source files...',
+          behavioral_hint: 'Assertion goal for SQL Injection: mock the database layer',
+          few_shot_example: 'describe("SQL Injection", () => { it("should pass payload unescaped"...'
+        }
+      };
+      const vulnerability = { type: 'SQL Injection', cweId: 'CWE-89' };
+
+      const feedback = buildRetryFeedback(attempt, vulnerability, []);
+
+      expect(feedback).toContain('STATIC TEST REJECTED');
+      expect(feedback).toContain('STATIC TEST REJECTED: Your test reads source files');
+      expect(feedback).toContain('Assertion goal for SQL Injection');
+      expect(feedback).toContain('should pass payload unescaped');
+    });
+
+    it('handles StaticTestNotAcceptable without retryGuidance (generic fallback)', () => {
+      const attempt = {
+        attempt: 1,
+        error: 'StaticTestNotAcceptable',
+        errorMessage: 'Static source analysis — not acceptable for CWE-89'
+      };
+      const vulnerability = { type: 'SQL Injection', cweId: 'CWE-89' };
+
+      const feedback = buildRetryFeedback(attempt, vulnerability, []);
+
+      expect(feedback).toContain('STATIC TEST REJECTED');
+      expect(feedback).toContain('DO NOT read source files');
+    });
+
+    it('includes few_shot_example section when provided in retryGuidance', () => {
+      const attempt = {
+        attempt: 1,
+        error: 'StaticTestNotAcceptable',
+        errorMessage: 'Static source analysis',
+        retryGuidance: {
+          feedback: 'Generate a BEHAVIORAL test',
+          behavioral_hint: 'Mock the database layer',
+          few_shot_example: 'const dbStub = sinon.stub(db, "query");'
+        }
+      };
+
+      const feedback = buildRetryFeedback(attempt, { cweId: 'CWE-89' }, []);
+
+      expect(feedback).toContain('EXAMPLE BEHAVIORAL TEST');
+      expect(feedback).toContain('sinon.stub');
+    });
+
+    it('omits few_shot section when few_shot_example is null', () => {
+      const attempt = {
+        attempt: 1,
+        error: 'StaticTestNotAcceptable',
+        errorMessage: 'Static source analysis',
+        retryGuidance: {
+          feedback: 'Generate a BEHAVIORAL test',
+          behavioral_hint: 'Mock the database layer',
+          few_shot_example: null
+        }
+      };
+
+      const feedback = buildRetryFeedback(attempt, { cweId: 'CWE-89' }, []);
+
+      expect(feedback).toContain('BEHAVIORAL test');
+      expect(feedback).not.toContain('EXAMPLE BEHAVIORAL TEST');
+    });
   });
 
   describe('extractMissingModule', () => {

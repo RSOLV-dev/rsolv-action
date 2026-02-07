@@ -137,16 +137,25 @@ export interface TestSuite {
   }>;
 }
 
+/** Platform retry guidance for static test rejection */
+export interface RetryGuidance {
+  feedback: string;
+  behavioral_hint: string;
+  few_shot_example: string | null;
+}
+
 // Attempt history for retry loop
 export interface AttemptHistory {
   attempt: number;
-  error: 'SyntaxError' | 'TestPassedUnexpectedly' | 'ExistingTestsRegression' | string;
+  error: 'SyntaxError' | 'TestPassedUnexpectedly' | 'ExistingTestsRegression' | 'StaticTestNotAcceptable' | string;
   errorMessage: string;
   timestamp: string;
   /** Truncated test output from execution (for retry feedback) */
   testOutput?: string;
   /** The generated test code from this attempt (for retry feedback) */
   generatedCode?: string;
+  /** RFC-103 Phase 4: Platform retry guidance when test classified as static */
+  retryGuidance?: RetryGuidance;
 }
 
 // Framework information

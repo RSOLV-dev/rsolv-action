@@ -241,7 +241,7 @@ describe('RFC-060-AMENDMENT-001: ValidationMode Test Execution Integration', () 
 
       expect(result.validated).toBe(false);
       expect(result.falsePositiveReason).toContain('Unable to generate valid RED test');
-      expect(result.falsePositiveReason).toContain('3 attempts');
+      expect(result.falsePositiveReason).toContain('4 attempts');
     });
 
     test('should include branchName in result when validated', async () => {

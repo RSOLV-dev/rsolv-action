@@ -7,12 +7,20 @@
 
 import { getAssertionTemplate } from '../prompts/vulnerability-assertion-templates.js';
 
+interface RetryGuidance {
+  feedback: string;
+  behavioral_hint: string;
+  few_shot_example: string | null;
+}
+
 interface PreviousAttempt {
   attempt: number;
   error: string;
   errorMessage?: string;
   generatedCode?: string;
   testOutput?: string;
+  /** RFC-103 Phase 4: Platform retry guidance when test classified as static */
+  retryGuidance?: RetryGuidance;
 }
 
 interface Vulnerability {
@@ -110,6 +118,28 @@ export function buildRetryFeedback(
       feedback += `Use ONLY these libraries or the language's built-in assertions.\n`;
     } else {
       feedback += `Use ONLY the language's built-in assertions (e.g., Node's assert module).\n`;
+    }
+  }
+
+  // Handle static test rejection with platform-provided guidance
+  if (attempt.error === 'StaticTestNotAcceptable') {
+    if (attempt.retryGuidance) {
+      feedback += `\n## STATIC TEST REJECTED — GENERATE A BEHAVIORAL TEST\n`;
+      feedback += `${attempt.retryGuidance.feedback}\n`;
+      feedback += `\n### BEHAVIORAL HINT\n`;
+      feedback += `${attempt.retryGuidance.behavioral_hint}\n`;
+      if (attempt.retryGuidance.few_shot_example) {
+        feedback += `\n### EXAMPLE BEHAVIORAL TEST\n`;
+        feedback += `\`\`\`\n${attempt.retryGuidance.few_shot_example}\n\`\`\`\n`;
+      }
+    } else {
+      feedback += `\n## STATIC TEST REJECTED — GENERATE A BEHAVIORAL TEST\n`;
+      feedback += `Your test reads source files and pattern-matches for code patterns. ` +
+        `This only proves the pattern exists, NOT that it's exploitable.\n`;
+      feedback += `Generate a BEHAVIORAL test that imports the vulnerable module, ` +
+        `calls it with malicious input, and asserts on the runtime behavior.\n`;
+      feedback += `DO NOT read source files. DO NOT use fs.readFileSync, open(), File.read, ` +
+        `or any file-reading approach.\n`;
     }
   }
 

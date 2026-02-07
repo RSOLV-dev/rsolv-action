@@ -525,7 +525,7 @@ export class ValidationMode {
       const testSuite = await this.generateTestWithRetry(
         vulnerabilityDescriptor,
         targetTestFile,
-        3 // maxAttempts
+        4 // maxAttempts — RFC-103 Phase 4: extra attempt for static-test retry
       );
 
       if (!testSuite) {
@@ -540,7 +540,7 @@ export class ValidationMode {
         return {
           issueId: issue.number,
           validated: false,
-          falsePositiveReason: 'Unable to generate valid RED test after 3 attempts',
+          falsePositiveReason: 'Unable to generate valid RED test after 4 attempts',
           infrastructureFailure: isInfra || undefined,
           vulnerabilities,
           timestamp: new Date().toISOString(),
@@ -548,12 +548,17 @@ export class ValidationMode {
         };
       }
 
-      // RFC-103 Phase 3.5: Classify test via platform API (static vs behavioral)
+      // RFC-103 Phase 3.5/4: Classify test via platform API (static vs behavioral)
+      // Use stored result from in-loop classification if available (avoids duplicate API call)
       const testCode = testSuite.redTests[0]?.testCode || '';
       const cweId = vulnerabilityDescriptor?.cweId;
-      let classificationResult = this.registryClient
-        ? await this.registryClient.classifyTest(testCode, cweId)
-        : null;
+      const storedClassification = (testSuite.redTests[0] as Record<string, unknown> | undefined)?._classificationResult as
+        import('../external/vulnerability-registry-client.js').TestClassificationResult | undefined;
+      let classificationResult = storedClassification || (
+        this.registryClient
+          ? await this.registryClient.classifyTest(testCode, cweId)
+          : null
+      );
 
       // Determine if this is a static-only result that is NOT acceptable for this CWE
       const isStaticOnly = classificationResult?.is_static === true
@@ -1531,7 +1536,7 @@ ${tests}
         };
 
         // Track candidate-level failures for this attempt
-        const candidateFailures: Array<{ candidateIndex: number; error: string; errorMessage: string; generatedCode?: string; testOutput?: string }> = [];
+        const candidateFailures: Array<{ candidateIndex: number; error: string; errorMessage: string; generatedCode?: string; testOutput?: string; retryGuidance?: { feedback: string; behavioral_hint: string; few_shot_example: string | null } }> = [];
         let successfulCandidate: typeof testSuite | null = null;
 
         // 3. Try each candidate until one succeeds
@@ -1690,8 +1695,32 @@ ${tests}
               continue; // Try next candidate
             }
 
-            // Success! This candidate has a genuine assertion failure
-            // Classification (static vs behavioral) happens later via platform API
+            // RFC-103 Phase 4: Classify test as static vs behavioral INSIDE the loop
+            // This enables retry with platform-provided guidance instead of accepting static tests
+            if (this.registryClient) {
+              const classifyCweId = vulnerability.cweId || vulnerability.cwe_id;
+              const fwName = framework?.name;
+              const classResult = await this.registryClient.classifyTest(
+                candidate.testCode, classifyCweId, fwName
+              );
+              if (classResult?.is_static && classResult?.static_acceptable !== true) {
+                logger.warn(`✗ Candidate ${candidateIdx + 1}: STATIC test rejected (${classResult.reason})`);
+                candidateFailures.push({
+                  candidateIndex: candidateIdx,
+                  error: 'StaticTestNotAcceptable',
+                  errorMessage: `Static source analysis — not acceptable for ${classifyCweId || 'unknown CWE'}`,
+                  generatedCode: candidate.testCode.slice(0, 1500),
+                  retryGuidance: classResult.retry_guidance || undefined
+                });
+                continue; // Try next candidate
+              }
+              // Store classification for post-loop use (avoid duplicate API call)
+              if (classResult) {
+                (candidate as Record<string, unknown>)._classificationResult = classResult;
+              }
+            }
+
+            // Success! Genuine assertion failure + behavioral (or static_acceptable)
             logger.info(`✓ Candidate ${candidateIdx + 1}: SUCCESS — genuine assertion failure, vulnerability proven`);
             successfulCandidate = {
               ...testSuite,
@@ -1721,9 +1750,10 @@ ${tests}
         }
 
         // All candidates failed — record best failure for retry feedback
-        // Prioritize TestPassedUnexpectedly (closest to success) over other errors
+        // Priority: StaticTestNotAcceptable > TestPassedUnexpectedly > last failure
+        const staticRejected = candidateFailures.find(f => f.error === 'StaticTestNotAcceptable');
         const passedButWrong = candidateFailures.find(f => f.error === 'TestPassedUnexpectedly');
-        const bestFailure = passedButWrong || candidateFailures[candidateFailures.length - 1];
+        const bestFailure = staticRejected || passedButWrong || candidateFailures[candidateFailures.length - 1];
 
         if (bestFailure) {
           logger.warn(`All ${candidates.length} candidates failed. Best attempt: ${bestFailure.error}`);
@@ -1733,6 +1763,7 @@ ${tests}
             errorMessage: bestFailure.errorMessage,
             generatedCode: bestFailure.generatedCode,
             testOutput: bestFailure.testOutput,
+            retryGuidance: bestFailure.retryGuidance,
             timestamp: new Date().toISOString()
           });
         }
@@ -2144,7 +2175,11 @@ ${(() => {
 
       // RFC-103: Add specific guidance based on error types using enhanced feedback
       const lastError = lastAttempt.error;
-      if (lastError === 'SyntaxError') {
+      if (lastError === 'StaticTestNotAcceptable') {
+        // RFC-103 Phase 4: Static test rejected — use platform retry guidance
+        logger.info(`[RFC-103] Building retry feedback for StaticTestNotAcceptable (attempt ${lastAttempt.attempt})`);
+        prompt += buildRetryFeedback(lastAttempt, vulnerability, this.availableTestLibraries);
+      } else if (lastError === 'SyntaxError') {
         // Use enhanced feedback for syntax errors
         logger.info(`[RFC-103] Building retry feedback for SyntaxError (attempt ${lastAttempt.attempt})`);
         prompt += buildRetryFeedback(lastAttempt, vulnerability, this.availableTestLibraries);

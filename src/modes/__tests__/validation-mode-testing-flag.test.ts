@@ -161,7 +161,7 @@ describe('ValidationMode - RFC-060-AMENDMENT-001 Pipeline', () => {
       const result = await validationMode.validateVulnerability(mockIssue);
 
       expect(result.validated).toBe(false);
-      expect(result.falsePositiveReason).toBe('Unable to generate valid RED test after 3 attempts');
+      expect(result.falsePositiveReason).toBe('Unable to generate valid RED test after 4 attempts');
     });
 
     it('should mark as not validated when analysis says canBeFixed is false', async () => {
@@ -211,7 +211,7 @@ describe('ValidationMode - RFC-060-AMENDMENT-001 Pipeline', () => {
 
       // In the new pipeline, RSOLV_TESTING_MODE does NOT override test generation failures
       expect(result.validated).toBe(false);
-      expect(result.falsePositiveReason).toBe('Unable to generate valid RED test after 3 attempts');
+      expect(result.falsePositiveReason).toBe('Unable to generate valid RED test after 4 attempts');
     });
 
     it('should still respect analysis failure even in testing mode', async () => {
@@ -242,7 +242,7 @@ describe('ValidationMode - RFC-060-AMENDMENT-001 Pipeline', () => {
       const result = await validationMode.validateVulnerability(mockIssue);
 
       expect(result.validated).toBe(false);
-      expect(result.falsePositiveReason).toBe('Unable to generate valid RED test after 3 attempts');
+      expect(result.falsePositiveReason).toBe('Unable to generate valid RED test after 4 attempts');
     });
 
     it('should include branch name and test suite when validation succeeds', async () => {
