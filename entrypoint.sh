@@ -50,4 +50,7 @@ if [ -n "$INPUT_RSOLVAPIKEY" ]; then
 fi
 
 # Run the action using the built output from /app
-exec bun run /app/dist/index.js
+# NOTE: Do NOT use `exec` here — it replaces the shell process, which prevents
+# the EXIT trap (persist_mise_cache) from firing. Without exec, the shell remains
+# as parent, bun runs as child, and the trap fires after bun exits.
+bun run /app/dist/index.js
