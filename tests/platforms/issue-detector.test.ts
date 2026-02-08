@@ -74,7 +74,7 @@ describe('Multi-Platform Issue Detection', () => {
       },
       ai: {
         provider: 'anthropic',
-        model: 'claude-opus-4-5-20251101',
+        model: 'claude-opus-4-6',
         temperature: 0.2,
         maxTokens: 4000
       }

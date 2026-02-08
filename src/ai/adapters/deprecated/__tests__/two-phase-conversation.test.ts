@@ -7,6 +7,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { GitBasedClaudeCodeAdapter } from '../claude-code-git.js';
+import { MODELS } from '../../../../config/models.js';
 import type { IssueContext } from '../../../../types/index.js';
 import type { AIConfig, IssueAnalysis } from '../../../types.js';
 import * as fs from 'fs/promises';
@@ -117,7 +118,7 @@ describe('Two-Phase Claude Code Conversation', () => {
       provider: 'claude-code',
       apiKey: process.env.ANTHROPIC_API_KEY || 'test-key',
       baseUrl: 'https://api.anthropic.com',
-      model: 'claude-opus-4-5-20251101',
+      model: MODELS.CLAUDE_OPUS,
       maxTokens: 4096,
       temperature: 0.1,
       claudeCodeConfig: {
@@ -178,7 +179,7 @@ describe('Two-Phase Claude Code Conversation', () => {
         provider: 'claude-code',
         apiKey: process.env.ANTHROPIC_API_KEY || 'test-key',
         baseUrl: 'https://api.anthropic.com',
-        model: 'claude-opus-4-5-20251101',
+        model: MODELS.CLAUDE_OPUS,
         maxTokens: 4096,
         temperature: 0.1,
         claudeCodeConfig: {

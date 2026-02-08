@@ -9,6 +9,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { GitBasedClaudeCodeAdapter } from '../claude-code-git.js';
+import { MODELS } from '../../../../config/models.js';
 import type { IssueContext, IssueAnalysis } from '../../../types.js';
 
 // Mock fs and child_process
@@ -67,7 +68,7 @@ describe.skip('GitBasedClaudeCodeAdapter Prompt Effectiveness', () => {
     adapter = new GitBasedClaudeCodeAdapter({
       provider: 'anthropic',
       apiKey: 'test-key',
-      model: 'claude-opus-4-5-20251101',
+      model: MODELS.CLAUDE_OPUS,
       maxTokens: 4096,
       temperature: 0.1,
       claudeCodeConfig: {

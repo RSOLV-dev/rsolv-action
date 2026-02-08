@@ -1,5 +1,6 @@
 import { describe, expect, test, vi, beforeEach, vi } from 'vitest';
 import { analyzeIssue } from '../analyzer.js';
+import { MODELS } from '../../config/models.js';
 import { IssueContext, ActionConfig } from '../../types.js';
 
 // Mock the AI client
@@ -50,7 +51,7 @@ describe('Issue Analyzer', () => {
       aiProvider: {
         type: 'anthropic',
         apiKey: 'test-api-key',
-        model: 'claude-opus-4-5-20251101',
+        model: MODELS.CLAUDE_OPUS,
         temperature: 0.2,
         maxTokens: 2000,
         useVendedCredentials: false

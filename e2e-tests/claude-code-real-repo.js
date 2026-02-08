@@ -154,7 +154,7 @@ async function testStandardApproach() {
   const config = {
     provider: 'anthropic',
     apiKey: process.env.ANTHROPIC_API_KEY,
-    modelName: 'claude-opus-4-5-20251101'
+    modelName: 'claude-opus-4-6'
   };
   
   // Create client

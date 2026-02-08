@@ -1,4 +1,5 @@
 import { beforeEach, afterEach, vi } from 'vitest';
+import { MODELS } from '../src/config/models.js';
 
 console.log('[Vitest Setup] Test environment configured');
 
@@ -95,7 +96,7 @@ export const testConfig = {
   githubToken: 'test-github-token',
   aiProvider: 'anthropic' as const,
   aiApiKey: 'test-anthropic-key',
-  aiModel: 'claude-opus-4-5-20251101',
+  aiModel: MODELS.CLAUDE_OPUS,
   aiTemperature: 0.3,
   aiMaxTokens: 4000,
   dryRun: true,

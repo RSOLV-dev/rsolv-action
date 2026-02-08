@@ -3,6 +3,7 @@ import * as yaml from 'js-yaml';
 import { z } from 'zod';
 import { ActionConfig } from '../types/index.js';
 import { logger } from '../utils/logger.js';
+import { DEFAULT_MODEL } from './models.js';
 
 // Zod schema for validating configuration
 const AiProviderConfigSchema = z.object({
@@ -148,7 +149,7 @@ function getDefaultConfig(): Partial<ActionConfig> {
     useStructuredPhases: true,  // Default to true - CLI approach works with structured phases
     aiProvider: {
       provider: 'claude-code',
-      model: 'claude-sonnet-4-5-20250929',  // Claude Sonnet 4.5 - Latest model
+      model: DEFAULT_MODEL,  // Claude Sonnet 4.5 - Latest model
       temperature: 0.2,
       // maxTokens intentionally omitted - resolved by token-utils based on use case
       contextLimit: 100000,
@@ -321,7 +322,7 @@ function loadConfigFromEnv(): Partial<ActionConfig> {
     envConfig.aiProvider = {
       provider: process.env.RSOLV_AI_PROVIDER || 'claude-code',  // Default to claude-code
       providerApiKey: providerApiKey,
-      model: process.env.RSOLV_AI_MODEL || 'claude-sonnet-4-5-20250929',  // Default to Sonnet 4.5
+      model: process.env.RSOLV_AI_MODEL || DEFAULT_MODEL,  // Default to Sonnet 4.5
       baseUrl: process.env.RSOLV_AI_BASE_URL,
       // CRITICAL: Preserve useVendedCredentials flag - default to true per RFC-012
       useVendedCredentials: process.env.RSOLV_USE_VENDED_CREDENTIALS !== undefined ?

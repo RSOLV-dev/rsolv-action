@@ -4,6 +4,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { loadConfig } from '../index.js';
+import { MODELS, DEFAULT_MODEL } from '../models.js';
 import * as fs from 'fs';
 
 // Mock fs and yaml to control config file loading
@@ -49,7 +50,7 @@ describe.skip('Model Configuration', () => {
       const config = await loadConfig();
 
       // THEN: Should use Claude 4 Sonnet
-      expect(config.aiProvider.model).toBe('claude-sonnet-4-5-20250929');
+      expect(config.aiProvider.model).toBe(DEFAULT_MODEL);
     });
 
     it('should use Claude 4 Sonnet even when provider is set via env', async () => {
@@ -61,7 +62,7 @@ describe.skip('Model Configuration', () => {
       const config = await loadConfig();
 
       // THEN: Should still default to Claude 4 Sonnet
-      expect(config.aiProvider.model).toBe('claude-sonnet-4-5-20250929');
+      expect(config.aiProvider.model).toBe(DEFAULT_MODEL);
     });
 
     it('should preserve useVendedCredentials when env vars are set', async () => {
@@ -78,13 +79,13 @@ describe.skip('Model Configuration', () => {
 
     it('should respect explicit model override', async () => {
       // GIVEN: Explicit model override
-      process.env.RSOLV_AI_MODEL = 'claude-opus-4-5-20251101';
+      process.env.RSOLV_AI_MODEL = MODELS.CLAUDE_OPUS;
 
       // WHEN: Loading configuration
       const config = await loadConfig();
 
       // THEN: Should use the overridden model
-      expect(config.aiProvider.model).toBe('claude-opus-4-5-20251101');
+      expect(config.aiProvider.model).toBe(MODELS.CLAUDE_OPUS);
     });
   });
 
@@ -95,7 +96,7 @@ describe.skip('Model Configuration', () => {
 
       // THEN: Should have Claude 4 Sonnet with proper settings
       expect(config.aiProvider).toMatchObject({
-        model: 'claude-sonnet-4-5-20250929',
+        model: DEFAULT_MODEL,
         provider: 'claude-code',
         contextLimit: 100000,
         timeout: 3600000, // 60 minutes for complex operations
@@ -119,7 +120,7 @@ describe.skip('Model Configuration', () => {
       // THEN: Should merge properly
       expect(config.aiProvider.provider).toBe('claude-code');
       expect(config.aiProvider.temperature).toBe(0.7);
-      expect(config.aiProvider.model).toBe('claude-sonnet-4-5-20250929'); // Default preserved
+      expect(config.aiProvider.model).toBe(DEFAULT_MODEL); // Default preserved
       expect(config.aiProvider.useVendedCredentials).toBe(true); // Default preserved
     });
   });

@@ -11,6 +11,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { processIssueWithGit, getMaxIterations } from '../git-based-processor.js';
+import { MODELS } from '../../config/models.js';
 import { IssueContext, ActionConfig } from '../../types/index.js';
 import * as child_process from 'child_process';
 
@@ -271,7 +272,7 @@ describe.skip('processIssueWithGit - Characterization Tests', () => {
       aiProvider: {
         provider: 'anthropic',
         apiKey: 'test-api-key',
-        model: 'claude-opus-4-5-20251101',
+        model: MODELS.CLAUDE_OPUS,
         maxTokens: 4096,
         useVendedCredentials: false
       },

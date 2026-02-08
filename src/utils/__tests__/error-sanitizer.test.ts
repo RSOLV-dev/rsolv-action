@@ -87,7 +87,7 @@ describe('Error Sanitizer', () => {
 
     test('should sanitize model names', () => {
       const messages = [
-        'Model claude-opus-4-5-20251101 not available',
+        'Model claude-opus-4-6 not available',
         'Using gpt-4-turbo-preview',
         'Failed to load claude-instant-1.2',
         'text-davinci-003 is deprecated'

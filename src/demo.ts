@@ -9,6 +9,7 @@ import { generateSolution } from './ai/solution.js';
 import { analyzeIssue } from './ai/analyzer.js';
 import { ActionConfig } from './types/index.js';
 import { IssueContext } from './types/index.js';
+import { MODELS, OPENROUTER_MODELS } from './config/models.js';
 
 // Ensure GitHub token is set
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
@@ -112,11 +113,11 @@ async function main() {
     switch (provider) {
     case 'anthropic':
       apiKey = process.env.ANTHROPIC_API_KEY || '';
-      modelName = 'claude-sonnet-4-20250514';
+      modelName = MODELS.CLAUDE_SONNET;
       break;
     case 'openrouter':
       apiKey = process.env.OPENROUTER_API_KEY || '';
-      modelName = 'anthropic/claude-opus-4-5-20251101';
+      modelName = OPENROUTER_MODELS.CLAUDE_OPUS;
       break;
     case 'ollama':
       apiKey = process.env.OLLAMA_API_KEY || ''; // Can be URL:TOKEN format
@@ -124,7 +125,7 @@ async function main() {
       break;
     default:
       apiKey = process.env.ANTHROPIC_API_KEY || '';
-      modelName = 'claude-sonnet-4-20250514';
+      modelName = MODELS.CLAUDE_SONNET;
     }
     
     // Create proper ActionConfig

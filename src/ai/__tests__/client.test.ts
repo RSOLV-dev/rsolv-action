@@ -3,6 +3,7 @@
  */
 import { test, expect, vi, describe, beforeEach, vi } from 'vitest';
 import { getAiClient } from '../client.js';
+import { MODELS } from '../../config/models.js';
 
 // Mock the logger to avoid noisy logs
 vi.mock('../../utils/logger', () => ({
@@ -171,7 +172,7 @@ describe('AI Client Factory', () => {
       const client = await getAiClient({
         provider: 'anthropic',
         apiKey: 'test-key',
-        model: 'claude-opus-4-5-20251101',
+        model: MODELS.CLAUDE_OPUS,
         temperature: 0.7,
         maxTokens: 4000
       });

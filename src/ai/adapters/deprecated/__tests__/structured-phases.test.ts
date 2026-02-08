@@ -8,6 +8,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { GitBasedClaudeCodeAdapter } from '../claude-code-git.js';
 import { ClaudeCodeAdapter } from '../claude-code.js';
+import { MODELS } from '../../../../config/models.js';
 import type { IssueContext, IssueAnalysis } from '../../../../types/index.js';
 import type { SDKMessage } from '@anthropic-ai/claude-code';
 
@@ -89,7 +90,7 @@ describe('Structured Phased Prompting - RED Phase', () => {
       {
         apiKey: 'test-key',
         baseUrl: 'https://api.anthropic.com',
-        model: 'claude-opus-4-5-20251101',
+        model: MODELS.CLAUDE_OPUS,
         maxTokens: 4096,
         temperature: 0.1,
         claudeCodeConfig: {
