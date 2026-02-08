@@ -1289,7 +1289,15 @@ export class PhaseExecutor {
               // Add vulnerability indicators for mitigation phase
               hasSpecificVulnerabilities: validationData.validated,
               vulnerabilities: issue.specificVulnerabilities || [],
-              confidence: 'high' as const
+              confidence: 'high' as const,
+              // RFC-103 Phase 6: Stats dimensions
+              testType: validationData.testType,
+              cweId: validationData.cweId,
+              framework: validationData.framework,
+              retryCount: validationData.retryCount,
+              classificationSource: validationData.classificationSource,
+              infrastructureFailure: validationData.infrastructureFailure || false,
+              validationInconclusive: validationData.validationInconclusive || false
             }
           }, {
             repo: `${options.repository!.owner}/${options.repository!.name}`,
