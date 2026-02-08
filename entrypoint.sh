@@ -21,7 +21,7 @@ fi
 # actions/cache@v4 on the host populates .mise-cache/ before the container starts.
 # We copy cached installs into the default mise data dir so `mise install` is a no-op.
 MISE_CACHE_PATH="/github/workspace/.mise-cache"
-MISE_INSTALL_PATH="${MISE_DATA_DIR:-/root/.local/share/mise}"
+MISE_INSTALL_PATH="${MISE_DATA_DIR:-${HOME:-/root}/.local/share/mise}"
 
 if [ -d "$MISE_CACHE_PATH/installs" ]; then
   echo "[RSOLV] Restoring cached mise runtimes..."
@@ -32,17 +32,11 @@ fi
 
 # Persist mise installs back to workspace cache on exit (for actions/cache to save)
 persist_mise_cache() {
-  echo "[RSOLV] EXIT trap fired — checking for mise installs to cache..."
-  echo "[RSOLV] MISE_INSTALL_PATH=$MISE_INSTALL_PATH"
-  ls -la "$MISE_INSTALL_PATH/installs/" 2>/dev/null || echo "[RSOLV] No installs directory found"
   if [ -d "$MISE_INSTALL_PATH/installs" ] && [ -d "/github/workspace" ]; then
     echo "[RSOLV] Persisting mise runtimes to cache..."
     mkdir -p "$MISE_CACHE_PATH/installs"
     cp -a "$MISE_INSTALL_PATH/installs/"* "$MISE_CACHE_PATH/installs/" 2>/dev/null || true
     echo "[RSOLV] Cached runtimes: $(ls "$MISE_CACHE_PATH/installs/" 2>/dev/null | tr '\n' ' ')"
-    echo "[RSOLV] Cache directory size: $(du -sh "$MISE_CACHE_PATH" 2>/dev/null | cut -f1)"
-  else
-    echo "[RSOLV] Skipping cache persist: installs=$(test -d "$MISE_INSTALL_PATH/installs" && echo yes || echo no), workspace=$(test -d /github/workspace && echo yes || echo no)"
   fi
 }
 trap persist_mise_cache EXIT
@@ -59,8 +53,4 @@ fi
 # NOTE: Do NOT use `exec` here — it replaces the shell process, which prevents
 # the EXIT trap (persist_mise_cache) from firing. Without exec, the shell remains
 # as parent, bun runs as child, and the trap fires after bun exits.
-echo "[RSOLV] Starting bun process..."
 bun run /app/dist/index.js
-BUN_EXIT_CODE=$?
-echo "[RSOLV] bun exited with code $BUN_EXIT_CODE"
-exit $BUN_EXIT_CODE
