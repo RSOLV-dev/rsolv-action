@@ -9,10 +9,11 @@
  * to properly classify results.
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ValidationMode } from '../validation-mode.js';
 import { parseTestOutputCounts, isInfrastructureFailure } from '../../utils/test-result-classifier.js';
 import { createTestConfig, type TestResultClassification } from './test-fixtures.js';
+import type { VulnerabilityRegistryClient, TestResultClassificationResult } from '../../external/vulnerability-registry-client.js';
 
 describe('Test Result Classification', () => {
   let validationMode: ValidationMode;
@@ -23,41 +24,41 @@ describe('Test Result Classification', () => {
   });
 
   describe('Exit Code Based Classification', () => {
-    it('should classify exit code 0 as test passed (not valid failure)', () => {
-      const result = validationMode.classifyTestResult(0, 'All tests passed', '');
+    it('should classify exit code 0 as test passed (not valid failure)', async () => {
+      const result = await validationMode.classifyTestResult(0, 'All tests passed', '');
 
       expect(result.type).toBe('test_passed');
       expect(result.isValidFailure).toBe(false);
       expect(result.reason).toMatch(/passed|not proven/i);
     });
 
-    it('should classify exit code 127 as command not found', () => {
+    it('should classify exit code 127 as command not found', async () => {
       const stderr = 'vitest: command not found';
-      const result = validationMode.classifyTestResult(127, '', stderr);
+      const result = await validationMode.classifyTestResult(127, '', stderr);
 
       expect(result.type).toBe('command_not_found');
       expect(result.isValidFailure).toBe(false);
       expect(result.reason).toMatch(/not found|not installed/i);
     });
 
-    it('should classify exit code 137 as OOM killed', () => {
-      const result = validationMode.classifyTestResult(137, '', '');
+    it('should classify exit code 137 as OOM killed', async () => {
+      const result = await validationMode.classifyTestResult(137, '', '');
 
       expect(result.type).toBe('oom_killed');
       expect(result.isValidFailure).toBe(false);
       expect(result.reason).toMatch(/memory|killed/i);
     });
 
-    it('should classify exit code 143 as terminated', () => {
-      const result = validationMode.classifyTestResult(143, '', '');
+    it('should classify exit code 143 as terminated', async () => {
+      const result = await validationMode.classifyTestResult(143, '', '');
 
       expect(result.type).toBe('terminated');
       expect(result.isValidFailure).toBe(false);
       expect(result.reason).toMatch(/terminated|interrupted/i);
     });
 
-    it('should classify exit code 130 as interrupted (SIGINT)', () => {
-      const result = validationMode.classifyTestResult(130, '', '');
+    it('should classify exit code 130 as interrupted (SIGINT)', async () => {
+      const result = await validationMode.classifyTestResult(130, '', '');
 
       expect(result.type).toBe('terminated');
       expect(result.isValidFailure).toBe(false);
@@ -65,52 +66,52 @@ describe('Test Result Classification', () => {
   });
 
   describe('Syntax Error Detection', () => {
-    it('should detect JavaScript SyntaxError', () => {
+    it('should detect JavaScript SyntaxError', async () => {
       const stderr = `
 SyntaxError: Unexpected token '{'
     at Parser.parseStatement (internal/deps/acorn/acorn/dist/acorn.js:123:45)
       `;
-      const result = validationMode.classifyTestResult(1, '', stderr);
+      const result = await validationMode.classifyTestResult(1, '', stderr);
 
       expect(result.type).toBe('syntax_error');
       expect(result.isValidFailure).toBe(false);
       expect(result.reason).toMatch(/syntax/i);
     });
 
-    it('should detect unexpected end of input', () => {
+    it('should detect unexpected end of input', async () => {
       const stderr = 'SyntaxError: Unexpected end of input';
-      const result = validationMode.classifyTestResult(1, '', stderr);
+      const result = await validationMode.classifyTestResult(1, '', stderr);
 
       expect(result.type).toBe('syntax_error');
       expect(result.isValidFailure).toBe(false);
     });
 
-    it('should detect unexpected token errors', () => {
+    it('should detect unexpected token errors', async () => {
       const stderr = 'SyntaxError: Unexpected token \'else\'';
-      const result = validationMode.classifyTestResult(1, '', stderr);
+      const result = await validationMode.classifyTestResult(1, '', stderr);
 
       expect(result.type).toBe('syntax_error');
       expect(result.isValidFailure).toBe(false);
     });
 
-    it('should detect Python syntax errors', () => {
+    it('should detect Python syntax errors', async () => {
       const stderr = `
   File "test_user.py", line 10
     if x = 5:
          ^
 SyntaxError: invalid syntax
       `;
-      const result = validationMode.classifyTestResult(1, '', stderr);
+      const result = await validationMode.classifyTestResult(1, '', stderr);
 
       expect(result.type).toBe('syntax_error');
       expect(result.isValidFailure).toBe(false);
     });
 
-    it('should detect Ruby syntax errors', () => {
+    it('should detect Ruby syntax errors', async () => {
       const stderr = `
 user_spec.rb:15: syntax error, unexpected keyword_end
       `;
-      const result = validationMode.classifyTestResult(1, '', stderr);
+      const result = await validationMode.classifyTestResult(1, '', stderr);
 
       expect(result.type).toBe('syntax_error');
       expect(result.isValidFailure).toBe(false);
@@ -118,56 +119,56 @@ user_spec.rb:15: syntax error, unexpected keyword_end
   });
 
   describe('Runtime Error Detection', () => {
-    it('should detect ReferenceError (undefined variable)', () => {
+    it('should detect ReferenceError (undefined variable)', async () => {
       const stderr = `
 ReferenceError: undefinedVariable is not defined
     at Object.<anonymous> (test.js:5:1)
       `;
-      const result = validationMode.classifyTestResult(1, '', stderr);
+      const result = await validationMode.classifyTestResult(1, '', stderr);
 
       expect(result.type).toBe('runtime_error');
       expect(result.isValidFailure).toBe(false);
       expect(result.reason).toMatch(/reference|undefined/i);
     });
 
-    it('should detect "is not defined" errors', () => {
+    it('should detect "is not defined" errors', async () => {
       const stderr = 'ReferenceError: detectSQLInjection is not defined';
-      const result = validationMode.classifyTestResult(1, '', stderr);
+      const result = await validationMode.classifyTestResult(1, '', stderr);
 
       expect(result.type).toBe('runtime_error');
       expect(result.isValidFailure).toBe(false);
     });
 
-    it('should detect TypeError for missing functions', () => {
+    it('should detect TypeError for missing functions', async () => {
       const stderr = 'TypeError: x.someMethod is not a function';
-      const result = validationMode.classifyTestResult(1, '', stderr);
+      const result = await validationMode.classifyTestResult(1, '', stderr);
 
       expect(result.type).toBe('runtime_error');
       expect(result.isValidFailure).toBe(false);
     });
 
     // RFC-101 v3.8.71: Database unavailable patterns
-    it('should detect Ecto database creation failure (Elixir)', () => {
+    it('should detect Ecto database creation failure (Elixir)', async () => {
       const stderr = '** (Mix) The database for Carafe.Repo couldn\'t be created: killed';
-      const result = validationMode.classifyTestResult(1, '', stderr);
+      const result = await validationMode.classifyTestResult(1, '', stderr);
 
       expect(result.type).toBe('runtime_error');
       expect(result.isValidFailure).toBe(false);
       expect(result.reason).toMatch(/database|PostgreSQL/i);
     });
 
-    it('should detect PostgreSQL connection refused', () => {
+    it('should detect PostgreSQL connection refused', async () => {
       const stderr = 'could not connect to server: Connection refused\n\tIs the server running on host "localhost"?';
-      const result = validationMode.classifyTestResult(1, '', stderr);
+      const result = await validationMode.classifyTestResult(1, '', stderr);
 
       expect(result.type).toBe('runtime_error');
       expect(result.isValidFailure).toBe(false);
       expect(result.reason).toMatch(/PostgreSQL|connection/i);
     });
 
-    it('should detect MySQL connection failure', () => {
+    it('should detect MySQL connection failure', async () => {
       const stderr = "Can't connect to MySQL server on 'localhost'";
-      const result = validationMode.classifyTestResult(1, '', stderr);
+      const result = await validationMode.classifyTestResult(1, '', stderr);
 
       expect(result.type).toBe('runtime_error');
       expect(result.isValidFailure).toBe(false);
@@ -176,9 +177,9 @@ ReferenceError: undefinedVariable is not defined
   });
 
   describe('Test File Discovery Errors', () => {
-    it('should detect vitest "No test files found" as runtime_error', () => {
+    it('should detect vitest "No test files found" as runtime_error', async () => {
       const stdout = `No test files found, exiting with code 1\n\nfilter: /github/workspace/__tests__/vulnerability_validation.ts\ninclude: **/*.{test,spec}.?(c|m)[jt]s?(x)`;
-      const result = validationMode.classifyTestResult(1, stdout, '');
+      const result = await validationMode.classifyTestResult(1, stdout, '');
 
       expect(result.type).toBe('runtime_error');
       expect(result.isValidFailure).toBe(false);
@@ -187,56 +188,56 @@ ReferenceError: undefinedVariable is not defined
   });
 
   describe('Missing Dependency Detection', () => {
-    it('should detect Cannot find module error (Node.js)', () => {
+    it('should detect Cannot find module error (Node.js)', async () => {
       const stderr = `
 Error: Cannot find module 'express'
     at Function.Module._resolveFilename (internal/modules/cjs/loader.js:636:15)
       `;
-      const result = validationMode.classifyTestResult(1, '', stderr);
+      const result = await validationMode.classifyTestResult(1, '', stderr);
 
       expect(result.type).toBe('missing_dependency');
       expect(result.isValidFailure).toBe(false);
       expect(result.reason).toMatch(/dependency|module/i);
     });
 
-    it('should detect ModuleNotFoundError (Python)', () => {
+    it('should detect ModuleNotFoundError (Python)', async () => {
       const stderr = 'ModuleNotFoundError: No module named \'django\'';
-      const result = validationMode.classifyTestResult(1, '', stderr);
+      const result = await validationMode.classifyTestResult(1, '', stderr);
 
       expect(result.type).toBe('missing_dependency');
       expect(result.isValidFailure).toBe(false);
     });
 
-    it('should detect No module named error (Python)', () => {
+    it('should detect No module named error (Python)', async () => {
       const stderr = 'ImportError: No module named \'flask\'';
-      const result = validationMode.classifyTestResult(1, '', stderr);
+      const result = await validationMode.classifyTestResult(1, '', stderr);
 
       expect(result.type).toBe('missing_dependency');
       expect(result.isValidFailure).toBe(false);
     });
 
-    it('should detect LoadError (Ruby)', () => {
+    it('should detect LoadError (Ruby)', async () => {
       const stderr = 'LoadError: cannot load such file -- rails';
-      const result = validationMode.classifyTestResult(1, '', stderr);
+      const result = await validationMode.classifyTestResult(1, '', stderr);
 
       expect(result.type).toBe('missing_dependency');
       expect(result.isValidFailure).toBe(false);
     });
 
-    it('should detect Ruby LoadError with (LoadError) suffix', () => {
+    it('should detect Ruby LoadError with (LoadError) suffix', async () => {
       // Real Ruby output format: "cannot load such file" comes BEFORE "(LoadError)"
       const stderr = `/github/workspace/spec/security_test_spec.rb:1:in \`require': cannot load such file -- rails_helper (LoadError)
 \tfrom /github/workspace/spec/security_test_spec.rb:1:in \`<top (required)>'`;
-      const result = validationMode.classifyTestResult(1, '', stderr);
+      const result = await validationMode.classifyTestResult(1, '', stderr);
 
       expect(result.type).toBe('missing_dependency');
       expect(result.isValidFailure).toBe(false);
     });
 
-    it('should detect Bundler GemNotFound error (Ruby)', () => {
+    it('should detect Bundler GemNotFound error (Ruby)', async () => {
       const stderr = `bundler: failed to load command: rspec (/github/home/.local/share/mise/installs/ruby/3.2.1/bin/rspec)
 /github/home/.local/share/mise/installs/ruby/3.2.1/lib/ruby/gems/3.2.0/gems/bundler-2.7.2/lib/bundler/definition.rb:691:in \`materialize': Could not find rails-6.0.0, coffee-rails-5.0.0, rspec-rails-4.0.0.beta3 in locally installed gems (Bundler::GemNotFound)`;
-      const result = validationMode.classifyTestResult(1, '', stderr);
+      const result = await validationMode.classifyTestResult(1, '', stderr);
 
       expect(result.type).toBe('missing_dependency');
       expect(result.isValidFailure).toBe(false);
@@ -245,19 +246,19 @@ Error: Cannot find module 'express'
   });
 
   describe('Valid Test Failure Detection', () => {
-    it('should classify AssertionError as valid failure', () => {
+    it('should classify AssertionError as valid failure', async () => {
       const stderr = `
 AssertionError: expected 'safe' to equal 'vulnerable'
     at Context.<anonymous> (test.js:10:14)
       `;
-      const result = validationMode.classifyTestResult(1, '', stderr);
+      const result = await validationMode.classifyTestResult(1, '', stderr);
 
       expect(result.type).toBe('test_failed');
       expect(result.isValidFailure).toBe(true);
       expect(result.reason).toMatch(/assertion|proven/i);
     });
 
-    it('should classify Jest/Vitest expect failures as valid', () => {
+    it('should classify Jest/Vitest expect failures as valid', async () => {
       const stdout = `
  FAIL  tests/user.test.js
   ● Security Test › should detect SQL injection
@@ -269,46 +270,46 @@ AssertionError: expected 'safe' to equal 'vulnerable'
 
       at Object.<anonymous> (tests/user.test.js:15:20)
       `;
-      const result = validationMode.classifyTestResult(1, stdout, '');
+      const result = await validationMode.classifyTestResult(1, stdout, '');
 
       expect(result.type).toBe('test_failed');
       expect(result.isValidFailure).toBe(true);
     });
 
-    it('should classify "expected ... to" patterns as valid (Chai/RSpec)', () => {
+    it('should classify "expected ... to" patterns as valid (Chai/RSpec)', async () => {
       const stderr = 'expected result to be vulnerable';
-      const result = validationMode.classifyTestResult(1, '', stderr);
+      const result = await validationMode.classifyTestResult(1, '', stderr);
 
       expect(result.type).toBe('test_failed');
       expect(result.isValidFailure).toBe(true);
     });
 
-    it('should classify FAIL marker with exit 1 as valid failure', () => {
+    it('should classify FAIL marker with exit 1 as valid failure', async () => {
       const stdout = `
 Test Suites: 1 failed, 0 passed, 1 total
 Tests:       3 failed, 0 passed, 3 total
 FAIL tests/security.test.js
       `;
-      const result = validationMode.classifyTestResult(1, stdout, '');
+      const result = await validationMode.classifyTestResult(1, stdout, '');
 
       expect(result.type).toBe('test_failed');
       expect(result.isValidFailure).toBe(true);
     });
 
-    it('should classify checkmark failure symbols as valid', () => {
+    it('should classify checkmark failure symbols as valid', async () => {
       const stdout = '✗ should detect SQL injection (5ms)';
-      const result = validationMode.classifyTestResult(1, stdout, '');
+      const result = await validationMode.classifyTestResult(1, stdout, '');
 
       expect(result.type).toBe('test_failed');
       expect(result.isValidFailure).toBe(true);
     });
 
-    it('should classify "Received:" patterns as valid (Jest matcher output)', () => {
+    it('should classify "Received:" patterns as valid (Jest matcher output)', async () => {
       const stdout = `
     Expected: true
     Received: false
       `;
-      const result = validationMode.classifyTestResult(1, stdout, '');
+      const result = await validationMode.classifyTestResult(1, stdout, '');
 
       expect(result.type).toBe('test_failed');
       expect(result.isValidFailure).toBe(true);
@@ -316,54 +317,54 @@ FAIL tests/security.test.js
   });
 
   describe('Edge Cases', () => {
-    it('should return unknown for exit 1 without clear pattern', () => {
-      const result = validationMode.classifyTestResult(1, '', 'Some error occurred');
+    it('should return unknown for exit 1 without clear pattern', async () => {
+      const result = await validationMode.classifyTestResult(1, '', 'Some error occurred');
 
       expect(result.type).toBe('unknown');
       expect(result.isValidFailure).toBe(false);
       expect(result.reason).toMatch(/unknown|unclear|pattern/i);
     });
 
-    it('should handle empty stdout and stderr', () => {
-      const result = validationMode.classifyTestResult(1, '', '');
+    it('should handle empty stdout and stderr', async () => {
+      const result = await validationMode.classifyTestResult(1, '', '');
 
       expect(result.type).toBe('unknown');
       expect(result.isValidFailure).toBe(false);
     });
 
-    it('should prioritize syntax errors over FAIL markers', () => {
+    it('should prioritize syntax errors over FAIL markers', async () => {
       // If there's a syntax error AND a FAIL marker, syntax error is the real issue
       const stderr = 'SyntaxError: Unexpected token\nFAIL';
-      const result = validationMode.classifyTestResult(1, '', stderr);
+      const result = await validationMode.classifyTestResult(1, '', stderr);
 
       expect(result.type).toBe('syntax_error');
       expect(result.isValidFailure).toBe(false);
     });
 
-    it('should check both stdout and stderr for patterns', () => {
+    it('should check both stdout and stderr for patterns', async () => {
       const stdout = 'AssertionError: expected true to be false';
       const stderr = '';
-      const result = validationMode.classifyTestResult(1, stdout, stderr);
+      const result = await validationMode.classifyTestResult(1, stdout, stderr);
 
       expect(result.type).toBe('test_failed');
       expect(result.isValidFailure).toBe(true);
     });
 
-    it('should detect ENOENT errors as file not found', () => {
+    it('should detect ENOENT errors as file not found', async () => {
       const stderr = 'Error: ENOENT: no such file or directory, open \'config.json\'';
-      const result = validationMode.classifyTestResult(1, '', stderr);
+      const result = await validationMode.classifyTestResult(1, '', stderr);
 
       expect(result.type).toBe('command_not_found');
       expect(result.isValidFailure).toBe(false);
     });
 
-    it('should classify mocha "0 passing" as not a valid failure', () => {
-      const result = validationMode.classifyTestResult(1, '\n  0 passing (1ms)\n\n', '');
+    it('should classify mocha "0 passing" as not a valid failure', async () => {
+      const result = await validationMode.classifyTestResult(1, '\n  0 passing (1ms)\n\n', '');
       expect(result.isValidFailure).toBe(false);
       expect(result.type).toBe('runtime_error');
     });
 
-    it('should classify mocha "0 passing, 1 failing" with AssertionError as VALID failure', () => {
+    it('should classify mocha "0 passing, 1 failing" with AssertionError as VALID failure', async () => {
       // Mocha output for a genuine test failure: 0 pass, 1 fail, with assertion error
       // This is NOT module-level assertions — mocha discovered and ran the test
       const stdout = `
@@ -378,12 +379,12 @@ FAIL tests/security.test.js
      AssertionError [ERR_ASSERTION]: Found hardcoded password in source code
       at Context.<anonymous> (test/security/cwe-798.test.js:12:14)
       `;
-      const result = validationMode.classifyTestResult(1, stdout, '');
+      const result = await validationMode.classifyTestResult(1, stdout, '');
       expect(result.isValidFailure).toBe(true);
       expect(result.type).toBe('test_failed');
     });
 
-    it('should classify mocha "0 passing" with AssertionError but NO failing count as module-level', () => {
+    it('should classify mocha "0 passing" with AssertionError but NO failing count as module-level', async () => {
       // Module-level assertions: assertion runs at load time, mocha never discovers tests
       // Output has "0 passing" and AssertionError but NO "N failing" line
       const stdout = `
@@ -393,36 +394,36 @@ FAIL tests/security.test.js
 AssertionError [ERR_ASSERTION]: Found hardcoded password
     at Object.<anonymous> (test.js:5:1)
       `;
-      const result = validationMode.classifyTestResult(1, stdout, stderr);
+      const result = await validationMode.classifyTestResult(1, stdout, stderr);
       expect(result.isValidFailure).toBe(false);
       expect(result.type).toBe('runtime_error');
       expect(result.reason).toMatch(/module-level/i);
     });
 
-    it('should classify RSpec "0 examples, 0 failures" with error as not valid', () => {
+    it('should classify RSpec "0 examples, 0 failures" with error as not valid', async () => {
       // RSpec output when test crashes during load (e.g., LoadError outside examples)
       const stdout = `Finished in 0.00023 seconds (files took 0.5 seconds to load)
 0 examples, 0 failures, 1 error occurred outside of examples`;
-      const result = validationMode.classifyTestResult(1, stdout, '');
+      const result = await validationMode.classifyTestResult(1, stdout, '');
       expect(result.isValidFailure).toBe(false);
       expect(result.type).toBe('runtime_error');
     });
 
-    it('should classify "No test files found" as not a valid failure', () => {
-      const result = validationMode.classifyTestResult(1, 'No test files found', '');
+    it('should classify "No test files found" as not a valid failure', async () => {
+      const result = await validationMode.classifyTestResult(1, 'No test files found', '');
       expect(result.isValidFailure).toBe(false);
     });
 
-    it('should NOT classify "0 passing" as invalid when real passes also present', () => {
+    it('should NOT classify "0 passing" as invalid when real passes also present', async () => {
       // Mocha output with real passes + failures should be classified as valid failure
       const stdout = '3 passing (5ms)\n1 failing\n\nAssertionError: expected safe to equal unsafe';
-      const result = validationMode.classifyTestResult(1, stdout, '');
+      const result = await validationMode.classifyTestResult(1, stdout, '');
       expect(result.isValidFailure).toBe(true);
     });
   });
 
   describe('Framework-Specific Output', () => {
-    it('should classify pytest failure output as valid', () => {
+    it('should classify pytest failure output as valid', async () => {
       const stdout = `
 =================================== FAILURES ===================================
 ______________________________ test_sql_injection ______________________________
@@ -436,13 +437,13 @@ tests/test_security.py:15: AssertionError
 =========================== short test summary info ============================
 FAILED tests/test_security.py::test_sql_injection - AssertionError: assert...
       `;
-      const result = validationMode.classifyTestResult(1, stdout, '');
+      const result = await validationMode.classifyTestResult(1, stdout, '');
 
       expect(result.type).toBe('test_failed');
       expect(result.isValidFailure).toBe(true);
     });
 
-    it('should classify RSpec failure output as valid', () => {
+    it('should classify RSpec failure output as valid', async () => {
       const stdout = `
 Failures:
 
@@ -455,13 +456,13 @@ Failures:
 Finished in 0.5 seconds (files took 1.2 seconds to load)
 1 example, 1 failure
       `;
-      const result = validationMode.classifyTestResult(1, stdout, '');
+      const result = await validationMode.classifyTestResult(1, stdout, '');
 
       expect(result.type).toBe('test_failed');
       expect(result.isValidFailure).toBe(true);
     });
 
-    it('should classify PHPUnit failure output as valid', () => {
+    it('should classify PHPUnit failure output as valid', async () => {
       const stdout = `
 PHPUnit 9.5.10 by Sebastian Bergmann and contributors.
 
@@ -479,13 +480,13 @@ Failed asserting that false is true.
 FAILURES!
 Tests: 1, Assertions: 1, Failures: 1.
       `;
-      const result = validationMode.classifyTestResult(1, stdout, '');
+      const result = await validationMode.classifyTestResult(1, stdout, '');
 
       expect(result.type).toBe('test_failed');
       expect(result.isValidFailure).toBe(true);
     });
 
-    it('should classify JUnit failure output as valid', () => {
+    it('should classify JUnit failure output as valid', async () => {
       const stdout = `
 [ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0
 
@@ -493,13 +494,13 @@ Tests: 1, Assertions: 1, Failures: 1.
 java.lang.AssertionError: expected:<true> but was:<false>
     at org.junit.Assert.fail(Assert.java:88)
       `;
-      const result = validationMode.classifyTestResult(1, stdout, '');
+      const result = await validationMode.classifyTestResult(1, stdout, '');
 
       expect(result.type).toBe('test_failed');
       expect(result.isValidFailure).toBe(true);
     });
 
-    it('should classify ExUnit failure output as valid', () => {
+    it('should classify ExUnit failure output as valid', async () => {
       const stdout = `
   1) test detects SQL injection (RsolvTest.SecurityTest)
      test/rsolv/security_test.exs:15
@@ -511,7 +512,7 @@ java.lang.AssertionError: expected:<true> but was:<false>
 Finished in 0.1 seconds
 1 test, 1 failure
       `;
-      const result = validationMode.classifyTestResult(1, stdout, '');
+      const result = await validationMode.classifyTestResult(1, stdout, '');
 
       expect(result.type).toBe('test_failed');
       expect(result.isValidFailure).toBe(true);
@@ -600,5 +601,152 @@ describe('isInfrastructureFailure (RFC-103 B4)', () => {
   it('should return false for syntax_error type', () => {
     const result = { type: 'syntax_error' as const, isValidFailure: false, reason: 'Syntax error in test' };
     expect(isInfrastructureFailure(result)).toBe(false);
+  });
+});
+
+describe('Platform-first classifyTestResult (Phase 5.1)', () => {
+  /** Helper to create a mock registry client with classifyTestResult */
+  function createMockRegistryClient(
+    response: TestResultClassificationResult | null
+  ): VulnerabilityRegistryClient {
+    return {
+      classifyTestResult: vi.fn().mockResolvedValue(response),
+      classifyTest: vi.fn().mockResolvedValue(null),
+      getEntry: vi.fn().mockResolvedValue(null),
+    } as unknown as VulnerabilityRegistryClient;
+  }
+
+  it('should call registryClient.classifyTestResult when client is available', async () => {
+    const platformResponse: TestResultClassificationResult = {
+      type: 'test_failed',
+      is_valid_failure: true,
+      is_infrastructure_failure: false,
+      reason: 'Assertion failed - vulnerability proven',
+    };
+    const mockClient = createMockRegistryClient(platformResponse);
+
+    const config = createTestConfig({ rsolvApiKey: 'test-key' });
+    const vm = new ValidationMode(config);
+    // Inject mock client
+    (vm as unknown as { registryClient: VulnerabilityRegistryClient }).registryClient = mockClient;
+
+    const result = await vm.classifyTestResult(1, 'AssertionError: expected true', '');
+
+    expect(mockClient.classifyTestResult).toHaveBeenCalledWith(1, 'AssertionError: expected true', '');
+    expect(result.type).toBe('test_failed');
+    expect(result.isValidFailure).toBe(true);
+    expect(result.reason).toBe('Assertion failed - vulnerability proven');
+  });
+
+  it('should map snake_case platform response to camelCase', async () => {
+    const platformResponse: TestResultClassificationResult = {
+      type: 'missing_dependency',
+      is_valid_failure: false,
+      is_infrastructure_failure: true,
+      reason: 'Cannot find module express',
+      test_counts: { passed: 0, failed: 0, total: 0 },
+    };
+    const mockClient = createMockRegistryClient(platformResponse);
+
+    const config = createTestConfig({ rsolvApiKey: 'test-key' });
+    const vm = new ValidationMode(config);
+    (vm as unknown as { registryClient: VulnerabilityRegistryClient }).registryClient = mockClient;
+
+    const result = await vm.classifyTestResult(1, '', 'Cannot find module express');
+
+    expect(result.isValidFailure).toBe(false);
+    expect(result.isInfrastructureFailure).toBe(true);
+    expect(result.testCounts).toEqual({ passed: 0, failed: 0, total: 0 });
+  });
+
+  it('should fall back to local classifier when platform returns null', async () => {
+    const mockClient = createMockRegistryClient(null);
+
+    const config = createTestConfig({ rsolvApiKey: 'test-key' });
+    const vm = new ValidationMode(config);
+    (vm as unknown as { registryClient: VulnerabilityRegistryClient }).registryClient = mockClient;
+
+    const result = await vm.classifyTestResult(1, 'AssertionError: expected true', '');
+
+    expect(mockClient.classifyTestResult).toHaveBeenCalled();
+    // Should still get a valid result from local classifier
+    expect(result.type).toBe('test_failed');
+    expect(result.isValidFailure).toBe(true);
+  });
+
+  it('should fall back to local classifier when registryClient is null', async () => {
+    const config = createTestConfig({ rsolvApiKey: '' }); // No API key = no client
+    const vm = new ValidationMode(config);
+    // Ensure client is null
+    (vm as unknown as { registryClient: VulnerabilityRegistryClient | null }).registryClient = null;
+
+    const result = await vm.classifyTestResult(0, 'All tests passed', '');
+
+    expect(result.type).toBe('test_passed');
+    expect(result.isValidFailure).toBe(false);
+  });
+
+  it('should include isInfrastructureFailure from platform response', async () => {
+    const platformResponse: TestResultClassificationResult = {
+      type: 'runtime_error',
+      is_valid_failure: false,
+      is_infrastructure_failure: true,
+      reason: 'PostgreSQL connection refused',
+    };
+    const mockClient = createMockRegistryClient(platformResponse);
+
+    const config = createTestConfig({ rsolvApiKey: 'test-key' });
+    const vm = new ValidationMode(config);
+    (vm as unknown as { registryClient: VulnerabilityRegistryClient }).registryClient = mockClient;
+
+    const result = await vm.classifyTestResult(1, '', 'could not connect to server');
+
+    expect(result.isInfrastructureFailure).toBe(true);
+  });
+
+  it('should include testCounts from platform response when available', async () => {
+    const platformResponse: TestResultClassificationResult = {
+      type: 'test_failed',
+      is_valid_failure: true,
+      is_infrastructure_failure: false,
+      reason: 'Assertion failed',
+      test_counts: { passed: 3, failed: 1, total: 4 },
+    };
+    const mockClient = createMockRegistryClient(platformResponse);
+
+    const config = createTestConfig({ rsolvApiKey: 'test-key' });
+    const vm = new ValidationMode(config);
+    (vm as unknown as { registryClient: VulnerabilityRegistryClient }).registryClient = mockClient;
+
+    const result = await vm.classifyTestResult(1, '3 passing\n1 failing', '');
+
+    expect(result.testCounts).toEqual({ passed: 3, failed: 1, total: 4 });
+  });
+
+  it('should handle platform API rejection gracefully — falls back to local', async () => {
+    const mockClient = {
+      classifyTestResult: vi.fn().mockRejectedValue(new Error('Network timeout')),
+      classifyTest: vi.fn().mockResolvedValue(null),
+      getEntry: vi.fn().mockResolvedValue(null),
+    } as unknown as VulnerabilityRegistryClient;
+
+    const config = createTestConfig({ rsolvApiKey: 'test-key' });
+    const vm = new ValidationMode(config);
+    (vm as unknown as { registryClient: VulnerabilityRegistryClient }).registryClient = mockClient;
+
+    // Should not throw — falls back to local classifier
+    const result = await vm.classifyTestResult(137, '', '');
+
+    expect(result.type).toBe('oom_killed');
+    expect(result.isValidFailure).toBe(false);
+  });
+
+  it('should return a Promise (async method)', () => {
+    const config = createTestConfig();
+    const vm = new ValidationMode(config);
+
+    const result = vm.classifyTestResult(0, 'All tests passed', '');
+    // The result should be a Promise (async method)
+    expect(result).toBeInstanceOf(Promise);
   });
 });

@@ -42,6 +42,8 @@ export class ValidationMode {
   private availableTestLibraries: string[] = [];
   /** RFC-103 B4: Last classification type from test execution (for infrastructure failure detection) */
   private lastFailureClassificationType: string = '';
+  /** RFC-103 Phase 5.1: Whether last failure was infrastructure (from platform or local classifier) */
+  private lastFailureIsInfrastructure: boolean = false;
   /** RFC-101: Deferred setup commands from project shape — execute AFTER runtime/deps installed */
   private deferredSetupCommands: Array<{ cmd: string; env: Record<string, string> }> = [];
   /** RFC-103 v3.8.94: Flag indicating project has no test framework (only stdlib) */
@@ -529,9 +531,11 @@ export class ValidationMode {
       );
 
       if (!testSuite) {
-        // RFC-103 B4: Check if failure was due to infrastructure issues
-        const isInfra = this.lastFailureClassificationType &&
-          isInfrastructureFailure({ type: this.lastFailureClassificationType as 'runtime_error', isValidFailure: false, reason: '' });
+        // RFC-103 B4 + Phase 5.1: Check if failure was due to infrastructure issues
+        // Uses stored flag from platform response (preferred) or local classifier fallback
+        const isInfra = this.lastFailureIsInfrastructure ||
+          (this.lastFailureClassificationType &&
+            isInfrastructureFailure({ type: this.lastFailureClassificationType as 'runtime_error', isValidFailure: false, reason: '' }));
         if (isInfra) {
           logger.warn(`Failed to validate issue #${issue.number} due to infrastructure limitation (${this.lastFailureClassificationType})`);
         } else {
@@ -1039,17 +1043,41 @@ ${tests}
   }
 
   /**
-   * RFC-060-AMENDMENT-001: Classify test execution result
+   * RFC-060-AMENDMENT-001 + RFC-103 Phase 5.1: Classify test execution result
+   *
+   * Platform-first: calls the platform API when available, falls back to
+   * local classifier on error or when the registry client is unavailable.
    *
    * Distinguishes between valid test failures (vulnerability proven) and
    * errors (syntax errors, missing dependencies, etc.) that don't prove anything.
    */
-  classifyTestResult(exitCode: number, stdout: string, stderr: string): {
+  async classifyTestResult(exitCode: number, stdout: string, stderr: string): Promise<{
     type: 'test_passed' | 'test_failed' | 'syntax_error' | 'runtime_error' |
           'missing_dependency' | 'command_not_found' | 'oom_killed' | 'terminated' | 'unknown';
     isValidFailure: boolean;
+    isInfrastructureFailure?: boolean;
     reason: string;
-  } {
+    testCounts?: { passed: number; failed: number; total: number };
+  }> {
+    // Platform-first: try the platform API when registry client is available
+    if (this.registryClient) {
+      try {
+        const platformResult = await this.registryClient.classifyTestResult(exitCode, stdout, stderr);
+        if (platformResult) {
+          return {
+            type: platformResult.type as 'test_passed' | 'test_failed' | 'syntax_error' | 'runtime_error' |
+              'missing_dependency' | 'command_not_found' | 'oom_killed' | 'terminated' | 'unknown',
+            isValidFailure: platformResult.is_valid_failure,
+            isInfrastructureFailure: platformResult.is_infrastructure_failure,
+            reason: platformResult.reason,
+            testCounts: platformResult.test_counts,
+          };
+        }
+      } catch (error) {
+        logger.warn(`[RFC-103] Platform classifyTestResult failed, falling back to local: ${(error as Error).message}`);
+      }
+    }
+    // Fallback to local classifier
     return classifyTestResultImpl(exitCode, stdout, stderr);
   }
 
@@ -1423,6 +1451,7 @@ ${tests}
       // Set the failure classification type so the caller knows this is an infrastructure failure
       // This will result in rsolv:validation-inconclusive label instead of false-positive
       this.lastFailureClassificationType = 'command_not_found';
+      this.lastFailureIsInfrastructure = true;
       return null;
     }
 
@@ -1615,7 +1644,7 @@ ${tests}
 
                 if (!invertedResult.passed) {
                   // Inverted test fails — classify to make sure it's a genuine assertion failure
-                  const invertedClassification = this.classifyTestResult(
+                  const invertedClassification = await this.classifyTestResult(
                     invertedResult.exitCode,
                     invertedResult.output,
                     invertedResult.stderr
@@ -1677,7 +1706,7 @@ ${tests}
             }
 
             // 3c. Classify test failure — is it a genuine assertion failure or an infrastructure crash?
-            const classification = this.classifyTestResult(
+            const classification = await this.classifyTestResult(
               testResult.exitCode,
               testResult.output,
               testResult.stderr
@@ -1685,8 +1714,10 @@ ${tests}
 
             if (!classification.isValidFailure) {
               logger.warn(`✗ Candidate ${candidateIdx + 1}: ${classification.type} — ${classification.reason}`);
-              // RFC-103 B4: Track last failure type for infrastructure failure detection
+              // RFC-103 B4 + Phase 5.1: Track last failure type and infra flag for detection
               this.lastFailureClassificationType = classification.type;
+              this.lastFailureIsInfrastructure = classification.isInfrastructureFailure ??
+                isInfrastructureFailure({ type: classification.type as 'runtime_error', isValidFailure: false, reason: '' });
               const errorDetails = (testResult.stderr || testResult.output || '')
                 .split('\n')
                 .filter(line => /error|cannot|not found|load|missing|undefined/i.test(line))

@@ -25,7 +25,7 @@ export interface TestResultClassification {
  */
 export interface ValidationModeTestAccess {
   scanTestFiles(framework?: string): Promise<string[]>;
-  classifyTestResult(exitCode: number, stdout: string, stderr: string): TestResultClassification;
+  classifyTestResult(exitCode: number, stdout: string, stderr: string): Promise<TestResultClassification>;
   convertToExecutableTest(testContent: unknown): string;
   convertToExecutableTestSanitized(testContent: unknown): string;
   sanitizeTestStructure(code: string): string;
