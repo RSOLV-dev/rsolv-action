@@ -102,6 +102,65 @@ describe('PhaseExecutor - Phase Data Persistence', () => {
     expect(validation?.confidence).toBe('high');
   });
   
+  it('should include RFC-103 Phase 6 stats dimensions in stored validation data', async () => {
+    // RED: Phase-decomposed validation path must include cweId, framework,
+    // retryCount, classificationSource for the stats pipeline to work.
+    // Bug: These fields were present in the non-decomposed path (line 505-525)
+    // but missing from the phase-decomposed path (line 2269-2301).
+    const issueNumber = 789;
+    const repoOwner = 'test-owner';
+    const repoName = 'test-repo';
+
+    // Simulate what phase-decomposed executeValidatePhase stores
+    const validationData = {
+      issueNumber,
+      validated: true,
+      branchName: 'rsolv/validate/789',
+      redTests: { redTests: [{ testCode: 'test code' }], framework: 'exunit' },
+      testResults: { passed: 0, failed: 1, total: 1, output: 'test output', exitCode: 1 },
+      falsePositive: false,
+      infrastructureFailure: false,
+      noTestFramework: false,
+      validationInconclusive: false,
+      // These fields MUST be present for the stats pipeline
+      testType: 'behavioral' as const,
+      cweId: 'CWE-89',
+      framework: 'exunit',
+      retryCount: 2,
+      classificationSource: 'platform' as const,
+      timestamp: new Date().toISOString(),
+      commitHash: 'abc123',
+      hasSpecificVulnerabilities: true,
+      vulnerabilities: [],
+      confidence: 'high' as const
+    };
+
+    await executor.storePhaseData('validation', {
+      [`issue-${issueNumber}`]: validationData
+    }, {
+      repo: `${repoOwner}/${repoName}`,
+      issueNumber,
+      commitSha: 'test-commit-sha'
+    });
+
+    const retrievedData = await executor.phaseDataClient.retrievePhaseResults(
+      `${repoOwner}/${repoName}`,
+      issueNumber,
+      'test-commit-sha'
+    );
+
+    const issueKey = `issue-${issueNumber}`;
+    const validation = retrievedData?.validate?.[issueKey] || retrievedData?.validation?.[issueKey];
+
+    expect(validation).toBeDefined();
+    // RFC-103 Phase 6: Stats dimensions must be preserved in stored data
+    expect(validation?.testType).toBe('behavioral');
+    expect(validation?.cweId).toBe('CWE-89');
+    expect(validation?.framework).toBe('exunit');
+    expect(validation?.retryCount).toBe(2);
+    expect(validation?.classificationSource).toBe('platform');
+  });
+
   it('should handle the actual structure returned by retrievePhaseResults', async () => {
     const issueNumber = 456;
     const repoOwner = 'test-owner';

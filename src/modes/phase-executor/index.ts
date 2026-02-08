@@ -463,7 +463,15 @@ export class PhaseExecutor {
             validated: false,
             falsePositiveReason: validationResult.falsePositiveReason,
             timestamp: validationResult.timestamp,
-            commitHash: validationResult.commitHash
+            commitHash: validationResult.commitHash,
+            // RFC-103 Phase 6: Stats dimensions
+            cweId: validationResult.cweId,
+            testType: validationResult.testType,
+            framework: validationResult.framework,
+            retryCount: validationResult.retryCount,
+            classificationSource: validationResult.classificationSource,
+            infrastructureFailure: validationResult.infrastructureFailure || false,
+            validationInconclusive: validationResult.validationInconclusive || false
           }
         }, {
           repo: `${options.repository.owner}/${options.repository.name}`,
@@ -505,7 +513,15 @@ export class PhaseExecutor {
         // Enhanced validation fields for compatibility
         hasSpecificVulnerabilities: true,
         vulnerabilities: [], // Will be enhanced by enrichment if needed
-        confidence: 'high' as const
+        confidence: 'high' as const,
+        // RFC-103 Phase 6: Stats dimensions
+        cweId: validationResult.cweId,
+        testType: validationResult.testType,
+        framework: validationResult.framework,
+        retryCount: validationResult.retryCount,
+        classificationSource: validationResult.classificationSource,
+        infrastructureFailure: validationResult.infrastructureFailure || false,
+        validationInconclusive: validationResult.validationInconclusive || false
       };
 
       await this.storePhaseData('validation', {
@@ -2264,6 +2280,11 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
             // RFC-103 Phase 3: Static-only test detected pattern but didn't prove exploitability
             validationInconclusive: !vmValidationResult.validated && !!vmValidationResult.validationInconclusive,
             testType: vmValidationResult.testType,
+            // RFC-103 Phase 6: Stats dimensions (must match non-decomposed path)
+            cweId: vmValidationResult.cweId,
+            framework: vmValidationResult.framework,
+            retryCount: vmValidationResult.retryCount,
+            classificationSource: vmValidationResult.classificationSource,
             falsePositiveReason: vmValidationResult.falsePositiveReason,
             existingTests: existing?.hasTests,
             testFramework: existing?.framework,
