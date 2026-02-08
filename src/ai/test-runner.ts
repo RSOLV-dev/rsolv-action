@@ -115,9 +115,18 @@ export class TestRunner {
   private readonly DEFAULT_TIMEOUT = 30000; // 30 seconds
   private readonly RUNTIME_INSTALL_TIMEOUT = 600000; // 10 minutes for runtime install (Ruby compiles from source)
   private readonly MISE_QUICK_TIMEOUT = 300000; // 5 minutes for mise install before fallback (RFC-101 M2)
-  // Note: For faster builds, configure GitHub Actions cache for ~/.local/share/mise
-  // Or configure mise to use prebuilt binaries: mise settings set ruby_binary_url ...
+  // RFC-105: Mise runtimes are cached via entrypoint.sh + actions/cache@v4
   private readonly DEP_INSTALL_TIMEOUT = 180000; // 3 minutes for dependency install
+
+  /** Get the mise data directory, respecting MISE_DATA_DIR env var (RFC-105) */
+  private getMiseDataDir(): string {
+    return process.env.MISE_DATA_DIR || `${process.env.HOME || '/root'}/.local/share/mise`;
+  }
+
+  /** Get the mise shims path, derived from getMiseDataDir() (RFC-105) */
+  private getMiseShimsPath(): string {
+    return `${this.getMiseDataDir()}/shims`;
+  }
 
   // RFC-103: Python test command prefix, set by detectPythonInstaller()
   // e.g., 'poetry run ' for poetry projects, 'uv run ' for uv-managed projects
@@ -224,9 +233,8 @@ export class TestRunner {
 
           // CRITICAL: Update PATH immediately after Erlang installation
           // so that Elixir's installation can find 'erl' for its version check
-          const homedir = process.env.HOME || '/root';
-          const miseShims = `${homedir}/.local/share/mise/shims`;
-          const miseBin = `${homedir}/.local/bin`;
+          const miseShims = this.getMiseShimsPath();
+          const miseBin = `${process.env.HOME || '/root'}/.local/bin`;
           const currentPath = process.env.PATH || '';
           if (!currentPath.includes(miseShims)) {
             process.env.PATH = `${miseShims}:${miseBin}:${currentPath}`;
@@ -289,13 +297,12 @@ export class TestRunner {
           if (stderr) console.log(`[TestRunner] mise Java stderr: ${stderr}`);
 
           // Ensure mise shims are on PATH
-          const homedir = process.env.HOME || '/root';
-          const miseShims = `${homedir}/.local/share/mise/shims`;
-          const miseBin = `${homedir}/.local/bin`;
-          const currentPath = process.env.PATH || '';
-          if (!currentPath.includes(miseShims)) {
-            process.env.PATH = `${miseShims}:${miseBin}:${currentPath}`;
-            console.log(`[TestRunner] Updated PATH to include mise shims: ${miseShims}`);
+          const miseShimsJava = this.getMiseShimsPath();
+          const miseBinJava = `${process.env.HOME || '/root'}/.local/bin`;
+          const currentPathJava = process.env.PATH || '';
+          if (!currentPathJava.includes(miseShimsJava)) {
+            process.env.PATH = `${miseShimsJava}:${miseBinJava}:${currentPathJava}`;
+            console.log(`[TestRunner] Updated PATH to include mise shims: ${miseShimsJava}`);
           }
 
           // Also ensure Maven is available
@@ -347,10 +354,9 @@ export class TestRunner {
       // during Elixir's installation verification step (which spawns its own subprocess)
       let installCmd = `mise install ${runtimeSpec} && mise use --global ${runtimeSpec}`;
       if (runtime === 'elixir') {
-        const homedir = process.env.HOME || '/root';
-        const miseShims = `${homedir}/.local/share/mise/shims`;
-        installCmd = `PATH="${miseShims}:$PATH" ${installCmd}`;
-        console.log(`[TestRunner] Using PATH prefix for Elixir install: ${miseShims}`);
+        const miseShimsElixir = this.getMiseShimsPath();
+        installCmd = `PATH="${miseShimsElixir}:$PATH" ${installCmd}`;
+        console.log(`[TestRunner] Using PATH prefix for Elixir install: ${miseShimsElixir}`);
       }
 
       // RFC-101 Iteration 15 M2: Use shorter timeout for mise, fall back to apt-get on timeout
@@ -366,13 +372,12 @@ export class TestRunner {
 
       // Ensure mise shims and install paths are on the current process PATH
       // so subsequent execSync calls (syntax check, test run) can find the binary
-      const homedir = process.env.HOME || '/root';
-      const miseShims = `${homedir}/.local/share/mise/shims`;
-      const miseBin = `${homedir}/.local/bin`;
-      const currentPath = process.env.PATH || '';
-      if (!currentPath.includes(miseShims)) {
-        process.env.PATH = `${miseShims}:${miseBin}:${currentPath}`;
-        console.log(`[TestRunner] Updated PATH to include mise shims: ${miseShims}`);
+      const miseShimsGeneral = this.getMiseShimsPath();
+      const miseBinGeneral = `${process.env.HOME || '/root'}/.local/bin`;
+      const currentPathGeneral = process.env.PATH || '';
+      if (!currentPathGeneral.includes(miseShimsGeneral)) {
+        process.env.PATH = `${miseShimsGeneral}:${miseBinGeneral}:${currentPathGeneral}`;
+        console.log(`[TestRunner] Updated PATH to include mise shims: ${miseShimsGeneral}`);
       }
 
       // For PHP installed via mise, also install Composer

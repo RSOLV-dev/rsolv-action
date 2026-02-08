@@ -48,6 +48,10 @@ export class ValidationMode {
   private deferredSetupCommands: Array<{ cmd: string; env: Record<string, string> }> = [];
   /** RFC-103 v3.8.94: Flag indicating project has no test framework (only stdlib) */
   private noTestFrameworkAvailable: boolean = false;
+  /** RFC-103 Phase 6: Track retry count for stats enrichment */
+  private lastRetryCount: number = 0;
+  /** RFC-103 Phase 6: Track whether classification came from platform or local */
+  private lastClassificationSource: 'platform' | 'local' = 'local';
 
   constructor(config: ActionConfig, repoPath?: string) {
     this.config = config;
@@ -547,6 +551,10 @@ export class ValidationMode {
           falsePositiveReason: 'Unable to generate valid RED test after 4 attempts',
           infrastructureFailure: isInfra || undefined,
           vulnerabilities,
+          cweId: vulnerabilityDescriptor?.cweId,
+          framework: frameworkName,
+          retryCount: this.lastRetryCount || 4,
+          classificationSource: this.lastClassificationSource,
           timestamp: new Date().toISOString(),
           commitHash: this.getCurrentCommitHash()
         };
@@ -705,6 +713,10 @@ export class ValidationMode {
           testResults: testResultsForDisplay,
           testExecutionResult,
           vulnerabilities,
+          cweId,
+          framework: frameworkName,
+          retryCount: this.lastRetryCount,
+          classificationSource: this.lastClassificationSource,
           timestamp: new Date().toISOString(),
           commitHash: this.getCurrentCommitHash()
         };
@@ -728,6 +740,10 @@ export class ValidationMode {
         testResults: testResultsForDisplay,
         testExecutionResult,
         vulnerabilities,
+        cweId,
+        framework: frameworkName,
+        retryCount: this.lastRetryCount,
+        classificationSource: this.lastClassificationSource,
         timestamp: new Date().toISOString(),
         commitHash: this.getCurrentCommitHash()
       };
@@ -1064,6 +1080,7 @@ ${tests}
       try {
         const platformResult = await this.registryClient.classifyTestResult(exitCode, stdout, stderr);
         if (platformResult) {
+          this.lastClassificationSource = 'platform';
           return {
             type: platformResult.type as 'test_passed' | 'test_failed' | 'syntax_error' | 'runtime_error' |
               'missing_dependency' | 'command_not_found' | 'oom_killed' | 'terminated' | 'unknown',
@@ -1078,6 +1095,7 @@ ${tests}
       }
     }
     // Fallback to local classifier
+    this.lastClassificationSource = 'local';
     return classifyTestResultImpl(exitCode, stdout, stderr);
   }
 
@@ -1471,9 +1489,10 @@ ${tests}
         logger.info('Runtime and dependency setup complete');
         // Defensively ensure mise shims are on PATH — the TestRunner updates
         // process.env.PATH but verify it persisted and add if missing
-        const homedir = process.env.HOME || '/root';
-        const miseShims = `${homedir}/.local/share/mise/shims`;
-        const miseBin = `${homedir}/.local/bin`;
+        // RFC-105: Respect MISE_DATA_DIR env var for cache flexibility
+        const miseDataDir = process.env.MISE_DATA_DIR || `${process.env.HOME || '/root'}/.local/share/mise`;
+        const miseShims = `${miseDataDir}/shims`;
+        const miseBin = `${process.env.HOME || '/root'}/.local/bin`;
         if (!process.env.PATH?.includes(miseShims)) {
           process.env.PATH = `${miseShims}:${miseBin}:${process.env.PATH || ''}`;
           logger.info(`ValidationMode: Added mise shims to PATH: ${miseShims}`);
@@ -1797,6 +1816,7 @@ ${tests}
         // If we found a successful candidate, return it
         if (successfulCandidate) {
           logger.info(`✓ Test generation successful on attempt ${attempt}`);
+          this.lastRetryCount = attempt;
           return successfulCandidate;
         }
 

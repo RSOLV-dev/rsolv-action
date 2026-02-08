@@ -110,3 +110,6 @@ nodegoat-demo/
 
 # RSOLV runtime data (generated during action execution)
 .rsolv/
+
+# Mise runtime cache (RFC-105, populated by actions/cache@v4)
+.mise-cache/

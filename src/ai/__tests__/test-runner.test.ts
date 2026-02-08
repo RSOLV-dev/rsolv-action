@@ -867,6 +867,62 @@ describe('TestRunner', () => {
     });
   });
 
+  describe('Mise Data Directory Helpers (RFC-105)', () => {
+    test('getMiseDataDir returns default path when MISE_DATA_DIR is not set', () => {
+      const originalMiseDataDir = process.env.MISE_DATA_DIR;
+      const originalHome = process.env.HOME;
+      delete process.env.MISE_DATA_DIR;
+      process.env.HOME = '/root';
+
+      // Access private method via any cast for testing
+      const dir = (runner as any).getMiseDataDir();
+      expect(dir).toBe('/root/.local/share/mise');
+
+      // Cleanup
+      if (originalMiseDataDir) process.env.MISE_DATA_DIR = originalMiseDataDir;
+      else delete process.env.MISE_DATA_DIR;
+      if (originalHome) process.env.HOME = originalHome;
+      else delete process.env.HOME;
+    });
+
+    test('getMiseDataDir returns custom path when MISE_DATA_DIR is set', () => {
+      const originalMiseDataDir = process.env.MISE_DATA_DIR;
+      process.env.MISE_DATA_DIR = '/custom/mise/data';
+
+      const dir = (runner as any).getMiseDataDir();
+      expect(dir).toBe('/custom/mise/data');
+
+      // Cleanup
+      if (originalMiseDataDir) process.env.MISE_DATA_DIR = originalMiseDataDir;
+      else delete process.env.MISE_DATA_DIR;
+    });
+
+    test('getMiseShimsPath derives from getMiseDataDir', () => {
+      const originalMiseDataDir = process.env.MISE_DATA_DIR;
+      delete process.env.MISE_DATA_DIR;
+      process.env.HOME = '/root';
+
+      const shimsPath = (runner as any).getMiseShimsPath();
+      expect(shimsPath).toBe('/root/.local/share/mise/shims');
+
+      // Cleanup
+      if (originalMiseDataDir) process.env.MISE_DATA_DIR = originalMiseDataDir;
+      else delete process.env.MISE_DATA_DIR;
+    });
+
+    test('getMiseShimsPath uses custom MISE_DATA_DIR', () => {
+      const originalMiseDataDir = process.env.MISE_DATA_DIR;
+      process.env.MISE_DATA_DIR = '/custom/mise/data';
+
+      const shimsPath = (runner as any).getMiseShimsPath();
+      expect(shimsPath).toBe('/custom/mise/data/shims');
+
+      // Cleanup
+      if (originalMiseDataDir) process.env.MISE_DATA_DIR = originalMiseDataDir;
+      else delete process.env.MISE_DATA_DIR;
+    });
+  });
+
   describe('PostgreSQL Provisioning (RFC-103 B1)', () => {
     beforeEach(() => {
       mockFsAccess.mockRejectedValue(new Error('ENOENT'));

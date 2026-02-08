@@ -17,6 +17,31 @@ else
   echo "Running from app directory: $(pwd)"
 fi
 
+# --- Mise runtime cache restore (RFC-105) ---
+# actions/cache@v4 on the host populates .mise-cache/ before the container starts.
+# We copy cached installs into the default mise data dir so `mise install` is a no-op.
+MISE_CACHE_PATH="/github/workspace/.mise-cache"
+MISE_INSTALL_PATH="${MISE_DATA_DIR:-/root/.local/share/mise}"
+
+if [ -d "$MISE_CACHE_PATH/installs" ]; then
+  echo "[RSOLV] Restoring cached mise runtimes..."
+  mkdir -p "$MISE_INSTALL_PATH/installs"
+  cp -a "$MISE_CACHE_PATH/installs/"* "$MISE_INSTALL_PATH/installs/" 2>/dev/null || true
+  echo "[RSOLV] Restored runtimes: $(ls "$MISE_INSTALL_PATH/installs/" 2>/dev/null | tr '\n' ' ')"
+fi
+
+# Persist mise installs back to workspace cache on exit (for actions/cache to save)
+persist_mise_cache() {
+  if [ -d "$MISE_INSTALL_PATH/installs" ] && [ -d "/github/workspace" ]; then
+    echo "[RSOLV] Persisting mise runtimes to cache..."
+    mkdir -p "$MISE_CACHE_PATH/installs"
+    cp -a "$MISE_INSTALL_PATH/installs/"* "$MISE_CACHE_PATH/installs/" 2>/dev/null || true
+    echo "[RSOLV] Cached runtimes: $(ls "$MISE_CACHE_PATH/installs/" 2>/dev/null | tr '\n' ' ')"
+  fi
+}
+trap persist_mise_cache EXIT
+# --- End mise runtime cache ---
+
 # Map GitHub Action inputs to expected environment variables
 # GitHub Actions passes inputs as INPUT_<UPPERCASE_NAME>
 if [ -n "$INPUT_RSOLVAPIKEY" ]; then
