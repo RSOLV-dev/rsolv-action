@@ -52,6 +52,14 @@ export interface ValidationPhaseData {
   falsePositiveReason?: string;
   vulnerabilities?: ValidationVulnerability[];
   timestamp: string;
+  /** RFC-103 Phase 6: Stats dimensions for aggregation */
+  cweId?: string;
+  testType?: 'behavioral' | 'static';
+  framework?: string;
+  retryCount?: number;
+  classificationSource?: 'platform' | 'local';
+  infrastructureFailure?: boolean;
+  validationInconclusive?: boolean;
 }
 
 /**

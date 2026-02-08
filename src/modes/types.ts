@@ -42,6 +42,14 @@ export interface ValidationResult {
   testType?: 'behavioral' | 'static';
   testingMode?: boolean; // RFC-059: Indicates testing mode is enabled
   testingModeNote?: string; // RFC-059: Explanation when testing mode overrides validation
+  /** RFC-103 Phase 6: CWE identifier for stats tracking */
+  cweId?: string;
+  /** RFC-103 Phase 6: Test framework used (e.g., "vitest", "pytest") */
+  framework?: string;
+  /** RFC-103 Phase 6: Number of retry attempts before result */
+  retryCount?: number;
+  /** RFC-103 Phase 6: Whether classification came from platform or local */
+  classificationSource?: 'platform' | 'local';
   timestamp: string;
   commitHash: string;
 }
