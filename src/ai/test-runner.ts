@@ -117,7 +117,8 @@ export class TestRunner {
   private readonly MISE_QUICK_TIMEOUT = 300000; // 5 minutes for mise install before fallback (RFC-101 M2)
   // RFC-105: Mise runtimes are cached via entrypoint.sh + actions/cache@v4
   // Track whether bundle install failed — if so, use rspec directly instead of bundle exec
-  private bundleInstallFailed = false;
+  // Public so validation-mode.ts can read it (it has its own runTest() method with separate command building)
+  public bundleInstallFailed = false;
   private readonly DEP_INSTALL_TIMEOUT = 180000; // 3 minutes for dependency install
 
   /** Get the mise data directory, respecting MISE_DATA_DIR env var (RFC-105) */

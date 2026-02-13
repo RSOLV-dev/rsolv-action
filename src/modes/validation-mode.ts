@@ -1528,6 +1528,18 @@ ${tests}
         await testRunnerSetup.ensureRuntime(frameworkNameForSetup, this.repoPath);
         logger.info(`Ensuring dependencies for framework: ${frameworkNameForSetup}`);
         await testRunnerSetup.ensureDependencies(frameworkNameForSetup, this.repoPath);
+        // When bundle install fails (e.g., native extension compile error for mysql2),
+        // TestRunner falls back to gem install rspec. We need to update the framework's
+        // testCommand to use 'rspec' directly instead of 'bundle exec rspec', since
+        // 'bundle exec' loads all Gemfile dependencies via bundler/setup.rb.
+        if (testRunnerSetup.bundleInstallFailed && framework.testCommand) {
+          logger.info('[RFC-112] bundle install failed — switching to direct rspec invocation (no bundle exec)');
+          if (framework.testCommand.includes('bundle exec rspec')) {
+            framework.testCommand = 'rspec';
+          } else if (framework.testCommand.includes('bundle exec ruby')) {
+            framework.testCommand = 'ruby -Itest';
+          }
+        }
         logger.info('Runtime and dependency setup complete');
         // Defensively ensure mise shims are on PATH — the TestRunner updates
         // process.env.PATH but verify it persisted and add if missing

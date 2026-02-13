@@ -491,6 +491,31 @@ describe('TestRunner', () => {
       expect(testCall).toBeDefined();
     });
 
+    test('should expose bundleInstallFailed flag for external consumers (validation-mode.ts)', async () => {
+      // validation-mode.ts creates a TestRunner for setup, then uses its own runTest() method.
+      // It needs to check TestRunner.bundleInstallFailed to know whether to use 'rspec' vs 'bundle exec rspec'.
+      mockFsAccess.mockImplementation((filePath: string) => {
+        if (filePath.endsWith('Gemfile')) return Promise.resolve();
+        return Promise.reject(new Error('ENOENT'));
+      });
+
+      // Make bundle install fail, gem install rspec succeeds
+      mockExecAsync.mockImplementation((cmd: string) => {
+        if (typeof cmd === 'string' && cmd.includes('bundle install')) {
+          return Promise.reject(new Error('Gem::Ext::BuildError: Failed to build mysql2'));
+        }
+        return Promise.resolve({ stdout: '', stderr: '' });
+      });
+
+      // Verify flag is false before ensureDependencies
+      expect(runner.bundleInstallFailed).toBe(false);
+
+      await runner.ensureDependencies('rspec', '/tmp/ruby-repo');
+
+      // After ensureDependencies with bundle install failure, flag should be true
+      expect(runner.bundleInstallFailed).toBe(true);
+    });
+
     test('should still use bundle exec rspec when bundle install succeeds', async () => {
       // Mock: Gemfile exists
       mockFsAccess.mockImplementation((filePath: string) => {
