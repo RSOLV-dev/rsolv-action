@@ -512,7 +512,7 @@ export class PhaseExecutor {
         commitHash: validationResult.commitHash,
         // Enhanced validation fields for compatibility
         hasSpecificVulnerabilities: true,
-        vulnerabilities: [], // Will be enhanced by enrichment if needed
+        vulnerabilities: validationResult.vulnerabilities || [], // Pass through from VALIDATE for MITIGATE consumption
         confidence: 'high' as const,
         // RFC-103 Phase 6: Stats dimensions
         cweId: validationResult.cweId,
@@ -2301,7 +2301,7 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
             commitHash: vmValidationResult.commitHash,
             // RFC-058 enhanced fields
             hasSpecificVulnerabilities: vmValidationResult.validated,
-            vulnerabilities: [],
+            vulnerabilities: vmValidationResult.vulnerabilities || [],
             confidence: vmValidationResult.validated ? 'high' as const : 'low' as const,
             // Carry forward scan analysis data for MITIGATE educational PR generation
             analysisData: analysisDataForStorage ? {
