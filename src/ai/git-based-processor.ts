@@ -22,6 +22,7 @@ import { execSync } from 'child_process';
 import { TestGeneratingSecurityAnalyzer, AnalysisWithTestsResult } from './test-generating-security-analyzer.js';
 import { GitBasedTestValidator, ValidationResult } from './git-based-test-validator.js';
 import { VulnerabilityType } from '../security/types.js';
+import { extractValidateRedTest, verifyFixWithValidateRedTest, type ValidateRedTest, type RedTestVerificationResult } from './validate-test-reuse.js';
 
 // Type alias for CLI results (legacy compatibility)
 type CLISolutionResult = GitSolutionResult;
@@ -261,9 +262,21 @@ export async function processIssueWithGit(
       };
     }
 
-    // Step 2.5: Generate tests if test generation or fix validation is enabled
+    // Step 2.5: Get validation test — prefer VALIDATE's proven RED test over generating new ones
     let testResults: AnalysisWithTestsResult | undefined;
-    if ((config.testGeneration?.enabled || config.fixValidation?.enabled !== false) && config.enableSecurityAnalysis) {
+    let validateRedTest: ValidateRedTest | null = null;
+
+    // Check if we have a proven RED test from VALIDATE phase
+    if (validationData) {
+      validateRedTest = extractValidateRedTest(validationData as Record<string, unknown>, issue.number);
+      if (validateRedTest) {
+        logger.info(`[MITIGATE] Using proven RED test from VALIDATE (${validateRedTest.framework}, file: ${validateRedTest.testFile})`);
+        logger.info('[MITIGATE] Skipping TestGeneratingSecurityAnalyzer — VALIDATE already proved the vulnerability');
+      }
+    }
+
+    // Only generate new tests if no VALIDATE RED test available
+    if (!validateRedTest && (config.testGeneration?.enabled || config.fixValidation?.enabled !== false) && config.enableSecurityAnalysis) {
       logger.info(`Generating tests for issue #${issue.number}`);
       
       // Pass AI config for test generation
@@ -429,7 +442,7 @@ export async function processIssueWithGit(
       // Validation is enabled - proceed with validation
       const shouldValidate = config.testGeneration?.validateFixes === true ||
                             config.fixValidation?.enabled === true ||
-                            (config.fixValidation?.enabled !== false && testResults?.generatedTests?.success);
+                            (config.fixValidation?.enabled !== false && (testResults?.generatedTests?.success || validateRedTest));
 
       if (shouldValidate) {
         // Check if we should use static validation for this vulnerability type
@@ -471,9 +484,29 @@ export async function processIssueWithGit(
               }
             };
           }
+        } else if (validateRedTest) {
+          // Use VALIDATE's proven RED test with ecosystem-native runner
+          logger.info(`[MITIGATE] Verifying fix with VALIDATE RED test (${validateRedTest.framework})...`);
+
+          const verification = await verifyFixWithValidateRedTest(
+            beforeFixCommit,
+            isGitSolutionResult(solution) ? solution.commitHash! : 'HEAD',
+            validateRedTest,
+            process.cwd()
+          );
+
+          validationResult = verification;
+
+          if (verification.isValidFix) {
+            logger.info('[MITIGATE] Fix verified: RED test now passes (GREEN)');
+            validationPassed = true;
+          } else {
+            logger.warn('[MITIGATE] Fix verification failed: RED test still fails');
+            validationPassed = false;
+          }
         } else if (testResults?.generatedTests?.success && testResults.generatedTests.testSuite) {
-          // Use runtime test validation for other vulnerability types
-          logger.info('Validating fix with pre-generated executable tests...');
+          // LEGACY: Use GitBasedTestValidator when no VALIDATE RED test available
+          logger.info('Validating fix with pre-generated executable tests (legacy path)...');
           const validator = new GitBasedTestValidator();
 
           validationResult = await validator.validateFixWithTests(
@@ -549,8 +582,24 @@ export async function processIssueWithGit(
 
         // Enhance issue context with validation failure information
         if (validationResult) {
-          // Check if this was a static validation failure
-          if (validationResult.vulnerablePatterns) {
+          // Check if this was a VALIDATE RED test verification failure
+          if (validateRedTest && 'fixedResult' in validationResult && !validationResult.isValidFix) {
+            const verificationResult = validationResult as RedTestVerificationResult;
+            currentIssue = {
+              ...issue,
+              specificVulnerabilities: issue.specificVulnerabilities,
+              body: `${issue.body}
+
+## Fix Verification Failed (attempt ${iteration} of ${maxIterations})
+
+The RED test still fails after your fix. Test output:
+\`\`\`
+${verificationResult.fixedResult?.output || 'no output'}
+\`\`\`
+
+The test expects the vulnerability to be fixed. Please review and try again.`
+            };
+          } else if (validationResult.vulnerablePatterns) {
             // Static validation - create custom enhanced issue
             currentIssue = {
               ...issue,
