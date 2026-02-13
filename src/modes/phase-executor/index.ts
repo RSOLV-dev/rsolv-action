@@ -1288,7 +1288,7 @@ export class PhaseExecutor {
               commitHash: validationData.commitHash,
               // Add vulnerability indicators for mitigation phase
               hasSpecificVulnerabilities: validationData.validated,
-              vulnerabilities: issue.specificVulnerabilities || [],
+              vulnerabilities: validationData.vulnerabilities || [],
               confidence: 'high' as const,
               // RFC-103 Phase 6: Stats dimensions
               testType: validationData.testType,

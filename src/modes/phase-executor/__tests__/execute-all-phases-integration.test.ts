@@ -338,4 +338,5 @@ describe('PhaseExecutor - executeAllPhases Integration', () => {
     expect(result.error).toContain('Scan failed');
     expect(mockGetIssue).not.toHaveBeenCalled();
   });
+
 });
