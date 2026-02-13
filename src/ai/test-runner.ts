@@ -343,8 +343,52 @@ export class TestRunner {
       }
     }
 
-    // Determine version from project files
-    const version = await this.detectRuntimeVersion(runtime, workingDir);
+    // RFC-112: Three-tier version cascade
+    // 1. Platform-provided version (from project shape via RSOLV_RUNTIME_VERSION)
+    // 2. Local file detection (.ruby-version, .python-version, etc.)
+    // 3. Let mise try native resolution, fall back to @latest
+    let version = process.env.RSOLV_RUNTIME_VERSION;
+    const versionSource = process.env.RSOLV_RUNTIME_VERSION_SOURCE || 'unknown';
+
+    if (version) {
+      // Platform detected a version constraint — resolve to a concrete mise-compatible spec
+      console.log(`[TestRunner] [RFC-112] Platform-detected runtime version: ${runtime}@${version} (from ${versionSource})`);
+      // Constraints like ">=3.8" or "~> 2.7" aren't valid mise specs — extract a concrete version
+      const concreteMatch = version.match(/^(\d+(?:\.\d+(?:\.\d+)?)?)$/);
+      if (!concreteMatch) {
+        // It's a constraint, not a concrete version — let mise resolve it
+        console.log(`[TestRunner] [RFC-112] Version "${version}" is a constraint, falling back to local detection`);
+        version = await this.detectRuntimeVersion(runtime, workingDir) || undefined;
+      }
+    } else {
+      // No platform version — try local file detection
+      version = await this.detectRuntimeVersion(runtime, workingDir) || undefined;
+    }
+
+    // If we still don't have a version, try mise native resolution before @latest
+    if (!version) {
+      try {
+        console.log(`[TestRunner] [RFC-112] No version constraint found, trying mise native resolution for ${runtime}`);
+        await execAsync(
+          `mise install ${runtime} && mise use --global ${runtime}`,
+          { cwd: workingDir, timeout: this.RUNTIME_INSTALL_TIMEOUT, encoding: 'utf8' }
+        );
+
+        // Ensure mise shims are on PATH
+        const miseShimsNative = this.getMiseShimsPath();
+        const miseBinNative = `${process.env.HOME || '/root'}/.local/bin`;
+        const currentPathNative = process.env.PATH || '';
+        if (!currentPathNative.includes(miseShimsNative)) {
+          process.env.PATH = `${miseShimsNative}:${miseBinNative}:${currentPathNative}`;
+        }
+
+        console.log(`[TestRunner] [RFC-112] mise native resolution succeeded for ${runtime}`);
+        return;
+      } catch {
+        console.log(`[TestRunner] [RFC-112] mise native resolution failed, falling back to ${runtime}@latest`);
+      }
+    }
+
     const runtimeSpec = version ? `${runtime}@${version}` : `${runtime}@latest`;
 
     console.log(`[TestRunner] Installing runtime: ${runtimeSpec} via mise`);

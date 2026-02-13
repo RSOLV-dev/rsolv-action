@@ -466,7 +466,7 @@ export class ValidationMode {
           const phaseRecord = phaseData as Record<string, unknown> | null;
 
           // Resolve shapes array: prefer project_shapes (multi-ecosystem), fall back to project_shape (single)
-          type ShapeEntry = { ecosystem?: string; ai_context?: string; setup_commands?: string[]; runtime_services?: unknown[]; env?: Record<string, string> };
+          type ShapeEntry = { ecosystem?: string; ai_context?: string; setup_commands?: string[]; runtime_services?: unknown[]; env?: Record<string, string>; runtime_version?: string; runtime_version_source?: string; framework_versions?: Record<string, string> };
           let shapes: ShapeEntry[] = [];
 
           if (Array.isArray(phaseRecord?.project_shapes) && (phaseRecord.project_shapes as unknown[]).length > 0) {
@@ -520,10 +520,52 @@ export class ValidationMode {
               }));
               logger.info(`[RFC-101] Deferred ${this.deferredSetupCommands.length} setup command(s) until after runtime installation`);
             }
+
+            // RFC-112: Extract runtime version constraints from platform shape
+            for (const shape of shapes) {
+              if (shape.runtime_version && typeof shape.runtime_version === 'string') {
+                process.env.RSOLV_RUNTIME_VERSION = shape.runtime_version;
+                process.env.RSOLV_RUNTIME_VERSION_SOURCE = shape.runtime_version_source || 'platform';
+                logger.info(`[RFC-112] Runtime version from platform: ${shape.runtime_version} (source: ${shape.runtime_version_source})`);
+                break; // Use first shape's version (primary ecosystem)
+              }
+            }
+
+            // RFC-112: Pass framework versions to LLM context
+            for (const shape of shapes) {
+              const fwVersions = shape.framework_versions;
+              if (fwVersions && Object.keys(fwVersions).length > 0) {
+                const fwContext = Object.entries(fwVersions)
+                  .map(([fw, ver]) => `${fw} ${ver}.x`)
+                  .join(', ');
+                this.projectAiContext += `\n\nFramework versions detected: ${fwContext}. Generate tests compatible with these specific versions.`;
+                logger.info(`[RFC-112] Framework versions added to AI context: ${fwContext}`);
+                break;
+              }
+            }
           }
         }
       } catch (shapeErr) {
         logger.warn(`[RFC-101] Project shape retrieval warning: ${shapeErr instanceof Error ? shapeErr.message : String(shapeErr)}`);
+      }
+
+      // RFC-112: Skip VALIDATE for Python 2 projects (EOL, not supported)
+      if (process.env.RSOLV_RUNTIME_VERSION === '2') {
+        logger.warn(`[RFC-112] Python 2 project detected — skipping VALIDATE (Python 2 EOL)`);
+        delete process.env.RSOLV_RUNTIME_VERSION;
+        delete process.env.RSOLV_RUNTIME_VERSION_SOURCE;
+        return {
+          issueId: issue.number,
+          validated: false,
+          infrastructureFailure: true,
+          falsePositiveReason: 'Python 2 project — not supported for automated validation',
+          vulnerabilities,
+          cweId: vulnerabilityDescriptor?.cweId,
+          framework: frameworkName,
+          retryCount: 0,
+          timestamp: new Date().toISOString(),
+          commitHash: this.getCurrentCommitHash()
+        };
       }
 
       // Step 5f: Generate test with retry loop (existing RFC-060 method)
@@ -1540,6 +1582,11 @@ ${tests}
       }
       this.deferredSetupCommands = [];
     }
+
+    // RFC-112: Clean up runtime version env vars after use
+    // Prevents leaking between issues in the same workflow run
+    delete process.env.RSOLV_RUNTIME_VERSION;
+    delete process.env.RSOLV_RUNTIME_VERSION_SOURCE;
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       logger.info(`Attempt ${attempt}/${maxAttempts}: Generating test candidates...`);

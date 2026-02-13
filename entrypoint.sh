@@ -49,6 +49,18 @@ if [ -n "$INPUT_RSOLVAPIKEY" ]; then
   echo "Mapped INPUT_RSOLVAPIKEY to RSOLV_API_KEY"
 fi
 
+# Map github-token input to GITHUB_TOKEN
+# GitHub Actions sets INPUT_GITHUB-TOKEN from the action input default (${{ github.token }})
+# but the hyphenated name isn't valid as a shell variable, so we check the env directly.
+if [ -z "$GITHUB_TOKEN" ]; then
+  # Try the input variable (GitHub normalizes input names to INPUT_<UPPER>)
+  GH_TOKEN_INPUT=$(printenv 'INPUT_GITHUB-TOKEN' 2>/dev/null || true)
+  if [ -n "$GH_TOKEN_INPUT" ]; then
+    export GITHUB_TOKEN="$GH_TOKEN_INPUT"
+    echo "Mapped INPUT_GITHUB-TOKEN to GITHUB_TOKEN"
+  fi
+fi
+
 # Run the action using the built output from /app
 # NOTE: Do NOT use `exec` here — it replaces the shell process, which prevents
 # the EXIT trap (persist_mise_cache) from firing. Without exec, the shell remains

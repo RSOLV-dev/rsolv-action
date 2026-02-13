@@ -59,13 +59,14 @@ export class RepositoryScanner {
    * ecosystem and determine runtime service dependencies.
    */
   private static readonly MANIFEST_FILES = [
-    'Gemfile', 'config/database.yml',                        // Ruby
-    'package.json', 'prisma/schema.prisma',                  // JavaScript/TypeScript
-    'requirements.txt', 'pyproject.toml', 'setup.py',       // Python
-    'setup.cfg', 'manage.py',                                // Python
-    'mix.exs', 'config/dev.exs', 'config/test.exs',        // Elixir
-    'pom.xml', 'build.gradle',                              // Java
-    'composer.json',                                         // PHP
+    'Gemfile', 'Gemfile.lock', 'config/database.yml', '.ruby-version',  // Ruby
+    'package.json', 'prisma/schema.prisma', '.node-version',            // JavaScript/TypeScript
+    'requirements.txt', 'pyproject.toml', 'setup.py',                   // Python
+    'setup.cfg', 'manage.py', '.python-version',                        // Python
+    'mix.exs', 'config/dev.exs', 'config/test.exs',                    // Elixir
+    'pom.xml', 'build.gradle',                                          // Java
+    'composer.json', '.php-version',                                     // PHP
+    '.tool-versions',                                                    // Multi-runtime (mise/asdf)
   ];
 
   /**
