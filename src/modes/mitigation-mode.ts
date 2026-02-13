@@ -244,23 +244,50 @@ export class MitigationMode {
 
   /**
    * RFC-058: Get validation tests from current branch
+   *
+   * VALIDATE writes tests to ecosystem-standard directories (tests/, spec/, __tests__/),
+   * not .rsolv/tests/. This method searches both the legacy path and the standard paths,
+   * matching common test file patterns across ecosystems.
    */
   async getValidationTests(issue: IssueContext): Promise<string[]> {
-    const testDir = path.join(this.repoPath, '.rsolv', 'tests');
+    const testFiles: string[] = [];
 
-    if (!fs.existsSync(testDir)) {
-      return [];
+    // Ecosystem-standard directories where VALIDATE writes tests
+    const testDirs = [
+      path.join(this.repoPath, 'tests'),
+      path.join(this.repoPath, 'spec'),
+      path.join(this.repoPath, '__tests__'),
+      path.join(this.repoPath, 'test'),
+      path.join(this.repoPath, '.rsolv', 'tests'), // Legacy path
+    ];
+
+    // Test file patterns for all ecosystems
+    const testPatterns = [
+      /vulnerability_validation/i,
+      /test_vulnerability/i,
+      /vulnerability.*test/i,
+      /validation.*spec/i,
+      /validation.*test/i,
+    ];
+
+    for (const testDir of testDirs) {
+      if (!fs.existsSync(testDir)) {
+        continue;
+      }
+
+      try {
+        const files = fs.readdirSync(testDir);
+        for (const file of files) {
+          if (testPatterns.some(pattern => pattern.test(file))) {
+            testFiles.push(path.join(testDir, file));
+          }
+        }
+      } catch (error) {
+        logger.debug(`Could not read test directory ${testDir}: ${error}`);
+      }
     }
 
-    // Return all test files in the validation branch
-    try {
-      return fs.readdirSync(testDir)
-        .filter(file => file.endsWith('.test.js'))
-        .map(file => path.join(testDir, file));
-    } catch (error) {
-      logger.warn(`Could not read test directory: ${error}`);
-      return [];
-    }
+    return testFiles;
   }
 
   /**

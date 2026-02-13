@@ -1,6 +1,13 @@
 /**
  * GitBasedTestValidator - RFC-060 Compatible Implementation
  *
+ * @deprecated Use validate-test-reuse.ts for ecosystem-native verification.
+ * This validator wraps ALL test code in a JavaScript/CommonJS template and
+ * runs with `node`, which causes syntax errors for Python/Ruby tests and
+ * ReferenceErrors for ESM/vitest tests. It is kept as a fallback for repos
+ * that run MITIGATE without prior VALIDATE data, but will be removed when
+ * RFC-096 (Backend Orchestration) ships.
+ *
  * Validates that vulnerability fixes actually work by running generated RED tests
  * against both vulnerable and fixed versions of the code using git.
  *
