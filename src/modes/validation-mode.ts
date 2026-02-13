@@ -46,6 +46,8 @@ export class ValidationMode {
   private lastFailureIsInfrastructure: boolean = false;
   /** RFC-101: Deferred setup commands from project shape — execute AFTER runtime/deps installed */
   private deferredSetupCommands: Array<{ cmd: string; env: Record<string, string> }> = [];
+  /** RFC-112: System packages (apt) to install before bundle/pip install for native extensions */
+  private systemPackagesToInstall: string[] = [];
   /** RFC-103 v3.8.94: Flag indicating project has no test framework (only stdlib) */
   private noTestFrameworkAvailable: boolean = false;
   /** RFC-103 Phase 6: Track retry count for stats enrichment */
@@ -466,7 +468,7 @@ export class ValidationMode {
           const phaseRecord = phaseData as Record<string, unknown> | null;
 
           // Resolve shapes array: prefer project_shapes (multi-ecosystem), fall back to project_shape (single)
-          type ShapeEntry = { ecosystem?: string; ai_context?: string; setup_commands?: string[]; runtime_services?: unknown[]; env?: Record<string, string>; runtime_version?: string; runtime_version_source?: string; framework_versions?: Record<string, string> };
+          type ShapeEntry = { ecosystem?: string; ai_context?: string; setup_commands?: string[]; runtime_services?: unknown[]; env?: Record<string, string>; runtime_version?: string; runtime_version_source?: string; framework_versions?: Record<string, string>; system_packages?: string[] };
           let shapes: ShapeEntry[] = [];
 
           if (Array.isArray(phaseRecord?.project_shapes) && (phaseRecord.project_shapes as unknown[]).length > 0) {
@@ -542,6 +544,15 @@ export class ValidationMode {
                 logger.info(`[RFC-112] Framework versions added to AI context: ${fwContext}`);
                 break;
               }
+            }
+
+            // Collect system packages from all shapes for pre-install before bundle/pip install
+            const systemPackages = shapes.flatMap(s =>
+              (Array.isArray(s.system_packages) ? s.system_packages : []) as string[]
+            ).filter((pkg, i, arr) => arr.indexOf(pkg) === i); // deduplicate
+            if (systemPackages.length > 0) {
+              this.systemPackagesToInstall = systemPackages;
+              logger.info(`[RFC-112] System packages to install: ${systemPackages.join(', ')}`);
             }
           }
         }
@@ -1526,6 +1537,23 @@ ${tests}
         const testRunnerSetup = new FrameworkTestRunner();
         logger.info(`Ensuring runtime for framework: ${frameworkNameForSetup}`);
         await testRunnerSetup.ensureRuntime(frameworkNameForSetup, this.repoPath);
+        // RFC-112: Install system packages before dependency install (native extensions need C libs)
+        if (this.systemPackagesToInstall.length > 0) {
+          const pkgList = this.systemPackagesToInstall.join(' ');
+          logger.info(`[RFC-112] Installing system packages: ${pkgList}`);
+          try {
+            execSync(`apt-get update -qq && apt-get install -y -qq ${pkgList}`, {
+              cwd: this.repoPath,
+              timeout: 120000, // 2 minutes
+              encoding: 'utf8',
+              env: process.env,
+            });
+            logger.info('[RFC-112] System packages installed successfully');
+          } catch (aptErr) {
+            logger.warn(`[RFC-112] System package install warning: ${aptErr instanceof Error ? aptErr.message : String(aptErr)}`);
+          }
+          this.systemPackagesToInstall = []; // Don't re-install on retries
+        }
         logger.info(`Ensuring dependencies for framework: ${frameworkNameForSetup}`);
         await testRunnerSetup.ensureDependencies(frameworkNameForSetup, this.repoPath);
         // When bundle install fails (e.g., native extension compile error for mysql2),
