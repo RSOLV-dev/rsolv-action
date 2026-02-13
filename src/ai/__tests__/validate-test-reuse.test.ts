@@ -130,6 +130,68 @@ describe('MITIGATE: Validate Branch RED Test Reuse', () => {
       expect(result!.testFile).toBe('spec/vulnerability_validation_spec.rb');
     });
 
+    it('extracts from flat per-issue format (as passed by unified-processor)', () => {
+      // When processIssueWithGit receives validationData via unified-processor,
+      // it's already the per-issue object (not nested under validation.issue-N)
+      const flatValidationData = {
+        branchName: 'rsolv/validate/issue-42',
+        framework: 'pytest',
+        redTests: {
+          framework: 'pytest',
+          testFile: 'tests/test_vulnerability_validation.py',
+          redTests: [
+            {
+              testName: 'test_secret_key_not_hardcoded',
+              testCode: 'import pytest\ndef test_secret_key():\n    assert False',
+              attackVector: 'hardcoded_secrets',
+              expectedBehavior: 'should_fail_on_vulnerable_code' as const,
+            },
+          ],
+        },
+        testResults: {
+          testFile: 'tests/test_vulnerability_validation.py',
+          passed: 0,
+          failed: 1,
+          total: 1,
+        },
+        validated: true,
+      };
+
+      // Issue number doesn't matter for flat format — it's already per-issue
+      const result = extractValidateRedTest(flatValidationData, 42);
+      expect(result).not.toBeNull();
+      expect(result!.testCode).toContain('import pytest');
+      expect(result!.framework).toBe('pytest');
+      expect(result!.testFile).toBe('tests/test_vulnerability_validation.py');
+      expect(result!.branchName).toBe('rsolv/validate/issue-42');
+    });
+
+    it('extracts from flat format with redTests.testFile', () => {
+      // The testFile can be in redTests instead of testResults
+      const flatValidationData = {
+        branchName: 'rsolv/validate/issue-3',
+        framework: 'rspec',
+        redTests: {
+          framework: 'rspec',
+          testFile: 'spec/vulnerability_validation_spec.rb',
+          redTests: [
+            {
+              testName: 'test_secure_random',
+              testCode: "require 'securerandom'\nRSpec.describe 'random' do\n  it 'test' do\n  end\nend",
+              attackVector: 'weak_cryptography',
+              expectedBehavior: 'should_fail_on_vulnerable_code' as const,
+            },
+          ],
+        },
+        validated: true,
+      };
+
+      const result = extractValidateRedTest(flatValidationData, 3);
+      expect(result).not.toBeNull();
+      expect(result!.framework).toBe('rspec');
+      expect(result!.testFile).toBe('spec/vulnerability_validation_spec.rb');
+    });
+
     it('extracts from single red test (non-array format)', () => {
       const validationData = {
         validation: {

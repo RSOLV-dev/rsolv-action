@@ -75,8 +75,11 @@ function getTestCommand(framework: string, testFile: string): string {
 /**
  * Extract the proven RED test from VALIDATE phase data.
  *
- * Looks for validation data under both `validation` and `validate` keys
- * (PhaseDataClient may remap during storage/retrieval).
+ * Handles two formats:
+ * 1. Nested: { validation: { "issue-N": { redTests, framework, ... } } }
+ *    (from PhaseDataClient.retrievePhaseResults)
+ * 2. Flat: { redTests, framework, branchName, ... }
+ *    (when unified-processor extracts per-issue data before calling processIssueWithGit)
  *
  * Returns null if no usable RED test is found.
  */
@@ -90,17 +93,22 @@ export function extractValidateRedTest(
 
   const issueKey = `issue-${issueNumber}`;
 
-  // PhaseDataClient stores under 'validation' or remaps to 'validate'
-  const validation =
-    (validationData as Record<string, Record<string, unknown>>)?.validation?.[issueKey] ||
-    (validationData as Record<string, Record<string, unknown>>)?.validate?.[issueKey];
+  // Try nested format first: { validation: { "issue-N": { ... } } }
+  type NestedData = Record<string, Record<string, Record<string, unknown>>>;
+  let data: Record<string, unknown> | undefined =
+    (validationData as NestedData)?.validation?.[issueKey] ||
+    (validationData as NestedData)?.validate?.[issueKey];
 
-  if (!validation) {
+  // Try flat format: validationData IS the per-issue object (has redTests at top level)
+  if (!data && validationData.redTests) {
+    data = validationData;
+    logger.debug(`[MITIGATE] Using flat validation data format (redTests at top level)`);
+  }
+
+  if (!data) {
     logger.debug(`[MITIGATE] No validation entry found for ${issueKey}`);
     return null;
   }
-
-  const data = validation as Record<string, unknown>;
 
   // Extract framework
   const framework = data.framework as string | undefined;
@@ -137,9 +145,12 @@ export function extractValidateRedTest(
     return null;
   }
 
-  // Extract test file path from testResults
+  // Extract test file path from testResults or redTests.testFile
   const testResults = data.testResults as Record<string, unknown> | undefined;
-  const testFile = (testResults?.testFile as string) || getDefaultTestFile(framework);
+  const testFile =
+    (testResults?.testFile as string) ||
+    (redTests.testFile as string) ||
+    getDefaultTestFile(framework);
 
   // Extract branch name
   const branchName = (data.branchName as string) || `rsolv/validate/${issueKey}`;
