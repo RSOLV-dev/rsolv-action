@@ -32,6 +32,7 @@ import type {
 } from '../../types/vulnerability.js';
 import { logger } from '../../utils/logger.js';
 import { execSync } from 'child_process';
+import { extractValidateRedTest, verifyFixWithValidateRedTest, type ValidateRedTest, type RedTestVerificationResult } from '../../ai/validate-test-reuse.js';
 
 export interface ExecuteOptions {
   repository?: {
@@ -1691,7 +1692,16 @@ export class PhaseExecutor {
       
       const { analysisData } = scanData;
       const { generatedTests } = validationData;
-      
+
+      // Extract VALIDATE RED test from stored validation data
+      const validateRedTest = extractValidateRedTest(
+        validationData as Record<string, unknown>,
+        issue.number
+      );
+      if (validateRedTest) {
+        logger.info(`[MITIGATE] Found proven RED test from VALIDATE (${validateRedTest.framework}, file: ${validateRedTest.testFile})`);
+      }
+
       // Set up AI config
       const aiConfig: AIConfig = {
         provider: 'anthropic',
@@ -1800,10 +1810,70 @@ export class PhaseExecutor {
           logger.info('[MITIGATE] 📋 Skipping fix validation (DISABLE_FIX_VALIDATION=true)');
           logger.info('[MITIGATE] Fix will be applied without validation - proceeding to PR creation');
           break; // Exit the iteration loop and proceed to PR creation
+        } else if (validateRedTest) {
+          // NEW: Use VALIDATE's proven RED test with ecosystem-native runner
+          logger.info(`[MITIGATE] Verifying fix with VALIDATE RED test (${validateRedTest.framework})...`);
+
+          const verification = await verifyFixWithValidateRedTest(
+            beforeFixCommit,
+            solution.commitHash!,
+            validateRedTest,
+            process.cwd()
+          );
+
+          if (verification.isValidFix) {
+            logger.info('[MITIGATE] ✅ Fix verified: RED test now passes');
+            validationSucceeded = true;
+            break;
+          }
+
+          // Fix failed, prepare for retry
+          logger.info(`[MITIGATE] ❌ Fix verification failed, will retry (${iteration + 1}/${maxIterations} attempts so far)`);
+
+          if (iteration + 1 >= maxIterations) {
+            const isTestMode = process.env.RSOLV_TESTING_MODE === 'true';
+
+            if (isTestMode) {
+              logger.warn(`[TEST MODE] Fix verification failed after ${maxIterations} attempts, but creating PR anyway for inspection`);
+              solution.isTestMode = true;
+              solution.validationFailed = true;
+              solution.testModeNote = `Verification failed after ${maxIterations} attempts: RED test still fails on fixed code`;
+              break;
+            }
+
+            execSync(`git reset --hard ${beforeFixCommit}`, { encoding: 'utf-8' });
+
+            return {
+              success: false,
+              phase: 'mitigate',
+              message: `Fix verification failed after ${maxIterations} attempts`,
+              error: `RED test still fails: ${verification.fixedResult?.output?.substring(0, 500) || 'no output'}`
+            };
+          }
+
+          // Reset and enhance issue for retry with RED test failure context
+          execSync(`git reset --hard ${beforeFixCommit}`, { encoding: 'utf-8' });
+          currentIssue = {
+            ...issue,
+            specificVulnerabilities: issue.specificVulnerabilities,
+            body: `${issue.body}
+
+## Fix Verification Failed (attempt ${iteration + 1} of ${maxIterations})
+
+The RED test still fails after your fix. Test output:
+\`\`\`
+${verification.fixedResult?.output || 'no output'}
+\`\`\`
+
+The test expects the vulnerability to be fixed. Please review and try again.`
+          };
+
+          iteration++;
+          continue;
         } else if ((this.config.testGeneration?.validateFixes === true || this.config.fixValidation?.enabled === true) &&
             generatedTests?.success && generatedTests.testSuite) {
-
-          logger.info('[MITIGATE] Validating fix with tests...');
+          // LEGACY: Use GitBasedTestValidator when no VALIDATE RED test available
+          logger.info('[MITIGATE] Validating fix with tests (legacy path)...');
 
           const validator = this.gitBasedValidator || new GitBasedTestValidator();
           const validation = await validator.validateFixWithTests(
