@@ -116,6 +116,8 @@ export class TestRunner {
   private readonly RUNTIME_INSTALL_TIMEOUT = 600000; // 10 minutes for runtime install (Ruby compiles from source)
   private readonly MISE_QUICK_TIMEOUT = 300000; // 5 minutes for mise install before fallback (RFC-101 M2)
   // RFC-105: Mise runtimes are cached via entrypoint.sh + actions/cache@v4
+  // Track whether bundle install failed — if so, use rspec directly instead of bundle exec
+  private bundleInstallFailed = false;
   private readonly DEP_INSTALL_TIMEOUT = 180000; // 3 minutes for dependency install
 
   /** Get the mise data directory, respecting MISE_DATA_DIR env var (RFC-105) */
@@ -850,6 +852,25 @@ export class TestRunner {
       console.warn(
         `[TestRunner] Dependency install warning: ${execError.stderr || execError.message}`
       );
+
+      // Ruby fallback: when bundle install fails (e.g., native extension compile error for mysql2),
+      // install the test runner gem directly so tests can still run in isolation
+      if (framework === 'rspec' || framework === 'minitest') {
+        const gemName = framework === 'rspec' ? 'rspec' : 'minitest';
+        console.log(`[TestRunner] bundle install failed, falling back to: gem install ${gemName}`);
+        try {
+          await execAsync(`gem install ${gemName}`, {
+            cwd: workingDir,
+            timeout: this.DEP_INSTALL_TIMEOUT,
+            encoding: 'utf8',
+          });
+          this.bundleInstallFailed = true;
+          console.log(`[TestRunner] ${gemName} installed directly via gem install`);
+        } catch (gemError: unknown) {
+          const gemExecError = gemError as { message?: string };
+          console.warn(`[TestRunner] gem install ${gemName} also failed: ${gemExecError.message}`);
+        }
+      }
     }
   }
 
@@ -1004,9 +1025,9 @@ export class TestRunner {
       jest: { base: 'npx jest', testNameFlag: '-t' },
       vitest: { base: 'npx vitest run', testNameFlag: '-t' },
       mocha: { base: 'npx mocha', testNameFlag: '--grep' },
-      // Ruby (BUNDLE_IGNORE_RUBY_VERSION=1 handles apt-get fallback version mismatch)
-      rspec: { base: 'BUNDLE_IGNORE_RUBY_VERSION=1 bundle exec rspec', testNameFlag: '-e' },
-      minitest: { base: 'BUNDLE_IGNORE_RUBY_VERSION=1 ruby', testNameFlag: '-n' },
+      // Ruby: use bundle exec when available, fall back to direct invocation when bundle install failed
+      rspec: { base: this.bundleInstallFailed ? 'rspec' : 'BUNDLE_IGNORE_RUBY_VERSION=1 bundle exec rspec', testNameFlag: '-e' },
+      minitest: { base: this.bundleInstallFailed ? 'ruby' : 'BUNDLE_IGNORE_RUBY_VERSION=1 ruby', testNameFlag: '-n' },
       // Python (prefix set by detectPythonInstaller: 'poetry run ', 'uv run ', etc.)
       pytest: { base: `${this.pythonTestPrefix}pytest`, testNameFlag: '-k' },
       // PHP
