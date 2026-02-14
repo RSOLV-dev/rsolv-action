@@ -294,6 +294,38 @@ describe('MITIGATE: Validate Branch RED Test Reuse', () => {
       expect(call[0]).toContain('rspec');
     });
 
+    it('uses bare rspec (not bundle exec) when bundleInstallFailed is true', async () => {
+      mockExecSync.mockReturnValue(Buffer.from('1 example, 0 failures'));
+
+      const result = await runRedTestForVerification(
+        "RSpec.describe 'vuln' do\n  it 'exists' do\n  end\nend",
+        'spec/vulnerability_validation_spec.rb',
+        'rspec',
+        '/tmp/repo',
+        { bundleInstallFailed: true }
+      );
+
+      expect(result.passed).toBe(true);
+      const call = mockExecSync.mock.calls[0];
+      expect(String(call[0])).toContain('rspec');
+      expect(String(call[0])).not.toContain('bundle exec');
+    });
+
+    it('uses bundle exec rspec when bundleInstallFailed is false or unset', async () => {
+      mockExecSync.mockReturnValue(Buffer.from('1 example, 0 failures'));
+
+      await runRedTestForVerification(
+        "RSpec.describe 'vuln' do\n  it 'exists' do\n  end\nend",
+        'spec/vulnerability_validation_spec.rb',
+        'rspec',
+        '/tmp/repo',
+        { bundleInstallFailed: false }
+      );
+
+      const call = mockExecSync.mock.calls[0];
+      expect(String(call[0])).toContain('bundle exec rspec');
+    });
+
     it('runs vitest for JavaScript RED tests', async () => {
       mockExecSync.mockReturnValue(Buffer.from('Tests: 1 passed'));
 
@@ -570,6 +602,54 @@ describe('MITIGATE: Validate Branch RED Test Reuse', () => {
 
       // Should have checkouts for: vulnerable, fixed, and restore
       expect(gitCalls.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('auto-detects bundleInstallFailed for rspec and uses bare rspec', async () => {
+      const rspecRedTest: ValidateRedTest = {
+        testCode: "RSpec.describe 'vuln' do\n  it 'exists' do\n  end\nend",
+        testFile: 'spec/vulnerability_validation_spec.rb',
+        framework: 'rspec',
+        branchName: 'rsolv/validate/issue-3',
+      };
+
+      let rspecCommands: string[] = [];
+      mockExecSync.mockImplementation((cmd: string) => {
+        const cmdStr = typeof cmd === 'string' ? cmd : '';
+        // bundle check fails (simulating no Gemfile or failed install)
+        if (cmdStr.includes('bundle check')) {
+          const err = new Error('Could not locate Gemfile') as any;
+          err.status = 1;
+          err.stdout = Buffer.from('');
+          err.stderr = Buffer.from('Could not locate Gemfile');
+          throw err;
+        }
+        if (cmdStr.includes('git checkout') || cmdStr.includes('git rev-parse')) {
+          return Buffer.from('');
+        }
+        if (cmdStr.includes('rspec')) {
+          rspecCommands.push(cmdStr);
+          // First call (vulnerable) = FAIL, second call (fixed) = PASS
+          if (rspecCommands.length <= 1) {
+            const err = new Error('test failed') as any;
+            err.status = 1;
+            err.stdout = Buffer.from('1 example, 1 failure');
+            err.stderr = Buffer.from('');
+            throw err;
+          }
+          return Buffer.from('1 example, 0 failures');
+        }
+        return Buffer.from('');
+      });
+
+      const result = await verifyFixWithValidateRedTest(
+        'abc123', 'def456', rspecRedTest, '/tmp/repo'
+      );
+
+      // Should use bare rspec, not bundle exec rspec
+      expect(rspecCommands.length).toBe(2);
+      expect(rspecCommands[0]).not.toContain('bundle exec');
+      expect(rspecCommands[0]).toContain('rspec');
+      expect(result.isValidFix).toBe(true);
     });
   });
 });

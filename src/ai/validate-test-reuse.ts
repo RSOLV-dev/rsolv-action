@@ -65,11 +65,16 @@ function getEnvWithMiseShims(): Record<string, string> {
 
 // --- Framework → command map ---
 
+/** Options for running RED test verification */
+export interface RunTestOptions {
+  bundleInstallFailed?: boolean;
+}
+
 /**
  * Map framework name to the native test command.
  * Intentionally simple — 8 lines, no TestRunner instantiation overhead.
  */
-function getTestCommand(framework: string, testFile: string): string {
+function getTestCommand(framework: string, testFile: string, options?: RunTestOptions): string {
   switch (framework.toLowerCase()) {
     case 'pytest':
       // Use `python -m pytest` instead of bare `pytest` because mise creates
@@ -77,6 +82,11 @@ function getTestCommand(framework: string, testFile: string): string {
       // `python -m pytest` routes through the python shim which is always available.
       return `python -m pytest "${testFile}" -x -v`;
     case 'rspec':
+      // When bundle install failed (e.g., native extensions missing), fall back
+      // to bare `rspec` which was installed via `gem install rspec`.
+      if (options?.bundleInstallFailed) {
+        return `rspec "${testFile}" --format documentation`;
+      }
       return `bundle exec rspec "${testFile}" --format documentation`;
     case 'vitest':
       return `npx vitest run "${testFile}"`;
@@ -202,7 +212,8 @@ export async function runRedTestForVerification(
   testCode: string,
   testFile: string,
   framework: string,
-  workingDir: string
+  workingDir: string,
+  options?: RunTestOptions
 ): Promise<RunTestResult> {
   const fullPath = join(workingDir, testFile);
 
@@ -217,7 +228,7 @@ export async function runRedTestForVerification(
     writeFileSync(fullPath, testCode, 'utf-8');
 
     // Build and run the native test command
-    const command = getTestCommand(framework, testFile);
+    const command = getTestCommand(framework, testFile, options);
     logger.info(`[MITIGATE] Running RED test: ${command}`);
 
     const output = execSync(command, {
@@ -294,8 +305,20 @@ export async function verifyFixWithValidateRedTest(
   vulnerableCommit: string,
   fixedCommit: string,
   redTest: ValidateRedTest,
-  workingDir: string
+  workingDir: string,
+  options?: RunTestOptions
 ): Promise<RedTestVerificationResult> {
+  // Auto-detect bundleInstallFailed for rspec when not explicitly set
+  const effectiveOptions = { ...options };
+  if (redTest.framework.toLowerCase() === 'rspec' && effectiveOptions.bundleInstallFailed === undefined) {
+    try {
+      execSync('bundle check', { cwd: workingDir, encoding: 'utf-8', stdio: 'pipe' });
+    } catch {
+      logger.info('[MITIGATE] bundle check failed — using bare rspec (not bundle exec)');
+      effectiveOptions.bundleInstallFailed = true;
+    }
+  }
+
   // Save current HEAD to restore later
   let originalHead: string;
   try {
@@ -322,7 +345,8 @@ export async function verifyFixWithValidateRedTest(
       redTest.testCode,
       redTest.testFile,
       redTest.framework,
-      workingDir
+      workingDir,
+      effectiveOptions
     );
 
     logger.info(`[MITIGATE] RED test on vulnerable commit: ${vulnerableResult.passed ? 'PASSED (unexpected)' : 'FAILED (expected)'}`);
@@ -338,7 +362,8 @@ export async function verifyFixWithValidateRedTest(
       redTest.testCode,
       redTest.testFile,
       redTest.framework,
-      workingDir
+      workingDir,
+      effectiveOptions
     );
 
     logger.info(`[MITIGATE] RED test on fixed commit: ${fixedResult.passed ? 'PASSED (expected)' : 'FAILED (unexpected)'}`);
