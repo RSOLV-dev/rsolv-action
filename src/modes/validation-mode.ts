@@ -2184,6 +2184,15 @@ If using Tier 3, add a comment: "// Source analysis fallback — could not impor
 DO NOT default to reading source files with fs.readFileSync/File.read/open(). That is a linter, not a proof
 of exploitability. Import the actual code and exercise it.
 
+CRITICAL: Test the APPLICATION'S business logic, not the language or framework.
+DO NOT call language stdlib functions directly (Random.rand, Math.random, hashlib.md5, etc.) to demonstrate
+they are insecure. Of course they are — that's well-known. Instead, import the APPLICATION MODULE and call
+ITS function to prove that THE APP uses the insecure primitive. The test must fail because of what the app
+does, not because of how the language works. If you fix the app, the test must be able to pass.
+
+BAD: Random.srand(42); assert Random.rand == Random.rand  ← tests Ruby stdlib, not the app
+GOOD: require_relative 'ext/failure_rate'; assert FailureRate.decide(request) uses SecureRandom  ← tests the app
+
 BAD EXAMPLE — DO NOT generate tests like this:
 \`\`\`javascript
 // ❌ REJECTED: This is a LINTER, not a test. It proves nothing about runtime behavior.
