@@ -73,6 +73,25 @@ const TEST_LIBRARY_PATTERNS: Record<string, string[]> = {
 };
 
 /**
+ * Composite/starter dependencies that bundle multiple test libraries.
+ * When we detect one of these artifact names, we expand to the implied libraries.
+ * Handles Java starters (Spring Boot, Quarkus, Micronaut, Dropwizard).
+ */
+const COMPOSITE_TEST_DEPENDENCIES: Record<string, Record<string, string[]>> = {
+  java: {
+    'spring-boot-starter-test': ['junit-jupiter', 'mockito', 'assertj', 'hamcrest'],
+    'quarkus-junit5': ['junit-jupiter'],
+    'quarkus-junit5-mockito': ['junit-jupiter', 'mockito'],
+    'micronaut-test-junit5': ['junit-jupiter'],
+    'dropwizard-testing': ['junit-jupiter', 'assertj'],
+    'vertx-junit5': ['junit-jupiter'],
+    'camel-test-junit5': ['junit-jupiter'],
+    'helidon-testing-junit5': ['junit-jupiter'],
+    'arquillian-junit5-container': ['junit-jupiter'],
+  },
+};
+
+/**
  * Extract test libraries from project manifests for all ecosystems.
  *
  * @param ecosystem - The programming language/ecosystem
@@ -251,6 +270,20 @@ function extractJavaLibraries(
     const regex = new RegExp(`:${escaped}[^'"]*['"]`, 'i');
     if (regex.test(gradle)) {
       found.add(pattern);
+    }
+  }
+
+  // Composite dependency expansion (e.g., spring-boot-starter-test → junit-jupiter + mockito)
+  const composites = COMPOSITE_TEST_DEPENDENCIES['java'] || {};
+  for (const [starter, implied] of Object.entries(composites)) {
+    const escaped = escapeRegex(starter);
+    const pomRegex = new RegExp(`<artifactId>[^<]*${escaped}[^<]*</artifactId>`, 'i');
+    const gradleRegex = new RegExp(`${escaped}`, 'i');
+
+    if (pomRegex.test(pomXml) || gradleRegex.test(gradle)) {
+      for (const lib of implied) {
+        found.add(lib);
+      }
     }
   }
 }

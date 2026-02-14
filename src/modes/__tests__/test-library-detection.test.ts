@@ -92,6 +92,41 @@ end`
       const libs = extractTestLibraries('java', manifests);
       expect(libs).toContain('junit-jupiter');
     });
+
+    it('detects junit from spring-boot-starter-test in pom.xml', () => {
+      const manifests = {
+        'pom.xml': `<dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>`
+      };
+      const libs = extractTestLibraries('java', manifests);
+      expect(libs).toContain('junit-jupiter');
+      expect(libs).toContain('mockito');
+    });
+
+    it('detects junit from quarkus-junit5 in pom.xml', () => {
+      const manifests = {
+        'pom.xml': `<dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-junit5</artifactId>
+      <scope>test</scope>
+    </dependency>`
+      };
+      const libs = extractTestLibraries('java', manifests);
+      expect(libs).toContain('junit-jupiter');
+    });
+
+    it('detects junit from spring-boot-starter-test in build.gradle', () => {
+      const manifests = {
+        'build.gradle': `dependencies {
+      testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    }`
+      };
+      const libs = extractTestLibraries('java', manifests);
+      expect(libs).toContain('junit-jupiter');
+    });
   });
 
   describe('JavaScript', () => {
