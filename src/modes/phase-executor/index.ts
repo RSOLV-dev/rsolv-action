@@ -1827,6 +1827,13 @@ export class PhaseExecutor {
             break;
           }
 
+          // Infrastructure failure: test runner not available — don't retry
+          if (verification.error?.includes('infrastructure')) {
+            logger.error(`[MITIGATE] Infrastructure failure: ${verification.error}`);
+            logger.warn('[MITIGATE] Skipping retries — test runner not available');
+            break;
+          }
+
           // Fix failed, prepare for retry
           logger.info(`[MITIGATE] ❌ Fix verification failed, will retry (${iteration + 1}/${maxIterations} attempts so far)`);
 

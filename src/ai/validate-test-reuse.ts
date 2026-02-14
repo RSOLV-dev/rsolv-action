@@ -72,7 +72,10 @@ function getEnvWithMiseShims(): Record<string, string> {
 function getTestCommand(framework: string, testFile: string): string {
   switch (framework.toLowerCase()) {
     case 'pytest':
-      return `pytest "${testFile}" -x -v`;
+      // Use `python -m pytest` instead of bare `pytest` because mise creates
+      // shims for `python` but NOT for pip-installed tools like `pytest`.
+      // `python -m pytest` routes through the python shim which is always available.
+      return `python -m pytest "${testFile}" -x -v`;
     case 'rspec':
       return `bundle exec rspec "${testFile}" --format documentation`;
     case 'vitest':
@@ -350,6 +353,18 @@ export async function verifyFixWithValidateRedTest(
       // Best effort restore
       logger.warn('[MITIGATE] Failed to restore original HEAD after verification');
     }
+  }
+
+  // Check for infrastructure failure (test runner not found on either commit)
+  if (vulnerableResult.infrastructureFailure || fixedResult.infrastructureFailure) {
+    const failOutput = vulnerableResult.output || fixedResult.output || 'unknown';
+    logger.warn(`[MITIGATE] Test runner infrastructure failure: ${failOutput}`);
+    return {
+      isValidFix: false,
+      vulnerableResult,
+      fixedResult,
+      error: `Test runner infrastructure failure — ${redTest.framework} not available. Output: ${failOutput}`,
+    };
   }
 
   // Determine if fix is valid:

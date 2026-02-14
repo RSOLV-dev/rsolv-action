@@ -261,7 +261,7 @@ describe('MITIGATE: Validate Branch RED Test Reuse', () => {
   });
 
   describe('runRedTestForVerification', () => {
-    it('runs pytest for Python RED tests', async () => {
+    it('runs pytest via python -m pytest (not bare pytest) to use mise python shim', async () => {
       mockExecSync.mockReturnValue(Buffer.from('1 passed'));
 
       const result = await runRedTestForVerification(
@@ -272,10 +272,11 @@ describe('MITIGATE: Validate Branch RED Test Reuse', () => {
       );
 
       expect(result.passed).toBe(true);
-      // Verify pytest command was used
+      // Verify `python -m pytest` is used, NOT bare `pytest`
+      // Bare `pytest` fails because mise creates shims for `python` but not pip-installed tools
       const call = mockExecSync.mock.calls[0];
-      expect(call[0]).toContain('pytest');
-      expect(call[0]).toContain('tests/test_vulnerability_validation.py');
+      expect(String(call[0])).toContain('python -m pytest');
+      expect(String(call[0])).toContain('tests/test_vulnerability_validation.py');
     });
 
     it('runs rspec for Ruby RED tests', async () => {
@@ -320,7 +321,7 @@ describe('MITIGATE: Validate Branch RED Test Reuse', () => {
 
       // The execSync call for running the test (not the file writes)
       const testRunCall = mockExecSync.mock.calls.find(
-        (c) => String(c[0]).includes('pytest')
+        (c) => String(c[0]).includes('python -m pytest')
       );
       expect(testRunCall).toBeDefined();
 
@@ -489,6 +490,36 @@ describe('MITIGATE: Validate Branch RED Test Reuse', () => {
       expect(result.isValidFix).toBe(false);
       // The vulnerable result passed when it shouldn't have
       expect(result.vulnerableResult.passed).toBe(true);
+    });
+
+    it('detects infrastructure failure when test runner not found on both commits', async () => {
+      // When pytest/rspec/vitest isn't installed, both runs return exit 127.
+      // This should be flagged as infrastructure failure, not a fix quality issue.
+      mockExecSync.mockImplementation((cmd: string) => {
+        const cmdStr = typeof cmd === 'string' ? cmd : '';
+        if (cmdStr.includes('git checkout') || cmdStr.includes('git rev-parse')) {
+          return Buffer.from('');
+        }
+        if (cmdStr.includes('pytest') || cmdStr.includes('python -m pytest')) {
+          const err = new Error('command not found: pytest') as any;
+          err.status = 127;
+          err.stdout = Buffer.from('');
+          err.stderr = Buffer.from('/bin/sh: 1: pytest: not found');
+          throw err;
+        }
+        return Buffer.from('');
+      });
+
+      const result = await verifyFixWithValidateRedTest(
+        'abc123',
+        'def456',
+        redTest,
+        '/tmp/repo'
+      );
+
+      expect(result.isValidFix).toBe(false);
+      expect(result.error).toBeDefined();
+      expect(result.error).toContain('infrastructure');
     });
 
     it('includes retry context when fix verification fails', async () => {

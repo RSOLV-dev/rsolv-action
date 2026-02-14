@@ -500,6 +500,13 @@ export async function processIssueWithGit(
           if (verification.isValidFix) {
             logger.info('[MITIGATE] Fix verified: RED test now passes (GREEN)');
             validationPassed = true;
+          } else if (verification.error?.includes('infrastructure')) {
+            // Test runner not available — retrying won't help
+            logger.error(`[MITIGATE] Infrastructure failure: ${verification.error}`);
+            logger.warn('[MITIGATE] Skipping retries — test runner not available');
+            validationPassed = false;
+            // Force exit the retry loop by maxing out iterations
+            iteration = maxIterations;
           } else {
             logger.warn('[MITIGATE] Fix verification failed: RED test still fails');
             validationPassed = false;
