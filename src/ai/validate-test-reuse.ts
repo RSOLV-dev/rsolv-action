@@ -110,15 +110,18 @@ export function extractValidateRedTest(
     return null;
   }
 
-  // Extract framework
-  const framework = data.framework as string | undefined;
+  // Extract RED test code from redTests structure
+  const redTests = data.redTests as Record<string, unknown> | undefined;
+
+  // Extract framework — check data.framework first, then redTests.framework
+  // (extractValidationData() in validation-helpers.ts strips top-level framework,
+  //  but redTests.framework is always present)
+  const framework = (data.framework as string | undefined) ||
+    (redTests?.framework as string | undefined);
   if (!framework) {
     logger.debug(`[MITIGATE] No framework in validation data for ${issueKey}`);
     return null;
   }
-
-  // Extract RED test code from redTests structure
-  const redTests = data.redTests as Record<string, unknown> | undefined;
   if (!redTests) {
     logger.debug(`[MITIGATE] No redTests in validation data for ${issueKey}`);
     return null;

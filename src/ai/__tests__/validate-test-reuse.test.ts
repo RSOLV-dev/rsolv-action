@@ -192,6 +192,45 @@ describe('MITIGATE: Validate Branch RED Test Reuse', () => {
       expect(result!.testFile).toBe('spec/vulnerability_validation_spec.rb');
     });
 
+    it('extracts framework from redTests.framework when top-level framework is stripped', () => {
+      // Reproduces the actual production bug: extractValidationData() in validation-helpers.ts
+      // strips `framework` from the ValidationData type, but redTests.framework still has it.
+      // This is the exact shape that reaches processIssueWithGit via unified-processor.
+      const strippedValidationData = {
+        branchName: 'rsolv/validate/issue-2',
+        // NOTE: NO top-level `framework` field — stripped by extractValidationData()
+        redTests: {
+          framework: 'pytest',
+          testFile: 'tests/test_vulnerability_validation.py',
+          redTests: [
+            {
+              testName: 'test_flask_secret_key_not_hardcoded',
+              testCode: 'import pytest\ndef test_secret_key():\n    assert False',
+              attackVector: 'hardcoded_secrets',
+              expectedBehavior: 'should_fail_on_vulnerable_code' as const,
+            },
+          ],
+        },
+        testResults: {
+          testFile: 'tests/test_vulnerability_validation.py',
+          passed: 0,
+          failed: 1,
+          total: 1,
+        },
+        vulnerabilities: [
+          { cweId: 'CWE-798', file: 'app.py', line: 6, type: 'hardcoded_secrets' },
+        ],
+        validated: true,
+      };
+
+      const result = extractValidateRedTest(strippedValidationData, 2);
+      expect(result).not.toBeNull();
+      expect(result!.testCode).toContain('import pytest');
+      expect(result!.framework).toBe('pytest');
+      expect(result!.testFile).toBe('tests/test_vulnerability_validation.py');
+      expect(result!.branchName).toBe('rsolv/validate/issue-2');
+    });
+
     it('extracts from single red test (non-array format)', () => {
       const validationData = {
         validation: {
