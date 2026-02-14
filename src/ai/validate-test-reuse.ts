@@ -40,6 +40,29 @@ export interface RedTestVerificationResult {
   error?: string;
 }
 
+// --- Mise runtime PATH ---
+
+/**
+ * Build an env object with mise shims prepended to PATH.
+ * During MITIGATE, the test runner (pytest/rspec/vitest) may be installed
+ * via mise but not on the default shell PATH. Explicitly include the shims
+ * so execSync can find them.
+ */
+function getEnvWithMiseShims(): Record<string, string> {
+  const miseDataDir = process.env.MISE_DATA_DIR ||
+    `${process.env.HOME || '/root'}/.local/share/mise`;
+  const shimsPath = `${miseDataDir}/shims`;
+  const currentPath = process.env.PATH || '';
+  const pathWithShims = currentPath.includes(shimsPath)
+    ? currentPath
+    : `${shimsPath}:${currentPath}`;
+
+  return {
+    ...process.env as Record<string, string>,
+    PATH: pathWithShims,
+  };
+}
+
 // --- Framework → command map ---
 
 /**
@@ -199,6 +222,7 @@ export async function runRedTestForVerification(
       encoding: 'utf-8',
       timeout: 60000,
       stdio: ['pipe', 'pipe', 'pipe'],
+      env: getEnvWithMiseShims(),
     });
 
     return {

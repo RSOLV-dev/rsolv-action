@@ -308,6 +308,30 @@ describe('MITIGATE: Validate Branch RED Test Reuse', () => {
       expect(call[0]).toContain('vitest');
     });
 
+    it('includes mise shims PATH in execSync env for native runners', async () => {
+      mockExecSync.mockReturnValue(Buffer.from('1 passed'));
+
+      await runRedTestForVerification(
+        'def test_vuln(): pass',
+        'tests/test_vuln.py',
+        'pytest',
+        '/tmp/repo'
+      );
+
+      // The execSync call for running the test (not the file writes)
+      const testRunCall = mockExecSync.mock.calls.find(
+        (c) => String(c[0]).includes('pytest')
+      );
+      expect(testRunCall).toBeDefined();
+
+      // Should include env with mise shims on PATH
+      const opts = testRunCall![1] as Record<string, unknown>;
+      const env = opts.env as Record<string, string>;
+      expect(env).toBeDefined();
+      expect(env.PATH).toContain('mise');
+      expect(env.PATH).toContain('shims');
+    });
+
     it('returns { passed: true } when test passes (fix verified)', async () => {
       mockExecSync.mockReturnValue(Buffer.from('All tests passed'));
 
