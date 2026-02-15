@@ -33,6 +33,7 @@ import type {
 import { logger } from '../../utils/logger.js';
 import { execSync } from 'child_process';
 import { extractValidateRedTest, verifyFixWithValidateRedTest, type ValidateRedTest, type RedTestVerificationResult } from '../../ai/validate-test-reuse.js';
+import { MitigationClient, type MitigationContext } from '../../pipeline/mitigation-client.js';
 
 export interface ExecuteOptions {
   repository?: {
@@ -1676,6 +1677,163 @@ export class PhaseExecutor {
   }
 
   /**
+   * RFC-096 Phase B: Execute MITIGATE via backend-orchestrated pipeline.
+   *
+   * The backend Orchestrator drives the agentic loop (API calls, tool selection).
+   * This method runs tool requests locally and creates the PR from the result.
+   */
+  private async executeMitigateViaBackend(
+    issue: IssueContext,
+    scanData: ScanPhaseData,
+    validationData: unknown
+  ): Promise<ExecuteResult> {
+    const startTime = Date.now();
+
+    try {
+      logger.info(`[MITIGATE-BACKEND] Starting backend-orchestrated mitigation for issue #${issue.number}`);
+
+      const rsolvApiUrl = process.env.RSOLV_API_URL || 'https://api.rsolv.dev';
+      const mitigationClient = new MitigationClient({
+        baseUrl: rsolvApiUrl,
+        apiKey: this.config.rsolvApiKey!,
+      });
+
+      const { analysisData } = scanData;
+
+      // Build context for the backend orchestrator
+      const mitigationContext: MitigationContext = {
+        issue: {
+          title: issue.title,
+          body: issue.body || '',
+          number: issue.number,
+        },
+        analysis: {
+          summary: `${analysisData.issueType} issue analysis`,
+          complexity: analysisData.estimatedComplexity === 'simple' ? 'low' :
+            analysisData.estimatedComplexity === 'complex' ? 'high' : 'medium',
+          recommended_approach: analysisData.suggestedApproach,
+          related_files: analysisData.filesToModify,
+        },
+        repoPath: process.cwd(),
+        namespace: `${issue.repository?.owner || ''}/${issue.repository?.name || ''}`,
+      };
+
+      // Include validation data if available
+      if (validationData) {
+        const validateRedTest = extractValidateRedTest(
+          validationData as Record<string, unknown>,
+          issue.number
+        );
+        if (validateRedTest) {
+          mitigationContext.validationData = {
+            red_test: {
+              test_path: validateRedTest.testFile,
+              test_code: validateRedTest.testCode,
+              framework: validateRedTest.framework,
+              test_command: `${validateRedTest.framework} ${validateRedTest.testFile}`,
+            },
+          };
+        }
+      }
+
+      // Run the backend-orchestrated mitigation
+      const result = await mitigationClient.runMitigation(mitigationContext);
+
+      if (!result.success) {
+        logger.error(`[MITIGATE-BACKEND] Backend mitigation failed: ${result.error}`);
+        return {
+          success: false,
+          phase: 'mitigate',
+          error: result.error || 'Backend mitigation failed',
+        };
+      }
+
+      logger.info(`[MITIGATE-BACKEND] Backend mitigation completed: ${result.title}`);
+
+      // Check for modified files (the backend orchestrator made changes via tool_requests)
+      const modifiedFiles = execSync('git diff --name-only', { encoding: 'utf-8' }).trim().split('\n').filter(Boolean);
+
+      if (modifiedFiles.length === 0) {
+        logger.warn('[MITIGATE-BACKEND] No files modified by backend orchestrator');
+        return {
+          success: false,
+          phase: 'mitigate',
+          error: 'No files were modified during mitigation',
+        };
+      }
+
+      // Create commit from modified files
+      logger.info(`[MITIGATE-BACKEND] Creating commit for ${modifiedFiles.length} modified files`);
+
+      // Configure git user if needed
+      try {
+        execSync('git config user.name', { encoding: 'utf-8' });
+      } catch {
+        execSync('git config user.name "RSOLV[bot]"', { encoding: 'utf-8' });
+        execSync('git config user.email "bot@rsolv.dev"', { encoding: 'utf-8' });
+      }
+
+      const commitMessage = result.title || `fix: ${issue.title}`;
+      execSync(`git add ${modifiedFiles.map(f => `"${f}"`).join(' ')}`, { encoding: 'utf-8' });
+      execSync(`git commit -m "${commitMessage.replace(/"/g, '\\"')}"`, { encoding: 'utf-8' });
+      const commitHash = execSync('git rev-parse HEAD', { encoding: 'utf-8' }).trim();
+
+      // Get diff stats
+      const diffStatOutput = execSync('git diff HEAD~1 --stat', { encoding: 'utf-8' });
+      const statMatch = diffStatOutput.match(/(\d+) files? changed(?:, (\d+) insertions?\(\+\))?(?:, (\d+) deletions?\(-\))?/);
+      const diffStats = {
+        filesChanged: statMatch ? parseInt(statMatch[1], 10) : modifiedFiles.length,
+        insertions: statMatch ? parseInt(statMatch[2] || '0', 10) : 0,
+        deletions: statMatch ? parseInt(statMatch[3] || '0', 10) : 0,
+      };
+
+      // Create PR
+      logger.info(`[MITIGATE-BACKEND] Creating PR from commit ${commitHash.substring(0, 8)}`);
+
+      const prResult = await createEducationalPullRequest(
+        issue,
+        commitHash,
+        {
+          title: result.title || issue.title,
+          description: result.description || '',
+          vulnerabilityType: scanData.analysisData.vulnerabilityType || 'security',
+          severity: scanData.analysisData.severity || 'medium',
+          cwe: scanData.analysisData.cwe,
+          isAiGenerated: scanData.analysisData.isAiGenerated,
+        },
+        this.config,
+        diffStats,
+        validationData as any
+      );
+
+      const duration = Date.now() - startTime;
+      logger.info(`[MITIGATE-BACKEND] Completed in ${duration}ms`);
+
+      return {
+        success: prResult.success,
+        phase: 'mitigate',
+        message: prResult.message,
+        data: {
+          pullRequestUrl: prResult.pullRequestUrl,
+          pullRequestNumber: prResult.pullRequestNumber,
+          commitHash,
+          filesModified: modifiedFiles,
+          diffStats,
+          backendOrchestrated: true,
+        },
+      };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      logger.error(`[MITIGATE-BACKEND] Error: ${message}`);
+      return {
+        success: false,
+        phase: 'mitigate',
+        error: `Backend mitigation error: ${message}`,
+      };
+    }
+  }
+
+  /**
    * Execute MITIGATE phase for a single issue
    * Applies the fix using Claude Code and validates with tests
    */
@@ -1684,9 +1842,14 @@ export class PhaseExecutor {
     scanData: ScanPhaseData,
     validationData: any // TODO: Fix type incompatibility with AnalysisWithTestsResult
   ): Promise<ExecuteResult> {
+    // RFC-096 Phase B: Route to backend-orchestrated pipeline when enabled
+    if (process.env.USE_BACKEND_MITIGATION === 'true' && this.config.rsolvApiKey) {
+      return this.executeMitigateViaBackend(issue, scanData, validationData);
+    }
+
     const startTime = Date.now();
     const beforeFixCommit = this.getCurrentCommitSha();
-    
+
     try {
       logger.info(`[MITIGATE] Applying fix for issue #${issue.number}`);
       

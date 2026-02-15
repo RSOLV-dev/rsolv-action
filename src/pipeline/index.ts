@@ -6,6 +6,8 @@
  */
 
 export { PipelineClient } from './client.js';
+export { MitigationClient } from './mitigation-client.js';
+export type { MitigationContext, MitigationResult } from './mitigation-client.js';
 export {
   executeReadFile,
   executeWriteFile,
