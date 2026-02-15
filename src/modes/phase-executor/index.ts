@@ -34,6 +34,7 @@ import { logger } from '../../utils/logger.js';
 import { execSync } from 'child_process';
 import { extractValidateRedTest, verifyFixWithValidateRedTest, type ValidateRedTest, type RedTestVerificationResult } from '../../ai/validate-test-reuse.js';
 import { MitigationClient, type MitigationContext } from '../../pipeline/mitigation-client.js';
+import { ValidationClient, type ValidationContext } from '../../pipeline/validation-client.js';
 
 export interface ExecuteOptions {
   repository?: {
@@ -1502,9 +1503,14 @@ export class PhaseExecutor {
    * Generates tests to validate the vulnerability
    */
   async executeValidateForIssue(
-    issue: IssueContext, 
+    issue: IssueContext,
     scanData: ScanPhaseData
   ): Promise<ExecuteResult> {
+    // RFC-096 Phase C: Route to backend-orchestrated pipeline when enabled
+    if (process.env.USE_BACKEND_VALIDATION === 'true' && this.config.rsolvApiKey) {
+      return this.executeValidateViaBackend(issue, scanData);
+    }
+
     try {
       logger.info(`[VALIDATE] Generating tests for issue #${issue.number}`);
       
@@ -1674,6 +1680,179 @@ export class PhaseExecutor {
         error: error instanceof Error ? error.message : String(error)
       };
     }
+  }
+
+  /**
+   * RFC-096 Phase C: Execute VALIDATE via backend-orchestrated pipeline.
+   *
+   * The backend Orchestrator drives the agentic loop (API calls, tool selection,
+   * classification gates). This method runs tool requests locally and returns
+   * the validation result.
+   */
+  private async executeValidateViaBackend(
+    issue: IssueContext,
+    scanData: ScanPhaseData
+  ): Promise<ExecuteResult> {
+    try {
+      logger.info(`[VALIDATE-BACKEND] Starting backend-orchestrated validation for issue #${issue.number}`);
+
+      const rsolvApiUrl = process.env.RSOLV_API_URL || 'https://api.rsolv.dev';
+      const validationClient = new ValidationClient({
+        baseUrl: rsolvApiUrl,
+        apiKey: this.config.rsolvApiKey!,
+      });
+
+      const { analysisData } = scanData;
+
+      // Extract vulnerability info from issue and scan data
+      const cweId = analysisData.cwe || 'CWE-unknown';
+      const vulnerabilityType = analysisData.vulnerabilityType || analysisData.issueType || cweId;
+      const sourceFile = analysisData.filesToModify?.[0];
+
+      // Determine framework from existing test infrastructure
+      const frameworkName = this.detectTestFramework();
+
+      // Build context for the backend orchestrator
+      const validationContext: ValidationContext = {
+        vulnerability: {
+          type: vulnerabilityType,
+          description: issue.body || issue.title,
+          location: sourceFile,
+          source: sourceFile,
+        },
+        framework: {
+          name: frameworkName,
+        },
+        cwe_id: cweId,
+        namespace: `${issue.repository?.owner || ''}/${issue.repository?.name || ''}`,
+        repoPath: process.cwd(),
+      };
+
+      // Run the backend-orchestrated validation
+      const result = await validationClient.runValidation(validationContext);
+
+      if (!result.validated) {
+        logger.warn(`[VALIDATE-BACKEND] Backend validation did not validate: ${result.error || 'test did not prove vulnerability'}`);
+        return {
+          success: false,
+          phase: 'validate',
+          message: result.error || 'Backend validation did not validate the vulnerability',
+          data: {
+            validation: {
+              [`issue_${issue.number}`]: {
+                validated: false,
+                error: result.error,
+              },
+            },
+          },
+        };
+      }
+
+      logger.info(`[VALIDATE-BACKEND] Backend validation succeeded: ${result.test_path}`);
+
+      // Commit the test file if it exists
+      if (result.test_path) {
+        try {
+          // Configure git user if needed
+          try {
+            execSync('git config user.name', { encoding: 'utf-8' });
+          } catch {
+            execSync('git config user.name "RSOLV[bot]"', { encoding: 'utf-8' });
+            execSync('git config user.email "bot@rsolv.dev"', { encoding: 'utf-8' });
+          }
+
+          execSync(`git add "${result.test_path}"`, { encoding: 'utf-8' });
+          const commitMsg = `test: RED test for ${cweId} vulnerability`;
+          execSync(`git commit -m "${commitMsg.replace(/"/g, '\\"')}"`, { encoding: 'utf-8' });
+          logger.info(`[VALIDATE-BACKEND] Committed test file: ${result.test_path}`);
+        } catch (gitError) {
+          logger.warn(`[VALIDATE-BACKEND] Git commit failed (test file may not exist on disk): ${gitError}`);
+        }
+      }
+
+      return {
+        success: true,
+        phase: 'validate',
+        message: 'Tests generated successfully via backend pipeline',
+        data: {
+          validation: {
+            [`issue_${issue.number}`]: {
+              validated: true,
+              test_path: result.test_path,
+              test_code: result.test_code,
+              framework: result.framework || frameworkName,
+              cwe_id: result.cwe_id || cweId,
+            },
+          },
+        },
+      };
+    } catch (error) {
+      logger.error('[VALIDATE-BACKEND] Backend validation failed', error);
+      return {
+        success: false,
+        phase: 'validate',
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  /**
+   * Detect the test framework from the current repo's file structure.
+   * Returns a best-guess framework name for the backend orchestrator.
+   */
+  private detectTestFramework(): string {
+    const fs = require('fs');
+    const path = require('path');
+    const cwd = process.cwd();
+
+    // Check for framework-specific files/dirs
+    if (fs.existsSync(path.join(cwd, 'spec'))) return 'rspec';
+    if (fs.existsSync(path.join(cwd, 'test', 'test_helper.exs'))) return 'exunit';
+    if (fs.existsSync(path.join(cwd, 'vitest.config.ts')) || fs.existsSync(path.join(cwd, 'vitest.config.js'))) return 'vitest';
+    if (fs.existsSync(path.join(cwd, 'jest.config.ts')) || fs.existsSync(path.join(cwd, 'jest.config.js'))) return 'jest';
+    if (fs.existsSync(path.join(cwd, 'pytest.ini')) || fs.existsSync(path.join(cwd, 'conftest.py'))) return 'pytest';
+    if (fs.existsSync(path.join(cwd, 'phpunit.xml')) || fs.existsSync(path.join(cwd, 'phpunit.xml.dist'))) return 'phpunit';
+    if (fs.existsSync(path.join(cwd, 'pom.xml'))) return 'junit';
+    if (fs.existsSync(path.join(cwd, 'build.gradle')) || fs.existsSync(path.join(cwd, 'build.gradle.kts'))) return 'junit';
+
+    // Check package.json for test runner
+    try {
+      const pkgPath = path.join(cwd, 'package.json');
+      if (fs.existsSync(pkgPath)) {
+        const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+        const deps = { ...pkg.dependencies, ...pkg.devDependencies };
+        if (deps.vitest) return 'vitest';
+        if (deps.jest) return 'jest';
+        if (deps.mocha) return 'mocha';
+      }
+    } catch {
+      // ignore parse errors
+    }
+
+    // Check Gemfile for test runner
+    try {
+      const gemfilePath = path.join(cwd, 'Gemfile');
+      if (fs.existsSync(gemfilePath)) {
+        const gemfile = fs.readFileSync(gemfilePath, 'utf-8');
+        if (gemfile.includes('rspec')) return 'rspec';
+        if (gemfile.includes('minitest')) return 'minitest';
+      }
+    } catch {
+      // ignore read errors
+    }
+
+    // Check requirements.txt / pyproject.toml for pytest
+    try {
+      const reqPath = path.join(cwd, 'requirements.txt');
+      if (fs.existsSync(reqPath)) {
+        const reqs = fs.readFileSync(reqPath, 'utf-8');
+        if (reqs.includes('pytest')) return 'pytest';
+      }
+    } catch {
+      // ignore
+    }
+
+    return 'unknown';
   }
 
   /**
