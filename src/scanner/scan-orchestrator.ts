@@ -1,5 +1,6 @@
 import { RepositoryScanner } from './repository-scanner.js';
 import { IssueCreator } from './issue-creator.js';
+import { GitHubAdapter } from '../forge/github-adapter.js';
 import { logger } from '../utils/logger.js';
 import { ensureLabelsExist } from '../github/label-manager.js';
 import type { ScanConfig, ScanResult } from './types.js';
@@ -10,7 +11,8 @@ export class ScanOrchestrator {
 
   constructor() {
     this.scanner = new RepositoryScanner();
-    this.issueCreator = new IssueCreator();
+    const token = process.env.GITHUB_TOKEN || '';
+    this.issueCreator = new IssueCreator(new GitHubAdapter(token));
   }
 
   async performScan(config: ScanConfig): Promise<ScanResult> {

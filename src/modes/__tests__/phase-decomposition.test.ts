@@ -1,6 +1,10 @@
 /**
  * Tests for phase decomposition of processIssueWithGit
  * Testing the extracted phases from processIssueWithGit
+ *
+ * RFC-096 Phase F: Tests updated to use backend-orchestrated pipeline.
+ * VALIDATE uses ValidationClient (SSE → backend).
+ * MITIGATE uses MitigationClient (SSE → backend).
  */
 
 import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
@@ -8,13 +12,22 @@ import { PhaseExecutor } from '../phase-executor/index.js';
 import { IssueContext, ActionConfig } from '../../types/index.js';
 
 // Use vi.hoisted for mocks that need to be available during module initialization
-const { mockExecSync, mockAnalyzeIssue } = vi.hoisted(() => {
+const { mockExecSync, mockAnalyzeIssue, mockRunValidation, mockRunMitigation } = vi.hoisted(() => {
   const execSync = vi.fn((cmd: string) => {
     if (cmd.includes('git status')) {
       return ''; // Clean status
     }
     if (cmd.includes('git rev-parse HEAD')) {
       return 'abc123def456';
+    }
+    if (cmd.includes('git diff --name-only')) {
+      return 'user.js\n'; // Modified files from backend mitigation
+    }
+    if (cmd.includes('git config user.name') && !cmd.includes('"')) {
+      return 'RSOLV[bot]';
+    }
+    if (cmd.includes('git diff HEAD~1 --stat')) {
+      return ' 1 file changed, 10 insertions(+), 5 deletions(-)';
     }
     return '';
   });
@@ -29,17 +42,33 @@ const { mockExecSync, mockAnalyzeIssue } = vi.hoisted(() => {
     severity: 'high'
   }));
 
+  const runValidation = vi.fn(() => Promise.resolve({
+    validated: true,
+    test_path: 'test/sql-injection.test.js',
+    test_code: 'assert(vulnerabilityExists())',
+    framework: 'jest',
+    cwe_id: 'CWE-89',
+  }));
+
+  const runMitigation = vi.fn(() => Promise.resolve({
+    success: true,
+    title: 'Fix SQL injection in user.js',
+    description: 'Used parameterized queries',
+    files_mentioned: ['user.js'],
+  }));
+
   return {
     mockExecSync: execSync,
-    mockAnalyzeIssue: analyzeIssue
+    mockAnalyzeIssue: analyzeIssue,
+    mockRunValidation: runValidation,
+    mockRunMitigation: runMitigation,
   };
 });
 
 // Mock child_process at module level
 vi.mock('child_process', () => ({
   execSync: mockExecSync,
-  exec: vi.fn((cmd: string, callback: any) => {
-    // Mock exec for TestRunner
+  exec: vi.fn((cmd: string, callback: (err: Error | null, result: { stdout: string; stderr: string }) => void) => {
     callback(null, { stdout: '', stderr: '' });
   })
 }));
@@ -49,7 +78,27 @@ vi.mock('../../ai/analyzer.js', () => ({
   analyzeIssue: mockAnalyzeIssue
 }));
 
-// Mock ClaudeAgentSDKAdapter (RFC-095: replaces GitBasedClaudeCodeAdapter)
+// Mock ValidationClient (RFC-096: backend-orchestrated pipeline)
+vi.mock('../../pipeline/validation-client.js', () => ({
+  ValidationClient: class {
+    constructor() {}
+    async runValidation(context: unknown) {
+      return mockRunValidation(context);
+    }
+  },
+}));
+
+// Mock MitigationClient (RFC-096: backend-orchestrated pipeline)
+vi.mock('../../pipeline/mitigation-client.js', () => ({
+  MitigationClient: class {
+    constructor() {}
+    async runMitigation(context: unknown) {
+      return mockRunMitigation(context);
+    }
+  },
+}));
+
+// Mock ClaudeAgentSDKAdapter (RFC-095: still used in standalone execution paths)
 vi.mock('../../ai/adapters/claude-agent-sdk.js', () => ({
   ClaudeAgentSDKAdapter: class {
     constructor() {}
@@ -111,7 +160,32 @@ describe('Phase Decomposition - processIssueWithGit refactoring', () => {
       if (cmd.includes('git rev-parse HEAD')) {
         return 'abc123def456';
       }
+      if (cmd.includes('git diff --name-only')) {
+        return 'user.js\n';
+      }
+      if (cmd.includes('git config user.name') && !cmd.includes('"')) {
+        return 'RSOLV[bot]';
+      }
+      if (cmd.includes('git diff HEAD~1 --stat')) {
+        return ' 1 file changed, 10 insertions(+), 5 deletions(-)';
+      }
       return '';
+    });
+
+    // Reset backend client mocks to defaults
+    mockRunValidation.mockResolvedValue({
+      validated: true,
+      test_path: 'test/sql-injection.test.js',
+      test_code: 'assert(vulnerabilityExists())',
+      framework: 'jest',
+      cwe_id: 'CWE-89',
+    });
+
+    mockRunMitigation.mockResolvedValue({
+      success: true,
+      title: 'Fix SQL injection in user.js',
+      description: 'Used parameterized queries',
+      files_mentioned: ['user.js'],
     });
 
     mockConfig = {
@@ -121,6 +195,7 @@ describe('Phase Decomposition - processIssueWithGit refactoring', () => {
         model: 'claude-3',
         maxTokens: 4000
       },
+      rsolvApiKey: 'rsolv_test_key_123',
       enableSecurityAnalysis: true,
       fixValidation: {
         enabled: true,
@@ -213,8 +288,7 @@ describe('Phase Decomposition - processIssueWithGit refactoring', () => {
   });
 
   describe('Validate Phase Extraction', () => {
-    test('executeValidateForIssue should generate tests for vulnerability', async () => {
-      // This method doesn't exist yet - RED phase
+    test('executeValidateForIssue should generate tests via backend pipeline', async () => {
       const scanData = {
         analysisData: {
           canBeFixed: true,
@@ -222,230 +296,168 @@ describe('Phase Decomposition - processIssueWithGit refactoring', () => {
           filesToModify: ['user.js']
         }
       };
-      
+
       const result = await executor.executeValidateForIssue(mockIssue, scanData);
-      
+
       expect(result.success).toBe(true);
       expect(result.phase).toBe('validate');
       expect(result.data).toHaveProperty('validation');
-      // RFC-060: The validation is structured with numeric keys { 123: { validated, redTests, testResults, ... } }
-      const issueKey = mockIssue.number;
+      // RFC-096: keyed as `issue_${number}`
+      const issueKey = `issue_${mockIssue.number}`;
       expect(result.data.validation).toHaveProperty(issueKey);
-      expect(result.data.validation[issueKey]).toHaveProperty('validated');
-      expect(result.data.validation[issueKey]).toHaveProperty('testResults');
+      expect(result.data.validation[issueKey]).toHaveProperty('validated', true);
+      expect(result.data.validation[issueKey]).toHaveProperty('test_path', 'test/sql-injection.test.js');
+      expect(result.data.validation[issueKey]).toHaveProperty('framework');
     });
 
-    test('executeValidateForIssue should use TestGeneratingSecurityAnalyzer', async () => {
-      const mockAnalyzer = {
-        analyzeWithTestGeneration: vi.fn(() => Promise.resolve({
-          generatedTests: {
-            success: true,
-            testSuite: 'test code here',
-            tests: [{
-              testCode: 'test code',
-              framework: 'jest'
-            }]
-          }
-        }))
-      };
-      
-      executor.testGeneratingAnalyzer = mockAnalyzer;
-      
+    test('executeValidateForIssue should call ValidationClient.runValidation', async () => {
       const scanData = {
         analysisData: {
           canBeFixed: true,
           filesToModify: ['user.js']
         }
       };
-      
+
       const result = await executor.executeValidateForIssue(mockIssue, scanData);
 
-      expect(mockAnalyzer.analyzeWithTestGeneration).toHaveBeenCalled();
-      // Check the validation structure - RFC-060: numeric keys
-      const issueKey = mockIssue.number;
-      expect(result.data.validation[issueKey]).toHaveProperty('validated');
-      expect(result.data.validation[issueKey].testResults).toBeDefined();
+      expect(mockRunValidation).toHaveBeenCalledTimes(1);
+      expect(mockRunValidation).toHaveBeenCalledWith(
+        expect.objectContaining({
+          vulnerability: expect.objectContaining({
+            location: 'user.js',
+          }),
+        })
+      );
+      const issueKey = `issue_${mockIssue.number}`;
+      expect(result.data.validation[issueKey]).toHaveProperty('validated', true);
+      expect(result.data.validation[issueKey].test_code).toBeDefined();
     });
 
-    test('executeValidateForIssue should store validation results', async () => {
-      const storeSpy = vi.fn(() => Promise.resolve());
-      executor.phaseDataClient.storePhaseResults = storeSpy;
-      
+    test('executeValidateForIssue should return failure when validation rejects', async () => {
+      mockRunValidation.mockResolvedValueOnce({
+        validated: false,
+        error: 'Test did not prove vulnerability is exploitable',
+      });
+
       const scanData = {
         analysisData: {
           canBeFixed: true,
           filesToModify: ['user.js']
         }
       };
-      
-      await executor.executeValidateForIssue(mockIssue, scanData);
-      
-      // The storePhaseResults is called with the phase name and data
-      expect(storeSpy).toHaveBeenCalled();
-      expect(storeSpy).toHaveBeenCalledWith(
-        'validate',
-        expect.any(Object), // The actual structure varies
-        expect.any(Object)
-      );
+
+      const result = await executor.executeValidateForIssue(mockIssue, scanData);
+
+      expect(result.success).toBe(false);
+      expect(result.phase).toBe('validate');
+      expect(result.message).toContain('did not prove vulnerability');
     });
   });
 
   describe('Mitigate Phase Extraction', () => {
-    test('executeMitigateForIssue should apply fix using Claude Code', async () => {
-      // Mock test validator directly on executor instance
-      executor.gitBasedValidator = {
-        validateFixWithTests: vi.fn(() => Promise.resolve({
-          isValidFix: true,
-          fixedCommit: {
-            redTestPassed: true,
-            greenTestPassed: true,
-            refactorTestPassed: true
-          }
-        }))
-      } as any;
-      
+    test('executeMitigateForIssue should apply fix via backend pipeline', async () => {
       const validationData = {
-        generatedTests: {
-          success: true,
-          testSuite: {
-            red: {
-              testName: 'SQL Injection RED test',
-              testCode: 'assert(vulnerabilityExists())',
-              expectedBehavior: 'Should detect vulnerability'
-            },
-            green: {
-              testName: 'SQL Injection GREEN test',
-              testCode: 'assert(!vulnerabilityExists())',
-              expectedBehavior: 'Should pass after fix'
-            },
-            refactor: {
-              testName: 'Refactor validation test',
-              testCode: 'assert(functionalityPreserved())',
-              expectedBehavior: 'Should maintain functionality'
-            }
+        validation: {
+          [`issue_${mockIssue.number}`]: {
+            validated: true,
+            test_path: 'test/sql-injection.test.js',
+            test_code: 'assert(vulnerabilityExists())',
+            framework: 'jest',
+            cwe_id: 'CWE-89',
           },
-          tests: [{
-            testCode: 'test',
-            framework: 'jest'
-          }]
-        }
+        },
       };
-      
+
       const scanData = {
         analysisData: {
           canBeFixed: true,
           issueType: 'sql-injection',
-          suggestedApproach: 'Use parameterized queries'
+          suggestedApproach: 'Use parameterized queries',
+          vulnerabilityType: 'SQL_INJECTION',
+          severity: 'high',
         }
       };
-      
+
       const result = await executor.executeMitigateForIssue(
-        mockIssue, 
+        mockIssue,
         scanData,
         validationData
       );
-      
-      if (!result.success) {
-        console.log('Test result:', result);
-      }
+
       expect(result.success).toBe(true);
       expect(result.phase).toBe('mitigate');
-      // RFC-060: The data is structured with numeric keys { 123: { fixed, prUrl, fixCommit, timestamp } }
-      const issueKey = mockIssue.number;
-      expect(result.data).toHaveProperty(issueKey);
-      expect(result.data[issueKey]).toHaveProperty('fixed', true);
-      expect(result.data[issueKey]).toHaveProperty('prUrl');
-      expect(result.data[issueKey]).toHaveProperty('fixCommit');
+      // RFC-096: data contains PR info at top level
+      expect(result.data).toHaveProperty('pullRequestUrl');
+      expect(result.data).toHaveProperty('commitHash');
+      expect(result.data).toHaveProperty('backendOrchestrated', true);
     });
 
-    test('executeMitigateForIssue should validate fix with generated tests', async () => {
-      const mockValidator = {
-        validateFixWithTests: vi.fn(() => Promise.resolve({
-          isValidFix: true,
-          fixedCommit: {
-            redTestPassed: true,
-            greenTestPassed: true,
-            refactorTestPassed: true
-          }
-        }))
-      };
-      
-      executor.gitBasedValidator = mockValidator;
-      
+    test('executeMitigateForIssue should call MitigationClient.runMitigation', async () => {
       const validationData = {
-        generatedTests: {
-          success: true,
-          testSuite: 'test code'
-        }
+        validation: {
+          [`issue_${mockIssue.number}`]: {
+            validated: true,
+            test_path: 'test/sql-injection.test.js',
+            test_code: 'assert(vulnerabilityExists())',
+            framework: 'jest',
+          },
+        },
       };
-      
+
       const scanData = {
         analysisData: {
           canBeFixed: true
         }
       };
-      
+
       await executor.executeMitigateForIssue(mockIssue, scanData, validationData);
-      
-      expect(mockValidator.validateFixWithTests).toHaveBeenCalled();
+
+      expect(mockRunMitigation).toHaveBeenCalledTimes(1);
+      expect(mockRunMitigation).toHaveBeenCalledWith(
+        expect.objectContaining({
+          issue: expect.objectContaining({
+            number: mockIssue.number,
+          }),
+          repoPath: expect.any(String),
+        })
+      );
     });
 
-    test('executeMitigateForIssue should retry on validation failure', async () => {
-      let attemptCount = 0;
-      const mockValidator = {
-        validateFixWithTests: vi.fn(() => {
-          attemptCount++;
-          return Promise.resolve({
-            isValidFix: attemptCount >= 2, // Fail first, succeed second
-            fixedCommit: {
-              redTestPassed: attemptCount >= 2,
-              greenTestPassed: true,
-              refactorTestPassed: true
-            }
-          });
-        })
-      };
-      
-      executor.gitBasedValidator = mockValidator;
-      executor.maxIterations = 3;
-      
+    test('executeMitigateForIssue should fail when backend mitigation fails', async () => {
+      mockRunMitigation.mockResolvedValueOnce({
+        success: false,
+        error: 'Anthropic API rate limit exceeded',
+      });
+
       const validationData = {
-        generatedTests: {
-          success: true,
-          testSuite: 'test code'
-        }
+        validation: {
+          [`issue_${mockIssue.number}`]: {
+            validated: true,
+          },
+        },
       };
-      
+
       const scanData = {
         analysisData: {
           canBeFixed: true
         }
       };
-      
+
       const result = await executor.executeMitigateForIssue(
-        mockIssue, 
-        scanData, 
+        mockIssue,
+        scanData,
         validationData
       );
-      
-      expect(attemptCount).toBe(2);
-      expect(result.success).toBe(true);
+
+      expect(result.success).toBe(false);
+      expect(result.phase).toBe('mitigate');
     });
   });
 
   describe('Full Three-Phase Execution', () => {
     test('executeThreePhaseForIssue should run all phases sequentially', async () => {
-      // Mock test validator to ensure fix validation passes
-      executor.gitBasedValidator = {
-        validateFixWithTests: vi.fn(() => Promise.resolve({
-          isValidFix: true,
-          fixedCommit: {
-            redTestPassed: true,
-            greenTestPassed: true,
-            refactorTestPassed: true
-          }
-        }))
-      } as any;
+      // RFC-096: Backend pipeline mocks are set up in beforeEach via
+      // mockRunValidation and mockRunMitigation — no client-side mocking needed.
 
       const result = await executor.executeThreePhaseForIssue(mockIssue);
 

@@ -1,18 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { IssueCreator } from '../issue-creator.js';
+import type { ForgeAdapter } from '../../forge/forge-adapter.js';
 import type { VulnerabilityGroup, ScanConfig } from '../types.js';
-
-// Mock GitHub client
-vi.mock('../../github/api.js', () => ({
-  getGitHubClient: vi.fn(() => ({
-    issues: {
-      listForRepo: vi.fn().mockResolvedValue({ data: [] }),
-      create: vi.fn().mockResolvedValue({ data: { number: 1, html_url: 'https://github.com/test/repo/issues/1' } }),
-      update: vi.fn().mockResolvedValue({ data: {} }),
-      addLabels: vi.fn().mockResolvedValue({ data: {} }),
-    }
-  }))
-}));
 
 vi.mock('../../utils/logger.js', () => ({
   logger: {
@@ -32,7 +21,19 @@ describe('Issue Body Enrichment', () => {
   };
 
   beforeEach(() => {
-    issueCreator = new IssueCreator();
+    const mockForgeAdapter = {
+      listIssues: vi.fn().mockResolvedValue([]),
+      createIssue: vi.fn().mockResolvedValue({ number: 1, title: 'test', url: 'https://github.com/test/repo/issues/1', labels: [], state: 'open' }),
+      updateIssue: vi.fn().mockResolvedValue(undefined),
+      addLabels: vi.fn().mockResolvedValue(undefined),
+      createComment: vi.fn().mockResolvedValue(undefined),
+      removeLabel: vi.fn().mockResolvedValue(undefined),
+      createPullRequest: vi.fn().mockResolvedValue({ number: 1, title: 'test', url: '', head: '', base: '' }),
+      listPullRequests: vi.fn().mockResolvedValue([]),
+      getFileTree: vi.fn().mockResolvedValue([]),
+      getFileContent: vi.fn().mockResolvedValue(''),
+    } as unknown as ForgeAdapter;
+    issueCreator = new IssueCreator(mockForgeAdapter);
   });
 
   function createGroup(overrides: Partial<VulnerabilityGroup> = {}): VulnerabilityGroup {

@@ -1,24 +1,13 @@
 /**
  * Integration test for prototype pollution type mapping
- * Verifies the full flow: VulnerabilityGroup → IssueCreator → GitHub Issue
+ * Verifies the full flow: VulnerabilityGroup -> IssueCreator -> GitHub Issue
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { IssueCreator } from '../issue-creator.js';
+import type { ForgeAdapter, ForgeIssue } from '../../forge/forge-adapter.js';
 import type { VulnerabilityGroup, ScanConfig } from '../types.js';
 import { VulnerabilityType } from '../../security/types.js';
-
-// Mock the GitHub API client
-const mockIssueCreate = vi.fn();
-
-vi.mock('../../github/api.js', () => ({
-  getGitHubClient: () => ({
-    issues: {
-      create: mockIssueCreate,
-      listForRepo: vi.fn().mockResolvedValue({ data: [] })
-    }
-  })
-}));
 
 vi.mock('../../utils/logger.js', () => ({
   logger: {
@@ -28,22 +17,40 @@ vi.mock('../../utils/logger.js', () => ({
   }
 }));
 
+function createMockForgeAdapter(): {
+  [K in keyof ForgeAdapter]: ReturnType<typeof vi.fn>;
+} {
+  return {
+    listIssues: vi.fn().mockResolvedValue([]),
+    createIssue: vi.fn(),
+    updateIssue: vi.fn().mockResolvedValue(undefined),
+    addLabels: vi.fn().mockResolvedValue(undefined),
+    removeLabel: vi.fn().mockResolvedValue(undefined),
+    createComment: vi.fn().mockResolvedValue(undefined),
+    createPullRequest: vi.fn(),
+    listPullRequests: vi.fn(),
+    getFileTree: vi.fn(),
+    getFileContent: vi.fn(),
+  };
+}
+
 describe('Prototype Pollution Integration Test', () => {
   let issueCreator: IssueCreator;
+  let mockForgeAdapter: ReturnType<typeof createMockForgeAdapter>;
   let mockConfig: ScanConfig;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    issueCreator = new IssueCreator();
+    mockForgeAdapter = createMockForgeAdapter();
+    issueCreator = new IssueCreator(mockForgeAdapter as unknown as ForgeAdapter);
 
-    mockIssueCreate.mockResolvedValue({
-      data: {
-        number: 1,
-        title: 'Test Issue',
-        html_url: 'https://github.com/test/repo/issues/1',
-        labels: []
-      }
-    });
+    mockForgeAdapter.createIssue.mockResolvedValue({
+      number: 1,
+      title: 'Test Issue',
+      url: 'https://github.com/test/repo/issues/1',
+      labels: [],
+      state: 'open'
+    } as ForgeIssue);
 
     mockConfig = {
       repository: {
@@ -103,38 +110,45 @@ describe('Prototype Pollution Integration Test', () => {
 
     // Assert: Verify the issue was created correctly
     expect(result.issues).toHaveLength(1);
-    expect(mockIssueCreate).toHaveBeenCalledTimes(1);
+    expect(mockForgeAdapter.createIssue).toHaveBeenCalledTimes(1);
 
-    const githubIssuePayload = mockIssueCreate.mock.calls[0][0];
+    // createIssue is called with (owner, repo, params) -- params is the 3rd arg
+    const callArgs = mockForgeAdapter.createIssue.mock.calls[0];
+    const owner = callArgs[0];
+    const repo = callArgs[1];
+    const params = callArgs[2];
+
+    expect(owner).toBe('RSOLV-dev');
+    expect(repo).toBe('railsgoat');
 
     // Verify title uses human-readable "Prototype Pollution"
-    expect(githubIssuePayload.title).toBe('🔒 Prototype Pollution vulnerabilities found in 1 file');
-    expect(githubIssuePayload.title).not.toContain('prototype_pollution'); // no underscore
-    expect(githubIssuePayload.title).not.toContain('Prototype_pollution'); // no underscore
+    expect(params.title).toBe('🔒 Prototype Pollution vulnerabilities found in 1 file');
+    expect(params.title).not.toContain('prototype_pollution'); // no underscore
+    expect(params.title).not.toContain('Prototype_pollution'); // no underscore
 
     // Verify labels include correct type-specific label
-    expect(githubIssuePayload.labels).toContain('rsolv:vuln-prototype_pollution');
-    expect(githubIssuePayload.labels).toContain('rsolv:detected');
-    expect(githubIssuePayload.labels).toContain('security');
-    expect(githubIssuePayload.labels).toContain('high');
+    expect(params.labels).toContain('rsolv:vuln-prototype_pollution');
+    expect(params.labels).toContain('rsolv:detected');
+    expect(params.labels).toContain('security');
+    expect(params.labels).toContain('high');
 
     // Verify body contains properly formatted type name
-    expect(githubIssuePayload.body).toContain('**Type**: Prototype Pollution');
-    expect(githubIssuePayload.body).not.toContain('**Type**: Prototype_pollution');
-    expect(githubIssuePayload.body).not.toContain('**Type**: prototype_pollution');
+    expect(params.body).toContain('**Type**: Prototype Pollution');
+    expect(params.body).not.toContain('**Type**: Prototype_pollution');
+    expect(params.body).not.toContain('**Type**: prototype_pollution');
 
     // Verify body contains proper description
-    expect(githubIssuePayload.body).toContain('Prototype pollution vulnerabilities occur');
-    expect(githubIssuePayload.body).toContain('prototype chain');
+    expect(params.body).toContain('Prototype pollution vulnerabilities occur');
+    expect(params.body).toContain('prototype chain');
 
     // Verify body contains proper remediation
-    expect(githubIssuePayload.body).toContain('Object.create(null)');
-    expect(githubIssuePayload.body).toContain('Map instead of plain objects');
+    expect(params.body).toContain('Object.create(null)');
+    expect(params.body).toContain('Map instead of plain objects');
 
     // Verify vulnerability details are included
-    expect(githubIssuePayload.body).toContain('jsapi.js');
-    expect(githubIssuePayload.body).toContain('Line 10');
-    expect(githubIssuePayload.body).toContain('Line 25');
+    expect(params.body).toContain('jsapi.js');
+    expect(params.body).toContain('Line 10');
+    expect(params.body).toContain('Line 25');
 
     // Verify the returned issue metadata
     expect(result.issues[0].vulnerabilityType).toBe('prototype_pollution');
@@ -162,21 +176,21 @@ describe('Prototype Pollution Integration Test', () => {
 
     await issueCreator.createIssuesFromGroups(groups, mockConfig);
 
-    expect(mockIssueCreate).toHaveBeenCalledTimes(2);
+    expect(mockForgeAdapter.createIssue).toHaveBeenCalledTimes(2);
 
-    const prototypePollutionCall = mockIssueCreate.mock.calls[0][0];
-    const deserializationCall = mockIssueCreate.mock.calls[1][0];
+    const prototypePollutionParams = mockForgeAdapter.createIssue.mock.calls[0][2];
+    const deserializationParams = mockForgeAdapter.createIssue.mock.calls[1][2];
 
     // Verify different titles
-    expect(prototypePollutionCall.title).toContain('Prototype Pollution');
-    expect(deserializationCall.title).toContain('Insecure Deserialization');
+    expect(prototypePollutionParams.title).toContain('Prototype Pollution');
+    expect(deserializationParams.title).toContain('Insecure Deserialization');
 
     // Verify different labels
-    expect(prototypePollutionCall.labels).toContain('rsolv:vuln-prototype_pollution');
-    expect(deserializationCall.labels).toContain('rsolv:vuln-insecure_deserialization');
+    expect(prototypePollutionParams.labels).toContain('rsolv:vuln-prototype_pollution');
+    expect(deserializationParams.labels).toContain('rsolv:vuln-insecure_deserialization');
 
     // Verify different descriptions
-    expect(prototypePollutionCall.body).toContain('prototype chain');
-    expect(deserializationCall.body).toContain('deserialized without proper validation');
+    expect(prototypePollutionParams.body).toContain('prototype chain');
+    expect(deserializationParams.body).toContain('deserialized without proper validation');
   });
 });

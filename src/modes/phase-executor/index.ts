@@ -3,28 +3,21 @@
  * Implements RFC-041 three-phase architecture
  */
 
-import { PhaseDataClient, PhaseData, ValidationPhaseData as PhaseDataClientValidationPhaseData } from '../phase-data-client/index.js';
+import { PhaseDataClient, PhaseData } from '../phase-data-client/index.js';
 import { ScanOrchestrator } from '../../scanner/index.js';
 import { analyzeIssue } from '../../ai/analyzer.js';
-import { TestGeneratingSecurityAnalyzer, AnalysisWithTestsResult } from '../../ai/test-generating-security-analyzer.js';
-import { GitBasedTestValidator, ValidationResult as TestValidationResult } from '../../ai/git-based-test-validator.js';
-// RFC-095: Use new unified adapter
+import { TestGeneratingSecurityAnalyzer } from '../../ai/test-generating-security-analyzer.js';
 import {
   ClaudeAgentSDKAdapter,
   GitSolutionResult,
   createClaudeAgentSDKAdapter
 } from '../../ai/adapters/claude-agent-sdk.js';
 import { createEducationalPullRequest } from '../../github/pr-git-educational.js';
-import { createPullRequestFromGit } from '../../github/pr-git.js';
-import { AIConfig, IssueAnalysis } from '../../ai/types.js';
-import { TestRunner, TestRunResult } from '../../ai/test-runner.js';
-import { extractVulnerabilitiesFromIssue } from '../../utils/vulnerability-extraction.js';
-// import { getIssue } from '../../github/api.js'; // Not needed yet
 import type { ActionConfig, IssueContext, AnalysisData } from '../../types/index.js';
 import type { Vulnerability } from '../../security/types.js';
 import type { ValidationResult, MitigationResult } from '../types.js';
-import type { 
-  ValidationData, 
+import type {
+  ValidationData,
   ValidatedVulnerability,
   ScanPhaseData,
   ValidationPhaseData,
@@ -32,7 +25,7 @@ import type {
 } from '../../types/vulnerability.js';
 import { logger } from '../../utils/logger.js';
 import { execSync } from 'child_process';
-import { extractValidateRedTest, verifyFixWithValidateRedTest, type ValidateRedTest, type RedTestVerificationResult } from '../../ai/validate-test-reuse.js';
+import { extractValidateRedTest } from '../../ai/validate-test-reuse.js';
 import { MitigationClient, type MitigationContext } from '../../pipeline/mitigation-client.js';
 import { ValidationClient, type ValidationContext } from '../../pipeline/validation-client.js';
 
@@ -1506,195 +1499,9 @@ export class PhaseExecutor {
     issue: IssueContext,
     scanData: ScanPhaseData
   ): Promise<ExecuteResult> {
-    // RFC-096 Phase C: Route to backend-orchestrated pipeline when enabled
-    if (process.env.USE_BACKEND_VALIDATION === 'true' && this.config.rsolvApiKey) {
-      return this.executeValidateViaBackend(issue, scanData);
-    }
-
+    // RFC-096 Phase F: Backend-orchestrated pipeline is the sole code path
     try {
-      logger.info(`[VALIDATE] Generating tests for issue #${issue.number}`);
-      
-      const { analysisData } = scanData;
-      
-      if (!analysisData.canBeFixed) {
-        return {
-          success: false,
-          phase: 'validate',
-          message: 'Issue cannot be fixed, skipping validation'
-        };
-      }
-      
-      // Use TestGeneratingSecurityAnalyzer if available
-      let testResults: AnalysisWithTestsResult | undefined;
-      
-      if (this.testGeneratingAnalyzer) {
-        // Get codebase files for test generation
-        const codebaseFiles = new Map<string, string>();
-        
-        if (analysisData.filesToModify && analysisData.filesToModify.length > 0) {
-          const fs = (await import('fs')).default;
-          const path = (await import('path')).default;
-          
-          for (const filePath of analysisData.filesToModify) {
-            try {
-              const fullPath = path.resolve(process.cwd(), filePath);
-              if (fs.existsSync(fullPath)) {
-                const content = fs.readFileSync(fullPath, 'utf8');
-                codebaseFiles.set(filePath, content);
-              }
-            } catch (error) {
-              logger.warn(`Could not read file ${filePath} for test generation:`, error);
-            }
-          }
-        }
-        
-        testResults = await this.testGeneratingAnalyzer.analyzeWithTestGeneration(
-          issue,
-          this.config,
-          codebaseFiles
-        );
-      } else if (this.config.testGeneration?.enabled || this.config.fixValidation?.enabled !== false) {
-        // Create analyzer if enabled
-        const aiConfig: AIConfig = {
-          provider: 'anthropic',
-          apiKey: this.config.aiProvider.apiKey,
-          model: this.config.aiProvider.model,
-          temperature: 0.2,
-          maxTokens: this.config.aiProvider.maxTokens,
-          useVendedCredentials: this.config.aiProvider.useVendedCredentials
-        };
-        
-        const testAnalyzer = new TestGeneratingSecurityAnalyzer(aiConfig);
-        
-        // Get codebase files
-        const codebaseFiles = new Map<string, string>();
-        
-        if (analysisData.filesToModify && analysisData.filesToModify.length > 0) {
-          const fs = (await import('fs')).default;
-          const path = (await import('path')).default;
-          
-          for (const filePath of analysisData.filesToModify) {
-            try {
-              const fullPath = path.resolve(process.cwd(), filePath);
-              if (fs.existsSync(fullPath)) {
-                const content = fs.readFileSync(fullPath, 'utf8');
-                codebaseFiles.set(filePath, content);
-              }
-            } catch (error) {
-              logger.warn(`Could not read file ${filePath}:`, error);
-            }
-          }
-        }
-        
-        testResults = await testAnalyzer.analyzeWithTestGeneration(
-          issue,
-          this.config,
-          codebaseFiles
-        );
-      }
-      
-      // RFC-060: Use numeric keys for PhaseDataClient compatibility
-      const issueKey = issue.number;
-
-      // RFC-060 Phase 2.2: Execute generated RED tests
-      let testExecutionResult: TestRunResult | undefined;
-      if (testResults?.generatedTests?.success && testResults.generatedTests.tests?.[0]) {
-        const testRunner = new TestRunner();
-        const testInfo = testResults.generatedTests.tests[0];
-        const testFile = testInfo.suggestedFileName || '__tests__/security/vulnerability-test.js';
-
-        try {
-          testExecutionResult = await testRunner.runTests({
-            framework: testInfo.framework as any,
-            testFile: testFile,
-            workingDir: process.cwd(),
-            timeout: 30000
-          });
-
-          logger.info(`[VALIDATE] Test execution result: ${testExecutionResult.passed ? 'PASSED' : 'FAILED'}`);
-        } catch (error) {
-          logger.warn('[VALIDATE] Could not execute test:', error);
-        }
-      }
-
-      // Extract vulnerability information using shared utility
-      const vulnerabilities = extractVulnerabilitiesFromIssue(issue, scanData);
-
-      logger.info('[VALIDATE] Extracted vulnerabilities from issue', {
-        issueNumber: issue.number,
-        vulnerabilitiesCount: vulnerabilities.length,
-        files: vulnerabilities.map(v => v.file)
-      });
-
-      const validationResult: { [issueId: number]: PhaseDataClientValidationPhaseData } = {
-        [issueKey]: {
-          validated: testResults?.generatedTests?.success || false,
-          redTests: testResults?.generatedTests?.testSuite,
-          testResults: testExecutionResult as any,
-          falsePositiveReason: undefined,
-          vulnerabilities,
-          timestamp: new Date().toISOString()
-        }
-      };
-
-      // Store validation results
-      const commitSha = this.getCurrentCommitSha();
-      logger.info('[VALIDATE] Storing validation results to Platform API', {
-        repo: `${issue.repository.owner}/${issue.repository.name}`,
-        issueNumber: issue.number,
-        commitSha: commitSha.substring(0, 8),
-        hasData: !!validationResult,
-        dataKeys: validationResult ? Object.keys(validationResult) : []
-      });
-
-      const storeResult = await this.phaseDataClient.storePhaseResults(
-        'validate',
-        { validate: validationResult },
-        {
-          repo: `${issue.repository.owner}/${issue.repository.name}`,
-          issueNumber: issue.number,
-          commitSha
-        }
-      );
-
-      logger.info('[VALIDATE] Validation storage result:', {
-        success: storeResult.success,
-        storage: storeResult.storage,
-        warning: storeResult.warning,
-        message: storeResult.message
-      });
-
-      return {
-        success: true,
-        phase: 'validate',
-        message: validationResult[issueKey]?.validated ?
-          'Tests generated successfully' :
-          'Test generation skipped or failed',
-        data: { validation: validationResult }
-      };
-    } catch (error) {
-      logger.error('[VALIDATE] Failed to generate tests', error);
-      return {
-        success: false,
-        phase: 'validate',
-        error: error instanceof Error ? error.message : String(error)
-      };
-    }
-  }
-
-  /**
-   * RFC-096 Phase C: Execute VALIDATE via backend-orchestrated pipeline.
-   *
-   * The backend Orchestrator drives the agentic loop (API calls, tool selection,
-   * classification gates). This method runs tool requests locally and returns
-   * the validation result.
-   */
-  private async executeValidateViaBackend(
-    issue: IssueContext,
-    scanData: ScanPhaseData
-  ): Promise<ExecuteResult> {
-    try {
-      logger.info(`[VALIDATE-BACKEND] Starting backend-orchestrated validation for issue #${issue.number}`);
+      logger.info(`[VALIDATE] Starting backend-orchestrated validation for issue #${issue.number}`);
 
       const rsolvApiUrl = process.env.RSOLV_API_URL || 'https://api.rsolv.dev';
       const validationClient = new ValidationClient({
@@ -1734,7 +1541,7 @@ export class PhaseExecutor {
       const result = await validationClient.runValidation(validationContext);
 
       if (!result.validated) {
-        logger.warn(`[VALIDATE-BACKEND] Backend validation did not validate: ${result.error || 'test did not prove vulnerability'}`);
+        logger.warn(`[VALIDATE] Backend validation did not validate: ${result.error || 'test did not prove vulnerability'}`);
         return {
           success: false,
           phase: 'validate',
@@ -1750,7 +1557,7 @@ export class PhaseExecutor {
         };
       }
 
-      logger.info(`[VALIDATE-BACKEND] Backend validation succeeded: ${result.test_path}`);
+      logger.info(`[VALIDATE] Backend validation succeeded: ${result.test_path}`);
 
       // Commit the test file if it exists
       if (result.test_path) {
@@ -1766,9 +1573,9 @@ export class PhaseExecutor {
           execSync(`git add "${result.test_path}"`, { encoding: 'utf-8' });
           const commitMsg = `test: RED test for ${cweId} vulnerability`;
           execSync(`git commit -m "${commitMsg.replace(/"/g, '\\"')}"`, { encoding: 'utf-8' });
-          logger.info(`[VALIDATE-BACKEND] Committed test file: ${result.test_path}`);
+          logger.info(`[VALIDATE] Committed test file: ${result.test_path}`);
         } catch (gitError) {
-          logger.warn(`[VALIDATE-BACKEND] Git commit failed (test file may not exist on disk): ${gitError}`);
+          logger.warn(`[VALIDATE] Git commit failed (test file may not exist on disk): ${gitError}`);
         }
       }
 
@@ -1789,7 +1596,7 @@ export class PhaseExecutor {
         },
       };
     } catch (error) {
-      logger.error('[VALIDATE-BACKEND] Backend validation failed', error);
+      logger.error('[VALIDATE] Backend validation failed', error);
       return {
         success: false,
         phase: 'validate',
@@ -1858,12 +1665,10 @@ export class PhaseExecutor {
   }
 
   /**
-   * RFC-096 Phase B: Execute MITIGATE via backend-orchestrated pipeline.
-   *
-   * The backend Orchestrator drives the agentic loop (API calls, tool selection).
-   * This method runs tool requests locally and creates the PR from the result.
+   * Execute MITIGATE phase for a single issue.
+   * RFC-096 Phase F: Backend-orchestrated pipeline is the sole code path.
    */
-  private async executeMitigateViaBackend(
+  async executeMitigateForIssue(
     issue: IssueContext,
     scanData: ScanPhaseData,
     validationData: unknown
@@ -1871,7 +1676,7 @@ export class PhaseExecutor {
     const startTime = Date.now();
 
     try {
-      logger.info(`[MITIGATE-BACKEND] Starting backend-orchestrated mitigation for issue #${issue.number}`);
+      logger.info(`[MITIGATE] Starting backend-orchestrated mitigation for issue #${issue.number}`);
 
       const rsolvApiUrl = process.env.RSOLV_API_URL || 'https://api.rsolv.dev';
       const mitigationClient = new MitigationClient({
@@ -1921,7 +1726,7 @@ export class PhaseExecutor {
       const result = await mitigationClient.runMitigation(mitigationContext);
 
       if (!result.success) {
-        logger.error(`[MITIGATE-BACKEND] Backend mitigation failed: ${result.error}`);
+        logger.error(`[MITIGATE] Backend mitigation failed: ${result.error}`);
         return {
           success: false,
           phase: 'mitigate',
@@ -1929,13 +1734,13 @@ export class PhaseExecutor {
         };
       }
 
-      logger.info(`[MITIGATE-BACKEND] Backend mitigation completed: ${result.title}`);
+      logger.info(`[MITIGATE] Backend mitigation completed: ${result.title}`);
 
       // Check for modified files (the backend orchestrator made changes via tool_requests)
       const modifiedFiles = execSync('git diff --name-only', { encoding: 'utf-8' }).trim().split('\n').filter(Boolean);
 
       if (modifiedFiles.length === 0) {
-        logger.warn('[MITIGATE-BACKEND] No files modified by backend orchestrator');
+        logger.warn('[MITIGATE] No files modified by backend orchestrator');
         return {
           success: false,
           phase: 'mitigate',
@@ -1944,7 +1749,7 @@ export class PhaseExecutor {
       }
 
       // Create commit from modified files
-      logger.info(`[MITIGATE-BACKEND] Creating commit for ${modifiedFiles.length} modified files`);
+      logger.info(`[MITIGATE] Creating commit for ${modifiedFiles.length} modified files`);
 
       // Configure git user if needed
       try {
@@ -1969,7 +1774,7 @@ export class PhaseExecutor {
       };
 
       // Create PR
-      logger.info(`[MITIGATE-BACKEND] Creating PR from commit ${commitHash.substring(0, 8)}`);
+      logger.info(`[MITIGATE] Creating PR from commit ${commitHash.substring(0, 8)}`);
 
       const prResult = await createEducationalPullRequest(
         issue,
@@ -1988,7 +1793,7 @@ export class PhaseExecutor {
       );
 
       const duration = Date.now() - startTime;
-      logger.info(`[MITIGATE-BACKEND] Completed in ${duration}ms`);
+      logger.info(`[MITIGATE] Completed in ${duration}ms`);
 
       return {
         success: prResult.success,
@@ -2005,372 +1810,11 @@ export class PhaseExecutor {
       };
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      logger.error(`[MITIGATE-BACKEND] Error: ${message}`);
+      logger.error(`[MITIGATE] Error: ${message}`);
       return {
         success: false,
         phase: 'mitigate',
         error: `Backend mitigation error: ${message}`,
-      };
-    }
-  }
-
-  /**
-   * Execute MITIGATE phase for a single issue
-   * Applies the fix using Claude Code and validates with tests
-   */
-  async executeMitigateForIssue(
-    issue: IssueContext,
-    scanData: ScanPhaseData,
-    validationData: any // TODO: Fix type incompatibility with AnalysisWithTestsResult
-  ): Promise<ExecuteResult> {
-    // RFC-096 Phase B: Route to backend-orchestrated pipeline when enabled
-    if (process.env.USE_BACKEND_MITIGATION === 'true' && this.config.rsolvApiKey) {
-      return this.executeMitigateViaBackend(issue, scanData, validationData);
-    }
-
-    const startTime = Date.now();
-    const beforeFixCommit = this.getCurrentCommitSha();
-
-    try {
-      logger.info(`[MITIGATE] Applying fix for issue #${issue.number}`);
-      
-      const { analysisData } = scanData;
-      const { generatedTests } = validationData;
-
-      // Extract VALIDATE RED test from stored validation data
-      const validateRedTest = extractValidateRedTest(
-        validationData as Record<string, unknown>,
-        issue.number
-      );
-      if (validateRedTest) {
-        logger.info(`[MITIGATE] Found proven RED test from VALIDATE (${validateRedTest.framework}, file: ${validateRedTest.testFile})`);
-      }
-
-      // Set up AI config
-      const aiConfig: AIConfig = {
-        provider: 'anthropic',
-        apiKey: this.config.aiProvider.apiKey,
-        model: this.config.aiProvider.model,
-        temperature: 0.1,
-        maxTokens: this.config.aiProvider.maxTokens,
-        useVendedCredentials: this.config.aiProvider.useVendedCredentials,
-        claudeCodeConfig: {
-          verboseLogging: true,
-          timeout: 600000,
-          executablePath: process.env.CLAUDE_CODE_PATH,
-          useStructuredPhases: this.config.useStructuredPhases
-        }
-      };
-      
-      // Get credential manager if using vended credentials
-      let credentialManager;
-      if (this.config.aiProvider.useVendedCredentials && this.config.rsolvApiKey) {
-        // Set RSOLV_API_KEY environment variable for AI client
-        process.env.RSOLV_API_KEY = this.config.rsolvApiKey;
-        logger.info('Set RSOLV_API_KEY environment variable for vended credentials');
-        
-        const { CredentialManagerSingleton } = await import('../../credentials/singleton.js');
-        credentialManager = await CredentialManagerSingleton.getInstance(this.config.rsolvApiKey);
-        logger.info('Using vended credentials singleton for Claude Code');
-      }
-      
-      // Execute fix with validation loop
-      let solution;
-      let iteration = 0;
-      const maxIterations = this.maxIterations || this.getMaxIterations(issue);
-      let currentIssue = issue;
-      let validationSucceeded = false;
-
-      while (iteration < maxIterations) {
-        logger.info(`[MITIGATE] Fix attempt ${iteration + 1}/${maxIterations}`);
-
-        logger.info('=== MITIGATION ADAPTER CREATION DEBUG ===');
-        logger.info(`useVendedCredentials in aiConfig: ${aiConfig.useVendedCredentials}`);
-        logger.info(`this.config.aiProvider.useVendedCredentials: ${this.config.aiProvider.useVendedCredentials}`);
-        logger.info(`credentialManager exists: ${!!credentialManager}`);
-        logger.info('==========================================');
-
-        // RFC-095: Use new unified ClaudeAgentSDKAdapter
-        const adapter = createClaudeAgentSDKAdapter({
-          repoPath: process.cwd(),
-          credentialManager,
-          useVendedCredentials: aiConfig.useVendedCredentials,
-          maxTurns: 3,
-          model: aiConfig.model,
-          testFilePatterns: ['test/', 'tests/', 'spec/', '__tests__/', '.test.', '.spec.'],
-          verbose: aiConfig.claudeCodeConfig?.verboseLogging
-        });
-
-        // Convert AnalysisData to IssueAnalysis
-        const issueAnalysis: IssueAnalysis = {
-          summary: `${analysisData.issueType} issue analysis`,
-          complexity: analysisData.estimatedComplexity === 'simple' ? 'low' :
-            analysisData.estimatedComplexity === 'complex' ? 'high' : 'medium',
-          estimatedTime: 60,
-          potentialFixes: [analysisData.suggestedApproach || ''],
-          recommendedApproach: analysisData.suggestedApproach || '',
-          relatedFiles: analysisData.filesToModify
-        };
-
-        const validationContext = iteration > 0 ? {
-          current: iteration + 1,
-          max: maxIterations
-        } : undefined;
-
-        solution = await adapter.generateSolutionWithGit(
-          currentIssue,
-          issueAnalysis,
-          undefined,
-          validationData,
-          undefined,
-          validationContext
-        );
-
-        if (!solution.success) {
-          // Check if this is a test mode validation failure that we should proceed with
-          const isTestMode = process.env.RSOLV_TESTING_MODE === 'true';
-          if (isTestMode && solution.isTestMode && solution.validationFailed) {
-            logger.info('[TEST MODE] Solution failed validation but proceeding to create PR for inspection');
-            // Continue to PR creation with the test mode flag
-          } else {
-            return {
-              success: false,
-              phase: 'mitigate',
-              message: solution.message,
-              error: solution.error
-            };
-          }
-        }
-
-        // Validate fix if tests were generated
-        logger.info(`[MITIGATE DEBUG] DISABLE_FIX_VALIDATION env: ${process.env.DISABLE_FIX_VALIDATION}`);
-        logger.info(`[MITIGATE DEBUG] config.fixValidation?.enabled: ${this.config.fixValidation?.enabled}`);
-        logger.info(`[MITIGATE DEBUG] config.testGeneration?.validateFixes: ${this.config.testGeneration?.validateFixes}`);
-
-        const skipValidation = this.config.fixValidation?.enabled === false;
-        logger.info(`[MITIGATE DEBUG] skipValidation calculated as: ${skipValidation}`);
-
-        if (skipValidation) {
-          logger.info('[MITIGATE] 📋 Skipping fix validation (DISABLE_FIX_VALIDATION=true)');
-          logger.info('[MITIGATE] Fix will be applied without validation - proceeding to PR creation');
-          break; // Exit the iteration loop and proceed to PR creation
-        } else if (validateRedTest) {
-          // NEW: Use VALIDATE's proven RED test with ecosystem-native runner
-          logger.info(`[MITIGATE] Verifying fix with VALIDATE RED test (${validateRedTest.framework})...`);
-
-          const verification = await verifyFixWithValidateRedTest(
-            beforeFixCommit,
-            solution.commitHash!,
-            validateRedTest,
-            process.cwd()
-          );
-
-          if (verification.isValidFix) {
-            logger.info('[MITIGATE] ✅ Fix verified: RED test now passes');
-            validationSucceeded = true;
-            break;
-          }
-
-          // Infrastructure failure: test runner not available — don't retry
-          if (verification.error?.includes('infrastructure')) {
-            logger.error(`[MITIGATE] Infrastructure failure: ${verification.error}`);
-            logger.warn('[MITIGATE] Skipping retries — test runner not available');
-            break;
-          }
-
-          // Fix failed, prepare for retry
-          logger.info(`[MITIGATE] ❌ Fix verification failed, will retry (${iteration + 1}/${maxIterations} attempts so far)`);
-
-          if (iteration + 1 >= maxIterations) {
-            const isTestMode = process.env.RSOLV_TESTING_MODE === 'true';
-
-            if (isTestMode) {
-              logger.warn(`[TEST MODE] Fix verification failed after ${maxIterations} attempts, but creating PR anyway for inspection`);
-              solution.isTestMode = true;
-              solution.validationFailed = true;
-              solution.testModeNote = `Verification failed after ${maxIterations} attempts: RED test still fails on fixed code`;
-              break;
-            }
-
-            execSync(`git reset --hard ${beforeFixCommit}`, { encoding: 'utf-8' });
-
-            return {
-              success: false,
-              phase: 'mitigate',
-              message: `Fix verification failed after ${maxIterations} attempts`,
-              error: `RED test still fails: ${verification.fixedResult?.output?.substring(0, 500) || 'no output'}`
-            };
-          }
-
-          // Reset and enhance issue for retry with RED test failure context
-          execSync(`git reset --hard ${beforeFixCommit}`, { encoding: 'utf-8' });
-          currentIssue = {
-            ...issue,
-            specificVulnerabilities: issue.specificVulnerabilities,
-            body: `${issue.body}
-
-## Fix Verification Failed (attempt ${iteration + 1} of ${maxIterations})
-
-The RED test still fails after your fix. Test output:
-\`\`\`
-${verification.fixedResult?.output || 'no output'}
-\`\`\`
-
-The test expects the vulnerability to be fixed. Please review and try again.`
-          };
-
-          iteration++;
-          continue;
-        } else if ((this.config.testGeneration?.validateFixes === true || this.config.fixValidation?.enabled === true) &&
-            generatedTests?.success && generatedTests.testSuite) {
-          // LEGACY: Use GitBasedTestValidator when no VALIDATE RED test available
-          logger.info('[MITIGATE] Validating fix with tests (legacy path)...');
-
-          const validator = this.gitBasedValidator || new GitBasedTestValidator();
-          const validation = await validator.validateFixWithTests(
-            beforeFixCommit,
-            solution.commitHash!,
-            generatedTests.testSuite
-          );
-
-          if (validation.isValidFix) {
-            logger.info('[MITIGATE] ✅ Fix validated successfully');
-            validationSucceeded = true;
-            break;
-          }
-
-          // Fix failed, prepare for retry
-          logger.info(`[MITIGATE] ❌ Fix validation failed, will retry (${iteration + 1}/${maxIterations} attempts so far)`);
-
-          if (iteration + 1 >= maxIterations) {
-            const isTestMode = process.env.RSOLV_TESTING_MODE === 'true';
-
-            if (isTestMode) {
-              logger.warn(`[TEST MODE] Fix validation failed after ${maxIterations} attempts, but creating PR anyway for inspection`);
-              // Keep the fix (don't rollback) and proceed to PR creation
-              solution.isTestMode = true;
-              solution.validationFailed = true;
-              solution.testModeNote = `Validation failed after ${maxIterations} attempts: ${this.explainTestFailureFromResult(validation)}`;
-              break; // Exit loop and proceed to PR creation
-            }
-
-            execSync(`git reset --hard ${beforeFixCommit}`, { encoding: 'utf-8' });
-
-            return {
-              success: false,
-              phase: 'mitigate',
-              message: `Fix validation failed after ${maxIterations} attempts`,
-              error: this.explainTestFailureFromResult(validation)
-            };
-          }
-
-          // Reset and enhance issue for retry
-          execSync(`git reset --hard ${beforeFixCommit}`, { encoding: 'utf-8' });
-          currentIssue = this.createEnhancedIssueWithTestFailure(
-            issue,
-            validation,
-            validationData,
-            iteration + 1,
-            maxIterations
-          );
-
-          iteration++;
-          continue;
-        } else {
-          // No validation needed
-          logger.info('[MITIGATE] No validation configured, proceeding to PR creation');
-          break;
-        }
-      }
-      
-      // Create PR from the commit
-      logger.info(`[MITIGATE] Creating PR from commit ${solution!.commitHash?.substring(0, 8)}`);
-      
-      const useEducationalPR = process.env.RSOLV_EDUCATIONAL_PR !== 'false';
-      
-      const prResult = useEducationalPR ?
-        await createEducationalPullRequest(
-          issue,
-          solution!.commitHash!,
-          {
-            ...solution!.summary!,
-            vulnerabilityType: scanData.analysisData.vulnerabilityType || 'security',
-            severity: scanData.analysisData.severity || 'medium',
-            cwe: scanData.analysisData.cwe,
-            isAiGenerated: scanData.analysisData.isAiGenerated
-          },
-          this.config,
-          solution!.diffStats
-        ) :
-        await createPullRequestFromGit(
-          issue,
-          solution!.commitHash!,
-          solution!.summary!,
-          this.config,
-          solution!.diffStats
-        );
-      
-      if (!prResult.success) {
-        try {
-          execSync('git reset --hard HEAD~1', { encoding: 'utf-8' });
-        } catch (resetError) {
-          logger.warn('Failed to rollback commit', resetError);
-        }
-        
-        return {
-          success: false,
-          phase: 'mitigate',
-          message: prResult.message,
-          error: prResult.error
-        };
-      }
-      
-      const processingTime = Date.now() - startTime;
-      logger.info(`[MITIGATE] Successfully created PR in ${processingTime}ms`);
-
-      // Store mitigation results
-      // RFC-060: Use numeric keys for PhaseDataClient compatibility
-      const issueKey = issue.number;
-      const mitigationResult = {
-        [issueKey]: {
-          fixed: solution!.success || false,
-          prUrl: prResult.pullRequestUrl,
-          fixCommit: solution!.commitHash,
-          timestamp: new Date().toISOString()
-        }
-      };
-      
-      await this.phaseDataClient.storePhaseResults(
-        'mitigate',
-        { mitigate: mitigationResult },
-        {
-          repo: `${issue.repository.owner}/${issue.repository.name}`,
-          issueNumber: issue.number,
-          commitSha: solution!.commitHash!
-        }
-      );
-      
-      return {
-        success: true,
-        phase: 'mitigate',
-        message: `Created PR #${prResult.pullRequestNumber}`,
-        data: mitigationResult
-      };
-      
-    } catch (error) {
-      logger.error('[MITIGATE] Failed to apply fix', error);
-      
-      // Try to rollback
-      try {
-        execSync(`git reset --hard ${beforeFixCommit}`, { encoding: 'utf-8' });
-      } catch (resetError) {
-        logger.warn('Failed to rollback after error', resetError);
-      }
-      
-      return {
-        success: false,
-        phase: 'mitigate',
-        error: error instanceof Error ? error.message : String(error)
       };
     }
   }
@@ -2472,120 +1916,12 @@ The test expects the vulnerability to be fixed. Please review and try again.`
     }
   }
 
-  /**
-   * Get maximum iterations for fix validation
-   */
-  private getMaxIterations(issue: IssueContext): number {
-    // Check for label override
-    const labelMatch = issue.labels.find(label => label.startsWith('fix-validation-max-'));
-    if (labelMatch) {
-      const maxFromLabel = parseInt(labelMatch.replace('fix-validation-max-', ''));
-      if (!isNaN(maxFromLabel)) return maxFromLabel;
-    }
-    
-    // Use config value
-    if (this.config.fixValidation?.maxIterations !== undefined) {
-      return this.config.fixValidation.maxIterations;
-    }
-    
-    // Default
-    return 3;
-  }
-
-  /**
-   * RFC-060: Explain why RED tests failed from ValidationResult
-   */
-  private explainTestFailureFromResult(validation: TestValidationResult): string {
-    const failures = [];
-
-    if (!validation.fixedCommit.allPassed) {
-      failures.push('- **The vulnerability still exists** - RED tests are still failing on your fixed code');
-      // Show which specific RED tests failed if there are multiple
-      if (validation.fixedCommit.redTestsPassed.length > 1) {
-        const failedTests = validation.fixedCommit.redTestsPassed
-          .map((passed, index) => !passed ? `RED test ${index + 1}` : null)
-          .filter(Boolean);
-        if (failedTests.length > 0) {
-          failures.push(`  Failed tests: ${failedTests.join(', ')}`);
-        }
-      }
-    }
-    if (validation.vulnerableCommit.allPassed) {
-      failures.push('- **Warning**: RED tests passed on vulnerable code (they should have failed!)');
-      failures.push('  This suggests the tests may not be properly detecting the vulnerability');
-    }
-
-    return failures.join('\n');
-  }
-
-  /**
-   * Explain why tests failed
-   */
-  private explainTestFailure(validation: ValidationPhaseData): string {
-    const failures = [];
-    
-    if (!validation.validated) {
-      failures.push('- Validation failed');
-    }
-    if (validation.falsePositiveReason) {
-      failures.push(`- False positive: ${validation.falsePositiveReason}`);
-    }
-    if (validation.testResults && !validation.testResults.success) {
-      failures.push('- Test execution failed');
-    }
-    
-    return failures.length > 0 ? failures.join('\n') : 'Unknown validation failure';
-  }
-
-  /**
-   * Create enhanced issue context with test failure information
-   */
-  private createEnhancedIssueWithTestFailure(
-    issue: IssueContext,
-    validation: any,
-    testResults: any,
-    iteration: number,
-    maxIterations: number
-  ): IssueContext {
-    const testCode = testResults.generatedTests?.tests?.[0]?.testCode || '';
-    const framework = testResults.generatedTests?.tests?.[0]?.framework || 'unknown';
-    
-    return {
-      ...issue,
-      body: `${issue.body}
-
-## Previous Fix Attempt Failed
-
-The previous fix did not pass the generated security tests:
-
-### Test Results:
-- Red Test (vulnerability should be fixed): ${validation.fixedCommit.redTestPassed ? '✅ PASSED' : '❌ FAILED'}
-- Green Test (fix should work): ${validation.fixedCommit.greenTestPassed ? '✅ PASSED' : '❌ FAILED'}
-- Refactor Test (functionality maintained): ${validation.fixedCommit.refactorTestPassed ? '✅ PASSED' : '❌ FAILED'}
-
-### Generated Test Code:
-\`\`\`${framework}
-${testCode}
-\`\`\`
-
-Please fix the vulnerability again, ensuring the fix passes all three tests.
-
-### Why the Previous Fix Failed:
-${this.explainTestFailure(validation)}
-
-This is attempt ${iteration + 1} of ${maxIterations}.`
-    };
-  }
-
   // Properties for mocking in tests
   public testGeneratingAnalyzer?: TestGeneratingSecurityAnalyzer;
-  public gitBasedValidator?: GitBasedTestValidator;
-  public maxIterations?: number;
   public testRunner?: any;
   public testDiscovery?: any;
   public testIntegrator?: any;
   public githubClient?: any;
-  public validationTimeout?: number;
 
   /**
    * Execute standalone validation mode for multiple issues

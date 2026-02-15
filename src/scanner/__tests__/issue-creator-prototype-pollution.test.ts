@@ -11,22 +11,10 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { IssueCreator } from '../issue-creator.js';
+import type { ForgeAdapter, ForgeIssue } from '../../forge/forge-adapter.js';
 import type { VulnerabilityGroup, ScanConfig } from '../types.js';
 import { VulnerabilityType } from '../../security/types.js';
 
-// Mock the GitHub API client
-const mockIssueCreate = vi.fn();
-
-vi.mock('../../github/api.js', () => ({
-  getGitHubClient: () => ({
-    issues: {
-      create: mockIssueCreate,
-      listForRepo: vi.fn().mockResolvedValue({ data: [] })
-    }
-  })
-}));
-
-// Mock logger
 vi.mock('../../utils/logger.js', () => ({
   logger: {
     info: vi.fn(),
@@ -36,23 +24,42 @@ vi.mock('../../utils/logger.js', () => ({
   }
 }));
 
+function createMockForgeAdapter(): {
+  [K in keyof ForgeAdapter]: ReturnType<typeof vi.fn>;
+} {
+  return {
+    listIssues: vi.fn().mockResolvedValue([]),
+    createIssue: vi.fn(),
+    updateIssue: vi.fn().mockResolvedValue(undefined),
+    addLabels: vi.fn().mockResolvedValue(undefined),
+    removeLabel: vi.fn().mockResolvedValue(undefined),
+    createComment: vi.fn().mockResolvedValue(undefined),
+    createPullRequest: vi.fn(),
+    listPullRequests: vi.fn(),
+    getFileTree: vi.fn(),
+    getFileContent: vi.fn(),
+  };
+}
+
 describe('IssueCreator - Prototype Pollution Type Mapping', () => {
   let issueCreator: IssueCreator;
+  let mockForgeAdapter: ReturnType<typeof createMockForgeAdapter>;
   let mockConfig: ScanConfig;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    issueCreator = new IssueCreator();
+    mockForgeAdapter = createMockForgeAdapter();
+    issueCreator = new IssueCreator(mockForgeAdapter as unknown as ForgeAdapter);
 
-    mockIssueCreate.mockImplementation(({ title, labels }) =>
-      Promise.resolve({
-        data: {
+    mockForgeAdapter.createIssue.mockImplementation(
+      (_owner: string, _repo: string, params: { title: string; body: string; labels: string[] }) =>
+        Promise.resolve({
           number: 123,
-          title,
-          html_url: 'https://github.com/test/repo/issues/123',
-          labels
-        }
-      })
+          title: params.title,
+          url: 'https://github.com/test/repo/issues/123',
+          labels: params.labels,
+          state: 'open'
+        } as ForgeIssue)
     );
 
     mockConfig = {
@@ -98,20 +105,20 @@ describe('IssueCreator - Prototype Pollution Type Mapping', () => {
 
       // Verify issue was created
       expect(result.issues).toHaveLength(1);
-      expect(mockIssueCreate).toHaveBeenCalledTimes(1);
+      expect(mockForgeAdapter.createIssue).toHaveBeenCalledTimes(1);
 
-      // Get the arguments passed to create
-      const createCallArgs = mockIssueCreate.mock.calls[0][0];
+      // Get the params passed to createIssue (3rd arg)
+      const createCallParams = mockForgeAdapter.createIssue.mock.calls[0][2];
 
       // RED: This should FAIL initially, demonstrating the bug
       // The type-specific label should be 'rsolv:vuln-prototype_pollution'
-      expect(createCallArgs.labels).toContain('rsolv:vuln-prototype_pollution');
+      expect(createCallParams.labels).toContain('rsolv:vuln-prototype_pollution');
 
       // Verify the issue title contains "Prototype Pollution"
-      expect(createCallArgs.title).toContain('Prototype Pollution');
+      expect(createCallParams.title).toContain('Prototype Pollution');
 
       // Verify it's NOT using improper_input_validation
-      expect(createCallArgs.labels).not.toContain('rsolv:vuln-improper_input_validation');
+      expect(createCallParams.labels).not.toContain('rsolv:vuln-improper_input_validation');
     });
 
     it('should generate correct human-readable title for prototype_pollution', async () => {
@@ -128,14 +135,14 @@ describe('IssueCreator - Prototype Pollution Type Mapping', () => {
         mockConfig
       );
 
-      const createCallArgs = mockIssueCreate.mock.calls[0][0];
+      const createCallParams = mockForgeAdapter.createIssue.mock.calls[0][2];
 
       // RED: This should FAIL initially
       // Title should be "🔒 Prototype Pollution vulnerabilities found in 2 files"
-      expect(createCallArgs.title).toBe('🔒 Prototype Pollution vulnerabilities found in 2 files');
+      expect(createCallParams.title).toBe('🔒 Prototype Pollution vulnerabilities found in 2 files');
 
       // Should NOT be generic or use improper capitalization
-      expect(createCallArgs.title).not.toContain('Prototype pollution'); // lowercase p
+      expect(createCallParams.title).not.toContain('Prototype pollution'); // lowercase p
     });
 
     it('should include prototype pollution in issue body description', async () => {
@@ -164,15 +171,15 @@ describe('IssueCreator - Prototype Pollution Type Mapping', () => {
         mockConfig
       );
 
-      const createCallArgs = mockIssueCreate.mock.calls[0][0];
+      const createCallParams = mockForgeAdapter.createIssue.mock.calls[0][2];
 
       // RED: This should FAIL initially
       // Body should contain proper description for prototype pollution
-      expect(createCallArgs.body).toContain('Prototype Pollution');
+      expect(createCallParams.body).toContain('Prototype Pollution');
 
       // Should include proper remediation advice specific to prototype pollution
-      expect(createCallArgs.body).toContain('Object.create(null)');
-      expect(createCallArgs.body).toContain('prototype');
+      expect(createCallParams.body).toContain('Object.create(null)');
+      expect(createCallParams.body).toContain('prototype');
     });
   });
 
@@ -191,11 +198,11 @@ describe('IssueCreator - Prototype Pollution Type Mapping', () => {
         mockConfig
       );
 
-      const createCallArgs = mockIssueCreate.mock.calls[0][0];
+      const createCallParams = mockForgeAdapter.createIssue.mock.calls[0][2];
 
       // This should work correctly (baseline)
-      expect(createCallArgs.title).toContain('SQL Injection');
-      expect(createCallArgs.labels).toContain('rsolv:vuln-sql_injection');
+      expect(createCallParams.title).toContain('SQL Injection');
+      expect(createCallParams.labels).toContain('rsolv:vuln-sql_injection');
     });
 
     it('should handle insecure_deserialization separately from prototype_pollution', async () => {
@@ -228,18 +235,18 @@ describe('IssueCreator - Prototype Pollution Type Mapping', () => {
       );
 
       // Verify they create different issues with different labels
-      expect(mockIssueCreate).toHaveBeenCalledTimes(2);
+      expect(mockForgeAdapter.createIssue).toHaveBeenCalledTimes(2);
 
-      const deserializationCall = mockIssueCreate.mock.calls[0][0];
-      const prototypePollutionCall = mockIssueCreate.mock.calls[1][0];
+      const deserializationParams = mockForgeAdapter.createIssue.mock.calls[0][2];
+      const prototypePollutionParams = mockForgeAdapter.createIssue.mock.calls[1][2];
 
       // RED: These should be different
-      expect(deserializationCall.labels).toContain('rsolv:vuln-insecure_deserialization');
-      expect(prototypePollutionCall.labels).toContain('rsolv:vuln-prototype_pollution');
+      expect(deserializationParams.labels).toContain('rsolv:vuln-insecure_deserialization');
+      expect(prototypePollutionParams.labels).toContain('rsolv:vuln-prototype_pollution');
 
       // Titles should be different
-      expect(deserializationCall.title).toContain('Insecure Deserialization');
-      expect(prototypePollutionCall.title).toContain('Prototype Pollution');
+      expect(deserializationParams.title).toContain('Insecure Deserialization');
+      expect(prototypePollutionParams.title).toContain('Prototype Pollution');
     });
   });
 });

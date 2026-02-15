@@ -5,24 +5,8 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { IssueCreator } from '../issue-creator.js';
+import type { ForgeAdapter, ForgeIssue } from '../../forge/forge-adapter.js';
 import type { VulnerabilityGroup, ScanConfig } from '../types.js';
-
-// Mock the GitHub API client
-vi.mock('../../github/api.js', () => ({
-  getGitHubClient: () => ({
-    issues: {
-      create: vi.fn().mockImplementation(({ title }) =>
-        Promise.resolve({
-          data: {
-            number: Math.floor(Math.random() * 1000),
-            title,
-            html_url: 'https://github.com/test/repo/issues/1'
-          }
-        })
-      )
-    }
-  })
-}));
 
 // Mock logger
 vi.mock('../../utils/logger.js', () => ({
@@ -34,14 +18,42 @@ vi.mock('../../utils/logger.js', () => ({
   }
 }));
 
+function createMockForgeAdapter(): {
+  [K in keyof ForgeAdapter]: ReturnType<typeof vi.fn>;
+} {
+  return {
+    listIssues: vi.fn().mockResolvedValue([]),
+    createIssue: vi.fn().mockImplementation(
+      (_owner: string, _repo: string, params: { title: string; body: string; labels: string[] }) =>
+        Promise.resolve({
+          number: Math.floor(Math.random() * 1000),
+          title: params.title,
+          url: 'https://github.com/test/repo/issues/1',
+          labels: params.labels,
+          state: 'open'
+        } as ForgeIssue)
+    ),
+    updateIssue: vi.fn().mockResolvedValue(undefined),
+    addLabels: vi.fn().mockResolvedValue(undefined),
+    removeLabel: vi.fn().mockResolvedValue(undefined),
+    createComment: vi.fn().mockResolvedValue(undefined),
+    createPullRequest: vi.fn(),
+    listPullRequests: vi.fn(),
+    getFileTree: vi.fn(),
+    getFileContent: vi.fn(),
+  };
+}
+
 describe.skip('IssueCreator - max_issues limit', () => {
   let issueCreator: IssueCreator;
+  let mockForgeAdapter: ReturnType<typeof createMockForgeAdapter>;
   let mockConfig: ScanConfig;
   let mockGroups: VulnerabilityGroup[];
 
   beforeEach(() => {
     vi.clearAllMocks();
-    issueCreator = new IssueCreator();
+    mockForgeAdapter = createMockForgeAdapter();
+    issueCreator = new IssueCreator(mockForgeAdapter as unknown as ForgeAdapter);
 
     mockConfig = {
       repository: {
@@ -210,17 +222,23 @@ describe.skip('IssueCreator - max_issues limit', () => {
     });
 
     it('should continue creating issues even if one fails', async () => {
-      const github = (await import('../../github/api.js')).getGitHubClient();
-      const createMock = github.issues.create as any;
-
       // Make the second issue creation fail
-      createMock.mockImplementationOnce(() => Promise.resolve({
-        data: { number: 1, title: 'Issue 1', html_url: 'url1' }
-      }))
-        .mockImplementationOnce(() => Promise.reject(new Error('API Error')))
-        .mockImplementationOnce(() => Promise.resolve({
-          data: { number: 3, title: 'Issue 3', html_url: 'url3' }
-        }));
+      let callCount = 0;
+      mockForgeAdapter.createIssue.mockImplementation(
+        (_owner: string, _repo: string, params: { title: string; body: string; labels: string[] }) => {
+          callCount++;
+          if (callCount === 2) {
+            return Promise.reject(new Error('API Error'));
+          }
+          return Promise.resolve({
+            number: callCount,
+            title: params.title,
+            url: `https://github.com/test/repo/issues/${callCount}`,
+            labels: params.labels,
+            state: 'open'
+          } as ForgeIssue);
+        }
+      );
 
       mockConfig.maxIssues = 3;
 

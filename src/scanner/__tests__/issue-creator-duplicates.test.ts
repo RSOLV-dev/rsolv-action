@@ -1,46 +1,47 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { IssueCreator } from '../issue-creator.js';
-import { getGitHubClient } from '../../github/api.js';
+import type { ForgeAdapter, ForgeIssue } from '../../forge/forge-adapter.js';
 import type { VulnerabilityGroup, ScanConfig } from '../types.js';
 
-vi.mock('../../github/api.js');
 vi.mock('../../utils/logger.js');
+
+function createMockForgeAdapter(): {
+  [K in keyof ForgeAdapter]: ReturnType<typeof vi.fn>;
+} {
+  return {
+    listIssues: vi.fn(),
+    createIssue: vi.fn(),
+    updateIssue: vi.fn(),
+    addLabels: vi.fn().mockResolvedValue(undefined),
+    removeLabel: vi.fn().mockResolvedValue(undefined),
+    createComment: vi.fn().mockResolvedValue(undefined),
+    createPullRequest: vi.fn(),
+    listPullRequests: vi.fn(),
+    getFileTree: vi.fn(),
+    getFileContent: vi.fn(),
+  };
+}
 
 describe('IssueCreator - Duplicate Detection', () => {
   let issueCreator: IssueCreator;
-  let mockGitHub: any;
+  let mockForgeAdapter: ReturnType<typeof createMockForgeAdapter>;
 
   beforeEach(() => {
-    mockGitHub = {
-      issues: {
-        create: vi.fn(),
-        update: vi.fn(),
-        createComment: vi.fn(),
-        listForRepo: vi.fn(),
-        addLabels: vi.fn().mockResolvedValue({ data: [] })
-      }
-    };
-
-    vi.mocked(getGitHubClient).mockReturnValue(mockGitHub);
-    issueCreator = new IssueCreator();
+    mockForgeAdapter = createMockForgeAdapter();
+    issueCreator = new IssueCreator(mockForgeAdapter as unknown as ForgeAdapter);
   });
 
   describe('findExistingIssue', () => {
     it('should find existing issue with matching vulnerability type label', async () => {
-      const existingIssue = {
+      const existingForgeIssue: ForgeIssue = {
         number: 123,
         title: '🔒 Cross-Site Scripting (XSS) vulnerabilities found in 2 files',
-        labels: [
-          { name: 'rsolv:detected' },
-          { name: 'rsolv:vuln-xss' },
-          { name: 'security' }
-        ],
+        url: 'https://github.com/test/repo/issues/123',
+        labels: ['rsolv:detected', 'rsolv:vuln-xss', 'security'],
         state: 'open'
       };
 
-      mockGitHub.issues.listForRepo.mockResolvedValue({
-        data: [existingIssue]
-      });
+      mockForgeAdapter.listIssues.mockResolvedValue([existingForgeIssue]);
 
       const group: VulnerabilityGroup = {
         type: 'xss',
@@ -61,18 +62,16 @@ describe('IssueCreator - Duplicate Detection', () => {
 
       expect(result).toBeDefined();
       expect(result.number).toBe(123);
-      expect(mockGitHub.issues.listForRepo).toHaveBeenCalledWith({
-        owner: 'test',
-        repo: 'repo',
-        labels: 'rsolv:vuln-xss',
-        state: 'open'
-      });
+      expect(mockForgeAdapter.listIssues).toHaveBeenCalledWith(
+        'test',
+        'repo',
+        'rsolv:vuln-xss',
+        'open'
+      );
     });
 
     it('should return null when no existing issue found', async () => {
-      mockGitHub.issues.listForRepo.mockResolvedValue({
-        data: []
-      });
+      mockForgeAdapter.listIssues.mockResolvedValue([]);
 
       const group: VulnerabilityGroup = {
         type: 'sql-injection',
@@ -101,7 +100,8 @@ describe('IssueCreator - Duplicate Detection', () => {
         number: 123,
         title: '🔒 Cross-Site Scripting (XSS) vulnerabilities found in 2 files',
         body: 'Old body content',
-        labels: [{ name: 'rsolv:detected' }, { name: 'rsolv:vuln-xss' }]
+        labels: [{ name: 'rsolv:detected' }, { name: 'rsolv:vuln-xss' }],
+        html_url: 'https://github.com/test/repo/issues/123'
       };
 
       const group: VulnerabilityGroup = {
@@ -125,30 +125,32 @@ describe('IssueCreator - Duplicate Detection', () => {
         createIssues: true
       };
 
-      mockGitHub.issues.update.mockResolvedValue({ data: { ...existingIssue } });
-      mockGitHub.issues.createComment.mockResolvedValue({ data: {} });
+      mockForgeAdapter.updateIssue.mockResolvedValue(undefined);
+      mockForgeAdapter.createComment.mockResolvedValue(undefined);
 
       // @ts-ignore - accessing private method for testing
       const result = await issueCreator.updateExistingIssue(existingIssue, group, config);
 
       expect(result).toBeDefined();
-      expect(mockGitHub.issues.update).toHaveBeenCalledWith({
-        owner: 'test',
-        repo: 'repo',
-        issue_number: 123,
-        title: '🔒 Cross-Site Scripting (XSS) vulnerabilities found in 3 files',
-        body: expect.stringContaining('**Total Instances**: 3')
-      });
+      expect(mockForgeAdapter.updateIssue).toHaveBeenCalledWith(
+        'test',
+        'repo',
+        123,
+        {
+          title: '🔒 Cross-Site Scripting (XSS) vulnerabilities found in 3 files',
+          body: expect.stringContaining('**Total Instances**: 3')
+        }
+      );
 
-      expect(mockGitHub.issues.createComment).toHaveBeenCalledWith({
-        owner: 'test',
-        repo: 'repo',
-        issue_number: 123,
-        body: expect.stringContaining('📊 Scan Update')
-      });
+      expect(mockForgeAdapter.createComment).toHaveBeenCalledWith(
+        'test',
+        'repo',
+        123,
+        expect.stringContaining('Scan Update')
+      );
 
       // Should NOT call addLabels since rsolv:detected is already present
-      expect(mockGitHub.issues.addLabels).not.toHaveBeenCalled();
+      expect(mockForgeAdapter.addLabels).not.toHaveBeenCalled();
     });
 
     it('should add rsolv:detected label when missing from reused issue', async () => {
@@ -187,41 +189,35 @@ describe('IssueCreator - Duplicate Detection', () => {
         createIssues: true
       };
 
-      mockGitHub.issues.update.mockResolvedValue({ data: { ...existingIssue } });
-      mockGitHub.issues.createComment.mockResolvedValue({ data: {} });
+      mockForgeAdapter.updateIssue.mockResolvedValue(undefined);
+      mockForgeAdapter.createComment.mockResolvedValue(undefined);
 
       // @ts-ignore - accessing private method for testing
       await issueCreator.updateExistingIssue(existingIssue, group, config);
 
       // Should call addLabels to ensure rsolv:detected is present for phase handoff
-      expect(mockGitHub.issues.addLabels).toHaveBeenCalledWith({
-        owner: 'test',
-        repo: 'repo',
-        issue_number: 1107,
-        labels: ['rsolv:detected']
-      });
+      expect(mockForgeAdapter.addLabels).toHaveBeenCalledWith(
+        'test',
+        'repo',
+        1107,
+        ['rsolv:detected']
+      );
     });
   });
 
   describe('createIssuesFromGroups with duplicate detection', () => {
     it('should update existing issue instead of creating new one', async () => {
-      const existingIssue = {
+      const existingForgeIssue: ForgeIssue = {
         number: 123,
         title: '🔒 Cross-Site Scripting (XSS) vulnerabilities found in 1 file',
-        labels: [
-          { name: 'rsolv:detected' },
-          { name: 'rsolv:vuln-xss' }
-        ],
-        html_url: 'https://github.com/test/repo/issues/123'
+        url: 'https://github.com/test/repo/issues/123',
+        labels: ['rsolv:detected', 'rsolv:vuln-xss'],
+        state: 'open'
       };
 
-      mockGitHub.issues.listForRepo.mockResolvedValue({
-        data: [existingIssue]
-      });
-      mockGitHub.issues.update.mockResolvedValue({
-        data: { ...existingIssue, title: '🔒 Cross-Site Scripting (XSS) vulnerabilities found in 2 files' }
-      });
-      mockGitHub.issues.createComment.mockResolvedValue({ data: {} });
+      mockForgeAdapter.listIssues.mockResolvedValue([existingForgeIssue]);
+      mockForgeAdapter.updateIssue.mockResolvedValue(undefined);
+      mockForgeAdapter.createComment.mockResolvedValue(undefined);
 
       const group: VulnerabilityGroup = {
         type: 'xss',
@@ -244,21 +240,19 @@ describe('IssueCreator - Duplicate Detection', () => {
       expect(result.issues[0].number).toBe(123);
       expect(result.skippedValidated).toBe(0);
       expect(result.skippedFalsePositive).toBe(0);
-      expect(mockGitHub.issues.create).not.toHaveBeenCalled();
-      expect(mockGitHub.issues.update).toHaveBeenCalled();
+      expect(mockForgeAdapter.createIssue).not.toHaveBeenCalled();
+      expect(mockForgeAdapter.updateIssue).toHaveBeenCalled();
     });
 
     it('should create new issue when no duplicate exists', async () => {
-      mockGitHub.issues.listForRepo.mockResolvedValue({
-        data: []
-      });
-      mockGitHub.issues.create.mockResolvedValue({
-        data: {
-          number: 456,
-          title: '🔒 SQL Injection vulnerabilities found in 1 file',
-          html_url: 'https://github.com/test/repo/issues/456'
-        }
-      });
+      mockForgeAdapter.listIssues.mockResolvedValue([]);
+      mockForgeAdapter.createIssue.mockResolvedValue({
+        number: 456,
+        title: '🔒 SQL Injection vulnerabilities found in 1 file',
+        url: 'https://github.com/test/repo/issues/456',
+        labels: ['rsolv:detected', 'rsolv:vuln-sql-injection', 'security', 'critical', 'automated-scan'],
+        state: 'open'
+      } as ForgeIssue);
 
       const group: VulnerabilityGroup = {
         type: 'sql-injection',
@@ -281,27 +275,22 @@ describe('IssueCreator - Duplicate Detection', () => {
       expect(result.issues[0].number).toBe(456);
       expect(result.skippedValidated).toBe(0);
       expect(result.skippedFalsePositive).toBe(0);
-      expect(mockGitHub.issues.create).toHaveBeenCalled();
-      expect(mockGitHub.issues.update).not.toHaveBeenCalled();
+      expect(mockForgeAdapter.createIssue).toHaveBeenCalled();
+      expect(mockForgeAdapter.updateIssue).not.toHaveBeenCalled();
     });
   });
 
   describe('RFC-081: Issue Lifecycle State Management', () => {
     it('should skip issues with rsolv:validated label', async () => {
-      const validatedIssue = {
+      const validatedIssue: ForgeIssue = {
         number: 100,
         title: '🔒 SQL Injection vulnerabilities found in 1 file',
-        labels: [
-          { name: 'rsolv:validated' },
-          { name: 'rsolv:vuln-sql-injection' },
-          { name: 'security' }
-        ],
-        html_url: 'https://github.com/test/repo/issues/100'
+        url: 'https://github.com/test/repo/issues/100',
+        labels: ['rsolv:validated', 'rsolv:vuln-sql-injection', 'security'],
+        state: 'open'
       };
 
-      mockGitHub.issues.listForRepo.mockResolvedValue({
-        data: [validatedIssue]
-      });
+      mockForgeAdapter.listIssues.mockResolvedValue([validatedIssue]);
 
       const group: VulnerabilityGroup = {
         type: 'sql-injection',
@@ -323,25 +312,20 @@ describe('IssueCreator - Duplicate Detection', () => {
       expect(result.issues).toHaveLength(0);
       expect(result.skippedValidated).toBe(1);
       expect(result.skippedFalsePositive).toBe(0);
-      expect(mockGitHub.issues.create).not.toHaveBeenCalled();
-      expect(mockGitHub.issues.update).not.toHaveBeenCalled();
+      expect(mockForgeAdapter.createIssue).not.toHaveBeenCalled();
+      expect(mockForgeAdapter.updateIssue).not.toHaveBeenCalled();
     });
 
     it('should skip issues with rsolv:false-positive label', async () => {
-      const falsePositiveIssue = {
+      const falsePositiveIssue: ForgeIssue = {
         number: 101,
         title: '🔒 XSS vulnerabilities found in 2 files',
-        labels: [
-          { name: 'rsolv:false-positive' },
-          { name: 'rsolv:vuln-xss' },
-          { name: 'security' }
-        ],
-        html_url: 'https://github.com/test/repo/issues/101'
+        url: 'https://github.com/test/repo/issues/101',
+        labels: ['rsolv:false-positive', 'rsolv:vuln-xss', 'security'],
+        state: 'open'
       };
 
-      mockGitHub.issues.listForRepo.mockResolvedValue({
-        data: [falsePositiveIssue]
-      });
+      mockForgeAdapter.listIssues.mockResolvedValue([falsePositiveIssue]);
 
       const group: VulnerabilityGroup = {
         type: 'xss',
@@ -363,29 +347,22 @@ describe('IssueCreator - Duplicate Detection', () => {
       expect(result.issues).toHaveLength(0);
       expect(result.skippedValidated).toBe(0);
       expect(result.skippedFalsePositive).toBe(1);
-      expect(mockGitHub.issues.create).not.toHaveBeenCalled();
-      expect(mockGitHub.issues.update).not.toHaveBeenCalled();
+      expect(mockForgeAdapter.createIssue).not.toHaveBeenCalled();
+      expect(mockForgeAdapter.updateIssue).not.toHaveBeenCalled();
     });
 
     it('should update issues with only rsolv:detected label', async () => {
-      const detectedIssue = {
+      const detectedIssue: ForgeIssue = {
         number: 102,
         title: '🔒 Command Injection vulnerabilities found in 1 file',
-        labels: [
-          { name: 'rsolv:detected' },
-          { name: 'rsolv:vuln-command-injection' },
-          { name: 'security' }
-        ],
-        html_url: 'https://github.com/test/repo/issues/102'
+        url: 'https://github.com/test/repo/issues/102',
+        labels: ['rsolv:detected', 'rsolv:vuln-command-injection', 'security'],
+        state: 'open'
       };
 
-      mockGitHub.issues.listForRepo.mockResolvedValue({
-        data: [detectedIssue]
-      });
-      mockGitHub.issues.update.mockResolvedValue({
-        data: { ...detectedIssue }
-      });
-      mockGitHub.issues.createComment.mockResolvedValue({ data: {} });
+      mockForgeAdapter.listIssues.mockResolvedValue([detectedIssue]);
+      mockForgeAdapter.updateIssue.mockResolvedValue(undefined);
+      mockForgeAdapter.createComment.mockResolvedValue(undefined);
 
       const group: VulnerabilityGroup = {
         type: 'command-injection',
@@ -408,67 +385,57 @@ describe('IssueCreator - Duplicate Detection', () => {
       expect(result.issues[0].number).toBe(102);
       expect(result.skippedValidated).toBe(0);
       expect(result.skippedFalsePositive).toBe(0);
-      expect(mockGitHub.issues.create).not.toHaveBeenCalled();
-      expect(mockGitHub.issues.update).toHaveBeenCalled();
+      expect(mockForgeAdapter.createIssue).not.toHaveBeenCalled();
+      expect(mockForgeAdapter.updateIssue).toHaveBeenCalled();
     });
 
     it('should handle mixed state transitions correctly', async () => {
-      // First group: validated (skip)
-      const validatedIssue = {
-        number: 200,
-        labels: [
-          { name: 'rsolv:validated' },
-          { name: 'rsolv:vuln-sql-injection' }
-        ]
-      };
+      // listIssues is called once per group with the vuln-type label
+      mockForgeAdapter.listIssues.mockImplementation(
+        (_owner: string, _repo: string, labels: string, _state: string) => {
+          if (labels === 'rsolv:vuln-sql-injection') {
+            return Promise.resolve([{
+              number: 200,
+              title: '🔒 SQL Injection',
+              url: 'https://github.com/test/repo/issues/200',
+              labels: ['rsolv:validated', 'rsolv:vuln-sql-injection'],
+              state: 'open'
+            }] as ForgeIssue[]);
+          }
+          if (labels === 'rsolv:vuln-xss') {
+            return Promise.resolve([{
+              number: 201,
+              title: '🔒 XSS',
+              url: 'https://github.com/test/repo/issues/201',
+              labels: ['rsolv:false-positive', 'rsolv:vuln-xss'],
+              state: 'open'
+            }] as ForgeIssue[]);
+          }
+          if (labels === 'rsolv:vuln-command-injection') {
+            return Promise.resolve([{
+              number: 202,
+              title: '🔒 Command Injection',
+              url: 'https://github.com/test/repo/issues/202',
+              labels: ['rsolv:detected', 'rsolv:vuln-command-injection'],
+              state: 'open'
+            }] as ForgeIssue[]);
+          }
+          if (labels === 'rsolv:vuln-path-traversal') {
+            return Promise.resolve([] as ForgeIssue[]);
+          }
+          return Promise.resolve([] as ForgeIssue[]);
+        }
+      );
 
-      // Second group: false-positive (skip)
-      const falsePositiveIssue = {
-        number: 201,
-        labels: [
-          { name: 'rsolv:false-positive' },
-          { name: 'rsolv:vuln-xss' }
-        ]
-      };
-
-      // Third group: detected (update)
-      const detectedIssue = {
-        number: 202,
-        labels: [
-          { name: 'rsolv:detected' },
-          { name: 'rsolv:vuln-command-injection' }
-        ],
-        html_url: 'https://github.com/test/repo/issues/202'
-      };
-
-      // Fourth group: no existing issue (create new)
-      mockGitHub.issues.listForRepo.mockImplementation(({ labels }: any) => {
-        if (labels === 'rsolv:vuln-sql-injection') {
-          return Promise.resolve({ data: [validatedIssue] });
-        }
-        if (labels === 'rsolv:vuln-xss') {
-          return Promise.resolve({ data: [falsePositiveIssue] });
-        }
-        if (labels === 'rsolv:vuln-command-injection') {
-          return Promise.resolve({ data: [detectedIssue] });
-        }
-        if (labels === 'rsolv:vuln-path-traversal') {
-          return Promise.resolve({ data: [] });
-        }
-        return Promise.resolve({ data: [] });
-      });
-
-      mockGitHub.issues.update.mockResolvedValue({
-        data: { ...detectedIssue }
-      });
-      mockGitHub.issues.createComment.mockResolvedValue({ data: {} });
-      mockGitHub.issues.create.mockResolvedValue({
-        data: {
-          number: 203,
-          title: '🔒 Path Traversal vulnerabilities found in 1 file',
-          html_url: 'https://github.com/test/repo/issues/203'
-        }
-      });
+      mockForgeAdapter.updateIssue.mockResolvedValue(undefined);
+      mockForgeAdapter.createComment.mockResolvedValue(undefined);
+      mockForgeAdapter.createIssue.mockResolvedValue({
+        number: 203,
+        title: '🔒 Path Traversal vulnerabilities found in 1 file',
+        url: 'https://github.com/test/repo/issues/203',
+        labels: ['rsolv:detected', 'rsolv:vuln-path-traversal', 'security', 'high', 'automated-scan'],
+        state: 'open'
+      } as ForgeIssue);
 
       const groups: VulnerabilityGroup[] = [
         {
@@ -513,8 +480,8 @@ describe('IssueCreator - Duplicate Detection', () => {
       expect(result.issues).toHaveLength(2);
       expect(result.skippedValidated).toBe(1);
       expect(result.skippedFalsePositive).toBe(1);
-      expect(mockGitHub.issues.update).toHaveBeenCalledTimes(1);
-      expect(mockGitHub.issues.create).toHaveBeenCalledTimes(1);
+      expect(mockForgeAdapter.updateIssue).toHaveBeenCalledTimes(1);
+      expect(mockForgeAdapter.createIssue).toHaveBeenCalledTimes(1);
     });
   });
 });

@@ -12,6 +12,25 @@ vi.mock('../../utils/logger.js', () => ({
     debug: vi.fn()
   }
 }));
+vi.mock('../../forge/github-adapter.js', () => ({
+  GitHubAdapter: class {
+    constructor() {}
+    async listIssues() { return []; }
+    async createIssue(params: { title: string }) {
+      return {
+        number: Math.floor(Math.random() * 1000),
+        title: params.title,
+        url: `https://github.com/test/repo/issues/${Math.floor(Math.random() * 1000)}`,
+        labels: [],
+        state: 'open',
+      };
+    }
+    async updateIssue() {}
+    async addLabels() {}
+    async createComment() {}
+    async removeLabel() {}
+  },
+}));
 vi.mock('../../github/api.js', () => ({
   getGitHubClient: vi.fn(() => ({
     issues: {
@@ -24,6 +43,9 @@ vi.mock('../../github/api.js', () => ({
       })
     }
   }))
+}));
+vi.mock('../../github/label-manager.js', () => ({
+  ensureLabelsExist: vi.fn(),
 }));
 
 describe('ScanOrchestrator - max_issues bug', () => {
