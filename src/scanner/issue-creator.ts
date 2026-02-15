@@ -1,5 +1,6 @@
 import { getGitHubClient } from '../github/api.js';
 import { logger } from '../utils/logger.js';
+import type { ForgeAdapter } from '../forge/forge-adapter.js';
 import type {
   VulnerabilityGroup,
   CreatedIssue,
@@ -73,9 +74,11 @@ function getVulnerabilityTypeName(type: string): string {
 
 export class IssueCreator {
   private github: ReturnType<typeof getGitHubClient>;
+  private forgeAdapter?: ForgeAdapter;
 
-  constructor() {
+  constructor(forgeAdapter?: ForgeAdapter) {
     this.github = getGitHubClient();
+    this.forgeAdapter = forgeAdapter;
   }
 
   /**
@@ -197,18 +200,30 @@ export class IssueCreator {
 
       // Search for open issues with the vulnerability type label
       const typeLabel = `rsolv:vuln-${group.type}`;
-      const { data: issues } = await this.github.issues.listForRepo({
-        owner: config.repository.owner,
-        repo: config.repository.name,
-        labels: typeLabel,
-        state: 'open'
-      });
+      let existingIssue: GitHubIssue;
 
-      if (issues.length === 0) {
-        return null;
+      if (this.forgeAdapter) {
+        const forgeIssues = await this.forgeAdapter.listIssues(
+          config.repository.owner, config.repository.name, typeLabel, 'open'
+        );
+        if (forgeIssues.length === 0) return null;
+        existingIssue = {
+          number: forgeIssues[0].number,
+          title: forgeIssues[0].title,
+          html_url: forgeIssues[0].url,
+          labels: forgeIssues[0].labels.map(name => ({ name })),
+          state: forgeIssues[0].state,
+        } as GitHubIssue;
+      } else {
+        const { data: issues } = await this.github.issues.listForRepo({
+          owner: config.repository.owner,
+          repo: config.repository.name,
+          labels: typeLabel,
+          state: 'open'
+        });
+        if (issues.length === 0) return null;
+        existingIssue = issues[0] as GitHubIssue;
       }
-
-      const existingIssue = issues[0] as GitHubIssue;
       const labelNames = this.extractLabelNames(existingIssue.labels);
       const skipStatus = this.checkSkipStatus(labelNames);
 
@@ -240,34 +255,55 @@ export class IssueCreator {
     const body = this.generateIssueBody(group, config);
 
     // Update the issue with new information
-    await this.github.issues.update({
-      owner: config.repository.owner,
-      repo: config.repository.name,
-      issue_number: existingIssue.number,
-      title,
-      body
-    });
+    if (this.forgeAdapter) {
+      await this.forgeAdapter.updateIssue(
+        config.repository.owner, config.repository.name, existingIssue.number,
+        { title, body }
+      );
+    } else {
+      await this.github.issues.update({
+        owner: config.repository.owner,
+        repo: config.repository.name,
+        issue_number: existingIssue.number,
+        title,
+        body
+      });
+    }
 
     // Ensure rsolv:detected label is present for phase handoff
     // (existing issues from earlier runs may lack this label)
     const labelNames = this.extractLabelNames(existingIssue.labels || []);
     if (!labelNames.includes('rsolv:detected')) {
-      await this.github.issues.addLabels({
-        owner: config.repository.owner,
-        repo: config.repository.name,
-        issue_number: existingIssue.number,
-        labels: ['rsolv:detected']
-      });
+      if (this.forgeAdapter) {
+        await this.forgeAdapter.addLabels(
+          config.repository.owner, config.repository.name, existingIssue.number,
+          ['rsolv:detected']
+        );
+      } else {
+        await this.github.issues.addLabels({
+          owner: config.repository.owner,
+          repo: config.repository.name,
+          issue_number: existingIssue.number,
+          labels: ['rsolv:detected']
+        });
+      }
     }
 
     // Add a comment showing the delta
     const comment = this.generateUpdateComment(group, existingIssue);
-    await this.github.issues.createComment({
-      owner: config.repository.owner,
-      repo: config.repository.name,
-      issue_number: existingIssue.number,
-      body: comment
-    });
+    if (this.forgeAdapter) {
+      await this.forgeAdapter.createComment(
+        config.repository.owner, config.repository.name, existingIssue.number,
+        comment
+      );
+    } else {
+      await this.github.issues.createComment({
+        owner: config.repository.owner,
+        repo: config.repository.name,
+        issue_number: existingIssue.number,
+        body: comment
+      });
+    }
 
     return {
       number: existingIssue.number,
@@ -312,6 +348,20 @@ export class IssueCreator {
     if (process.env.RSOLV_DEMO_MODE === 'true' || process.env.RSOLV_AUTO_FIX === 'true') {
       labels.push('rsolv:automate');
       labels.push('demo');
+    }
+
+    if (this.forgeAdapter) {
+      const forgeIssue = await this.forgeAdapter.createIssue(
+        config.repository.owner, config.repository.name,
+        { title, body, labels }
+      );
+      return {
+        number: forgeIssue.number,
+        title: forgeIssue.title,
+        url: forgeIssue.url,
+        vulnerabilityType: group.type,
+        fileCount: group.files.length
+      };
     }
 
     const { data: issue } = await this.github.issues.create({
