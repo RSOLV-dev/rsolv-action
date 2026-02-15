@@ -39,15 +39,19 @@ export interface ValidationContext {
     attack_vector?: string;
     source?: string;
   };
-  framework: {
+  cwe_id: string;
+  namespace: string;
+  repoPath: string;
+  /** Full repo name (owner/repo) — platform uses this to enrich from stored SCAN data */
+  repo: string;
+  /** Optional — platform auto-resolves from stored project_shape when omitted */
+  framework?: {
     name: string;
     test_command?: string;
     assertion_style?: string;
     available_libraries?: string[];
   };
-  cwe_id: string;
-  namespace: string;
-  repoPath: string;
+  /** Optional — platform auto-resolves from stored SCAN data when omitted */
   project_shape?: {
     ecosystem?: string;
     runtime_version?: string;
@@ -151,11 +155,19 @@ export class ValidationClient {
   private buildSessionContext(
     context: ValidationContext
   ): Record<string, unknown> {
+    // Send minimal context — platform auto-enriches from stored SCAN data
+    // via PhaseContext.enrich_for_validation() using the repo name
     const sessionContext: Record<string, unknown> = {
       vulnerability: context.vulnerability,
-      framework: context.framework,
       cwe_id: context.cwe_id,
+      repo: context.repo,
     };
+
+    // Include framework/project_shape only when explicitly provided;
+    // platform resolves these from stored shape when omitted
+    if (context.framework) {
+      sessionContext.framework = context.framework;
+    }
 
     if (context.project_shape) {
       sessionContext.project_shape = context.project_shape;

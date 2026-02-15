@@ -48,6 +48,7 @@ describe('ValidationClient', () => {
     },
     cwe_id: 'CWE-89',
     namespace: 'test-org',
+    repo: 'test-org/test-repo',
     repoPath: '/tmp/test-repo',
   };
 
@@ -238,6 +239,67 @@ describe('ValidationClient', () => {
 
       expect(result.validated).toBe(false);
       expect(result.error).toBeDefined();
+    });
+
+    it('sends repo in session context for platform enrichment', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          session_id: 'sess_v_abc123',
+          stream_url: '/api/v1/validation/stream/sess_v_abc123',
+        }),
+      });
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: new Map([['content-type', 'text/event-stream']]),
+        body: createSSEStream([
+          { type: 'complete', id: 1, data: { validated: false } },
+        ]),
+      });
+
+      await client.runValidation(context);
+
+      const startCall = mockFetch.mock.calls[0];
+      const body = JSON.parse(startCall[1].body);
+      expect(body.context.repo).toBe('test-org/test-repo');
+    });
+
+    it('omits framework from session context when not provided', async () => {
+      const minimalContext: ValidationContext = {
+        vulnerability: { type: 'CWE-89', description: 'SQL injection' },
+        cwe_id: 'CWE-89',
+        namespace: 'test-org',
+        repo: 'test-org/test-repo',
+        repoPath: '/tmp/test-repo',
+      };
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          session_id: 'sess_v_abc123',
+          stream_url: '/api/v1/validation/stream/sess_v_abc123',
+        }),
+      });
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: new Map([['content-type', 'text/event-stream']]),
+        body: createSSEStream([
+          { type: 'complete', id: 1, data: { validated: false } },
+        ]),
+      });
+
+      await client.runValidation(minimalContext);
+
+      const startCall = mockFetch.mock.calls[0];
+      const body = JSON.parse(startCall[1].body);
+      expect(body.context.framework).toBeUndefined();
+      expect(body.context.repo).toBe('test-org/test-repo');
     });
 
     it('includes project_shape in start context when provided', async () => {

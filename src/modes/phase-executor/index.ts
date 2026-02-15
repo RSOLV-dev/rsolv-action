@@ -1713,6 +1713,7 @@ export class PhaseExecutor {
       const frameworkName = this.detectTestFramework();
 
       // Build context for the backend orchestrator
+      const repoFullName = `${issue.repository?.owner || ''}/${issue.repository?.name || ''}`;
       const validationContext: ValidationContext = {
         vulnerability: {
           type: vulnerabilityType,
@@ -1724,7 +1725,8 @@ export class PhaseExecutor {
           name: frameworkName,
         },
         cwe_id: cweId,
-        namespace: `${issue.repository?.owner || ''}/${issue.repository?.name || ''}`,
+        namespace: repoFullName,
+        repo: repoFullName,
         repoPath: process.cwd(),
       };
 
