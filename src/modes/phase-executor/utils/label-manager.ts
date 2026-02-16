@@ -10,6 +10,7 @@
  *   infrastructure_failure → add rsolv:validation-inconclusive, keep rsolv:detected
  *   inconclusive         → add rsolv:validation-inconclusive, keep rsolv:detected
  *   no_test_framework    → add rsolv:validation-unavailable, keep rsolv:detected
+ *   max_turns_exceeded   → add rsolv:validation-inconclusive, keep rsolv:detected
  */
 
 import { addLabels, removeLabel } from '../../../github/api.js';
@@ -71,6 +72,12 @@ export async function applyValidationLabels(
         logger.info(`[LABELS] Adding 'rsolv:validation-unavailable' to issue #${issueNumber} (no test framework)`);
         await addLabels(owner, repo, issueNumber, ['rsolv:validation-unavailable']);
         // Keep rsolv:detected — vulnerability may be real
+        break;
+
+      case 'max_turns_exceeded':
+        logger.info(`[LABELS] Adding 'rsolv:validation-inconclusive' to issue #${issueNumber} (max turns exceeded)`);
+        await addLabels(owner, repo, issueNumber, ['rsolv:validation-inconclusive']);
+        // Keep rsolv:detected — vulnerability likely real, just ran out of turns
         break;
 
       default:
