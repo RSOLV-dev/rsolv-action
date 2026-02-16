@@ -137,7 +137,9 @@ export async function executeGrep(input: GrepInput): Promise<GrepResult> {
  * Includes mise shims in PATH for runtime access.
  */
 export async function executeBash(input: BashInput): Promise<BashResult> {
-  const timeoutMs = input.timeout_ms ?? 120_000;
+  // Default 600s (10 min) — must accommodate slow ecosystem setup
+  // (bundle install, mix deps.get, composer install) before test execution.
+  const timeoutMs = input.timeout_ms ?? 600_000;
 
   // Build PATH with mise shims
   const miseDataDir = process.env.MISE_DATA_DIR || `${process.env.HOME || '/root'}/.local/share/mise`;
