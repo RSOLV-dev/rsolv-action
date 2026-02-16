@@ -1528,16 +1528,23 @@ export class PhaseExecutor {
             }
           }
 
-          // Analyze issue if no prior scan
+          // Build minimal scan data from issue context (no AI call needed —
+          // backend enriches from stored SCAN data via PhaseContext)
           if (!scanData) {
-            const analysisData = await analyzeIssue(issue, this.config);
+            const cweId = this.extractCweFromIssue(issue);
             scanData = {
               analysisData: {
-                ...analysisData,
-                canBeFixed: analysisData?.canBeFixed || false
+                issueType: 'security',
+                vulnerabilityType: cweId,
+                severity: 'medium',
+                estimatedComplexity: 'moderate',
+                suggestedApproach: `Validate ${cweId} vulnerability`,
+                filesToModify: [],
+                cwe: cweId,
+                canBeFixed: true,
               },
-              canBeFixed: analysisData?.canBeFixed || false,
-              usedPriorScan: false
+              canBeFixed: true,
+              usedPriorScan: false,
             };
           }
 
