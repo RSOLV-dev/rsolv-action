@@ -81,6 +81,16 @@ describe('applyValidationLabels', () => {
     expect(mockRemoveLabel).not.toHaveBeenCalled();
   });
 
+  it('adds rsolv:validation-inconclusive for classification=max_turns_exceeded', async () => {
+    await applyValidationLabels(issueInfo, 'max_turns_exceeded');
+
+    expect(mockAddLabels).toHaveBeenCalledWith(
+      'test-org', 'test-repo', 42, ['rsolv:validation-inconclusive']
+    );
+    // Keep rsolv:detected — vulnerability likely real
+    expect(mockRemoveLabel).not.toHaveBeenCalled();
+  });
+
   it('does not remove rsolv:detected when it is not in currentLabels', async () => {
     const issueWithoutDetected = { ...issueInfo, currentLabels: [] };
     await applyValidationLabels(issueWithoutDetected, 'validated');
