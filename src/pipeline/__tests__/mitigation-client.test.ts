@@ -415,7 +415,9 @@ describe('MitigationClient', () => {
   });
 });
 
-// Helper: Create a ReadableStream that emits SSE events
+// Helper: Create a ReadableStream that emits SSE events in real platform format.
+// The platform sends: event: <type>\nid: <N>\ndata: <json_payload>\n\n
+// where the data line is the raw payload (NOT wrapped with type/id).
 function createSSEStream(events: SSEEvent[]): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
   let index = 0;
@@ -424,8 +426,12 @@ function createSSEStream(events: SSEEvent[]): ReadableStream<Uint8Array> {
     pull(controller) {
       if (index < events.length) {
         const event = events[index++];
-        const data = JSON.stringify({ type: event.type, data: event.data, id: event.id });
-        const sseChunk = `event: ${event.type}\ndata: ${data}\nid: ${event.id}\n\n`;
+        const dataJson = event.data != null ? JSON.stringify(event.data) : '';
+        let sseChunk = `event: ${event.type}\nid: ${event.id}\n`;
+        if (dataJson) {
+          sseChunk += `data: ${dataJson}\n`;
+        }
+        sseChunk += '\n';
         controller.enqueue(encoder.encode(sseChunk));
       } else {
         controller.close();

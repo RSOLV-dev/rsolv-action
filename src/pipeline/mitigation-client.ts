@@ -208,17 +208,29 @@ export class MitigationClient {
       if (!block.trim()) continue;
 
       const lines = block.split('\n');
+      let eventType = '';
+      let eventId = '';
       let dataLine = '';
 
       for (const line of lines) {
-        if (line.startsWith('data: ')) {
+        if (line.startsWith('event: ')) {
+          eventType = line.slice(7);
+        } else if (line.startsWith('id: ')) {
+          eventId = line.slice(4);
+        } else if (line.startsWith('data: ')) {
           dataLine = line.slice(6);
         }
+        // Lines starting with ':' are SSE comments (keepalive) — skip
       }
 
-      if (dataLine) {
+      if (eventType) {
         try {
-          const event = JSON.parse(dataLine) as SSEEvent;
+          const data = dataLine ? JSON.parse(dataLine) : null;
+          const event: SSEEvent = {
+            type: eventType as SSEEvent['type'],
+            id: eventId ? parseInt(eventId, 10) : 0,
+            data,
+          };
           parsed.push(event);
         } catch {
           // Skip malformed events
