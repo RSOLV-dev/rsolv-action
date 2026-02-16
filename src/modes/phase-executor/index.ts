@@ -7,18 +7,10 @@ import { PhaseDataClient, PhaseData } from '../phase-data-client/index.js';
 import { ScanOrchestrator } from '../../scanner/index.js';
 import { analyzeIssue } from '../../ai/analyzer.js';
 import { TestGeneratingSecurityAnalyzer } from '../../ai/test-generating-security-analyzer.js';
-import {
-  ClaudeAgentSDKAdapter,
-  GitSolutionResult,
-  createClaudeAgentSDKAdapter
-} from '../../ai/adapters/claude-agent-sdk.js';
 import { createEducationalPullRequest } from '../../github/pr-git-educational.js';
 import type { ActionConfig, IssueContext, AnalysisData } from '../../types/index.js';
-import type { Vulnerability } from '../../security/types.js';
-import type { ValidationResult, MitigationResult } from '../types.js';
 import type {
   ValidationData,
-  ValidatedVulnerability,
   ScanPhaseData,
   ValidationPhaseData,
   PhaseMetadata
@@ -28,6 +20,7 @@ import { execSync } from 'child_process';
 import { extractValidateRedTest } from '../../ai/validate-test-reuse.js';
 import { MitigationClient, type MitigationContext } from '../../pipeline/mitigation-client.js';
 import { ValidationClient, type ValidationContext } from '../../pipeline/validation-client.js';
+import { applyValidationLabels } from './utils/label-manager.js';
 
 export interface ExecuteOptions {
   repository?: {
@@ -94,8 +87,6 @@ export class PhaseExecutor {
 
   // These will be used for mocking in tests
   public testGenerator?: TestGeneratingSecurityAnalyzer;
-  public fixer?: ClaudeAgentSDKAdapter;
-  public validationMode?: any; // ValidationMode instance for testing
 
   constructor(config: ActionConfig) {
     this.config = config;
@@ -394,7 +385,7 @@ export class PhaseExecutor {
    */
   async executeValidate(options: ExecuteOptions): Promise<ExecuteResult> {
     try {
-      logger.info('[VALIDATE] Starting RFC-058 validation phase with ValidationMode');
+      logger.info('[VALIDATE] Starting backend-orchestrated validation phase');
 
       // Check if we have an issue to validate
       if (!options.issueNumber || !options.repository) {
@@ -422,13 +413,13 @@ export class PhaseExecutor {
       }
 
       // Convert GitHub issue to IssueContext format
-      const issueContext = {
+      const issueContext: IssueContext = {
         id: `issue-${issue.number}`,
         number: issue.number,
         title: issue.title,
         body: issue.body || '',
-        labels: issue.labels?.map((label: any) => typeof label === 'string' ? label : label.name) || [],
-        assignees: issue.assignees?.map((assignee: any) => assignee.login) || [],
+        labels: issue.labels?.map((label: string | { name?: string }) => typeof label === 'string' ? label : label.name || '') || [],
+        assignees: issue.assignees?.map((assignee: { login?: string }) => assignee.login || '') || [],
         repository: {
           owner: options.repository.owner,
           name: options.repository.name,
@@ -441,104 +432,18 @@ export class PhaseExecutor {
         metadata: {}
       };
 
-      // RFC-058: Use ValidationMode for validation with branch persistence
-      const { ValidationMode } = await import('../validation-mode.js');
-      const validationMode = new ValidationMode(this.config, process.cwd());
-
-      logger.info(`[VALIDATE] Using ValidationMode for RFC-058 validation of issue #${options.issueNumber}`);
-      const validationResult = await validationMode.validateVulnerability(issueContext);
-
-      if (!validationResult.validated) {
-        logger.info(`[VALIDATE] Issue #${options.issueNumber} failed validation: ${validationResult.falsePositiveReason}`);
-
-        // Store validation results even for false positives
-        const commitSha = options.commitSha || this.getCurrentCommitSha();
-        await this.storePhaseData('validation', {
-          [`issue-${options.issueNumber}`]: {
-            issueNumber: validationResult.issueId,
-            validated: false,
-            falsePositiveReason: validationResult.falsePositiveReason,
-            timestamp: validationResult.timestamp,
-            commitHash: validationResult.commitHash,
-            // RFC-103 Phase 6: Stats dimensions
-            cweId: validationResult.cweId,
-            testType: validationResult.testType,
-            framework: validationResult.framework,
-            retryCount: validationResult.retryCount,
-            classificationSource: validationResult.classificationSource,
-            infrastructureFailure: validationResult.infrastructureFailure || false,
-            validationInconclusive: validationResult.validationInconclusive || false
-          }
-        }, {
-          repo: `${options.repository.owner}/${options.repository.name}`,
-          issueNumber: options.issueNumber,
-          commitSha
-        });
-
-        return {
-          success: true,
-          phase: 'validate',
-          message: `Issue #${options.issueNumber} identified as false positive: ${validationResult.falsePositiveReason}`,
-          data: {
-            validation: {
-              issueNumber: validationResult.issueId,
-              validated: false,
-              falsePositiveReason: validationResult.falsePositiveReason,
-              timestamp: validationResult.timestamp
-            }
-          }
-        };
-      }
-
-      // Success - vulnerability validated with RFC-058 features
-      logger.info(`[VALIDATE] ✅ Issue #${options.issueNumber} validated successfully with ValidationMode`);
-      if (validationResult.branchName) {
-        logger.info(`[VALIDATE] ✅ RFC-058: Tests committed to validation branch: ${validationResult.branchName}`);
-      }
-
-      // Store validation results with RFC-058 branch reference
-      const commitSha = options.commitSha || this.getCurrentCommitSha();
-      const validationData = {
-        issueNumber: validationResult.issueId,
-        validated: true,
-        branchName: validationResult.branchName, // RFC-058 feature
-        redTests: validationResult.redTests,
-        testResults: validationResult.testResults,
-        timestamp: validationResult.timestamp,
-        commitHash: validationResult.commitHash,
-        // Enhanced validation fields for compatibility
-        hasSpecificVulnerabilities: true,
-        vulnerabilities: validationResult.vulnerabilities || [], // Pass through from VALIDATE for MITIGATE consumption
-        confidence: 'high' as const,
-        // RFC-103 Phase 6: Stats dimensions
-        cweId: validationResult.cweId,
-        testType: validationResult.testType,
-        framework: validationResult.framework,
-        retryCount: validationResult.retryCount,
-        classificationSource: validationResult.classificationSource,
-        infrastructureFailure: validationResult.infrastructureFailure || false,
-        validationInconclusive: validationResult.validationInconclusive || false
+      // Build ScanPhaseData from issue analysis or options
+      const scanData: ScanPhaseData = options.scanData || {
+        analysisData: {
+          canBeFixed: true,
+          issueType: 'security',
+          vulnerabilityType: 'security',
+          cwe: this.extractCweFromIssue(issueContext),
+        },
       };
 
-      await this.storePhaseData('validation', {
-        [`issue-${options.issueNumber}`]: validationData
-      }, {
-        repo: `${options.repository.owner}/${options.repository.name}`,
-        issueNumber: options.issueNumber,
-        commitSha
-      });
-
-      return {
-        success: true,
-        phase: 'validate',
-        message: validationResult.branchName ?
-          `Validated issue #${options.issueNumber} with RFC-058 branch persistence: ${validationResult.branchName}` :
-          `Validated issue #${options.issueNumber} with RED tests`,
-        data: {
-          validation: validationData,
-          rfc058Enabled: !!validationResult.branchName
-        }
-      };
+      // Delegate to the backend-orchestrated path
+      return await this.executeValidateForIssue(issueContext, scanData);
 
     } catch (error) {
       logger.error('Validation phase failed', error);
@@ -757,425 +662,46 @@ export class PhaseExecutor {
         }
       }
 
-      // Check if we have validation data now
-      logger.info('[MITIGATE] Step 4: Checking validation data...');
-      
-      let validation;
-      try {
-        const issueKey = `issue-${options.issueNumber}`;
-        logger.info('[MITIGATE] Looking for validation with key:', issueKey);
-        logger.info('[MITIGATE] Available validation data:', {
-          hasValidationData: !!validationData,
-          validationKeys: validationData ? Object.keys(validationData) : [],
-          validationProp: validationData?.validation ? Object.keys(validationData.validation) : [],
-          validateProp: validationData?.validate ? Object.keys(validationData.validate) : []
-        });
-        
-        // Check both 'validation' and 'validate' (PhaseDataClient remaps validation->validate)
-        validation = validationData?.validation?.[issueKey] || validationData?.validate?.[issueKey];
-        logger.info('[MITIGATE] Validation lookup result:', {
-          found: !!validation,
-          validationType: validation ? typeof validation : 'undefined'
-        });
-      } catch (error) {
-        logger.error('[MITIGATE] Error accessing validation data:', error);
-        return {
-          success: false,
-          phase: 'mitigate',
-          error: `Failed to access validation data: ${error instanceof Error ? error.message : String(error)}`,
-          data: { validationAccessError: true }
-        };
-      }
-      
-      if (!validation || typeof validation !== 'object') {
-        logger.warn('[MITIGATE] No validation data found for issue or invalid type', {
-          validationType: typeof validation,
-          validation
-        });
-        return {
-          success: false,
-          phase: 'mitigate',
-          error: 'No validation data available. Please run validation first or add rsolv:automate label.',
-          data: { validationRequired: true }
-        };
-      }
-      
-      logger.info('[MITIGATE] Step 4 complete: Validation data found');
+      // RFC-096 Phase F.2: Delegate to backend-orchestrated executeMitigateForIssue
+      logger.info('[MITIGATE] Step 4: Building context for backend mitigation...');
 
-      // DEBUG: Log the actual validation data structure
-      logger.info('[MITIGATE DEBUG] Validation data structure:', JSON.stringify(validation, null, 2));
-      
-      // Check if validation found specific vulnerabilities (handle both old and new formats)
-      const validationTyped = validation as ValidationData;
-      const hasSpecificVulnerabilities = validationTyped.hasSpecificVulnerabilities ?? 
-        (validationTyped.vulnerabilities && validationTyped.vulnerabilities.length > 0);
-      
-      logger.info('[MITIGATE DEBUG] Vulnerability check:', {
-        hasSpecificVulnerabilities,
-        hasSpecificVulnerabilitiesField: 'hasSpecificVulnerabilities' in validationTyped,
-        vulnerabilitiesLength: validationTyped.vulnerabilities?.length || 0,
-        validationKeys: Object.keys(validationTyped)
-      });
-        
-      if (!hasSpecificVulnerabilities) {
-        // RFC-045: With confidence scoring, this should rarely happen
-        // The EnhancedValidationEnricher always returns vulnerabilities if scan found any
-        logger.warn('[MITIGATE] No specific vulnerabilities found - validation may have failed');
-        logger.warn('[MITIGATE DEBUG] Validation object:', validation);
-        
-        return {
-          success: false,
-          phase: 'mitigate',
-          error: 'No specific vulnerabilities found during validation. This may be a false positive.',
-          data: { 
-            validation,
-            falsePositive: true
-          }
-        };
-      }
-
-      // Build enhanced context for AI with validation data
-      let vulnerabilities: ValidatedVulnerability[] = validationTyped.vulnerabilities || [];
-      const confidence: string = validationTyped.overallConfidence || validationTyped.confidence || 'medium';
-      
-      // DEBUG: Log the actual structure of vulnerabilities to diagnose vendor detection issue
-      logger.info('[MITIGATE] DEBUG: Vulnerability data structure:', {
-        vulnerabilityCount: vulnerabilities.length,
-        firstVulnerability: vulnerabilities[0] ? JSON.stringify(vulnerabilities[0]) : 'none',
-        vulnerabilityKeys: vulnerabilities[0] ? Object.keys(vulnerabilities[0]) : [],
-        validationKeys: Object.keys(validationTyped)
-      });
-      
-      // RFC-047 FIX: Parse issue body to get real filenames
-      // The validation service returns "unknown.js" instead of actual filenames
-      // We need to extract them from the issue body and enhance the validation data
-      logger.info('[MITIGATE] Step 4a: Parsing issue body to extract real filenames...');
-      const { parseIssueBody, enhanceValidationData } = await import('./utils/issue-body-parser.js');
-      const parsedIssueBody = parseIssueBody(issueBody);
-      
-      // Enhance validation data with real filenames
-      if (vulnerabilities.length > 0 && parsedIssueBody.files.length > 0) {
-        const enhancedData = enhanceValidationData(validationTyped, parsedIssueBody);
-        vulnerabilities = enhancedData.vulnerabilities;
-        
-        logger.info('[MITIGATE] Step 4a complete: Enhanced validation data with real filenames', {
-          originalFiles: validationTyped.vulnerabilities?.map((v: ValidatedVulnerability) => (v as any).filePath || (v as any).file) || [],
-          enhancedFiles: vulnerabilities.map((v: ValidatedVulnerability) => (v as any).filePath || (v as any).file),
-          filesFixed: vulnerabilities.filter((v: ValidatedVulnerability, i: number) => 
-            (v as any).file !== (validationTyped.vulnerabilities?.[i] as any)?.file
-          ).length
-        });
-      } else {
-        logger.warn('[MITIGATE] Step 4a: Could not enhance validation data', {
-          hasVulnerabilities: vulnerabilities.length > 0,
-          hasParsedFiles: parsedIssueBody.files.length > 0
-        });
-      }
-      
-      // RFC-045: Check confidence level before proceeding
-      if (confidence === 'review' || confidence === 'low') {
-        logger.warn(`[MITIGATE] Low confidence (${confidence}) - requiring manual review`);
-        // Still proceed but with warning
-      }
-      
-      const enhancedIssue = {
-        ...issue,
-        validationData: validation,
-        specificVulnerabilities: vulnerabilities
+      // Build IssueContext from the fetched issue
+      const issueContext: IssueContext = {
+        id: String(issue.id || options.issueNumber),
+        number: options.issueNumber!,
+        title: issue.title || '',
+        body: issue.body || '',
+        labels: Array.isArray(issue.labels)
+          ? issue.labels.map((l: string | { name?: string }) => typeof l === 'string' ? l : l.name || '')
+          : [],
+        assignees: [],
+        repository: {
+          ...options.repository,
+          fullName: `${options.repository.owner}/${options.repository.name}`,
+          defaultBranch: options.repository.defaultBranch || 'main',
+        },
+        source: 'github',
+        createdAt: issue.created_at || new Date().toISOString(),
+        updatedAt: issue.updated_at || new Date().toISOString(),
       };
 
-      // RFC-046 & RFC-047: Check for extended conversation/chunking and vendor detection before processing
-      logger.info('[MITIGATE] Step 5: Checking for vendor files and multi-file vulnerabilities...');
-      
-      // Import integrations
-      const { ChunkingIntegration } = await import('../../chunking/index.js');
-      const { VendorDetectionIntegration } = await import('../../vendor/index.js');
-      const { ExtendedConversationIntegration } = await import('../../extended-conversation/index.js');
-      
-      // Use extended conversation by default, fall back to chunking if configured
-      const useExtendedConversation = process.env.USE_EXTENDED_CONVERSATION !== 'false';
-      const multiFileHandler = useExtendedConversation 
-        ? new ExtendedConversationIntegration()
-        : new ChunkingIntegration();
-      const vendorIntegration = new VendorDetectionIntegration();
-      
-      // RFC-047: Check if vulnerability involves vendor files
-      // Use robust extraction that handles multiple possible data structures
-      const { extractFilesFromVulnerabilities } = await import('./utils/file-extraction.js');
-      const affectedFiles = extractFilesFromVulnerabilities(vulnerabilities, 'MITIGATE');
-      
-      // Adjust timeout based on file count
-      if (affectedFiles.length > 3) {
-        const perFileTimeout = 60000; // 1 minute per file for complex vulnerabilities
-        timeout = Math.max(timeout, affectedFiles.length * perFileTimeout);
-        logger.info(`[MITIGATE] Adjusted timeout for ${affectedFiles.length} files: ${timeout}ms`);
-      }
-      
-      const vendorFiles = await Promise.all(
-        affectedFiles.map(async (file: string) => ({
-          file,
-          isVendor: await vendorIntegration.isVendorFile(file)
-        }))
-      );
-      
-      logger.info('[MITIGATE] Vendor detection results:', {
-        totalFiles: affectedFiles.length,
-        vendorFiles: vendorFiles.filter(f => f.isVendor).map(f => f.file),
-        nonVendorFiles: vendorFiles.filter(f => !f.isVendor).map(f => f.file)
-      });
-      
-      const hasVendorFiles = vendorFiles.some(f => f.isVendor);
-      if (hasVendorFiles) {
-        logger.info('[MITIGATE] RFC-047: Vendor files detected, handling as vendor vulnerability');
-        const vendorResult = await vendorIntegration.processVulnerability({
-          ...enhancedIssue,
-          files: affectedFiles,
-          vendorFiles: vendorFiles.filter(f => f.isVendor).map(f => f.file)
-        });
-        
-        if (vendorResult.action === 'issue_created') {
-          return {
-            success: true,
-            phase: 'mitigate',
-            message: 'Vendor library vulnerability detected. Update recommendation created instead of patch.',
-            data: vendorResult
-          };
-        }
-      }
-      
-      // RFC-046: Check if vulnerability needs multi-file handling
-      const totalFiles = affectedFiles.length;
-      const shouldHandleMultiFile = useExtendedConversation
-        ? (multiFileHandler as any).shouldUseExtendedConversation({ files: affectedFiles, vulnerabilities })
-        : (multiFileHandler as any).shouldChunk({ files: affectedFiles, vulnerabilities });
-        
-      if (shouldHandleMultiFile) {
-        const approach = useExtendedConversation ? 'extended conversation' : 'chunking';
-        logger.info(`[MITIGATE] RFC-046: Multi-file vulnerability (${totalFiles} files) will use ${approach}`);
-        
-        const processMethod = useExtendedConversation 
-          ? 'processWithExtendedConversation'
-          : 'processWithChunking';
-          
-        const result = await (multiFileHandler as any)[processMethod](
-          { 
-            ...enhancedIssue, 
-            files: affectedFiles,
-            type: vulnerabilities[0]?.type || 'UNKNOWN'
-          },
-          options.issueNumber!
-        );
-        
-        if (result.success || result.chunked) {
-          const message = useExtendedConversation
-            ? 'Multi-file vulnerability fixed in single PR using extended conversation'
-            : `Multi-file vulnerability chunked into ${result.chunks} PRs for manageable fixes`;
-          
-          return {
-            success: true,
-            phase: 'mitigate',
-            message,
-            data: result
-          };
-        }
-        
-        if (result.requiresManual) {
-          return {
-            success: false,
-            phase: 'mitigate',
-            error: 'Vulnerability too complex for automated fixing',
-            data: { 
-              ...result,
-              manualGuide: result.guide
-            }
-          };
-        }
-      }
-      
-      // RFC-058/RFC-060: Check for validation branch and use test-aware mitigation
-      logger.info('[MITIGATE] Step 4: Checking for RFC-058/RFC-060 validation branch...');
-      const { MitigationMode } = await import('../mitigation-mode.js');
-      const mitigationMode = new MitigationMode(this.config, process.cwd(), this.phaseDataClient);
+      // Build ScanPhaseData from issue analysis
+      const cweId = this.extractCweFromIssue(issueContext);
+      const scanData: ScanPhaseData = {
+        analysisData: {
+          issueType: 'security',
+          vulnerabilityType: cweId,
+          severity: 'medium',
+          estimatedComplexity: 'moderate',
+          suggestedApproach: `Fix ${cweId} vulnerability`,
+          filesToModify: [],
+          cwe: cweId,
+          isAiGenerated: true,
+        },
+      } as unknown as ScanPhaseData;
 
-      // Try to use test-aware fix generation first
-      let useTestAwareFix = false;
-      try {
-        // Fetch remote branches to ensure we can access validation branches
-        logger.info('[MITIGATE] Fetching remote branches for RFC-058 validation branches...');
-        const { execSync } = await import('child_process');
-        try {
-          execSync('git fetch origin', { cwd: process.cwd(), encoding: 'utf8' });
-          logger.info('[MITIGATE] Remote branches fetched successfully');
-        } catch (fetchError) {
-          logger.warn('[MITIGATE] Could not fetch remote branches:', fetchError);
-        }
-
-        // Check if validation branch exists
-        const branchName = `rsolv/validate/issue-${options.issueNumber}`;
-        try {
-          execSync(`git rev-parse --verify origin/${branchName}`, { cwd: process.cwd() });
-          useTestAwareFix = true;
-          logger.info(`[MITIGATE] RFC-058: Validation branch found: origin/${branchName}`);
-        } catch {
-          logger.info('[MITIGATE] No validation branch found, using standard mitigation');
-        }
-      } catch (error) {
-        logger.warn('[MITIGATE] Error checking for validation branch:', error);
-      }
-
-      if (useTestAwareFix) {
-        // RFC-058: Use test-aware fix generation
-        logger.info('[MITIGATE] RFC-058: Using test-aware fix generation with validation tests');
-        const testAwareContext = await mitigationMode.generateTestAwareFix(issue);
-        logger.info('[MITIGATE] Test-aware context generated:', {
-          branchCheckedOut: testAwareContext.branchCheckedOut,
-          testFilesFound: testAwareContext.testFilesFound
-        });
-
-        // Add test context to enhanced issue for AI processor
-        enhancedIssue.testContext = testAwareContext;
-        enhancedIssue.hasValidationTests = testAwareContext.testFilesFound > 0;
-        enhancedIssue.validationBranch = testAwareContext.branchCheckedOut ?
-          mitigationMode.getCurrentBranch() : undefined;
-      }
-
-      // Use the actual AI processor to generate fixes
-      logger.info(`[MITIGATE] Generating fix for ${vulnerabilities.length} validated vulnerabilities`);
-
-      // Check for required credentials before proceeding
-      if (this.config.aiProvider?.useVendedCredentials && !this.config.rsolvApiKey) {
-        logger.error('[MITIGATE] Vended credentials enabled but RSOLV_API_KEY is missing');
-        return {
-          success: false,
-          phase: 'mitigate',
-          error: 'RSOLV_API_KEY is required for vended credentials but was not provided',
-          data: { credentialError: true }
-        };
-      }
-
-      // Import the processor
-      logger.info('[MITIGATE] Step 4: Importing AI processor...');
-      const { processIssues } = await import('../../ai/unified-processor.js');
-      logger.info('[MITIGATE] Step 4 complete: AI processor imported successfully');
-      
-      // Check time remaining
-      const elapsedTime = Date.now() - startTime;
-      const remainingTime = timeout - elapsedTime;
-      if (remainingTime <= 0) {
-        logger.error('[MITIGATE] Overall timeout exceeded before processing');
-        return {
-          success: false,
-          phase: 'mitigate',
-          error: 'Mitigation timeout exceeded',
-          data: { timeout: true, elapsed: elapsedTime }
-        };
-      }
-      
-      // Process the issue to generate a fix with timeout
-      logger.info('[MITIGATE] Step 5: Starting AI processing...', {
-        remainingTime: Math.round(remainingTime / 1000) + 's',
-        vulnerabilityCount: vulnerabilities.length,
-        hasVendedCredentials: this.config.aiProvider?.useVendedCredentials,
-        hasRsolvApiKey: !!this.config.rsolvApiKey
-      });
-      
-      let processingResults;
-      try {
-        const processPromise = processIssues([enhancedIssue], this.config);
-        const processTimeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error(`AI processing timeout after ${Math.round(remainingTime/1000)}s`)), remainingTime)
-        );
-        
-        processingResults = await Promise.race([processPromise, processTimeoutPromise]) as any;
-        logger.info('[MITIGATE] Step 5 complete: AI processing finished', {
-          hasResults: !!processingResults,
-          resultCount: processingResults?.length || 0,
-          firstResult: processingResults?.[0] ? Object.keys(processingResults[0]) : []
-        });
-      } catch (error) {
-        logger.error('[MITIGATE] Step 5 failed: Error during processIssues:', error);
-        return {
-          success: false,
-          phase: 'mitigate',
-          error: `Failed to process issue: ${error instanceof Error ? error.message : String(error)}`,
-          data: { processingError: true, elapsed: Date.now() - startTime }
-        };
-      }
-      
-      const issueKey = `issue-${options.issueNumber}`;
-      let mitigationResult;
-      if (processingResults && processingResults.length > 0 && processingResults[0].pullRequestUrl) {
-        // Success - PR was created
-        const result = processingResults[0];
-        mitigationResult = {
-          fixed: true,
-          prUrl: result.pullRequestUrl,
-          prNumber: result.pullRequestUrl ? parseInt(result.pullRequestUrl.split('/').pop() || '0') : 0,
-          filesModified: [],  // Not available from the result
-          vulnerabilitiesFixed: vulnerabilities.length,
-          usedValidationData: true,
-          validationConfidence: confidence,
-          timestamp: new Date().toISOString()
-        };
-      } else {
-        // Failed to create PR
-        const error = processingResults?.[0]?.error || processingResults?.[0]?.message || 'Unknown error during fix generation';
-        logger.error('[MITIGATE] Failed to generate fix', { 
-          error,
-          result: processingResults?.[0],
-          hasResult: processingResults?.length > 0
-        });
-        return {
-          success: false,
-          phase: 'mitigate',
-          error: `Failed to generate fix: ${error}`,
-          data: { 
-            processingResults,
-            validation
-          }
-        };
-      }
-
-      // Store mitigation results
-      logger.info('[MITIGATE] Step 6: Storing mitigation results...');
-      try {
-        const storePromise = this.storePhaseData('mitigation', {
-          [issueKey]: mitigationResult
-        }, {
-          repo: `${options.repository.owner}/${options.repository.name}`,
-          issueNumber: options.issueNumber,
-          commitSha
-        });
-        
-        const storeTimeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Store timeout after 10s')), 10000)
-        );
-        
-        await Promise.race([storePromise, storeTimeoutPromise]);
-        logger.info('[MITIGATE] Step 6 complete: Mitigation results stored');
-      } catch (error) {
-        logger.warn('[MITIGATE] Step 6 warning: Failed to store results (non-fatal):', error);
-        // Continue - storage failure is non-fatal
-      }
-
-      const totalTime = Date.now() - startTime;
-      logger.info('[MITIGATE] SUCCESS: Mitigation completed', {
-        prUrl: mitigationResult.prUrl,
-        vulnerabilitiesFixed: mitigationResult.vulnerabilitiesFixed,
-        totalTimeMs: totalTime,
-        totalTimeSec: Math.round(totalTime / 1000)
-      });
-
-      return {
-        success: true,
-        phase: 'mitigate',
-        message: `Fixed ${mitigationResult.vulnerabilitiesFixed} vulnerabilities and created PR`,
-        data: { 
-          mitigation: mitigationResult,
-          validationUsed: true,
-          executionTimeMs: totalTime
-        }
-      };
+      logger.info('[MITIGATE] Delegating to backend-orchestrated executeMitigateForIssue');
+      return await this.executeMitigateForIssue(issueContext, scanData, validationData);
     } catch (error) {
       const totalTime = Date.now() - startTime;
       logger.error('[MITIGATE] FAILED: Mitigation phase failed', {
@@ -1257,58 +783,27 @@ export class PhaseExecutor {
         };
       }
 
-      // Phase 2: VALIDATE - Test each issue for false positives
-      logger.info(`Validating ${issues.length} issues`);
+      // Phase 2: VALIDATE - Test each issue for false positives via backend pipeline
+      logger.info(`Validating ${issues.length} issues via backend pipeline`);
       const validationResults: Array<{issue: IssueContext, result: ExecuteResult}> = [];
-
-      // Use ValidationMode for batch validation
-      const { ValidationMode } = await import('../validation-mode.js');
-      const validationMode = this.validationMode || new ValidationMode(this.config, process.cwd());
 
       for (const issue of issues) {
         try {
           logger.info(`Validating issue #${issue.number}`);
-          const validationData = await validationMode.validateVulnerability(issue);
 
-          // Store validation results to platform for cross-phase data persistence
-          const commitSha = this.getCurrentCommitSha();
-          await this.storePhaseData('validation', {
-            [`issue-${issue.number}`]: {
-              issueNumber: validationData.issueId,
-              validated: validationData.validated,
-              falsePositiveReason: validationData.falsePositiveReason,
-              branchName: validationData.branchName,
-              redTests: validationData.redTests,
-              testResults: validationData.testResults,
-              timestamp: validationData.timestamp,
-              commitHash: validationData.commitHash,
-              // Add vulnerability indicators for mitigation phase
-              hasSpecificVulnerabilities: validationData.validated,
-              vulnerabilities: validationData.vulnerabilities || [],
-              confidence: 'high' as const,
-              // RFC-103 Phase 6: Stats dimensions
-              testType: validationData.testType,
-              cweId: validationData.cweId,
-              framework: validationData.framework,
-              retryCount: validationData.retryCount,
-              classificationSource: validationData.classificationSource,
-              infrastructureFailure: validationData.infrastructureFailure || false,
-              validationInconclusive: validationData.validationInconclusive || false
-            }
-          }, {
-            repo: `${options.repository!.owner}/${options.repository!.name}`,
-            issueNumber: issue.number,
-            commitSha
-          });
-
-          const validateResult: ExecuteResult = {
-            success: true,
-            phase: 'validate',
-            data: {
-              validation: validationData
-            }
+          // Build ScanPhaseData from issue analysis
+          const scanData: ScanPhaseData = {
+            analysisData: {
+              canBeFixed: true,
+              issueType: 'security',
+              vulnerabilityType: 'security',
+              cwe: this.extractCweFromIssue(issue),
+            },
           };
 
+          // Delegate to backend-orchestrated validation
+          // executeValidateForIssue handles storage, labels, and git commit
+          const validateResult = await this.executeValidateForIssue(issue, scanData);
           validationResults.push({ issue, result: validateResult });
         } catch (error) {
           logger.error(`Validation failed for issue #${issue.number}:`, error);
@@ -1540,6 +1035,43 @@ export class PhaseExecutor {
       // Run the backend-orchestrated validation
       const result = await validationClient.runValidation(validationContext);
 
+      // Build validation data for storage (matches live path structure)
+      const validationData = {
+        issueNumber: issue.number,
+        validated: result.validated,
+        test_path: result.test_path,
+        test_code: result.test_code,
+        framework: result.framework || frameworkName,
+        cwe_id: result.cwe_id || cweId,
+        classification: result.classification,
+        test_type: result.test_type,
+        retry_count: result.retry_count,
+        timestamp: new Date().toISOString(),
+        error: result.error,
+        backendOrchestrated: true,
+      };
+
+      // Store phase data
+      const commitSha = this.getCurrentCommitSha();
+      await this.storePhaseData('validation', {
+        [`issue-${issue.number}`]: validationData,
+      }, {
+        repo: repoFullName,
+        issueNumber: issue.number,
+        commitSha,
+      });
+
+      // Apply GitHub labels based on classification
+      const currentLabels = issue.labels?.map(
+        (l: string | { name?: string }) => typeof l === 'string' ? l : l.name || ''
+      ) || [];
+      await applyValidationLabels({
+        owner: issue.repository?.owner || '',
+        repo: issue.repository?.name || '',
+        issueNumber: issue.number,
+        currentLabels,
+      }, result.classification);
+
       if (!result.validated) {
         logger.warn(`[VALIDATE] Backend validation did not validate: ${result.error || 'test did not prove vulnerability'}`);
         return {
@@ -1548,10 +1080,7 @@ export class PhaseExecutor {
           message: result.error || 'Backend validation did not validate the vulnerability',
           data: {
             validation: {
-              [`issue_${issue.number}`]: {
-                validated: false,
-                error: result.error,
-              },
+              [`issue_${issue.number}`]: validationData,
             },
           },
         };
@@ -1585,13 +1114,7 @@ export class PhaseExecutor {
         message: 'Tests generated successfully via backend pipeline',
         data: {
           validation: {
-            [`issue_${issue.number}`]: {
-              validated: true,
-              test_path: result.test_path,
-              test_code: result.test_code,
-              framework: result.framework || frameworkName,
-              cwe_id: result.cwe_id || cweId,
-            },
+            [`issue_${issue.number}`]: validationData,
           },
         },
       };
@@ -1662,6 +1185,30 @@ export class PhaseExecutor {
     }
 
     return 'unknown';
+  }
+
+  /**
+   * Extract CWE ID from issue title/body/labels.
+   * Falls back to 'CWE-unknown' if not found.
+   */
+  private extractCweFromIssue(issue: IssueContext): string {
+    // Check labels first (e.g., "CWE-89")
+    const labels = issue.labels || [];
+    for (const label of labels) {
+      const labelStr = typeof label === 'string' ? label : (label as { name?: string }).name || '';
+      const cweMatch = labelStr.match(/CWE-\d+/);
+      if (cweMatch) return cweMatch[0];
+    }
+
+    // Check title
+    const titleMatch = issue.title?.match(/CWE-\d+/);
+    if (titleMatch) return titleMatch[0];
+
+    // Check body
+    const bodyMatch = issue.body?.match(/CWE-\d+/);
+    if (bodyMatch) return bodyMatch[0];
+
+    return 'CWE-unknown';
   }
 
   /**
@@ -1794,6 +1341,31 @@ export class PhaseExecutor {
 
       const duration = Date.now() - startTime;
       logger.info(`[MITIGATE] Completed in ${duration}ms`);
+
+      // Store mitigation phase data for cross-phase persistence
+      const issueKey = `issue-${issue.number}`;
+      const mitigationResult = {
+        fixed: prResult.success,
+        prUrl: prResult.pullRequestUrl,
+        prNumber: prResult.pullRequestNumber,
+        filesModified: modifiedFiles,
+        commitHash,
+        backendOrchestrated: true,
+        timestamp: new Date().toISOString(),
+      };
+
+      try {
+        await this.storePhaseData('mitigation', {
+          [issueKey]: mitigationResult,
+        }, {
+          repo: `${issue.repository?.owner || ''}/${issue.repository?.name || ''}`,
+          issueNumber: issue.number,
+          commitSha: commitHash,
+        });
+        logger.info(`[MITIGATE] Phase data stored for issue #${issue.number}`);
+      } catch (storeError) {
+        logger.warn(`[MITIGATE] Failed to store phase data (non-fatal):`, storeError);
+      }
 
       return {
         success: prResult.success,
@@ -1929,8 +1501,8 @@ export class PhaseExecutor {
    */
   async executeValidateStandalone(options: ExecuteOptions): Promise<ExecuteResult> {
     try {
-      logger.info(`[VALIDATE-STANDALONE] Processing ${options.issues?.length} issues`);
-      
+      logger.info(`[VALIDATE-STANDALONE] Processing ${options.issues?.length} issues via backend pipeline`);
+
       if (!options.issues || options.issues.length === 0) {
         return {
           success: false,
@@ -1940,18 +1512,20 @@ export class PhaseExecutor {
       }
 
       const validations: ValidationItem[] = [];
-      
+
       for (const issue of options.issues) {
         try {
           // Check for prior scan data if requested
-          let scanData = null;
+          let scanData: ScanPhaseData | null = null;
           if (options.usePriorScan) {
             const priorData = await this.phaseDataClient.retrievePhaseResults(
               `${issue.repository.owner}/${issue.repository.name}`,
               issue.number,
               this.getCurrentCommitSha()
             );
-            scanData = priorData?.scan;
+            if (priorData?.scan) {
+              scanData = priorData.scan as unknown as ScanPhaseData;
+            }
           }
 
           // Analyze issue if no prior scan
@@ -1965,13 +1539,10 @@ export class PhaseExecutor {
               canBeFixed: analysisData?.canBeFixed || false,
               usedPriorScan: false
             };
-          } else {
-            // scanData.usedPriorScan = true; - can't modify read-only scan data
-            // We'll track this in validation instead
           }
 
           // Skip validation if issue cannot be fixed
-          const canBeFixed = 'canBeFixed' in scanData ? scanData.canBeFixed : true;
+          const canBeFixed = scanData.canBeFixed ?? scanData.analysisData?.canBeFixed ?? true;
           if (!canBeFixed) {
             logger.info(`[VALIDATE] Skipping issue #${issue.number} - cannot be automatically fixed`);
             validations.push({
@@ -1979,114 +1550,40 @@ export class PhaseExecutor {
               validated: false,
               canBeFixed: false,
               reason: 'Issue cannot be automatically fixed',
-              usedPriorScan: 'usedPriorScan' in scanData ? scanData.usedPriorScan : false,
+              usedPriorScan: scanData.usedPriorScan || false,
               timestamp: new Date().toISOString()
             });
             continue;
           }
 
-          // RFC-058: Use ValidationMode for batch validation too
-          const { ValidationMode } = await import('../validation-mode.js');
-          const validationMode = new ValidationMode(this.config, process.cwd());
+          // Delegate to backend-orchestrated validation
+          logger.info(`[VALIDATE-STANDALONE] Delegating issue #${issue.number} to backend pipeline`);
+          const result = await this.executeValidateForIssue(issue, scanData);
 
-          logger.info(`[VALIDATE-STANDALONE] Using ValidationMode for issue #${issue.number}`);
-          const vmValidationResult = await validationMode.validateVulnerability(
-            issue,
-            scanData && 'analysisData' in scanData ? (scanData as { analysisData: AnalysisData }).analysisData : undefined
-          );
+          // Extract validation data from result for aggregation
+          const validationEntry = result.data?.validation;
+          const issueKey = `issue_${issue.number}`;
+          const issueData = validationEntry?.[issueKey] || validationEntry?.[`issue-${issue.number}`] || validationEntry || {};
 
-          // Run additional tests if requested and we have generated tests
-          let testExecution = null;
-          if (options.runTests && this.testRunner && vmValidationResult.redTests) {
-            try {
-              testExecution = await this.testRunner.runTests(vmValidationResult.redTests);
-              logger.info(`Test execution result: ${testExecution.redTestPassed ? 'PASSED' : 'FAILED'}`);
-            } catch (error) {
-              logger.warn(`Test execution failed for issue #${issue.number}:`, error);
-            }
-          }
-
-          // Check for existing tests
-          let existing: any = null;
-          if (this.testDiscovery) {
-            existing = await this.testDiscovery.findExistingTests(issue.repository);
-            if (existing.hasTests && vmValidationResult.redTests) {
-              logger.info(`Found existing test framework: ${existing.framework}`);
-
-              // Integrate tests if requested
-              if (options.integrateTests && this.testIntegrator) {
-                try {
-                  const integration = await this.testIntegrator.integrateTests(
-                    vmValidationResult.redTests,
-                    existing
-                  );
-                  logger.info(`Test integration result: ${integration.integrated}`);
-                } catch (error) {
-                  logger.warn(`Test integration failed: ${error}`);
-                }
-              }
-            }
-          }
-
-          // Store validation results with RFC-058 data
-          // Include analysisData so MITIGATE can access vulnerabilityType for educational PRs
-          const analysisDataForStorage = 'analysisData' in scanData ? (scanData as { analysisData: AnalysisData }).analysisData : undefined;
-          const validationData = {
+          validations.push({
             issueNumber: issue.number,
-            validated: vmValidationResult.validated,
-            branchName: vmValidationResult.branchName, // RFC-058 feature
-            redTests: vmValidationResult.redTests,
-            testResults: vmValidationResult.testResults,
-            // RFC-103 B4: Distinguish false positives from infrastructure failures
-            falsePositive: !vmValidationResult.validated && !vmValidationResult.infrastructureFailure && !vmValidationResult.noTestFramework && !vmValidationResult.validationInconclusive,
-            infrastructureFailure: !vmValidationResult.validated && !!vmValidationResult.infrastructureFailure,
-            // RFC-103 v3.8.94: Track when project has no test framework
-            noTestFramework: !vmValidationResult.validated && !!vmValidationResult.noTestFramework,
-            // RFC-103 Phase 3: Static-only test detected pattern but didn't prove exploitability
-            validationInconclusive: !vmValidationResult.validated && !!vmValidationResult.validationInconclusive,
-            testType: vmValidationResult.testType,
-            // RFC-103 Phase 6: Stats dimensions (must match non-decomposed path)
-            cweId: vmValidationResult.cweId,
-            framework: vmValidationResult.framework,
-            retryCount: vmValidationResult.retryCount,
-            classificationSource: vmValidationResult.classificationSource,
-            falsePositiveReason: vmValidationResult.falsePositiveReason,
-            existingTests: existing?.hasTests,
-            testFramework: existing?.framework,
-            usedPriorScan: 'usedPriorScan' in scanData ? scanData.usedPriorScan : false,
-            timestamp: vmValidationResult.timestamp,
-            commitHash: vmValidationResult.commitHash,
-            // RFC-058 enhanced fields
-            hasSpecificVulnerabilities: vmValidationResult.validated,
-            vulnerabilities: vmValidationResult.vulnerabilities || [],
-            confidence: vmValidationResult.validated ? 'high' as const : 'low' as const,
-            // Carry forward scan analysis data for MITIGATE educational PR generation
-            analysisData: analysisDataForStorage ? {
-              vulnerabilityType: analysisDataForStorage.vulnerabilityType,
-              severity: analysisDataForStorage.severity,
-              cwe: analysisDataForStorage.cwe,
-              issueType: analysisDataForStorage.issueType,
-              isAiGenerated: analysisDataForStorage.isAiGenerated
-            } : undefined
-          };
-
-          await this.phaseDataClient.storePhaseResults(
-            'validate',
-            {
-              validate: {
-                [issue.number]: validationData
-              }
-            },
-            {
-              repo: `${issue.repository.owner}/${issue.repository.name}`,
-              issueNumber: issue.number,
-              commitSha: this.getCurrentCommitSha()
-            }
-          );
+            validated: issueData.validated ?? result.success,
+            test_path: issueData.test_path,
+            test_code: issueData.test_code,
+            framework: issueData.framework,
+            cwe_id: issueData.cwe_id,
+            classification: issueData.classification,
+            test_type: issueData.test_type,
+            retry_count: issueData.retry_count,
+            timestamp: issueData.timestamp || new Date().toISOString(),
+            error: issueData.error || result.error,
+            backendOrchestrated: true,
+            usedPriorScan: scanData.usedPriorScan || false,
+          });
 
           // Post GitHub comment if requested
           if (options.postComment && this.githubClient) {
-            const comment = this.formatValidationComment(issue, validationData);
+            const comment = this.formatValidationComment(issue, issueData);
             await this.githubClient.createIssueComment(
               issue.repository.owner,
               issue.repository.name,
@@ -2095,86 +1592,9 @@ export class PhaseExecutor {
             );
           }
 
-          // Update GitHub labels based on validation result
-          try {
-            const { addLabels, removeLabel } = await import('../../github/api.js');
-
-            if (validationData.validated) {
-              // Add 'rsolv:validated' label for validated vulnerabilities
-              logger.info(`[VALIDATE] Adding 'rsolv:validated' label to issue #${issue.number}`);
-              await addLabels(
-                issue.repository.owner,
-                issue.repository.name,
-                issue.number,
-                ['rsolv:validated']
-              );
-
-              // Remove 'rsolv:detected' label if present
-              if (issue.labels && issue.labels.includes('rsolv:detected')) {
-                logger.info(`[VALIDATE] Removing 'rsolv:detected' label from issue #${issue.number}`);
-                await removeLabel(
-                  issue.repository.owner,
-                  issue.repository.name,
-                  issue.number,
-                  'rsolv:detected'
-                );
-              }
-            } else if (validationData.noTestFramework) {
-              // RFC-103 v3.8.94: No test framework — cannot validate but vulnerability may be real
-              logger.info(`[VALIDATE] Adding 'rsolv:validation-unavailable' label to issue #${issue.number} (no test framework)`);
-              await addLabels(
-                issue.repository.owner,
-                issue.repository.name,
-                issue.number,
-                ['rsolv:validation-unavailable']
-              );
-              // Keep 'rsolv:detected' — the vulnerability may still be real
-            } else if (validationData.validationInconclusive) {
-              // RFC-103 Phase 3: Static test detected pattern but didn't prove exploitability
-              // validation-mode.ts already added rsolv:validation-inconclusive label
-              logger.info(`[VALIDATE] Static-only test for issue #${issue.number} — validation-inconclusive (label already applied by validation-mode)`);
-              // Keep 'rsolv:detected' — the vulnerability pattern was found, behavioral test needed
-            } else if (validationData.infrastructureFailure) {
-              // RFC-103 B4: Infrastructure failure — vulnerability may be real, we just couldn't prove it
-              logger.info(`[VALIDATE] Adding 'rsolv:validation-inconclusive' label to issue #${issue.number} (infrastructure limitation)`);
-              await addLabels(
-                issue.repository.owner,
-                issue.repository.name,
-                issue.number,
-                ['rsolv:validation-inconclusive']
-              );
-              // Keep 'rsolv:detected' — the vulnerability may still be real
-            } else if (validationData.falsePositive) {
-              // Add 'rsolv:false-positive' label for false positives
-              logger.info(`[VALIDATE] Adding 'rsolv:false-positive' label to issue #${issue.number}`);
-              await addLabels(
-                issue.repository.owner,
-                issue.repository.name,
-                issue.number,
-                ['rsolv:false-positive']
-              );
-
-              // Remove 'rsolv:detected' label if present
-              if (issue.labels && issue.labels.includes('rsolv:detected')) {
-                logger.info(`[VALIDATE] Removing 'rsolv:detected' label from issue #${issue.number}`);
-                await removeLabel(
-                  issue.repository.owner,
-                  issue.repository.name,
-                  issue.number,
-                  'rsolv:detected'
-                );
-              }
-            }
-          } catch (labelError) {
-            logger.warn(`[VALIDATE] Failed to update labels for issue #${issue.number}:`, labelError);
-            // Don't fail the validation if label update fails
-          }
-
-          validations.push(validationData);
-          
         } catch (error) {
           logger.error(`Failed to validate issue #${issue.number}:`, error);
-          
+
           // Try fallback test generation
           const fallbackTests = this.generateFallbackTests(issue);
           validations.push({
@@ -2195,23 +1615,23 @@ export class PhaseExecutor {
       }
 
       // Check if any validations succeeded
-      const hasSuccessfulValidation = validations.some(v => 
-        v.validated !== false && 
+      const hasSuccessfulValidation = validations.some(v =>
+        v.validated !== false &&
         !v.testGenerationFailed &&
         v.canBeFixed !== false
       );
-      
+
       // For single issue, return simpler structure
       if (options.issues.length === 1) {
         const validation = validations[0];
-        const isSuccess = validation.validated !== false && 
+        const isSuccess = validation.validated !== false &&
                          validation.canBeFixed !== false &&
                          !validation.testGenerationFailed;
-        
+
         return {
           success: isSuccess,
           phase: 'validate',
-          message: validation.canBeFixed === false ? 
+          message: validation.canBeFixed === false ?
             'Issue cannot be automatically fixed' :
             validation.testGenerationFailed ?
               'Test generation failed' :
@@ -2231,11 +1651,11 @@ export class PhaseExecutor {
         data: {
           validations,
           report,
-          annotations: options.format === 'github-actions' ? 
+          annotations: options.format === 'github-actions' ?
             this.generateGitHubAnnotations(validations) : undefined
         }
       };
-      
+
     } catch (error) {
       logger.error('[VALIDATE-STANDALONE] Failed', error);
       return {
@@ -2514,69 +1934,47 @@ ${validation.falsePositive ?
         }
       }
       
-      // Check AI provider
-      if (!this.config.aiProvider) {
-        return {
-          success: false,
-          phase: 'mitigate',
-          error: 'AI provider not configured'
-        };
-      }
-      
-      // Process each issue
-      const mitigationResults: any = {};
+      // RFC-096 Phase F.2: Delegate to backend-orchestrated executeMitigateForIssue
+      const mitigationResults: Record<string, unknown> = {};
       let allSuccess = true;
       let partialSuccess = false;
 
       for (const issue of options.issues) {
-        const issueKey = issue.number; // RFC-060: Use numeric keys for PhaseDataClient compatibility
-        
-        // Handle both single issue and multi-issue validation data structures
-        // Also handle both 'validation' and 'validate' (PhaseDataClient remaps validation->validate)
-        let validation;
-        const validationObj = validationData.validation || validationData.validate;
-        if (validationObj) {
-          // Check if it's a single validation object or a map
-          // RFC-060: Support both numeric keys and legacy "issue-N" keys
-          if (validationObj[issueKey]) {
-            validation = validationObj[issueKey];
-          } else if (validationObj[`issue-${issue.number}`]) {
-            validation = validationObj[`issue-${issue.number}`]; // Legacy key format
-          } else if (validationObj.issueNumber === issue.number) {
-            // Single issue validation structure
-            validation = validationObj;
-          }
-        }
-        
-        if (!validation) {
-          logger.warn(`[MITIGATE-STANDALONE] No validation data for issue #${issue.number}`);
-          mitigationResults[issueKey] = {
-            success: false,
-            error: 'No validation data for this issue'
-          };
-          allSuccess = false;
-          continue;
-        }
-        
+        const issueKey = issue.number;
+
+        // Build ScanPhaseData from issue context
+        const cweId = this.extractCweFromIssue(issue);
+        const scanData: ScanPhaseData = {
+          analysisData: {
+            issueType: 'security',
+            vulnerabilityType: cweId,
+            severity: 'medium',
+            estimatedComplexity: 'moderate',
+            suggestedApproach: `Fix ${cweId} vulnerability`,
+            filesToModify: [],
+            cwe: cweId,
+            isAiGenerated: true,
+          },
+        } as unknown as ScanPhaseData;
+
         try {
-          // Apply mitigation with timeout
-          const mitigationPromise = this.mitigateIssue(
+          const timeout = options.timeout || 1800000;
+          const mitigationPromise = this.executeMitigateForIssue(
             issue,
-            validation,
-            options
+            scanData,
+            validationData
           );
-          
-          const timeout = options.timeout || 1800000; // 30 minutes default
+
           const result = await Promise.race([
             mitigationPromise,
-            new Promise((_, reject) => 
+            new Promise<ExecuteResult>((_, reject) =>
               setTimeout(() => reject(new Error('Mitigation timeout')), timeout)
-            )
+            ),
           ]);
-          
-          mitigationResults[issueKey] = result;
-          
-          if (!(result as any).success) {
+
+          mitigationResults[issueKey] = result.data || { success: result.success };
+
+          if (!result.success) {
             allSuccess = false;
           } else {
             partialSuccess = true;
@@ -2585,7 +1983,7 @@ ${validation.falsePositive ?
           logger.error(`[MITIGATE-STANDALONE] Failed to mitigate issue #${issue.number}:`, error);
           mitigationResults[issueKey] = {
             success: false,
-            error: error instanceof Error ? error.message : 'Unknown error'
+            error: error instanceof Error ? error.message : 'Unknown error',
           };
           allSuccess = false;
         }
@@ -2606,16 +2004,17 @@ ${validation.falsePositive ?
         };
       }
       
-      // Store results
-      await this.phaseDataClient.storePhaseResults(
-        'mitigate',
-        { mitigate: mitigationResults },
-        {
+      // Store results — executeMitigateForIssue already stores per-issue,
+      // but standalone also stores the aggregate for report generation
+      try {
+        await this.storePhaseData('mitigation', mitigationResults, {
           repo: options.issues[0].repository.fullName,
           issueNumber: options.issues.length === 1 ? options.issues[0].number : undefined,
-          commitSha: await this.getCurrentCommitSha()
-        }
-      );
+          commitSha: this.getCurrentCommitSha(),
+        });
+      } catch (storeError) {
+        logger.warn('[MITIGATE-STANDALONE] Failed to store aggregate results (non-fatal):', storeError);
+      }
       
       return {
         success: allSuccess,
@@ -2638,287 +2037,6 @@ ${validation.falsePositive ?
     }
   }
 
-  /**
-   * Apply mitigation to a single issue
-   */
-  private async mitigateIssue(
-    issue: IssueContext,
-    validation: any,
-    options: ExecuteOptions
-  ): Promise<any> {
-    // RFC-095: Use new unified ClaudeAgentSDKAdapter (already imported at top of file)
-
-    // Initialize credential manager if using vended credentials
-    // Fix for RFC-067: mitigateIssue was creating adapter without credential manager,
-    // causing Claude Code CLI to skip execution with "No credential manager available"
-    let credentialManager;
-    logger.info(`[MITIGATE] Checking credential manager requirements: useVendedCredentials=${this.config.aiProvider?.useVendedCredentials}, rsolvApiKey=${this.config.rsolvApiKey ? 'present' : 'missing'}`);
-    if (this.config.aiProvider?.useVendedCredentials && this.config.rsolvApiKey) {
-      logger.info('[MITIGATE] Initializing credential manager for vended credentials');
-      const { CredentialManagerSingleton } = await import('../../credentials/singleton.js');
-      try {
-        credentialManager = await CredentialManagerSingleton.getInstance(this.config.rsolvApiKey);
-        logger.info('[MITIGATE] Credential manager initialized successfully');
-      } catch (error) {
-        logger.error('[MITIGATE] Failed to initialize credential manager:', error);
-        throw new Error(`Credential initialization failed: ${error instanceof Error ? error.message : String(error)}`);
-      }
-    } else {
-      logger.warn(`[MITIGATE] Skipping credential manager initialization - useVendedCredentials: ${this.config.aiProvider?.useVendedCredentials}, hasApiKey: ${!!this.config.rsolvApiKey}`);
-    }
-
-    // RFC-095: Use new unified ClaudeAgentSDKAdapter
-    const adapter = createClaudeAgentSDKAdapter({
-      repoPath: process.cwd(),
-      credentialManager,
-      useVendedCredentials: this.config.aiProvider?.useVendedCredentials,
-      maxTurns: 3,
-      model: this.config.aiProvider?.model,
-      testFilePatterns: ['test/', 'tests/', 'spec/', '__tests__/', '.test.', '.spec.'],
-      verbose: false
-    });
-
-    // Apply fix with retries
-    let attempts = 0;
-    const maxRetries = options.maxRetries || 3;
-    let lastError: Error | undefined;
-    // Track successful solutions across retries to preserve commitHash
-    let lastSuccessfulSolution: GitSolutionResult | null = null;
-
-    while (attempts < maxRetries) {
-      attempts++;
-
-      try {
-        // Generate fix
-        const solution = await adapter.generateSolutionWithGit(
-          issue,
-          {
-            summary: 'Security issue fix',
-            complexity: 'medium' as const,
-            estimatedTime: 30,
-            potentialFixes: ['Apply security fix'],
-            recommendedApproach: 'Fix security vulnerability'
-          },
-          undefined,
-          validation.generatedTests
-        );
-
-        // Log solution commitHash for debugging
-        logger.info(`[MITIGATE] Solution generated with commitHash: ${solution.commitHash || 'UNDEFINED'}`);
-
-        // Check if solution failed (no file modifications)
-        if (!solution.success) {
-          const errorMsg = solution.error || solution.message || 'Unknown error';
-          logger.warn(`[MITIGATE] Solution generation returned success=false: ${errorMsg}`);
-
-          // Check if we can use a previous successful solution
-          if (lastSuccessfulSolution?.commitHash) {
-            logger.info(`[MITIGATE] Using previously stored solution with commitHash: ${lastSuccessfulSolution.commitHash}`);
-            // Use the previous successful solution
-            Object.assign(solution, {
-              success: true,
-              commitHash: lastSuccessfulSolution.commitHash,
-              filesModified: lastSuccessfulSolution.filesModified,
-              diffStats: lastSuccessfulSolution.diffStats
-            });
-          } else if (attempts < maxRetries) {
-            logger.info(`[MITIGATE] Retrying solution generation (attempt ${attempts}/${maxRetries})`);
-            continue;
-          } else {
-            throw new Error(`Solution generation failed: ${errorMsg}`);
-          }
-        }
-
-        // Preserve commitHash from successful solution attempts
-        // This handles the case where retry attempts don't create new commits
-        // because files were already committed in a previous attempt
-        if (solution.success && solution.commitHash) {
-          lastSuccessfulSolution = solution;
-          logger.info(`[MITIGATE] Storing successful solution with commitHash: ${solution.commitHash}`);
-        } else if (!solution.commitHash && lastSuccessfulSolution?.commitHash) {
-          // If this solution has no commitHash but we have one from a previous attempt,
-          // merge the previous commitHash into this solution
-          logger.info(`[MITIGATE] Using previously stored commitHash: ${lastSuccessfulSolution.commitHash}`);
-          solution.commitHash = lastSuccessfulSolution.commitHash;
-          // Also preserve other solution details if missing
-          if (!solution.filesModified && lastSuccessfulSolution.filesModified) {
-            solution.filesModified = lastSuccessfulSolution.filesModified;
-          }
-          if (!solution.diffStats && lastSuccessfulSolution.diffStats) {
-            solution.diffStats = lastSuccessfulSolution.diffStats;
-          }
-        }
-
-        // Final validation: ensure we have a commitHash before proceeding
-        if (!solution.commitHash) {
-          const errorMsg = 'No commitHash available - solution did not create any commits';
-          logger.error(`[MITIGATE] ${errorMsg}`);
-          throw new Error(errorMsg);
-        }
-
-        // Run tests if requested
-        if (options.runTests) {
-          const { runTests } = await import('../../utils/test-runner.js');
-          const testResults = await runTests(validation.generatedTests?.tests || []);
-          
-          if (!testResults.passed) {
-            if (attempts < maxRetries) {
-              logger.info(`[MITIGATE] Tests failed, retrying (attempt ${attempts}/${maxRetries})`);
-              continue;
-            }
-            throw new Error('Tests failed after fix');
-          }
-        }
-        
-        // Refactor if requested
-        if (options.refactorStyle) {
-          // In real implementation, would refactor code to match style
-          logger.info('[MITIGATE] Refactoring code to match codebase style');
-        }
-        
-        // Create PR if requested
-        if (options.createPR) {
-          const prResult = await this.createMitigationPR(
-            issue,
-            solution,
-            validation,
-            options
-          );
-          
-          return {
-            success: true,
-            issueNumber: issue.number,
-            prUrl: prResult.url,
-            prCreated: true,
-            prType: options.prType || 'standard',
-            testsPass: true,
-            refactored: options.refactorStyle || false,
-            attempts
-          };
-        }
-        
-        return {
-          success: true,
-          issueNumber: issue.number,
-          fixCommit: solution.commitHash,
-          testsPass: true,
-          refactored: options.refactorStyle || false,
-          attempts
-        };
-      } catch (error) {
-        lastError = error as Error;
-        
-        if (error instanceof Error && error.message.includes('Test environment')) {
-          // Test environment issue, fail immediately
-          throw error;
-        }
-        
-        if (attempts >= maxRetries) {
-          break;
-        }
-      }
-    }
-    
-    return {
-      success: false,
-      issueNumber: issue.number,
-      error: lastError?.message || 'Failed to mitigate',
-      attempts
-    };
-  }
-
-  /**
-   * Create PR for mitigation
-   */
-  private async createMitigationPR(
-    issue: IssueContext,
-    solution: any,
-    validation: any,
-    options: ExecuteOptions
-  ): Promise<any> {
-    // Use educational PR when prType is 'educational'
-    if (options.prType === 'educational') {
-      logger.info('[MITIGATE] Creating educational PR with comprehensive security education');
-
-      // Extract vulnerability type from issue title as fallback
-      // RSOLV issue titles follow pattern: "🔒 <VulnType> vulnerabilities found in N file(s)"
-      const extractVulnTypeFromTitle = (title: string): string | undefined => {
-        const match = title.match(/🔒\s*(.+?)\s+vulnerabilit/i);
-        return match?.[1];
-      };
-
-      // Prepare summary data for educational PR
-      const vulnType = validation.analysisData?.vulnerabilityType
-        || solution.summary?.vulnerabilityType
-        || extractVulnTypeFromTitle(issue.title)
-        || 'security';
-
-      logger.info(`[MITIGATE] Educational PR vulnerability type: "${vulnType}" (from: ${
-        validation.analysisData?.vulnerabilityType ? 'analysisData' :
-        solution.summary?.vulnerabilityType ? 'solution.summary' :
-        extractVulnTypeFromTitle(issue.title) ? 'issue.title' : 'fallback'
-      })`);
-
-      const summary = {
-        title: `Fix: ${issue.title}`,
-        description: solution.summary?.description || issue.body || 'Security fix applied',
-        vulnerabilityType: vulnType,
-        severity: validation.analysisData?.severity || solution.summary?.severity || 'medium',
-        cwe: validation.analysisData?.cwe || solution.summary?.cwe,
-        tests: validation.tests || solution.summary?.tests,
-        isAiGenerated: true,
-        isTestMode: process.env.RSOLV_TESTING_MODE === 'true'
-      };
-
-      // Prepare diff stats if available
-      const diffStats = solution.diffStats || solution.summary?.diffStats;
-
-      // Call the rich educational PR function
-      const eduPrResult = await createEducationalPullRequest(
-        issue,
-        solution.commitHash,
-        summary,
-        this.config,
-        diffStats,
-        validation // Pass full validation data including branch info
-      );
-
-      if (!eduPrResult.success) {
-        throw new Error(`Educational PR creation failed: ${eduPrResult.error || eduPrResult.message}`);
-      }
-
-      logger.info('[MITIGATE] Educational PR created successfully', {
-        prUrl: eduPrResult.pullRequestUrl,
-        prNumber: eduPrResult.pullRequestNumber
-      });
-
-      return {
-        url: eduPrResult.pullRequestUrl,
-        number: eduPrResult.pullRequestNumber,
-        educationalContent: eduPrResult.educationalContent
-      };
-    }
-
-    // Fall back to standard PR creation for non-educational mode
-    const { createPullRequest } = await import('../../utils/github-client.js');
-
-    let body = `## Security Fix for Issue #${issue.number}\n\n`;
-    body += `### ${issue.title}\n\n`;
-
-    if (options.includeBeforeAfter) {
-      body += '### Before\n```javascript\n// Vulnerable code\n```\n\n';
-      body += '### After\n```javascript\n// Fixed code\n```\n\n';
-    }
-
-    return createPullRequest({
-      repository: issue.repository.fullName,
-      commitSha: solution.commitHash,
-      issueNumber: issue.number,
-      title: `Fix: ${issue.title}`,
-      body,
-      base: issue.repository.defaultBranch
-    });
-  }
 
   /**
    * Generate markdown report for mitigation
@@ -2954,7 +2072,6 @@ ${validation.falsePositive ?
    */
   _setTestDependencies(deps: {
     scanner?: ScanOrchestrator;
-    validationMode?: any;
   }): void {
     if (process.env.NODE_ENV !== 'test' && process.env.RSOLV_TESTING_MODE !== 'true') {
       throw new Error('_setTestDependencies can only be called in test environment');
@@ -2962,9 +2079,6 @@ ${validation.falsePositive ?
 
     if (deps.scanner) {
       this.scanner = deps.scanner;
-    }
-    if (deps.validationMode) {
-      this.validationMode = deps.validationMode;
     }
   }
 }

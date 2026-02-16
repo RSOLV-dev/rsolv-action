@@ -66,6 +66,12 @@ export interface ValidationResult {
   framework?: string;
   cwe_id?: string;
   error?: string;
+  /** Classification from backend: validated, false_positive, infrastructure_failure, inconclusive, no_test_framework */
+  classification?: string;
+  /** Test type: behavioral (has test execution) or static (file writes only) */
+  test_type?: string;
+  /** Number of tool calls in the session */
+  retry_count?: number;
 }
 
 type ToolExecutor = (input: Record<string, unknown>) => Promise<Record<string, unknown>>;
@@ -265,6 +271,9 @@ export class ValidationClient {
           test_code: data.test_code as string | undefined,
           framework: data.framework as string | undefined,
           cwe_id: data.cwe_id as string | undefined,
+          classification: data.classification as string | undefined,
+          test_type: data.test_type as string | undefined,
+          retry_count: data.retry_count as number | undefined,
         };
       }
 

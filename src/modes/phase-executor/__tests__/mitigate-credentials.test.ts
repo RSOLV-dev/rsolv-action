@@ -1,180 +1,177 @@
+/**
+ * Tests for executeMitigate credential handling (RFC-096 Phase F.2).
+ *
+ * Verifies that executeMitigate correctly passes credentials to the
+ * backend MitigationClient and fails gracefully when API key is missing.
+ */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { PhaseExecutor } from '../index.js';
 import { ActionConfig } from '../../../types/index.js';
 
+// Mock MitigationClient to capture config
+const mockRunMitigation = vi.fn();
+vi.mock('../../../pipeline/mitigation-client.js', () => ({
+  MitigationClient: vi.fn().mockImplementation((config: { apiKey: string; baseUrl: string }) => ({
+    runMitigation: mockRunMitigation.mockImplementation(() => {
+      // If no API key, simulate auth failure
+      if (!config.apiKey) {
+        return Promise.resolve({
+          success: false,
+          error: 'Failed to start mitigation session: RSOLV_API_KEY is required',
+        });
+      }
+      return Promise.resolve({
+        success: true,
+        title: 'fix: test vulnerability',
+        description: 'Fixed test vulnerability',
+      });
+    }),
+  })),
+}));
+
+// Mock PR creation
+vi.mock('../../../github/pr-git-educational.js', () => ({
+  createEducationalPullRequest: vi.fn().mockResolvedValue({
+    success: true,
+    pullRequestUrl: 'https://github.com/test-owner/test-repo/pull/1',
+    pullRequestNumber: 1,
+    message: 'PR created',
+  }),
+}));
+
+// Mock GitHub API
+vi.mock('../../../github/api.js', () => ({
+  getIssue: vi.fn(),
+  getIssues: vi.fn(),
+  addLabels: vi.fn(),
+  removeLabel: vi.fn(),
+  getGitHubClient: vi.fn().mockReturnValue({
+    rest: {
+      pulls: { create: vi.fn().mockResolvedValue({ data: { number: 1, html_url: '' } }) },
+      issues: { addLabels: vi.fn(), createComment: vi.fn() },
+      repos: { getBranch: vi.fn().mockRejectedValue(new Error('not found')) },
+      git: { createRef: vi.fn() },
+    },
+  }),
+}));
+
+// Mock child_process for git operations
+vi.mock('child_process', () => ({
+  execSync: vi.fn().mockImplementation((cmd: string) => {
+    if (cmd === 'git diff --name-only') return 'src/fix.ts\n';
+    if (cmd.startsWith('git config user.name') && !cmd.includes('"')) return 'Test User';
+    if (cmd.startsWith('git add')) return '';
+    if (cmd.startsWith('git commit')) return '';
+    if (cmd === 'git rev-parse HEAD') return 'abc123\n';
+    if (cmd.startsWith('git diff HEAD~1 --stat')) return ' 1 file changed, 2 insertions(+)\n';
+    return '';
+  }),
+}));
+
 describe('PhaseExecutor - Mitigate Phase Credential Handling', () => {
   let executor: PhaseExecutor;
   let mockConfig: ActionConfig;
-  
+
   beforeEach(() => {
-    // Setup mock config with vended credentials enabled
+    vi.clearAllMocks();
+    process.env.RSOLV_TESTING_MODE = 'true';
+
     mockConfig = {
-      apiKey: undefined, // No direct API key
       rsolvApiKey: 'rsolv_test_key_123',
+      githubToken: 'github_test_token',
       aiProvider: {
-        provider: 'claude-code',
-        model: 'claude-sonnet-4',
-        useVendedCredentials: true, // This should be true by default
-        temperature: 0.2,
-        maxTokens: 4000,
-        contextLimit: 100000,
-        timeout: 3600000
+        name: 'claude-code',
+        useVendedCredentials: true,
       },
-      repository: {
-        owner: 'test-owner',
-        name: 'test-repo'
-      },
-      createIssues: false,
-      useGitBasedEditing: true,
-      enableSecurityAnalysis: true
+      repository: { owner: 'test-owner', name: 'test-repo' },
+      issueLabel: 'rsolv:detected',
+      maxIssues: 1,
+      fixValidation: { enabled: false },
     } as ActionConfig;
-    
-    // Set environment variables
-    process.env.RSOLV_API_KEY = 'rsolv_test_key_123';
-    process.env.GITHUB_TOKEN = 'github_test_token';
-    process.env.GITHUB_REPOSITORY = 'test-owner/test-repo';
-    
+
     executor = new PhaseExecutor(mockConfig);
   });
-  
+
   afterEach(() => {
-    vi.clearAllMocks();
-    delete process.env.RSOLV_API_KEY;
-    delete process.env.GITHUB_TOKEN;
-    delete process.env.GITHUB_REPOSITORY;
+    delete process.env.RSOLV_TESTING_MODE;
   });
-  
-  it('should pass rsolvApiKey and useVendedCredentials to processIssues', async () => {
-    // Mock the imports
-    const mockProcessIssues = vi.fn().mockResolvedValue([{
-      issueId: 'issue-1',
-      success: true,
-      pullRequestUrl: 'https://github.com/test/repo/pull/1'
-    }]);
-    
-    // We'll spy on the actual processIssues call instead
-    const processIssuesModule = await import('../../../ai/unified-processor.js');
-    vi.spyOn(processIssuesModule, 'processIssues').mockImplementation(mockProcessIssues);
-    
-    // Mock GitHub API
+
+  it('should pass rsolvApiKey to MitigationClient when delegating to backend', async () => {
+    // Mock GitHub API to return an issue
     const githubApiModule = await import('../../../github/api.js');
-    vi.spyOn(githubApiModule, 'getIssue').mockResolvedValue({
+    (githubApiModule.getIssue as ReturnType<typeof vi.fn>).mockResolvedValue({
       id: 'issue-1',
       number: 123,
-      title: 'Test Issue',
-      body: '## Vulnerabilities\n- XSS in file.js:10',
-      labels: ['rsolv:validated']
+      title: 'CWE-79: XSS vulnerability',
+      body: '#### `file.js`\n- **Line 10**: XSS found',
+      labels: [{ name: 'rsolv:validated' }],
+      created_at: '2026-01-01T00:00:00Z',
+      updated_at: '2026-01-01T00:00:00Z',
     });
-    vi.spyOn(githubApiModule, 'addLabels').mockResolvedValue(undefined);
-    vi.spyOn(githubApiModule, 'createIssueComment').mockResolvedValue(undefined);
-    
-    // Mock phase data client - need correct structure for validation data
-    executor.phaseDataClient.getPhaseData = vi.fn().mockResolvedValue({
-      phase: 'validate',
-      data: {
-        validation: {
-          'issue-123': {  // Key should be issue-{number}
-            confidence: 0.9,
-            hasSpecificVulnerabilities: true,
-            vulnerabilities: [{ file: 'test.js', line: 10, type: 'XSS' }]
-          }
-        },
-        vulnerabilities: [{ file: 'test.js', line: 10, type: 'XSS' }]
-      },
-      timestamp: new Date().toISOString()
-    });
-    
+
+    // Mock phase data retrieval
     executor.phaseDataClient.retrievePhaseResults = vi.fn().mockResolvedValue({
       validation: {
         'issue-123': {
-          confidence: 0.9,
-          hasSpecificVulnerabilities: true,
-          vulnerabilities: [{ file: 'test.js', line: 10, type: 'XSS' }]
-        }
-      }
-    });
-    
-    executor.phaseDataClient.storePhaseData = vi.fn().mockResolvedValue(undefined);
-    
-    // Execute mitigate phase
-    const result = await executor.executeMitigate({
-      repository: {
-        owner: 'test-owner',
-        name: 'test-repo',
-        defaultBranch: 'main'
+          validated: true,
+          classification: 'validated',
+          backendOrchestrated: true,
+        },
       },
-      issueNumber: 123
     });
-    
-    // Verify processIssues was called with correct config
-    expect(mockProcessIssues).toHaveBeenCalled();
-    const [issues, config] = mockProcessIssues.mock.calls[0];
-    
-    // Check that rsolvApiKey is passed
-    expect(config.rsolvApiKey).toBe('rsolv_test_key_123');
-    
-    // Check that useVendedCredentials is true
-    expect(config.aiProvider.useVendedCredentials).toBe(true);
-    
-    // Verify success
+
+    const result = await executor.executeMitigate({
+      repository: { owner: 'test-owner', name: 'test-repo', defaultBranch: 'main' },
+      issueNumber: 123,
+    });
+
+    // MitigationClient should have been constructed with the API key
+    const { MitigationClient } = await import('../../../pipeline/mitigation-client.js');
+    expect(MitigationClient).toHaveBeenCalledWith(
+      expect.objectContaining({
+        apiKey: 'rsolv_test_key_123',
+      })
+    );
+
     expect(result.success).toBe(true);
   });
-  
-  it('should fail gracefully when rsolvApiKey is missing but vended credentials are enabled', async () => {
+
+  it('should fail gracefully when rsolvApiKey is missing', async () => {
     // Remove rsolvApiKey
-    delete mockConfig.rsolvApiKey;
-    delete process.env.RSOLV_API_KEY;
-    
+    delete (mockConfig as Record<string, unknown>).rsolvApiKey;
+
     const executorNoKey = new PhaseExecutor(mockConfig);
-    
+
     // Mock GitHub API
     const githubApiModule = await import('../../../github/api.js');
-    vi.spyOn(githubApiModule, 'getIssue').mockResolvedValue({
+    (githubApiModule.getIssue as ReturnType<typeof vi.fn>).mockResolvedValue({
       id: 'issue-1',
       number: 123,
-      title: 'Test Issue',
-      body: '## Vulnerabilities\n- XSS in file.js:10',
-      labels: ['rsolv:validated']
+      title: 'CWE-79: XSS vulnerability',
+      body: '#### `file.js`\n- **Line 10**: XSS found',
+      labels: [{ name: 'rsolv:validated' }],
+      created_at: '2026-01-01T00:00:00Z',
+      updated_at: '2026-01-01T00:00:00Z',
     });
-    
-    // Mock phase data client with correct structure
-    executorNoKey.phaseDataClient.getPhaseData = vi.fn().mockResolvedValue({
-      phase: 'validate',
-      data: {
-        validation: {
-          'issue-123': {
-            confidence: 0.9,
-            hasSpecificVulnerabilities: true,
-            vulnerabilities: [{ file: 'test.js', line: 10, type: 'XSS' }]
-          }
-        },
-        vulnerabilities: [{ file: 'test.js', line: 10, type: 'XSS' }]
-      },
-      timestamp: new Date().toISOString()
-    });
-    
+
+    // Mock phase data retrieval
     executorNoKey.phaseDataClient.retrievePhaseResults = vi.fn().mockResolvedValue({
       validation: {
         'issue-123': {
-          confidence: 0.9,
-          hasSpecificVulnerabilities: true,
-          vulnerabilities: [{ file: 'test.js', line: 10, type: 'XSS' }]
-        }
-      }
-    });
-    
-    // This should fail because vended credentials are enabled but no key is provided
-    const result = await executorNoKey.executeMitigate({
-      repository: {
-        owner: 'test-owner',
-        name: 'test-repo',
-        defaultBranch: 'main'
+          validated: true,
+          classification: 'validated',
+          backendOrchestrated: true,
+        },
       },
-      issueNumber: 123
     });
-    
-    // Should fail with appropriate error
+
+    const result = await executorNoKey.executeMitigate({
+      repository: { owner: 'test-owner', name: 'test-repo', defaultBranch: 'main' },
+      issueNumber: 123,
+    });
+
+    // Should fail because MitigationClient got an undefined apiKey
     expect(result.success).toBe(false);
-    expect(result.error).toContain('RSOLV_API_KEY');
+    expect(result.error).toBeDefined();
   });
 });

@@ -1,12 +1,12 @@
 /**
  * Test for the MITIGATE "0 validated vulnerabilities" bug fix.
  *
- * Root cause: executeAllPhases line 1291 used `issue.specificVulnerabilities || []`
- * instead of `validationData.vulnerabilities || []`, causing the phase-executor's
- * second store to overwrite validation-mode's correct store with empty vulnerabilities.
+ * Root cause: executeAllPhases previously used `issue.specificVulnerabilities || []`
+ * instead of validation result data, causing incorrect phase data storage.
  *
- * MITIGATE reads the LATEST validation execution (ordered by inserted_at DESC),
- * which was the phase-executor's store with empty vulnerabilities.
+ * RFC-096 Phase F.2: executeAllPhases now delegates to executeValidateForIssue
+ * which uses the backend-orchestrated pipeline. This test verifies that
+ * storePhaseData is called with the backend validation result, not issue properties.
  */
 
 import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
@@ -26,6 +26,27 @@ vi.mock('../../../scanner/index.js', () => ({
   ScanOrchestrator: vi.fn().mockImplementation(() => ({
     performScan: vi.fn()
   }))
+}));
+
+// Mock the validation client to return backend results
+vi.mock('../../../pipeline/validation-client.js', () => ({
+  ValidationClient: vi.fn().mockImplementation(() => ({
+    runValidation: vi.fn().mockResolvedValue({
+      validated: true,
+      test_path: 'test/test_secrets.py',
+      test_code: 'def test_no_hardcoded_secrets(): ...',
+      framework: 'pytest',
+      cwe_id: 'CWE-798',
+      classification: 'validated',
+      test_type: 'behavioral',
+      retry_count: 2,
+    }),
+  })),
+}));
+
+// Mock child_process for git operations
+vi.mock('child_process', () => ({
+  execSync: vi.fn().mockReturnValue('abc123\n'),
 }));
 
 describe('executeAllPhases vulnerabilities handoff to MITIGATE', () => {
@@ -69,7 +90,7 @@ describe('executeAllPhases vulnerabilities handoff to MITIGATE', () => {
     delete process.env.RSOLV_TESTING_MODE;
   });
 
-  test('stores validationData.vulnerabilities (not issue.specificVulnerabilities) in phase data', async () => {
+  test('stores backend validation result in phase data (not issue.specificVulnerabilities)', async () => {
     // Arrange: scan creates an issue
     mockScanOrchestrator.performScan.mockResolvedValue({
       vulnerabilities: [{ file: 'app.py', line: 6, type: 'hardcoded_secrets' }],
@@ -79,31 +100,16 @@ describe('executeAllPhases vulnerabilities handoff to MITIGATE', () => {
     // Issue from GitHub API does NOT have specificVulnerabilities
     const mockIssue: IssueContext = {
       number: 1,
-      title: 'Hardcoded secrets found',
+      title: 'CWE-798: Hardcoded secrets found',
       body: '#### `app.py`\n- **Line 6**: Hardcoded secret detected',
       labels: ['rsolv:detected'],
       repository: mockConfig.repository!,
       url: 'https://github.com/arubis/Student-Feedback-System/issues/1'
-      // No specificVulnerabilities — this is what comes from GitHub API
     };
 
     mockGetIssue.mockResolvedValueOnce(mockIssue);
 
-    // validateVulnerability extracts and returns vulnerabilities from issue body
-    const expectedVulnerabilities = [
-      { file: 'app.py', line: 6, type: 'hardcoded_secrets', cweId: 'CWE-798', confidence: 'CRITICAL' }
-    ];
-
-    const mockValidateVulnerability = vi.fn().mockResolvedValueOnce({
-      issueId: 1,
-      validated: true,
-      vulnerabilities: expectedVulnerabilities,
-      testResults: { success: true },
-      branchName: 'rsolv/validate/issue-1',
-      timestamp: new Date().toISOString(),
-      commitHash: 'abc123'
-    });
-
+    // Mock executeMitigate to avoid actual mitigation
     const mockExecuteMitigate = vi.fn().mockResolvedValueOnce({
       success: true,
       phase: 'mitigate',
@@ -115,14 +121,13 @@ describe('executeAllPhases vulnerabilities handoff to MITIGATE', () => {
 
     executor._setTestDependencies({
       scanner: mockScanOrchestrator,
-      validationMode: { validateVulnerability: mockValidateVulnerability }
     });
     executor.executeMitigate = mockExecuteMitigate;
 
     // Act
     await executor.executeAllPhases({ repository: mockConfig.repository });
 
-    // Assert: storePhaseData should store vulnerabilities from validateVulnerability return
+    // Assert: storePhaseData should store backend validation result
     const validationStoreCall = storePhaseDataSpy.mock.calls.find(
       (call: unknown[]) => call[0] === 'validation'
     );
@@ -130,28 +135,27 @@ describe('executeAllPhases vulnerabilities handoff to MITIGATE', () => {
     expect(validationStoreCall).toBeDefined();
 
     const storedData = validationStoreCall![1] as Record<string, Record<string, unknown>>;
+    // Backend path stores with issue-N key format
     const issueData = storedData['issue-1'];
 
     expect(issueData).toBeDefined();
-    expect(issueData.vulnerabilities).toEqual(expectedVulnerabilities);
-    expect(issueData.vulnerabilities).toHaveLength(1);
-    expect((issueData.vulnerabilities as Array<{ file: string }>)[0].file).toBe('app.py');
-    expect((issueData.vulnerabilities as Array<{ cweId: string }>)[0].cweId).toBe('CWE-798');
+    // Backend validation stores the classification and cwe_id from the backend result
+    expect(issueData.validated).toBe(true);
+    expect(issueData.cwe_id).toBe('CWE-798');
+    expect(issueData.classification).toBe('validated');
+    expect(issueData.backendOrchestrated).toBe(true);
   });
 
   test('does not use issue.specificVulnerabilities for storage', async () => {
-    // This test ensures the bug doesn't regress — even if issue has specificVulnerabilities,
-    // the stored data should come from validateVulnerability return, not from the issue.
-
     mockScanOrchestrator.performScan.mockResolvedValue({
       vulnerabilities: [{ file: 'app.py', line: 6, type: 'hardcoded_secrets' }],
       createdIssues: [{ number: 1, url: 'https://github.com/arubis/test/issues/1' }]
     });
 
-    // Issue WITH specificVulnerabilities (different from what validateVulnerability returns)
+    // Issue WITH specificVulnerabilities — should be ignored by backend path
     const mockIssue: IssueContext = {
       number: 1,
-      title: 'Test',
+      title: 'CWE-798: Test',
       body: '#### `app.py`\n- **Line 6**: Hardcoded secret',
       labels: ['rsolv:detected'],
       repository: mockConfig.repository!,
@@ -163,19 +167,6 @@ describe('executeAllPhases vulnerabilities handoff to MITIGATE', () => {
 
     mockGetIssue.mockResolvedValueOnce(mockIssue);
 
-    // validateVulnerability returns DIFFERENT vulnerabilities than issue.specificVulnerabilities
-    const correctVulnerabilities = [
-      { file: 'app.py', line: 6, type: 'hardcoded_secrets', cweId: 'CWE-798' }
-    ];
-
-    const mockValidateVulnerability = vi.fn().mockResolvedValueOnce({
-      issueId: 1,
-      validated: true,
-      vulnerabilities: correctVulnerabilities,
-      timestamp: new Date().toISOString(),
-      commitHash: 'abc123'
-    });
-
     const mockExecuteMitigate = vi.fn().mockResolvedValue({
       success: true, phase: 'mitigate', data: {}
     });
@@ -184,7 +175,6 @@ describe('executeAllPhases vulnerabilities handoff to MITIGATE', () => {
 
     executor._setTestDependencies({
       scanner: mockScanOrchestrator,
-      validationMode: { validateVulnerability: mockValidateVulnerability }
     });
     executor.executeMitigate = mockExecuteMitigate;
 
@@ -198,9 +188,12 @@ describe('executeAllPhases vulnerabilities handoff to MITIGATE', () => {
     const storedData = validationStoreCall![1] as Record<string, Record<string, unknown>>;
     const issueData = storedData['issue-1'];
 
-    // Should use validateVulnerability's return, NOT issue.specificVulnerabilities
-    expect(issueData.vulnerabilities).toEqual(correctVulnerabilities);
-    expect((issueData.vulnerabilities as Array<{ file: string }>)[0].file).toBe('app.py');
-    expect((issueData.vulnerabilities as Array<{ file: string }>)[0].file).not.toBe('WRONG.py');
+    // Should store backend result, NOT issue.specificVulnerabilities
+    expect(issueData).toBeDefined();
+    expect(issueData.validated).toBe(true);
+    expect(issueData.backendOrchestrated).toBe(true);
+    // The key point: the stored data comes from the backend ValidationClient,
+    // not from the issue's specificVulnerabilities property
+    expect(issueData.cwe_id).toBe('CWE-798');
   });
 });

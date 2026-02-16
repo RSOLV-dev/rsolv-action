@@ -418,6 +418,116 @@ describe('ValidationClient', () => {
       }
     });
 
+    it('extracts classification fields from complete event', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          session_id: 'sess_v_abc123',
+          stream_url: '/api/v1/validation/stream/sess_v_abc123',
+        }),
+      });
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: new Map([['content-type', 'text/event-stream']]),
+        body: createSSEStream([
+          {
+            type: 'complete',
+            id: 1,
+            data: {
+              validated: true,
+              test_path: 'spec/auth_spec.rb',
+              test_code: 'test code',
+              framework: 'rspec',
+              cwe_id: 'CWE-89',
+              classification: 'validated',
+              test_type: 'behavioral',
+              retry_count: 3,
+            },
+          },
+        ]),
+      });
+
+      const result = await client.runValidation(context);
+
+      expect(result.validated).toBe(true);
+      expect(result.classification).toBe('validated');
+      expect(result.test_type).toBe('behavioral');
+      expect(result.retry_count).toBe(3);
+    });
+
+    it('handles classification fields for false positive', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          session_id: 'sess_v_abc123',
+          stream_url: '/api/v1/validation/stream/sess_v_abc123',
+        }),
+      });
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: new Map([['content-type', 'text/event-stream']]),
+        body: createSSEStream([
+          {
+            type: 'complete',
+            id: 1,
+            data: {
+              validated: false,
+              classification: 'false_positive',
+              test_type: 'behavioral',
+              retry_count: 2,
+            },
+          },
+        ]),
+      });
+
+      const result = await client.runValidation(context);
+
+      expect(result.validated).toBe(false);
+      expect(result.classification).toBe('false_positive');
+      expect(result.test_type).toBe('behavioral');
+      expect(result.retry_count).toBe(2);
+    });
+
+    it('defaults classification fields to undefined when not present', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          session_id: 'sess_v_abc123',
+          stream_url: '/api/v1/validation/stream/sess_v_abc123',
+        }),
+      });
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: new Map([['content-type', 'text/event-stream']]),
+        body: createSSEStream([
+          {
+            type: 'complete',
+            id: 1,
+            data: {
+              validated: true,
+              test_path: 'spec/auth_spec.rb',
+            },
+          },
+        ]),
+      });
+
+      const result = await client.runValidation(context);
+
+      expect(result.validated).toBe(true);
+      expect(result.classification).toBeUndefined();
+      expect(result.test_type).toBeUndefined();
+      expect(result.retry_count).toBeUndefined();
+    });
+
     it('handles multiple sequential tool requests', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
