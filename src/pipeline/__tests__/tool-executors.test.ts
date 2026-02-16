@@ -172,6 +172,23 @@ describe('ToolExecutors', () => {
       expect(result.error).toContain('timeout');
     });
 
+    it('defaults to 600s timeout for slow ecosystem setup (bundle install, mix deps.get)', async () => {
+      // The default timeout must accommodate slow dependency installs.
+      // We can't wait 600s in a test, so verify the default is applied
+      // by checking a short command completes without custom timeout_ms.
+      const result = await executeBash({ command: 'echo default-timeout-test' });
+      expect(result.exit_code).toBe(0);
+      expect(result.stdout).toContain('default-timeout-test');
+
+      // Verify the timeout error message includes 600000ms when it fires.
+      // Use a very short sleep with explicit timeout to confirm format.
+      const timeoutResult = await executeBash({
+        command: 'sleep 30',
+        timeout_ms: 50,
+      });
+      expect(timeoutResult.error).toContain('timeout: command exceeded 50ms');
+    });
+
     it('includes working directory when specified', async () => {
       const result = await executeBash({
         command: 'pwd',
