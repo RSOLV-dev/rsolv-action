@@ -163,12 +163,17 @@ async function pushCommitToBranch(
         const [owner, repo] = repoUrl.split('/');
         const authenticatedUrl = `https://x-access-token:${token}@github.com/${owner}/${repo}.git`;
 
-        // Set the authenticated remote URL
+        // Set BOTH fetch and push URLs — prevents SSH override if pushurl was set separately
         try {
           execSync(`git remote set-url origin ${authenticatedUrl}`, {
-            encoding: 'utf-8'
+            encoding: 'utf-8',
+            stdio: 'pipe'
           });
-          logger.debug('Configured git authentication for push');
+          execSync(`git remote set-url --push origin ${authenticatedUrl}`, {
+            encoding: 'utf-8',
+            stdio: 'pipe'
+          });
+          logger.debug('Configured git authentication for push (fetch + push URLs)');
         } catch (configError) {
           logger.warn('Failed to configure git authentication, will try with default settings');
         }
