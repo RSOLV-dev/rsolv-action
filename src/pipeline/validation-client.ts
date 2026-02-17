@@ -109,7 +109,7 @@ export class ValidationClient {
   constructor(config: PipelineClientConfig, options?: { maxReconnects?: number; reconnectBaseDelayMs?: number }) {
     this.config = config;
     this.client = new PipelineClient(config);
-    this.maxReconnects = options?.maxReconnects ?? 3;
+    this.maxReconnects = options?.maxReconnects ?? 5;
     this.reconnectBaseDelayMs = options?.reconnectBaseDelayMs ?? 2000;
   }
 
@@ -158,18 +158,19 @@ export class ValidationClient {
         const result = await this.connectSSEStream(sessionId);
         return result; // Got terminal result
       } catch (err) {
-        if (err instanceof SSEDisconnectError) {
-          if (attempt === this.maxReconnects) {
-            return {
-              validated: false,
-              error: `SSE stream failed after ${this.maxReconnects} reconnect attempts`,
-            };
-          }
-          continue; // Try reconnecting
-        }
-        // Non-disconnect error — don't reconnect
+        // Reconnect on ANY stream error — not just SSEDisconnectError.
+        // Undici throws generic Error ("socket connection was closed unexpectedly")
+        // at the fetch() level, which isn't an SSEDisconnectError. Both represent
+        // recoverable transport failures. See RFC-114 for long-term Channel migration.
         const message = err instanceof Error ? err.message : String(err);
-        return { validated: false, error: `SSE stream error: ${message}` };
+        console.log(`[ValidationClient] SSE stream error (attempt ${attempt}/${this.maxReconnects}): ${message}`);
+        if (attempt === this.maxReconnects) {
+          return {
+            validated: false,
+            error: `SSE stream failed after ${this.maxReconnects} reconnect attempts: ${message}`,
+          };
+        }
+        continue; // Try reconnecting
       }
     }
 

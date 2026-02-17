@@ -54,8 +54,8 @@ describe('ValidationClient', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    // Use very short reconnection delays for tests
-    client = new ValidationClient(config, { reconnectBaseDelayMs: 10 });
+    // Use very short reconnection delays and fewer retries for tests
+    client = new ValidationClient(config, { reconnectBaseDelayMs: 10, maxReconnects: 3 });
   });
 
   afterEach(() => {
@@ -687,6 +687,55 @@ describe('ValidationClient', () => {
 
       expect(result.validated).toBe(false);
       expect(result.error).toContain('reconnect');
+    });
+
+    it('reconnects on network-level errors (not just SSEDisconnectError)', async () => {
+      // This tests the fix for the potion-shop failure where undici throws
+      // "socket connection was closed unexpectedly" — a generic Error, not SSEDisconnectError.
+      // Previously this fell through to the non-reconnection handler.
+
+      // Start session
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          session_id: 'sess_v_network',
+          stream_url: '/api/v1/validation/stream/sess_v_network',
+        }),
+      });
+
+      // First SSE fetch — throws network error (NOT SSEDisconnectError)
+      mockFetch.mockRejectedValueOnce(
+        new Error('The socket connection was closed unexpectedly')
+      );
+
+      // Status check before reconnect — session still active
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          session_id: 'sess_v_network',
+          status: 'streaming',
+          phase: 'validation',
+          event_counter: 1,
+          pending_tools: 0,
+        }),
+      });
+
+      // Second SSE connection — succeeds
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: new Map([['content-type', 'text/event-stream']]),
+        body: createSSEStream([
+          { type: 'complete', id: 2, data: { validated: true, test_path: 'test/vuln_test.exs', classification: 'validated' } },
+        ]),
+      });
+
+      const result = await client.runValidation(context);
+
+      expect(result.validated).toBe(true);
+      expect(result.test_path).toBe('test/vuln_test.exs');
     });
 
     it('handles multiple sequential tool requests', async () => {
