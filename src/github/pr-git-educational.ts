@@ -187,8 +187,12 @@ export async function createEducationalPullRequest(
       const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
       const authenticatedUrl = `https://x-access-token:${token}@github.com/${owner}/${repo}.git`;
       try {
-        execSync(`git remote set-url origin ${authenticatedUrl}`, { cwd: process.cwd() });
-        logger.debug('Configured git authentication for push');
+        // Set BOTH fetch and push URLs — the AI's bash tool execution during MITIGATE
+        // may have set a separate pushurl via `git remote set-url --push origin <ssh-url>`,
+        // which would cause push to use SSH even though the fetch URL is HTTPS.
+        execSync(`git remote set-url origin ${authenticatedUrl}`, { cwd: process.cwd(), stdio: 'pipe' });
+        execSync(`git remote set-url --push origin ${authenticatedUrl}`, { cwd: process.cwd(), stdio: 'pipe' });
+        logger.debug('Configured git authentication for push (fetch + push URLs)');
       } catch (configError) {
         logger.debug('Could not configure authenticated remote');
       }
@@ -196,6 +200,13 @@ export async function createEducationalPullRequest(
 
     // Push the branch with better error handling
     try {
+      // Log the push URL for diagnostics (mask the token)
+      try {
+        const pushUrl = execSync('git remote get-url --push origin', { cwd: process.cwd(), encoding: 'utf-8', stdio: 'pipe' }).trim();
+        const maskedUrl = pushUrl.replace(/x-access-token:[^@]+@/, 'x-access-token:***@');
+        logger.debug(`Push URL: ${maskedUrl}`);
+      } catch { /* ignore diagnostic failure */ }
+
       execSync(`git push -u origin ${branchName}`, { cwd: process.cwd() });
       logger.info(`Pushed branch: ${branchName}`);
     } catch (error: any) {
