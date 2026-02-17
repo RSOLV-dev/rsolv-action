@@ -86,6 +86,9 @@ RUN apt-get update && \
 RUN curl https://mise.run | sh
 ENV PATH="/root/.local/share/mise/shims:/root/.local/bin:${PATH}"
 
+# Set Gradle cache to writable directory (root cause #31: Docker root user conflicts with default ~/.gradle)
+ENV GRADLE_USER_HOME=/tmp/.gradle
+
 # Install uv for fast Python package management (PEP 668 safe, 10-100x faster than pip)
 # RFC-103: Default Python installer — respects project lock files, falls back to uv pip install
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh && uv --version
