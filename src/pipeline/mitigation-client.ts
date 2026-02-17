@@ -78,20 +78,25 @@ const TOOL_DISPATCH: Record<ToolName, ToolExecutor> = {
 export class MitigationClient {
   private client: PipelineClient;
   private config: PipelineClientConfig;
+  private maxReconnects: number;
+  private reconnectBaseDelayMs: number;
 
-  constructor(config: PipelineClientConfig) {
+  constructor(config: PipelineClientConfig, options?: { maxReconnects?: number; reconnectBaseDelayMs?: number }) {
     this.config = config;
     this.client = new PipelineClient(config);
+    this.maxReconnects = options?.maxReconnects ?? 5;
+    this.reconnectBaseDelayMs = options?.reconnectBaseDelayMs ?? 2000;
   }
 
   /**
    * Runs a backend-orchestrated mitigation session.
    *
    * 1. POST /mitigation/start with issue context
-   * 2. Connect SSE stream (fetch + ReadableStream)
+   * 2. Connect SSE stream with automatic reconnection
    * 3. On tool_request: dispatch to local executor, POST tool_response
    * 4. On complete: return success result
    * 5. On error: return failure result
+   * 6. On disconnect: check session status, reconnect if still active
    */
   async runMitigation(context: MitigationContext): Promise<MitigationResult> {
     let sessionId: string;
@@ -112,33 +117,66 @@ export class MitigationClient {
       };
     }
 
-    // 2. Connect SSE stream
-    try {
-      const streamUrl = `${this.config.baseUrl}/api/v1/mitigation/stream/${sessionId}`;
-      const response = await fetch(streamUrl, {
-        method: 'GET',
-        headers: {
-          'x-api-key': this.config.apiKey,
-          Accept: 'text/event-stream',
-        },
-      });
+    // 2. Connect SSE stream with reconnection
+    for (let attempt = 0; attempt <= this.maxReconnects; attempt++) {
+      if (attempt > 0) {
+        const statusResult = await this.checkSessionBeforeReconnect(sessionId);
+        if (statusResult !== null) return statusResult;
 
-      if (!response.ok || !response.body) {
-        return {
-          success: false,
-          error: `Failed to connect SSE stream: ${response.status} ${response.statusText}`,
-        };
+        const delay = this.reconnectBaseDelayMs * Math.pow(2, attempt - 1);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        console.log(`[MitigationClient] SSE reconnecting (attempt ${attempt}/${this.maxReconnects})...`);
       }
 
-      // 3. Process SSE events
-      return await this.processSSEStream(response.body, sessionId);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      return {
-        success: false,
-        error: `SSE stream error: ${message}`,
-      };
+      try {
+        const result = await this.connectSSEStream(sessionId);
+        return result;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.log(`[MitigationClient] SSE stream error (attempt ${attempt}/${this.maxReconnects}): ${message}`);
+        if (attempt === this.maxReconnects) {
+          return {
+            success: false,
+            error: `SSE stream failed after ${this.maxReconnects} reconnect attempts: ${message}`,
+          };
+        }
+        continue;
+      }
     }
+
+    return { success: false, error: 'SSE reconnection exhausted' };
+  }
+
+  private async checkSessionBeforeReconnect(sessionId: string): Promise<MitigationResult | null> {
+    try {
+      const status = await this.client.getSessionStatus('mitigation', sessionId);
+      if (status.status === 'completed') {
+        return { success: false, error: `Session completed during SSE disconnect (status: ${status.status})` };
+      }
+      if (status.status === 'failed') {
+        return { success: false, error: 'Session failed during SSE disconnect' };
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  private async connectSSEStream(sessionId: string): Promise<MitigationResult> {
+    const streamUrl = `${this.config.baseUrl}/api/v1/mitigation/stream/${sessionId}`;
+    const response = await fetch(streamUrl, {
+      method: 'GET',
+      headers: {
+        'x-api-key': this.config.apiKey,
+        Accept: 'text/event-stream',
+      },
+    });
+
+    if (!response.ok || !response.body) {
+      throw new Error(`Failed to connect SSE stream: ${response.status} ${response.statusText}`);
+    }
+
+    return this.processSSEStream(response.body, sessionId);
   }
 
   private buildSessionContext(
@@ -169,11 +207,8 @@ export class MitigationClient {
         const { done, value } = await reader.read();
 
         if (done) {
-          // Stream ended without complete event
-          return {
-            success: false,
-            error: 'SSE stream ended without complete event',
-          };
+          // Stream ended without complete event — throw to trigger reconnection
+          throw new Error('SSE stream disconnected without terminal event');
         }
 
         buffer += decoder.decode(value, { stream: true });
