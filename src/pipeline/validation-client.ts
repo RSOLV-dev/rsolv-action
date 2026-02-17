@@ -31,6 +31,14 @@ import type {
   SSEEvent,
 } from './types.js';
 
+/** Thrown when the SSE stream closes without a terminal event (complete/error). */
+class SSEDisconnectError extends Error {
+  constructor() {
+    super('SSE stream disconnected without terminal event');
+    this.name = 'SSEDisconnectError';
+  }
+}
+
 export interface ValidationContext {
   vulnerability: {
     type: string;
@@ -95,20 +103,25 @@ const TOOL_DISPATCH: Record<ToolName, ToolExecutor> = {
 export class ValidationClient {
   private client: PipelineClient;
   private config: PipelineClientConfig;
+  private maxReconnects: number;
+  private reconnectBaseDelayMs: number;
 
-  constructor(config: PipelineClientConfig) {
+  constructor(config: PipelineClientConfig, options?: { maxReconnects?: number; reconnectBaseDelayMs?: number }) {
     this.config = config;
     this.client = new PipelineClient(config);
+    this.maxReconnects = options?.maxReconnects ?? 3;
+    this.reconnectBaseDelayMs = options?.reconnectBaseDelayMs ?? 2000;
   }
 
   /**
    * Runs a backend-orchestrated validation session.
    *
    * 1. POST /validation/start with vulnerability context
-   * 2. Connect SSE stream (fetch + ReadableStream)
+   * 2. Connect SSE stream with automatic reconnection
    * 3. On tool_request: dispatch to local executor, POST tool_response
    * 4. On complete: return validation result with test metadata
    * 5. On error: return failure result
+   * 6. On disconnect: check session status, reconnect if still active
    */
   async runValidation(context: ValidationContext): Promise<ValidationResult> {
     let sessionId: string;
@@ -129,33 +142,81 @@ export class ValidationClient {
       };
     }
 
-    // 2. Connect SSE stream
-    try {
-      const streamUrl = `${this.config.baseUrl}/api/v1/validation/stream/${sessionId}`;
-      const response = await fetch(streamUrl, {
-        method: 'GET',
-        headers: {
-          'x-api-key': this.config.apiKey,
-          Accept: 'text/event-stream',
-        },
-      });
+    // 2. Connect SSE stream with reconnection
+    for (let attempt = 0; attempt <= this.maxReconnects; attempt++) {
+      // On reconnect (attempt > 0), check session status first
+      if (attempt > 0) {
+        const statusResult = await this.checkSessionBeforeReconnect(sessionId);
+        if (statusResult !== null) return statusResult;
 
-      if (!response.ok || !response.body) {
-        return {
-          validated: false,
-          error: `Failed to connect SSE stream: ${response.status} ${response.statusText}`,
-        };
+        const delay = this.reconnectBaseDelayMs * Math.pow(2, attempt - 1);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        console.log(`[ValidationClient] SSE reconnecting (attempt ${attempt}/${this.maxReconnects})...`);
       }
 
-      // 3. Process SSE events
-      return await this.processSSEStream(response.body, sessionId);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      return {
-        validated: false,
-        error: `SSE stream error: ${message}`,
-      };
+      try {
+        const result = await this.connectSSEStream(sessionId);
+        return result; // Got terminal result
+      } catch (err) {
+        if (err instanceof SSEDisconnectError) {
+          if (attempt === this.maxReconnects) {
+            return {
+              validated: false,
+              error: `SSE stream failed after ${this.maxReconnects} reconnect attempts`,
+            };
+          }
+          continue; // Try reconnecting
+        }
+        // Non-disconnect error — don't reconnect
+        const message = err instanceof Error ? err.message : String(err);
+        return { validated: false, error: `SSE stream error: ${message}` };
+      }
     }
+
+    return { validated: false, error: 'SSE reconnection exhausted' };
+  }
+
+  /**
+   * Check session status before reconnecting. If the session completed
+   * or failed while we were disconnected, return the result immediately
+   * instead of reconnecting.
+   */
+  private async checkSessionBeforeReconnect(sessionId: string): Promise<ValidationResult | null> {
+    try {
+      const status = await this.client.getSessionStatus('validation', sessionId);
+      if (status.status === 'completed') {
+        return { validated: false, error: `Session completed during SSE disconnect (status: ${status.status})` };
+      }
+      if (status.status === 'failed') {
+        return { validated: false, error: `Session failed during SSE disconnect` };
+      }
+      // Session still active — proceed with reconnect
+      return null;
+    } catch {
+      // Can't check status — proceed with reconnect anyway
+      return null;
+    }
+  }
+
+  /**
+   * Opens a single SSE connection to the stream endpoint and processes events.
+   * Throws SSEDisconnectError if stream closes without a terminal event.
+   */
+  private async connectSSEStream(sessionId: string): Promise<ValidationResult> {
+    const streamUrl = `${this.config.baseUrl}/api/v1/validation/stream/${sessionId}`;
+    const response = await fetch(streamUrl, {
+      method: 'GET',
+      headers: {
+        'x-api-key': this.config.apiKey,
+        Accept: 'text/event-stream',
+      },
+    });
+
+    if (!response.ok || !response.body) {
+      throw new Error(`Failed to connect SSE stream: ${response.status} ${response.statusText}`);
+    }
+
+    return this.processSSEStream(response.body, sessionId);
   }
 
   private buildSessionContext(
@@ -195,10 +256,7 @@ export class ValidationClient {
         const { done, value } = await reader.read();
 
         if (done) {
-          return {
-            validated: false,
-            error: 'SSE stream ended without complete event',
-          };
+          throw new SSEDisconnectError();
         }
 
         buffer += decoder.decode(value, { stream: true });
