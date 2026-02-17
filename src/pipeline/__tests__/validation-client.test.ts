@@ -54,7 +54,8 @@ describe('ValidationClient', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    client = new ValidationClient(config);
+    // Use very short reconnection delays for tests
+    client = new ValidationClient(config, { reconnectBaseDelayMs: 10 });
   });
 
   afterEach(() => {
@@ -218,7 +219,8 @@ describe('ValidationClient', () => {
       expect(result.error).toContain('session');
     });
 
-    it('handles SSE stream disconnect gracefully', async () => {
+    it('handles SSE stream disconnect gracefully with reconnection', async () => {
+      // Start session
       mockFetch.mockResolvedValueOnce({
         ok: true,
         status: 200,
@@ -228,11 +230,25 @@ describe('ValidationClient', () => {
         }),
       });
 
+      // First SSE — closes immediately (no events)
       mockFetch.mockResolvedValueOnce({
         ok: true,
         status: 200,
         headers: new Map([['content-type', 'text/event-stream']]),
         body: createSSEStream([]),
+      });
+
+      // Status check — session failed during disconnect
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          session_id: 'sess_v_abc123',
+          status: 'failed',
+          phase: 'validation',
+          event_counter: 0,
+          pending_tools: 0,
+        }),
       });
 
       const result = await client.runValidation(context);
@@ -526,6 +542,151 @@ describe('ValidationClient', () => {
       expect(result.classification).toBeUndefined();
       expect(result.test_type).toBeUndefined();
       expect(result.retry_count).toBeUndefined();
+    });
+
+    it('reconnects SSE on unexpected stream close and succeeds', async () => {
+      // Start session
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          session_id: 'sess_v_reconnect',
+          stream_url: '/api/v1/validation/stream/sess_v_reconnect',
+        }),
+      });
+
+      // First SSE connection — closes without terminal event
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: new Map([['content-type', 'text/event-stream']]),
+        body: createSSEStream([
+          { type: 'heartbeat', id: 1, data: {} },
+          // Stream closes without complete/error
+        ]),
+      });
+
+      // Status check before reconnect — session still active
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          session_id: 'sess_v_reconnect',
+          status: 'streaming',
+          phase: 'validation',
+          event_counter: 1,
+          pending_tools: 0,
+        }),
+      });
+
+      // Second SSE connection — completes successfully
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: new Map([['content-type', 'text/event-stream']]),
+        body: createSSEStream([
+          { type: 'complete', id: 2, data: { validated: true, test_path: 'spec/auth_spec.rb', classification: 'validated' } },
+        ]),
+      });
+
+      const result = await client.runValidation(context);
+
+      expect(result.validated).toBe(true);
+      expect(result.classification).toBe('validated');
+    });
+
+    it('returns cached result when session completed during disconnect', async () => {
+      // Start session
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          session_id: 'sess_v_cached',
+          stream_url: '/api/v1/validation/stream/sess_v_cached',
+        }),
+      });
+
+      // First SSE connection — closes unexpectedly
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: new Map([['content-type', 'text/event-stream']]),
+        body: createSSEStream([]),
+      });
+
+      // Status check — session already completed while we were disconnected
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          session_id: 'sess_v_cached',
+          status: 'completed',
+          phase: 'validation',
+          event_counter: 5,
+          pending_tools: 0,
+        }),
+      });
+
+      const result = await client.runValidation(context);
+
+      // Should return a result based on status, not try to reconnect SSE
+      expect(result.validated).toBe(false);
+      expect(result.error).toContain('completed');
+    });
+
+    it('returns error after exhausting reconnection attempts', async () => {
+      // Start session
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          session_id: 'sess_v_exhaust',
+          stream_url: '/api/v1/validation/stream/sess_v_exhaust',
+        }),
+      });
+
+      // Mock calls in actual execution order:
+      // attempt 0: SSE fetch → disconnect
+      mockFetch.mockResolvedValueOnce({
+        ok: true, status: 200,
+        headers: new Map([['content-type', 'text/event-stream']]),
+        body: createSSEStream([]),
+      });
+      // attempt 1: status check → streaming, SSE fetch → disconnect
+      mockFetch.mockResolvedValueOnce({
+        ok: true, status: 200,
+        json: async () => ({ session_id: 'sess_v_exhaust', status: 'streaming', phase: 'validation', event_counter: 0, pending_tools: 0 }),
+      });
+      mockFetch.mockResolvedValueOnce({
+        ok: true, status: 200,
+        headers: new Map([['content-type', 'text/event-stream']]),
+        body: createSSEStream([]),
+      });
+      // attempt 2: status check → streaming, SSE fetch → disconnect
+      mockFetch.mockResolvedValueOnce({
+        ok: true, status: 200,
+        json: async () => ({ session_id: 'sess_v_exhaust', status: 'streaming', phase: 'validation', event_counter: 0, pending_tools: 0 }),
+      });
+      mockFetch.mockResolvedValueOnce({
+        ok: true, status: 200,
+        headers: new Map([['content-type', 'text/event-stream']]),
+        body: createSSEStream([]),
+      });
+      // attempt 3: status check → streaming, SSE fetch → disconnect → exhausted
+      mockFetch.mockResolvedValueOnce({
+        ok: true, status: 200,
+        json: async () => ({ session_id: 'sess_v_exhaust', status: 'streaming', phase: 'validation', event_counter: 0, pending_tools: 0 }),
+      });
+      mockFetch.mockResolvedValueOnce({
+        ok: true, status: 200,
+        headers: new Map([['content-type', 'text/event-stream']]),
+        body: createSSEStream([]),
+      });
+
+      const result = await client.runValidation(context);
+
+      expect(result.validated).toBe(false);
+      expect(result.error).toContain('reconnect');
     });
 
     it('handles multiple sequential tool requests', async () => {

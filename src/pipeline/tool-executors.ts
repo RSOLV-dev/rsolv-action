@@ -7,7 +7,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { execSync } from 'child_process';
+import { exec, execSync } from 'child_process';
 import { globSync } from 'glob';
 import type {
   ReadFileInput,
@@ -134,6 +134,11 @@ export async function executeGrep(input: GrepInput): Promise<GrepResult> {
 /**
  * Executes a shell command and returns stdout/stderr/exit_code.
  *
+ * Uses async `exec` (not `execSync`) to avoid blocking the event loop.
+ * This is critical for SSE connections: execSync freezes the event loop,
+ * preventing undici from processing incoming keepalives, which triggers
+ * a ~5min bodyTimeout and drops the SSE connection.
+ *
  * Includes mise shims in PATH for runtime access.
  */
 export async function executeBash(input: BashInput): Promise<BashResult> {
@@ -146,8 +151,8 @@ export async function executeBash(input: BashInput): Promise<BashResult> {
   const miseShimsPath = `${miseDataDir}/shims`;
   const enhancedPath = `${miseShimsPath}:${process.env.PATH || ''}`;
 
-  try {
-    const stdout = execSync(input.command, {
+  return new Promise((resolve) => {
+    exec(input.command, {
       encoding: 'utf-8',
       timeout: timeoutMs,
       maxBuffer: 10 * 1024 * 1024,
@@ -156,36 +161,38 @@ export async function executeBash(input: BashInput): Promise<BashResult> {
         ...process.env,
         PATH: enhancedPath,
       },
+    }, (error, stdout, stderr) => {
+      if (error) {
+        const execError = error as {
+          code?: number | string | null;
+          killed?: boolean;
+          signal?: string;
+        };
+
+        // Check if killed by timeout
+        if (execError.killed || execError.signal === 'SIGTERM') {
+          resolve({
+            stdout: stdout || '',
+            stderr: stderr || '',
+            exit_code: 124,
+            error: `timeout: command exceeded ${timeoutMs}ms`,
+          });
+          return;
+        }
+
+        resolve({
+          stdout: stdout || '',
+          stderr: stderr || '',
+          exit_code: typeof execError.code === 'number' ? execError.code : 1,
+        });
+        return;
+      }
+
+      resolve({
+        stdout: stdout || '',
+        stderr: stderr || '',
+        exit_code: 0,
+      });
     });
-
-    return {
-      stdout,
-      stderr: '',
-      exit_code: 0,
-    };
-  } catch (err) {
-    const execError = err as {
-      status?: number | null;
-      stdout?: string;
-      stderr?: string;
-      killed?: boolean;
-      signal?: string;
-    };
-
-    // Check if killed by timeout
-    if (execError.killed || execError.signal === 'SIGTERM') {
-      return {
-        stdout: execError.stdout || '',
-        stderr: execError.stderr || '',
-        exit_code: 124,
-        error: `timeout: command exceeded ${timeoutMs}ms`,
-      };
-    }
-
-    return {
-      stdout: execError.stdout || '',
-      stderr: execError.stderr || '',
-      exit_code: execError.status ?? 1,
-    };
-  }
+  });
 }

@@ -197,5 +197,45 @@ describe('ToolExecutors', () => {
 
       expect(result.stdout?.trim()).toBe(tmpDir);
     });
+
+    it('does not block the event loop during execution', async () => {
+      // This test verifies the critical fix for SSE disconnect:
+      // execSync blocks the event loop, preventing SSE keepalives from being
+      // processed by undici, triggering a ~5min bodyTimeout.
+      // exec (async) yields to the event loop, allowing I/O to proceed.
+      let timerFired = false;
+
+      // Set a timer that should fire during bash execution
+      const timer = setTimeout(() => {
+        timerFired = true;
+      }, 50);
+
+      // Execute a command that takes >50ms
+      const result = await executeBash({ command: 'sleep 0.2' });
+
+      clearTimeout(timer);
+      expect(result.exit_code).toBe(0);
+      // With execSync, timerFired would be false (event loop blocked).
+      // With async exec, timerFired is true (event loop yields).
+      expect(timerFired).toBe(true);
+    });
+
+    it('captures stderr separately from stdout', async () => {
+      const result = await executeBash({
+        command: 'echo out && echo err >&2',
+      });
+
+      expect(result.stdout).toContain('out');
+      expect(result.stderr).toContain('err');
+    });
+
+    it('captures stderr on non-zero exit', async () => {
+      const result = await executeBash({
+        command: 'echo "error msg" >&2 && exit 1',
+      });
+
+      expect(result.exit_code).toBe(1);
+      expect(result.stderr).toContain('error msg');
+    });
   });
 });
