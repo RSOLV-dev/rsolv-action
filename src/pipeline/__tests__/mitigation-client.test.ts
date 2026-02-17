@@ -51,7 +51,8 @@ describe('MitigationClient', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    client = new MitigationClient(config);
+    // Use very short reconnection delays and fewer retries for tests
+    client = new MitigationClient(config, { reconnectBaseDelayMs: 10, maxReconnects: 1 });
   });
 
   afterEach(() => {
@@ -275,7 +276,7 @@ describe('MitigationClient', () => {
       expect(body.context.validation_data.red_test.framework).toBe('pytest');
     });
 
-    it('handles SSE stream disconnect gracefully', async () => {
+    it('handles SSE stream disconnect gracefully with reconnection', async () => {
       // Mock start session
       mockFetch.mockResolvedValueOnce({
         ok: true,
@@ -286,7 +287,28 @@ describe('MitigationClient', () => {
         }),
       });
 
-      // Mock SSE stream that ends abruptly (empty stream)
+      // attempt 0: SSE stream closes abruptly (empty stream)
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: new Map([['content-type', 'text/event-stream']]),
+        body: createSSEStream([]),
+      });
+
+      // attempt 1: status check → still streaming
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          session_id: 'sess_m_abc123',
+          status: 'streaming',
+          phase: 'mitigation',
+          event_counter: 0,
+          pending_tools: 0,
+        }),
+      });
+
+      // attempt 1: SSE reconnect also closes (exhaust maxReconnects=1)
       mockFetch.mockResolvedValueOnce({
         ok: true,
         status: 200,
@@ -296,9 +318,9 @@ describe('MitigationClient', () => {
 
       const result = await client.runMitigation(context);
 
-      // Should return failure when stream ends without complete event
+      // Should return failure after exhausting reconnection attempts
       expect(result.success).toBe(false);
-      expect(result.error).toBeDefined();
+      expect(result.error).toContain('reconnect');
     });
 
     it('handles start session failure', async () => {

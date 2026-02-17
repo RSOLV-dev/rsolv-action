@@ -80,8 +80,12 @@ export function classifyTestResult(exitCode: number, stdout: string, stderr: str
     return { type: 'runtime_error', isValidFailure: false, reason: 'Java compilation error - version mismatch or unsupported release' };
   }
   // Gradle class version mismatch: "Unsupported class file major version 65" (Java 21 on old Gradle)
-  if (/Unsupported class file major version|Could not open settings generic class cache/i.test(combined)) {
+  if (/Unsupported class file major version/i.test(combined)) {
     return { type: 'runtime_error', isValidFailure: false, reason: 'Gradle version incompatible with installed Java - upgrade Gradle wrapper required' };
+  }
+  // Gradle cache permissions: "Could not open settings generic class cache" (root cause #31)
+  if (/Could not open settings generic class cache/i.test(combined)) {
+    return { type: 'runtime_error', isValidFailure: false, reason: 'Gradle cache permissions error - set GRADLE_USER_HOME to a writable directory' };
   }
   // PHP Fatal errors (version mismatch, incompatible code)
   if (/PHP Fatal error/i.test(combined)) {
