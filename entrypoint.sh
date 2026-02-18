@@ -11,6 +11,7 @@ if [ -d "/github/workspace" ]; then
   # GitHub Actions runs as a different user than the container
   git config --global --add safe.directory /github/workspace
   echo "Added /github/workspace as safe directory for git"
+
 else
   # Fallback for local testing
   cd /app
@@ -59,6 +60,16 @@ if [ -z "$GITHUB_TOKEN" ]; then
     export GITHUB_TOKEN="$GH_TOKEN_INPUT"
     echo "Mapped INPUT_GITHUB-TOKEN to GITHUB_TOKEN"
   fi
+fi
+
+# Rewrite SSH URLs to token-authenticated HTTPS globally in the container.
+# This serves two purposes:
+# 1. Prevents the AI from accidentally setting SSH push URLs during MITIGATE
+# 2. Enables private git dependencies (Gemfile, package.json, requirements.txt)
+#    that use git@github.com: URLs to authenticate via GITHUB_TOKEN
+if [ -n "$GITHUB_TOKEN" ]; then
+  git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "git@github.com:" 2>/dev/null || true
+  git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "ssh://git@github.com/" 2>/dev/null || true
 fi
 
 # Run the action using the built output from /app

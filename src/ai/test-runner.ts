@@ -854,22 +854,72 @@ export class TestRunner {
         `[TestRunner] Dependency install warning: ${execError.stderr || execError.message}`
       );
 
-      // Ruby fallback: when bundle install fails (e.g., native extension compile error for mysql2),
-      // install the test runner gem directly so tests can still run in isolation
+      // Ruby graduated fallback: try progressively simpler install strategies before
+      // giving up on app dependencies entirely. Native extension failures (mysql2, pg, etc.)
+      // often only affect optional gem groups, so skipping those groups can succeed.
       if (framework === 'rspec' || framework === 'minitest') {
         const gemName = framework === 'rspec' ? 'rspec' : 'minitest';
-        console.log(`[TestRunner] bundle install failed, falling back to: gem install ${gemName}`);
+        let installed = false;
+
+        // Fallback step 1: skip optional gem groups that often contain troublesome native extensions
+        const step1Cmd = 'BUNDLE_IGNORE_RUBY_VERSION=1 bundle install --retry 3 --without development production';
+        console.log(`[TestRunner] Ruby fallback step 1/3: ${step1Cmd}`);
         try {
-          await execAsync(`gem install ${gemName}`, {
+          const { stdout } = await execAsync(step1Cmd, {
             cwd: workingDir,
             timeout: this.DEP_INSTALL_TIMEOUT,
             encoding: 'utf8',
           });
-          this.bundleInstallFailed = true;
-          console.log(`[TestRunner] ${gemName} installed directly via gem install`);
-        } catch (gemError: unknown) {
-          const gemExecError = gemError as { message?: string };
-          console.warn(`[TestRunner] gem install ${gemName} also failed: ${gemExecError.message}`);
+          console.log(`[TestRunner] Ruby fallback step 1/3 succeeded: ${stdout.slice(0, 500)}`);
+          installed = true;
+        } catch (step1Error: unknown) {
+          const step1Exec = step1Error as { stderr?: string; message?: string };
+          console.warn(
+            `[TestRunner] Ruby fallback step 1/3 failed (--without development production): ${(step1Exec.stderr || step1Exec.message || '').slice(0, 500)}`
+          );
+        }
+
+        // Fallback step 2: use vendored gems if present (no network, no compilation)
+        if (!installed) {
+          const step2Cmd = 'BUNDLE_IGNORE_RUBY_VERSION=1 bundle install --retry 3 --local';
+          console.log(`[TestRunner] Ruby fallback step 2/3: ${step2Cmd}`);
+          try {
+            const { stdout } = await execAsync(step2Cmd, {
+              cwd: workingDir,
+              timeout: this.DEP_INSTALL_TIMEOUT,
+              encoding: 'utf8',
+            });
+            console.log(`[TestRunner] Ruby fallback step 2/3 succeeded (vendored gems): ${stdout.slice(0, 500)}`);
+            installed = true;
+          } catch (step2Error: unknown) {
+            const step2Exec = step2Error as { stderr?: string; message?: string };
+            console.warn(
+              `[TestRunner] Ruby fallback step 2/3 failed (--local): ${(step2Exec.stderr || step2Exec.message || '').slice(0, 500)}`
+            );
+          }
+        }
+
+        // Fallback step 3 (last resort): install only the test runner gem directly.
+        // WARNING: app dependencies (activerecord, rails, etc.) will NOT be available.
+        // Tests that require booting the app framework will fail.
+        if (!installed) {
+          console.warn(
+            `[TestRunner] Ruby fallback step 3/3: all bundle install strategies failed. ` +
+            `Installing bare '${gemName}' gem only — app dependencies will NOT be available. ` +
+            `Tests requiring Rails/ActiveRecord/etc. will fail.`
+          );
+          try {
+            await execAsync(`gem install ${gemName}`, {
+              cwd: workingDir,
+              timeout: this.DEP_INSTALL_TIMEOUT,
+              encoding: 'utf8',
+            });
+            this.bundleInstallFailed = true;
+            console.log(`[TestRunner] Ruby fallback step 3/3: ${gemName} installed directly via gem install`);
+          } catch (gemError: unknown) {
+            const gemExecError = gemError as { message?: string };
+            console.warn(`[TestRunner] Ruby fallback step 3/3: gem install ${gemName} also failed: ${gemExecError.message}`);
+          }
         }
       }
     }
@@ -890,7 +940,7 @@ export class TestRunner {
       // RFC-101 v3.8.67: Set BUNDLE_IGNORE_RUBY_VERSION=1 to handle apt-get fallback Ruby
       // version mismatch (e.g., Gemfile says ruby "3.4.1" but system has 3.2.x)
       if (await this.fileExists(path.join(workingDir, 'Gemfile'))) {
-        return 'BUNDLE_IGNORE_RUBY_VERSION=1 bundle install';
+        return 'BUNDLE_IGNORE_RUBY_VERSION=1 bundle install --retry 3';
       }
       return null;
     }

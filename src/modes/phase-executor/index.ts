@@ -3,11 +3,12 @@
  * Implements RFC-041 three-phase architecture
  */
 
-import { PhaseDataClient, PhaseData } from '../phase-data-client/index.js';
+import { PhaseDataClient, type PhaseData, type ScanVulnerability } from '../phase-data-client/index.js';
 import { ScanOrchestrator } from '../../scanner/index.js';
 import { analyzeIssue } from '../../ai/analyzer.js';
 import { TestGeneratingSecurityAnalyzer } from '../../ai/test-generating-security-analyzer.js';
 import { createEducationalPullRequest } from '../../github/pr-git-educational.js';
+import type { ValidationData as PrValidationData } from '../../types/validation.js';
 import type { ActionConfig, IssueContext, AnalysisData } from '../../types/index.js';
 import type {
   ValidationData,
@@ -40,7 +41,7 @@ export interface ExecuteOptions {
   format?: 'markdown' | 'json' | 'github-actions';
   
   // Mitigation-specific options
-  validationData?: any; // TODO: Migrate to ValidationPhaseData once type incompatibilities are resolved
+  validationData?: PhaseData | Record<string, unknown>;
   usePriorValidation?: boolean;
   generateTestsIfMissing?: boolean;
   timeout?: number;
@@ -55,7 +56,7 @@ export interface ExecuteResult {
   success: boolean;
   phase: string;
   message?: string;
-  data?: any; // TODO: Gradually migrate to typed structure
+  data?: Record<string, unknown>;
   error?: string;
   report?: string;
   jsonReport?: Record<string, unknown>;
@@ -359,7 +360,7 @@ export class PhaseExecutor {
 
       // Store scan results
       const commitSha = options.commitSha || this.getCurrentCommitSha();
-      await this.storePhaseData('scan', scanResult, {
+      await this.storePhaseData('scan', { ...scanResult }, {
         repo: `${repository.owner}/${repository.name}`,
         commitSha
       });
@@ -737,7 +738,8 @@ export class PhaseExecutor {
       }
 
       // Extract created issues from scan results
-      const createdIssues = scanResult.data?.scan?.createdIssues || [];
+      const scanData = scanResult.data?.scan as Record<string, unknown> | undefined;
+      const createdIssues = (scanData?.createdIssues || []) as Array<{ number: number }>;
       logger.info(`Scan created ${createdIssues.length} issues (limited by max_issues: ${this.config.maxIssues})`);
 
       if (createdIssues.length === 0) {
@@ -820,14 +822,14 @@ export class PhaseExecutor {
 
       // Count validated issues
       const validatedIssues = validationResults.filter(
-        v => v.result.success && v.result.data?.validation?.validated
+        v => v.result.success && (v.result.data?.validation as Record<string, unknown> | undefined)?.validated
       );
       logger.info(`${validatedIssues.length} of ${issues.length} issues validated`);
 
       // Phase 3: MITIGATE - Fix validated vulnerabilities
       const mitigationResults = [];
       for (const validation of validationResults) {
-        if (validation.result.success && validation.result.data?.validation?.validated) {
+        if (validation.result.success && (validation.result.data?.validation as Record<string, unknown> | undefined)?.validated) {
           try {
             logger.info(`Mitigating issue #${validation.issue.number}`);
             const mitigateResult = await this.executeMitigate({
@@ -872,14 +874,18 @@ export class PhaseExecutor {
   /**
    * Store phase data using PhaseDataClient
    */
-  async storePhaseData(phase: 'scan' | 'validation' | 'mitigation', data: any, metadata: any): Promise<void> { // TODO: Migrate to typed parameters
+  async storePhaseData(
+    phase: 'scan' | 'validation' | 'mitigation',
+    data: Record<string, unknown>,
+    metadata: PhaseMetadata & { commitSha: string }
+  ): Promise<void> {
     const phaseData: PhaseData = {};
     
     if (phase === 'scan') {
       phaseData.scan = {
-        vulnerabilities: data.vulnerabilities || [],
+        vulnerabilities: (data.vulnerabilities || []) as ScanVulnerability[],
         timestamp: new Date().toISOString(),
-        commitHash: metadata.commitSha,
+        commitHash: metadata.commitSha || '',
         // RFC-101: Include manifest files for project shape detection
         ...(data.manifestFiles ? { manifest_files: data.manifestFiles } : {})
       };
@@ -1336,7 +1342,7 @@ export class PhaseExecutor {
         },
         this.config,
         diffStats,
-        validationData as any
+        validationData as PrValidationData
       );
 
       const duration = Date.now() - startTime;
@@ -1417,7 +1423,8 @@ export class PhaseExecutor {
       }
       
       // Phase 2: VALIDATE
-      const validateResult = await this.executeValidateForIssue(issue, scanResult.data);
+      const scanPhaseData = scanResult.data as unknown as ScanPhaseData;
+      const validateResult = await this.executeValidateForIssue(issue, scanPhaseData);
       if (!validateResult.success) {
         return {
           ...validateResult,
@@ -1428,11 +1435,11 @@ export class PhaseExecutor {
           }
         };
       }
-      
+
       // Phase 3: MITIGATE
       const mitigateResult = await this.executeMitigateForIssue(
         issue,
-        scanResult.data,
+        scanPhaseData,
         validateResult.data
       );
       
@@ -1568,13 +1575,13 @@ export class PhaseExecutor {
           const result = await this.executeValidateForIssue(issue, scanData);
 
           // Extract validation data from result for aggregation
-          const validationEntry = result.data?.validation;
+          const validationEntry = result.data?.validation as Record<string, unknown> | undefined;
           const issueKey = `issue_${issue.number}`;
-          const issueData = validationEntry?.[issueKey] || validationEntry?.[`issue-${issue.number}`] || validationEntry || {};
+          const issueData = (validationEntry?.[issueKey] || validationEntry?.[`issue-${issue.number}`] || validationEntry || {}) as Record<string, unknown>;
 
           validations.push({
             issueNumber: issue.number,
-            validated: issueData.validated ?? result.success,
+            validated: (issueData.validated as boolean | undefined) ?? result.success,
             test_path: issueData.test_path,
             test_code: issueData.test_code,
             framework: issueData.framework,
@@ -1582,8 +1589,8 @@ export class PhaseExecutor {
             classification: issueData.classification,
             test_type: issueData.test_type,
             retry_count: issueData.retry_count,
-            timestamp: issueData.timestamp || new Date().toISOString(),
-            error: issueData.error || result.error,
+            timestamp: (issueData.timestamp as string | undefined) || new Date().toISOString(),
+            error: (issueData.error as string | undefined) || result.error,
             backendOrchestrated: true,
             usedPriorScan: scanData.usedPriorScan || false,
           });
@@ -1899,25 +1906,28 @@ ${validation.falsePositive ?
       
       if (!validationData && options.usePriorValidation) {
         // Try to retrieve validation data for each issue
-        validationData = { validation: {} };
-        
+        const collectedValidation: Record<string, unknown> = {};
+
         for (const issue of options.issues) {
           const phaseData = await this.phaseDataClient.retrievePhaseResults(
             issue.repository.fullName,
             issue.number,
             await this.getCurrentCommitSha()
           );
-          
+
           // Handle both 'validation' and 'validate' (PhaseDataClient remaps validation->validate)
           if (phaseData?.validation) {
-            Object.assign(validationData.validation, phaseData.validation);
+            Object.assign(collectedValidation, phaseData.validation);
           } else if (phaseData?.validate) {
-            Object.assign(validationData.validation, phaseData.validate);
+            Object.assign(collectedValidation, phaseData.validate);
           }
         }
+
+        validationData = { validation: collectedValidation };
       }
       
-      if (!validationData || Object.keys(validationData.validation || {}).length === 0) {
+      const validationEntries = (validationData as Record<string, unknown>)?.validation;
+      if (!validationData || Object.keys((validationEntries as Record<string, unknown>) || {}).length === 0) {
         if (options.generateTestsIfMissing) {
           // Generate tests on the fly
           logger.info('[MITIGATE-STANDALONE] No validation data, generating tests...');
@@ -1998,7 +2008,7 @@ ${validation.falsePositive ?
       
       // Generate report if requested
       let report: string | undefined;
-      let jsonReport: any | undefined;
+      let jsonReport: Record<string, unknown> | undefined;
       
       if (options.format === 'markdown') {
         report = this.generateMitigationMarkdownReport(mitigationResults);
@@ -2048,28 +2058,29 @@ ${validation.falsePositive ?
   /**
    * Generate markdown report for mitigation
    */
-  private generateMitigationMarkdownReport(mitigations: any): string { // TODO: Type properly
+  private generateMitigationMarkdownReport(mitigations: Record<string, unknown>): string {
     let report = '## Mitigation Report\n\n';
-    
+
     for (const [key, result] of Object.entries(mitigations)) {
       const issueNumber = key.replace('issue-', '');
       report += `### Issue #${issueNumber}\n`;
-      
-      if ((result as any).success) {
+
+      const entry = result as Record<string, unknown>;
+      if (entry.success) {
         report += '✅ Fixed\n';
-        if ((result as any).prUrl) {
-          report += `- PR: ${(result as any).prUrl}\n`;
+        if (entry.prUrl) {
+          report += `- PR: ${entry.prUrl}\n`;
         }
-        if ((result as any).testsPass) {
+        if (entry.testsPass) {
           report += '- Tests: Passing\n';
         }
       } else {
-        report += `❌ Failed: ${(result as any).error}\n`;
+        report += `❌ Failed: ${entry.error}\n`;
       }
-      
+
       report += '\n';
     }
-    
+
     return report;
   }
 
