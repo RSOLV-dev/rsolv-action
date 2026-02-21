@@ -397,6 +397,41 @@ describe('Educational PR Creation', () => {
       expect(globalPRBody).toContain('RSOLV Security Patterns');
     });
 
+    test('should not double-prefix CWE link when cwe already has CWE- prefix', async () => {
+      const issue = {
+        id: '303',
+        number: 888,
+        title: 'CSRF vulnerability',
+        body: 'Security issue',
+        repository: {
+          fullName: 'user/repo',
+          defaultBranch: 'main'
+        }
+      };
+
+      const summary = {
+        title: 'Fix CSRF',
+        description: 'Fixed CSRF',
+        vulnerabilityType: 'CSRF',
+        severity: 'medium',
+        cwe: 'CWE-352'  // Already has prefix — this is what extractCweFromIssue() returns
+      };
+
+      const result = await createEducationalPullRequest(
+        issue,
+        'cweprefix123',
+        summary,
+        { rsolvApiKey: 'test' }
+      );
+
+      expect(result.success).toBe(true);
+
+      // Should show CWE-352, NOT CWE-CWE-352
+      expect(globalPRBody).toContain('CWE-352');
+      expect(globalPRBody).not.toContain('CWE-CWE-352');
+      expect(globalPRBody).toContain('cwe.mitre.org/data/definitions/352.html');
+    });
+
     test('should use correct education content for prototype_pollution vulnerability type', async () => {
       const issue = {
         id: '404',

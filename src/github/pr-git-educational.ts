@@ -514,7 +514,8 @@ function generateLearningResourcesSection(
   ];
 
   if (summary.cwe) {
-    resources.push(`- [CWE-${summary.cwe}](https://cwe.mitre.org/data/definitions/${summary.cwe}.html) - Common Weakness Enumeration`);
+    const cweNum = String(summary.cwe).replace(/^CWE-/i, '');
+    resources.push(`- [CWE-${cweNum}](https://cwe.mitre.org/data/definitions/${cweNum}.html) - Common Weakness Enumeration`);
   }
 
   resources.push(`- [OWASP: ${education.title}](https://owasp.org) - Security best practices`);
