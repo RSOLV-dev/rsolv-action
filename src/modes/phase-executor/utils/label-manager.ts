@@ -38,51 +38,51 @@ export async function applyValidationLabels(
     const { owner, repo, issueNumber, currentLabels } = issue;
 
     switch (classification) {
-      case 'validated':
-        logger.info(`[LABELS] Adding 'rsolv:validated' to issue #${issueNumber}`);
-        await addLabels(owner, repo, issueNumber, ['rsolv:validated']);
-        if (currentLabels.includes('rsolv:detected')) {
-          logger.info(`[LABELS] Removing 'rsolv:detected' from issue #${issueNumber}`);
-          await removeLabel(owner, repo, issueNumber, 'rsolv:detected');
-        }
-        break;
+    case 'validated':
+      logger.info(`[LABELS] Adding 'rsolv:validated' to issue #${issueNumber}`);
+      await addLabels(owner, repo, issueNumber, ['rsolv:validated']);
+      if (currentLabels.includes('rsolv:detected')) {
+        logger.info(`[LABELS] Removing 'rsolv:detected' from issue #${issueNumber}`);
+        await removeLabel(owner, repo, issueNumber, 'rsolv:detected');
+      }
+      break;
 
-      case 'false_positive':
-        logger.info(`[LABELS] Adding 'rsolv:false-positive' to issue #${issueNumber}`);
-        await addLabels(owner, repo, issueNumber, ['rsolv:false-positive']);
-        if (currentLabels.includes('rsolv:detected')) {
-          logger.info(`[LABELS] Removing 'rsolv:detected' from issue #${issueNumber}`);
-          await removeLabel(owner, repo, issueNumber, 'rsolv:detected');
-        }
-        break;
+    case 'false_positive':
+      logger.info(`[LABELS] Adding 'rsolv:false-positive' to issue #${issueNumber}`);
+      await addLabels(owner, repo, issueNumber, ['rsolv:false-positive']);
+      if (currentLabels.includes('rsolv:detected')) {
+        logger.info(`[LABELS] Removing 'rsolv:detected' from issue #${issueNumber}`);
+        await removeLabel(owner, repo, issueNumber, 'rsolv:detected');
+      }
+      break;
 
-      case 'infrastructure_failure':
-        logger.info(`[LABELS] Adding 'rsolv:validation-inconclusive' to issue #${issueNumber} (infrastructure)`);
-        await addLabels(owner, repo, issueNumber, ['rsolv:validation-inconclusive']);
-        // Keep rsolv:detected — vulnerability may be real
-        break;
+    case 'infrastructure_failure':
+      logger.info(`[LABELS] Adding 'rsolv:validation-inconclusive' to issue #${issueNumber} (infrastructure)`);
+      await addLabels(owner, repo, issueNumber, ['rsolv:validation-inconclusive']);
+      // Keep rsolv:detected — vulnerability may be real
+      break;
 
-      case 'inconclusive':
-        logger.info(`[LABELS] Adding 'rsolv:validation-inconclusive' to issue #${issueNumber} (static test)`);
-        await addLabels(owner, repo, issueNumber, ['rsolv:validation-inconclusive']);
-        // Keep rsolv:detected — behavioral test needed
-        break;
+    case 'inconclusive':
+      logger.info(`[LABELS] Adding 'rsolv:validation-inconclusive' to issue #${issueNumber} (static test)`);
+      await addLabels(owner, repo, issueNumber, ['rsolv:validation-inconclusive']);
+      // Keep rsolv:detected — behavioral test needed
+      break;
 
-      case 'no_test_framework':
-        logger.info(`[LABELS] Adding 'rsolv:validation-unavailable' to issue #${issueNumber} (no test framework)`);
-        await addLabels(owner, repo, issueNumber, ['rsolv:validation-unavailable']);
-        // Keep rsolv:detected — vulnerability may be real
-        break;
+    case 'no_test_framework':
+      logger.info(`[LABELS] Adding 'rsolv:validation-unavailable' to issue #${issueNumber} (no test framework)`);
+      await addLabels(owner, repo, issueNumber, ['rsolv:validation-unavailable']);
+      // Keep rsolv:detected — vulnerability may be real
+      break;
 
-      case 'max_turns_exceeded':
-        logger.info(`[LABELS] Adding 'rsolv:validation-inconclusive' to issue #${issueNumber} (max turns exceeded)`);
-        await addLabels(owner, repo, issueNumber, ['rsolv:validation-inconclusive']);
-        // Keep rsolv:detected — vulnerability likely real, just ran out of turns
-        break;
+    case 'max_turns_exceeded':
+      logger.info(`[LABELS] Adding 'rsolv:validation-inconclusive' to issue #${issueNumber} (max turns exceeded)`);
+      await addLabels(owner, repo, issueNumber, ['rsolv:validation-inconclusive']);
+      // Keep rsolv:detected — vulnerability likely real, just ran out of turns
+      break;
 
-      default:
-        logger.warn(`[LABELS] Unknown classification '${classification}' for issue #${issueNumber}, skipping labels`);
-        break;
+    default:
+      logger.warn(`[LABELS] Unknown classification '${classification}' for issue #${issueNumber}, skipping labels`);
+      break;
     }
   } catch (error) {
     logger.warn(`[LABELS] Failed to update labels for issue #${issue.issueNumber}:`, error);

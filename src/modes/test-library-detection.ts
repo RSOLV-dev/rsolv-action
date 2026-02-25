@@ -116,29 +116,29 @@ export function extractTestLibraries(
   const found = new Set<string>(stdlib);
 
   switch (ecosystem) {
-    case 'python':
-      extractPythonLibraries(manifests, patterns, found);
-      break;
-    case 'ruby':
-      extractRubyLibraries(manifests, patterns, found);
-      break;
-    case 'elixir':
-      extractElixirLibraries(manifests, patterns, found);
-      break;
-    case 'php':
-      extractPhpLibraries(manifests, patterns, found);
-      break;
-    case 'java':
-      extractJavaLibraries(manifests, patterns, found);
-      break;
-    case 'javascript':
-    case 'typescript':
-      extractJavaScriptLibraries(manifests, patterns, found);
-      // Always add Node's built-in assert
-      if (found.size > stdlib.length && !found.has('assert (Node built-in)')) {
-        found.add('assert (Node built-in)');
-      }
-      break;
+  case 'python':
+    extractPythonLibraries(manifests, patterns, found);
+    break;
+  case 'ruby':
+    extractRubyLibraries(manifests, patterns, found);
+    break;
+  case 'elixir':
+    extractElixirLibraries(manifests, patterns, found);
+    break;
+  case 'php':
+    extractPhpLibraries(manifests, patterns, found);
+    break;
+  case 'java':
+    extractJavaLibraries(manifests, patterns, found);
+    break;
+  case 'javascript':
+  case 'typescript':
+    extractJavaScriptLibraries(manifests, patterns, found);
+    // Always add Node's built-in assert
+    if (found.size > stdlib.length && !found.has('assert (Node built-in)')) {
+      found.add('assert (Node built-in)');
+    }
+    break;
   }
 
   return Array.from(found);

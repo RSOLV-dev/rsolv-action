@@ -19,7 +19,7 @@ vi.mock('../../utils/logger.js', () => ({
 
 function createMockForgeAdapter(): {
   [K in keyof ForgeAdapter]: ReturnType<typeof vi.fn>;
-} {
+  } {
   return {
     listIssues: vi.fn().mockResolvedValue([]),
     createIssue: vi.fn(),

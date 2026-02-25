@@ -20,7 +20,7 @@ describe('Snippet Population', () => {
   });
 
   it('should populate snippet field with the vulnerable line content', async () => {
-    const code = `const query = "SELECT * FROM users WHERE id = " + userId;`;
+    const code = 'const query = "SELECT * FROM users WHERE id = " + userId;';
     const vulns = await detector.detect(code, 'javascript', 'app.js');
 
     const sqlVulns = vulns.filter(v => v.type === 'sql_injection' || v.type === 'sql-injection');
@@ -34,7 +34,7 @@ describe('Snippet Population', () => {
   });
 
   it('should populate snippet for XSS vulnerabilities', async () => {
-    const code = `document.write(userInput);`;
+    const code = 'document.write(userInput);';
     const vulns = await detector.detect(code, 'javascript', 'app.js');
 
     const xssVulns = vulns.filter(v => v.type === 'xss');
@@ -48,7 +48,7 @@ describe('Snippet Population', () => {
   });
 
   it('should populate snippet for hardcoded secrets', async () => {
-    const code = `const API_KEY = "sk-1234567890abcdef1234567890abcdef";`;
+    const code = 'const API_KEY = "sk-1234567890abcdef1234567890abcdef";';
     const vulns = await detector.detect(code, 'javascript', 'config.js');
 
     const secretVulns = vulns.filter(v => v.type === 'hardcoded_secrets' || v.type === 'hardcoded-secret');
@@ -61,7 +61,7 @@ describe('Snippet Population', () => {
   });
 
   it('should populate snippet for code injection vulnerabilities', async () => {
-    const code = `eval(userInput);`;
+    const code = 'eval(userInput);';
     const vulns = await detector.detect(code, 'javascript', 'app.js');
 
     const codeInjVulns = vulns.filter(v => v.type === 'code_injection' || v.type === 'code-injection');

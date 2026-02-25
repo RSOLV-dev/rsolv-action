@@ -111,7 +111,7 @@ describe('MITIGATE: Validate Branch RED Test Reuse', () => {
               redTests: [
                 {
                   testName: 'test_insecure_random',
-                  testCode: "require 'rspec'\nRSpec.describe 'random' do\n  it 'uses SecureRandom' do\n  end\nend",
+                  testCode: 'require \'rspec\'\nRSpec.describe \'random\' do\n  it \'uses SecureRandom\' do\n  end\nend',
                   attackVector: 'Insecure random number generation',
                   expectedBehavior: 'should_fail_on_vulnerable_code' as const,
                 },
@@ -177,7 +177,7 @@ describe('MITIGATE: Validate Branch RED Test Reuse', () => {
           redTests: [
             {
               testName: 'test_secure_random',
-              testCode: "require 'securerandom'\nRSpec.describe 'random' do\n  it 'test' do\n  end\nend",
+              testCode: 'require \'securerandom\'\nRSpec.describe \'random\' do\n  it \'test\' do\n  end\nend',
               attackVector: 'weak_cryptography',
               expectedBehavior: 'should_fail_on_vulnerable_code' as const,
             },
@@ -242,7 +242,7 @@ describe('MITIGATE: Validate Branch RED Test Reuse', () => {
             redTests: {
               red: {
                 testName: 'test_sql_injection',
-                testCode: "import { describe } from 'vitest';",
+                testCode: 'import { describe } from \'vitest\';',
                 attackVector: 'SQL injection',
                 expectedBehavior: 'should_fail_on_vulnerable_code' as const,
               },
@@ -283,7 +283,7 @@ describe('MITIGATE: Validate Branch RED Test Reuse', () => {
       mockExecSync.mockReturnValue(Buffer.from('1 example, 0 failures'));
 
       const result = await runRedTestForVerification(
-        "RSpec.describe 'vuln' do\n  it 'exists' do\n  end\nend",
+        'RSpec.describe \'vuln\' do\n  it \'exists\' do\n  end\nend',
         'spec/vulnerability_validation_spec.rb',
         'rspec',
         '/tmp/repo'
@@ -298,7 +298,7 @@ describe('MITIGATE: Validate Branch RED Test Reuse', () => {
       mockExecSync.mockReturnValue(Buffer.from('1 example, 0 failures'));
 
       const result = await runRedTestForVerification(
-        "RSpec.describe 'vuln' do\n  it 'exists' do\n  end\nend",
+        'RSpec.describe \'vuln\' do\n  it \'exists\' do\n  end\nend',
         'spec/vulnerability_validation_spec.rb',
         'rspec',
         '/tmp/repo',
@@ -315,7 +315,7 @@ describe('MITIGATE: Validate Branch RED Test Reuse', () => {
       mockExecSync.mockReturnValue(Buffer.from('1 example, 0 failures'));
 
       await runRedTestForVerification(
-        "RSpec.describe 'vuln' do\n  it 'exists' do\n  end\nend",
+        'RSpec.describe \'vuln\' do\n  it \'exists\' do\n  end\nend',
         'spec/vulnerability_validation_spec.rb',
         'rspec',
         '/tmp/repo',
@@ -330,7 +330,7 @@ describe('MITIGATE: Validate Branch RED Test Reuse', () => {
       mockExecSync.mockReturnValue(Buffer.from('Tests: 1 passed'));
 
       const result = await runRedTestForVerification(
-        "import { test } from 'vitest';",
+        'import { test } from \'vitest\';',
         '__tests__/vulnerability_validation.test.ts',
         'vitest',
         '/tmp/repo'
@@ -606,13 +606,13 @@ describe('MITIGATE: Validate Branch RED Test Reuse', () => {
 
     it('auto-detects bundleInstallFailed for rspec and uses bare rspec', async () => {
       const rspecRedTest: ValidateRedTest = {
-        testCode: "RSpec.describe 'vuln' do\n  it 'exists' do\n  end\nend",
+        testCode: 'RSpec.describe \'vuln\' do\n  it \'exists\' do\n  end\nend',
         testFile: 'spec/vulnerability_validation_spec.rb',
         framework: 'rspec',
         branchName: 'rsolv/validate/issue-3',
       };
 
-      let rspecCommands: string[] = [];
+      const rspecCommands: string[] = [];
       mockExecSync.mockImplementation((cmd: string) => {
         const cmdStr = typeof cmd === 'string' ? cmd : '';
         // bundle check fails (simulating no Gemfile or failed install)

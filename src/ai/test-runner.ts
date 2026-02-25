@@ -220,19 +220,19 @@ export class TestRunner {
 
     // Handle Elixir's dependency on Erlang - must install Erlang first
     if (runtime === 'elixir') {
-      console.log(`[TestRunner] Elixir requires Erlang - installing Erlang first`);
+      console.log('[TestRunner] Elixir requires Erlang - installing Erlang first');
       try {
-        await execAsync(`which erl`, { encoding: 'utf8' });
-        console.log(`[TestRunner] Erlang already available`);
+        await execAsync('which erl', { encoding: 'utf8' });
+        console.log('[TestRunner] Erlang already available');
       } catch {
         // Install Erlang via mise
-        console.log(`[TestRunner] Installing Erlang via mise`);
+        console.log('[TestRunner] Installing Erlang via mise');
         try {
           await execAsync(
-            `mise install erlang@latest && mise use --global erlang@latest`,
+            'mise install erlang@latest && mise use --global erlang@latest',
             { cwd: workingDir, timeout: this.RUNTIME_INSTALL_TIMEOUT, encoding: 'utf8' }
           );
-          console.log(`[TestRunner] Erlang installed successfully`);
+          console.log('[TestRunner] Erlang installed successfully');
 
           // CRITICAL: Update PATH immediately after Erlang installation
           // so that Elixir's installation can find 'erl' for its version check
@@ -261,22 +261,22 @@ export class TestRunner {
         console.log(`[TestRunner] PHP ${requiredVersion} required by composer.json - using mise for version matching`);
       } else {
         // No specific version - apt-get is faster
-        console.log(`[TestRunner] Trying apt-get for PHP + Composer (faster than building from source)`);
+        console.log('[TestRunner] Trying apt-get for PHP + Composer (faster than building from source)');
         try {
           const { stdout, stderr } = await execAsync(
-            `apt-get update && apt-get install -y php php-cli php-xml php-mbstring php-curl php-zip unzip composer`,
+            'apt-get update && apt-get install -y php php-cli php-xml php-mbstring php-curl php-zip unzip composer',
             { cwd: workingDir, timeout: 120000, encoding: 'utf8' }
           );
           console.log(`[TestRunner] apt-get output: ${stdout}`);
           if (stderr) console.log(`[TestRunner] apt-get stderr: ${stderr}`);
           // Verify installation
-          await execAsync(`which php`, { encoding: 'utf8' });
-          console.log(`[TestRunner] PHP installed via apt-get`);
+          await execAsync('which php', { encoding: 'utf8' });
+          console.log('[TestRunner] PHP installed via apt-get');
           return; // Success, no need for mise
         } catch (aptErr) {
           const err = aptErr as { stderr?: string; message?: string };
           console.log(`[TestRunner] apt-get PHP failed: ${err.stderr || err.message}`);
-          console.log(`[TestRunner] Will try mise as fallback`);
+          console.log('[TestRunner] Will try mise as fallback');
         }
       }
     }
@@ -312,13 +312,13 @@ export class TestRunner {
           await this.ensureMaven(workingDir);
 
           // Verify installation
-          await execAsync(`javac -version && mvn --version`, { encoding: 'utf8' });
+          await execAsync('javac -version && mvn --version', { encoding: 'utf8' });
           console.log(`[TestRunner] Java ${javaVersion} + Maven installed via mise`);
           return;
         } catch (miseErr) {
           const err = miseErr as { stderr?: string; message?: string };
           console.log(`[TestRunner] mise Java install failed: ${err.stderr || err.message}`);
-          console.log(`[TestRunner] Falling back to apt-get`);
+          console.log('[TestRunner] Falling back to apt-get');
         }
       }
 
@@ -327,14 +327,14 @@ export class TestRunner {
       console.log(`[TestRunner] Trying apt-get for Java + Maven${javaVersion ? ` (mise failed for temurin-${javaVersion})` : ' (no version detected)'}`);
       try {
         const { stdout, stderr } = await execAsync(
-          `apt-get update && apt-get install -y default-jdk maven`,
+          'apt-get update && apt-get install -y default-jdk maven',
           { cwd: workingDir, timeout: 180000, encoding: 'utf8' }
         );
         console.log(`[TestRunner] apt-get output: ${stdout}`);
         if (stderr) console.log(`[TestRunner] apt-get stderr: ${stderr}`);
         // Verify installation
-        await execAsync(`which javac && which mvn`, { encoding: 'utf8' });
-        console.log(`[TestRunner] Java + Maven installed via apt-get`);
+        await execAsync('which javac && which mvn', { encoding: 'utf8' });
+        console.log('[TestRunner] Java + Maven installed via apt-get');
         if (javaVersion) {
           console.log(`[TestRunner] WARNING: System Java may be incompatible with project's Gradle version (needed Java ${javaVersion})`);
         }
@@ -342,7 +342,7 @@ export class TestRunner {
       } catch (aptErr) {
         const err = aptErr as { stderr?: string; message?: string };
         console.log(`[TestRunner] apt-get Java failed: ${err.stderr || err.message}`);
-        console.log(`[TestRunner] Will try mise as fallback`);
+        console.log('[TestRunner] Will try mise as fallback');
       }
     }
 
@@ -429,14 +429,14 @@ export class TestRunner {
 
       // For PHP installed via mise, also install Composer
       if (runtime === 'php') {
-        console.log(`[TestRunner] Installing Composer for mise PHP`);
+        console.log('[TestRunner] Installing Composer for mise PHP');
         try {
           // Install Composer via official installer
           await execAsync(
-            `curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer`,
+            'curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer',
             { cwd: workingDir, timeout: 60000, encoding: 'utf8' }
           );
-          console.log(`[TestRunner] Composer installed successfully`);
+          console.log('[TestRunner] Composer installed successfully');
         } catch (composerErr) {
           console.warn(`[TestRunner] Composer install warning: ${(composerErr as Error).message}`);
         }
@@ -644,21 +644,21 @@ export class TestRunner {
    */
   private async ensureMaven(workingDir: string): Promise<void> {
     try {
-      await execAsync(`which mvn`, { encoding: 'utf8' });
-      console.log(`[TestRunner] Maven already available`);
+      await execAsync('which mvn', { encoding: 'utf8' });
+      console.log('[TestRunner] Maven already available');
       return;
     } catch {
       // Maven not found, install it
     }
 
-    console.log(`[TestRunner] Installing Maven via apt-get`);
+    console.log('[TestRunner] Installing Maven via apt-get');
     try {
       await execAsync(
-        `apt-get update && apt-get install -y maven`,
+        'apt-get update && apt-get install -y maven',
         { cwd: workingDir, timeout: 120000, encoding: 'utf8' }
       );
-      await execAsync(`which mvn`, { encoding: 'utf8' });
-      console.log(`[TestRunner] Maven installed via apt-get`);
+      await execAsync('which mvn', { encoding: 'utf8' });
+      console.log('[TestRunner] Maven installed via apt-get');
     } catch (err) {
       const error = err as { stderr?: string; message?: string };
       console.log(`[TestRunner] Maven install failed: ${error.stderr || error.message}`);
@@ -904,9 +904,9 @@ export class TestRunner {
         // Tests that require booting the app framework will fail.
         if (!installed) {
           console.warn(
-            `[TestRunner] Ruby fallback step 3/3: all bundle install strategies failed. ` +
+            '[TestRunner] Ruby fallback step 3/3: all bundle install strategies failed. ' +
             `Installing bare '${gemName}' gem only — app dependencies will NOT be available. ` +
-            `Tests requiring Rails/ActiveRecord/etc. will fail.`
+            'Tests requiring Rails/ActiveRecord/etc. will fail.'
           );
           try {
             await execAsync(`gem install ${gemName}`, {

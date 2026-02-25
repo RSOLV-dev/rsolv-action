@@ -262,7 +262,7 @@ describe('processIssueWithGit: VALIDATE RED test reuse path', () => {
           redTests: {
             redTests: [{
               testName: 'test_vuln',
-              testCode: "RSpec.describe 'vuln' do\nend",
+              testCode: 'RSpec.describe \'vuln\' do\nend',
               attackVector: 'vuln',
               expectedBehavior: 'should_fail_on_vulnerable_code' as const,
             }],
@@ -273,7 +273,7 @@ describe('processIssueWithGit: VALIDATE RED test reuse path', () => {
     };
 
     mockExtractValidateRedTest.mockReturnValue({
-      testCode: "RSpec.describe 'vuln' do\nend",
+      testCode: 'RSpec.describe \'vuln\' do\nend',
       testFile: 'spec/vulnerability_validation_spec.rb',
       framework: 'rspec',
       branchName: 'rsolv/validate/issue-42',

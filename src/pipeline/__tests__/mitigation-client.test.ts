@@ -151,7 +151,7 @@ describe('MitigationClient', () => {
       vi.mocked(execSync)
         .mockReturnValueOnce('') // git config user.name check
         .mockReturnValueOnce('') // git diff --name-only (no files)
-        ;
+      ;
 
       // Mock start session
       mockFetch.mockResolvedValueOnce({

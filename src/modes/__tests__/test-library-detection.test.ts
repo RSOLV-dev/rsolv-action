@@ -43,7 +43,7 @@ mock = "^5.0"`
     });
 
     it('detects rspec from Gemfile', () => {
-      const manifests = { 'Gemfile': "gem 'rspec', '~> 3.12'\ngem 'rails'" };
+      const manifests = { 'Gemfile': 'gem \'rspec\', \'~> 3.12\'\ngem \'rails\'' };
       const libs = extractTestLibraries('ruby', manifests);
       expect(libs).toContain('rspec');
     });

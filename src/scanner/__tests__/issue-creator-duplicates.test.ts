@@ -7,7 +7,7 @@ vi.mock('../../utils/logger.js');
 
 function createMockForgeAdapter(): {
   [K in keyof ForgeAdapter]: ReturnType<typeof vi.fn>;
-} {
+  } {
   return {
     listIssues: vi.fn(),
     createIssue: vi.fn(),
@@ -179,7 +179,7 @@ describe('IssueCreator - Duplicate Detection', () => {
           filePath: 'profile-dao.js',
           line: 28,
           description: 'SQL injection via string concatenation',
-          snippet: "var q = \"SELECT * FROM users WHERE id = '\" + userId + \"'\""
+          snippet: 'var q = "SELECT * FROM users WHERE id = \'" + userId + "\'"'
         }]
       };
 

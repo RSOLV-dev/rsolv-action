@@ -147,13 +147,13 @@ function buildGuidance(
   isTypeScript: boolean
 ): AssertionStyleGuidance {
   switch (style) {
-    case 'jest':
-      return buildJestGuidance(preferredLibrary, doNotUse, isTypeScript);
-    case 'bdd':
-      return buildBddGuidance(preferredLibrary, doNotUse, isTypeScript);
-    case 'tdd':
-    default:
-      return buildTddGuidance(preferredLibrary, doNotUse, isTypeScript);
+  case 'jest':
+    return buildJestGuidance(preferredLibrary, doNotUse, isTypeScript);
+  case 'bdd':
+    return buildBddGuidance(preferredLibrary, doNotUse, isTypeScript);
+  case 'tdd':
+  default:
+    return buildTddGuidance(preferredLibrary, doNotUse, isTypeScript);
   }
 }
 
@@ -167,18 +167,18 @@ function buildJestGuidance(
   let importStatement: string;
   if (isVitest) {
     // Vitest is ESM-first - always use ES import syntax
-    importStatement = `import { describe, it, expect } from 'vitest';`;
+    importStatement = 'import { describe, it, expect } from \'vitest\';';
   } else {
     // Jest - globals are auto-available, but TypeScript needs imports for types
     importStatement = isTypeScript
-      ? `import { describe, it, expect } from '@jest/globals';`
+      ? 'import { describe, it, expect } from \'@jest/globals\';'
       : ''; // Jest globals are auto-available in JS
   }
 
   return {
     style: 'jest',
     preferredLibrary: library,
-    syntaxExample: `expect(value).toBe(expected);\nexpect(string).toMatch(/pattern/);\nexpect(array).toContain(item);`,
+    syntaxExample: 'expect(value).toBe(expected);\nexpect(string).toMatch(/pattern/);\nexpect(array).toContain(item);',
     importStatement,
     doNotUse: doNotUse.filter((l) => l !== library),
   };
@@ -193,10 +193,10 @@ function buildBddGuidance(
     return {
       style: 'bdd',
       preferredLibrary: 'chai',
-      syntaxExample: `expect(value).to.equal(expected);\nexpect(string).to.match(/pattern/);\nexpect(array).to.include(item);`,
+      syntaxExample: 'expect(value).to.equal(expected);\nexpect(string).to.match(/pattern/);\nexpect(array).to.include(item);',
       importStatement: isTypeScript
-        ? `import { expect } from 'chai';`
-        : `const { expect } = require('chai');`,
+        ? 'import { expect } from \'chai\';'
+        : 'const { expect } = require(\'chai\');',
       doNotUse: doNotUse.filter((l) => l !== 'chai'),
     };
   }
@@ -205,8 +205,8 @@ function buildBddGuidance(
     return {
       style: 'bdd',
       preferredLibrary: 'should',
-      syntaxExample: `value.should.equal(expected);\nstring.should.match(/pattern/);\narray.should.containEql(item);`,
-      importStatement: isTypeScript ? `import 'should';` : `require('should');`,
+      syntaxExample: 'value.should.equal(expected);\nstring.should.match(/pattern/);\narray.should.containEql(item);',
+      importStatement: isTypeScript ? 'import \'should\';' : 'require(\'should\');',
       doNotUse: doNotUse.filter((l) => l !== 'should'),
     };
   }
@@ -215,7 +215,7 @@ function buildBddGuidance(
   return {
     style: 'bdd',
     preferredLibrary: library,
-    syntaxExample: `expect(value).to.be(expected);\nexpect(string).to.match(/pattern/);`,
+    syntaxExample: 'expect(value).to.be(expected);\nexpect(string).to.match(/pattern/);',
     importStatement: isTypeScript
       ? `import expect from '${library}';`
       : `const expect = require('${library}');`,
@@ -231,10 +231,10 @@ function buildTddGuidance(
   return {
     style: 'tdd',
     preferredLibrary: 'assert',
-    syntaxExample: `assert.strictEqual(actual, expected);\nassert.ok(condition);\nassert.deepStrictEqual(obj1, obj2);`,
+    syntaxExample: 'assert.strictEqual(actual, expected);\nassert.ok(condition);\nassert.deepStrictEqual(obj1, obj2);',
     importStatement: isTypeScript
-      ? `import assert from 'assert';`
-      : `const assert = require('assert');`,
+      ? 'import assert from \'assert\';'
+      : 'const assert = require(\'assert\');',
     doNotUse: doNotUse.filter((l) => l !== 'assert'),
     versionWarning:
       'Node.js assert module has version-dependent APIs. Use only these safe methods: ' +

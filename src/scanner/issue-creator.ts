@@ -197,13 +197,11 @@ export class IssueCreator {
 
       // Search for open issues with the vulnerability type label
       const typeLabel = `rsolv:vuln-${group.type}`;
-      let existingIssue: GitHubIssue;
-
       const forgeIssues = await this.forgeAdapter.listIssues(
         config.repository.owner, config.repository.name, typeLabel, 'open'
       );
       if (forgeIssues.length === 0) return null;
-      existingIssue = {
+      const existingIssue: GitHubIssue = {
         number: forgeIssues[0].number,
         title: forgeIssues[0].title,
         html_url: forgeIssues[0].url,

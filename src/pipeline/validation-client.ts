@@ -189,7 +189,7 @@ export class ValidationClient {
         return { validated: false, error: `Session completed during SSE disconnect (status: ${status.status})` };
       }
       if (status.status === 'failed') {
-        return { validated: false, error: `Session failed during SSE disconnect` };
+        return { validated: false, error: 'Session failed during SSE disconnect' };
       }
       // Session still active — proceed with reconnect
       return null;
@@ -328,40 +328,40 @@ export class ValidationClient {
     sessionId: string
   ): Promise<ValidationResult | null> {
     switch (event.type) {
-      case 'tool_request': {
-        const toolRequest = event.data as ToolRequest;
-        await this.executeAndSubmitTool(toolRequest, sessionId);
-        return null; // Continue processing
-      }
+    case 'tool_request': {
+      const toolRequest = event.data as ToolRequest;
+      await this.executeAndSubmitTool(toolRequest, sessionId);
+      return null; // Continue processing
+    }
 
-      case 'complete': {
-        const data = event.data as Record<string, unknown>;
-        return {
-          validated: (data.validated as boolean) ?? false,
-          test_path: data.test_path as string | undefined,
-          test_code: data.test_code as string | undefined,
-          framework: data.framework as string | undefined,
-          cwe_id: data.cwe_id as string | undefined,
-          classification: data.classification as string | undefined,
-          test_type: data.test_type as string | undefined,
-          retry_count: data.retry_count as number | undefined,
-        };
-      }
+    case 'complete': {
+      const data = event.data as Record<string, unknown>;
+      return {
+        validated: (data.validated as boolean) ?? false,
+        test_path: data.test_path as string | undefined,
+        test_code: data.test_code as string | undefined,
+        framework: data.framework as string | undefined,
+        cwe_id: data.cwe_id as string | undefined,
+        classification: data.classification as string | undefined,
+        test_type: data.test_type as string | undefined,
+        retry_count: data.retry_count as number | undefined,
+      };
+    }
 
-      case 'error': {
-        const data = event.data as Record<string, unknown>;
-        return {
-          validated: false,
-          error: (data.error as string) || 'Unknown error from backend',
-        };
-      }
+    case 'error': {
+      const data = event.data as Record<string, unknown>;
+      return {
+        validated: false,
+        error: (data.error as string) || 'Unknown error from backend',
+      };
+    }
 
-      case 'heartbeat':
-      case 'progress':
-        return null;
+    case 'heartbeat':
+    case 'progress':
+      return null;
 
-      default:
-        return null;
+    default:
+      return null;
     }
   }
 
