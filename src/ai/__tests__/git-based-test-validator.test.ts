@@ -107,7 +107,7 @@ describe('GitBasedTestValidator', () => {
     it('should capture stdout from console.log', () => {
       const redTest: RedTest = {
         testName: 'stdout capture test',
-        testCode: `console.log('HELLO_FROM_TEST');`,
+        testCode: 'console.log(\'HELLO_FROM_TEST\');',
         attackVector: 'none',
         expectedBehavior: 'should_fail_on_vulnerable_code'
       };
@@ -159,7 +159,7 @@ describe('GitBasedTestValidator', () => {
     it('should classify MODULE_NOT_FOUND as infrastructure failure (crashed=true)', () => {
       const redTest: RedTest = {
         testName: 'module not found test',
-        testCode: `const foo = require('./nonexistent-module-xyz');`,
+        testCode: 'const foo = require(\'./nonexistent-module-xyz\');',
         attackVector: 'none',
         expectedBehavior: 'should_fail_on_vulnerable_code'
       };
@@ -175,7 +175,7 @@ describe('GitBasedTestValidator', () => {
     it('should classify ReferenceError as infrastructure failure (crashed=true)', () => {
       const redTest: RedTest = {
         testName: 'reference error test',
-        testCode: `undefinedVariable.doSomething();`,
+        testCode: 'undefinedVariable.doSomething();',
         attackVector: 'none',
         expectedBehavior: 'should_fail_on_vulnerable_code'
       };
@@ -209,7 +209,7 @@ describe('GitBasedTestValidator', () => {
     it('should classify exit(0) as test passed', () => {
       const redTest: RedTest = {
         testName: 'passing test',
-        testCode: `const x = 42;`,
+        testCode: 'const x = 42;',
         attackVector: 'none',
         expectedBehavior: 'should_fail_on_vulnerable_code'
       };
@@ -280,13 +280,13 @@ describe('GitBasedTestValidator', () => {
         redTests: [
           {
             testName: 'crash test 1',
-            testCode: `const foo = require('./nonexistent-module-1');`,
+            testCode: 'const foo = require(\'./nonexistent-module-1\');',
             attackVector: 'none',
             expectedBehavior: 'should_fail_on_vulnerable_code' as const
           },
           {
             testName: 'crash test 2',
-            testCode: `const bar = require('./nonexistent-module-2');`,
+            testCode: 'const bar = require(\'./nonexistent-module-2\');',
             attackVector: 'none',
             expectedBehavior: 'should_fail_on_vulnerable_code' as const
           }
@@ -319,7 +319,7 @@ describe('GitBasedTestValidator', () => {
     it('should accept validation when at least one test has a genuine assertion failure', () => {
       const crashTest: RedTest = {
         testName: 'crash test',
-        testCode: `const foo = require('./nonexistent-module');`,
+        testCode: 'const foo = require(\'./nonexistent-module\');',
         attackVector: 'none',
         expectedBehavior: 'should_fail_on_vulnerable_code'
       };

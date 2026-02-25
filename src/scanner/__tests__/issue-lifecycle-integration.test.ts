@@ -28,7 +28,7 @@ let nextIssueNumber = 1;
 
 function createMockForgeAdapter(): {
   [K in keyof ForgeAdapter]: ReturnType<typeof vi.fn>;
-} {
+  } {
   return {
     listIssues: vi.fn(async (_owner: string, _repo: string, labels: string, _state: string) => {
       const issues = Array.from(issueDatabase.values())

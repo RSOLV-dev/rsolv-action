@@ -30,7 +30,7 @@ describe('getAssertionStyleGuidance', () => {
       expect(guidance.style).toBe('bdd');
       expect(guidance.preferredLibrary).toBe('chai');
       expect(guidance.syntaxExample).toContain('expect(');
-      expect(guidance.importStatement).toContain("require('chai')");
+      expect(guidance.importStatement).toContain('require(\'chai\')');
     });
 
     it('returns BDD guidance when "expect.js" is detected', () => {
@@ -57,7 +57,7 @@ describe('getAssertionStyleGuidance', () => {
 
       expect(guidance.style).toBe('jest');
       expect(guidance.preferredLibrary).toBe('vitest');
-      expect(guidance.importStatement).toContain("from 'vitest'");
+      expect(guidance.importStatement).toContain('from \'vitest\'');
     });
   });
 

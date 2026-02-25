@@ -281,36 +281,36 @@ export class MitigationClient {
     sessionId: string
   ): Promise<MitigationResult | null> {
     switch (event.type) {
-      case 'tool_request': {
-        const toolRequest = event.data as ToolRequest;
-        await this.executeAndSubmitTool(toolRequest, sessionId);
-        return null; // Continue processing
-      }
+    case 'tool_request': {
+      const toolRequest = event.data as ToolRequest;
+      await this.executeAndSubmitTool(toolRequest, sessionId);
+      return null; // Continue processing
+    }
 
-      case 'complete': {
-        const data = event.data as Record<string, unknown>;
-        return {
-          success: (data.success as boolean) ?? true,
-          title: data.title as string | undefined,
-          description: data.description as string | undefined,
-          files_mentioned: data.files_mentioned as string[] | undefined,
-        };
-      }
+    case 'complete': {
+      const data = event.data as Record<string, unknown>;
+      return {
+        success: (data.success as boolean) ?? true,
+        title: data.title as string | undefined,
+        description: data.description as string | undefined,
+        files_mentioned: data.files_mentioned as string[] | undefined,
+      };
+    }
 
-      case 'error': {
-        const data = event.data as Record<string, unknown>;
-        return {
-          success: false,
-          error: (data.error as string) || 'Unknown error from backend',
-        };
-      }
+    case 'error': {
+      const data = event.data as Record<string, unknown>;
+      return {
+        success: false,
+        error: (data.error as string) || 'Unknown error from backend',
+      };
+    }
 
-      case 'heartbeat':
-      case 'progress':
-        return null; // Continue processing
+    case 'heartbeat':
+    case 'progress':
+      return null; // Continue processing
 
-      default:
-        return null; // Ignore unknown event types
+    default:
+      return null; // Ignore unknown event types
     }
   }
 

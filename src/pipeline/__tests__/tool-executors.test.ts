@@ -37,11 +37,11 @@ describe('ToolExecutors', () => {
   describe('executeReadFile', () => {
     it('reads file contents and returns as string', async () => {
       const filePath = path.join(tmpDir, 'test.js');
-      fs.writeFileSync(filePath, "console.log('hello');");
+      fs.writeFileSync(filePath, 'console.log(\'hello\');');
 
       const result = await executeReadFile({ path: filePath });
 
-      expect(result.content).toBe("console.log('hello');");
+      expect(result.content).toBe('console.log(\'hello\');');
       expect(result.error).toBeUndefined();
     });
 

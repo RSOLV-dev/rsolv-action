@@ -76,33 +76,33 @@ export interface RunTestOptions {
  */
 function getTestCommand(framework: string, testFile: string, options?: RunTestOptions): string {
   switch (framework.toLowerCase()) {
-    case 'pytest':
-      // Use `python -m pytest` instead of bare `pytest` because mise creates
-      // shims for `python` but NOT for pip-installed tools like `pytest`.
-      // `python -m pytest` routes through the python shim which is always available.
-      return `python -m pytest "${testFile}" -x -v`;
-    case 'rspec':
-      // When bundle install failed (e.g., native extensions missing), fall back
-      // to bare `rspec` which was installed via `gem install rspec`.
-      if (options?.bundleInstallFailed) {
-        return `rspec "${testFile}" --format documentation`;
-      }
-      return `bundle exec rspec "${testFile}" --format documentation`;
-    case 'vitest':
-      return `npx vitest run "${testFile}"`;
-    case 'jest':
-      return `npx jest "${testFile}" --no-coverage`;
-    case 'mocha':
-      return `npx mocha "${testFile}"`;
-    case 'minitest':
-      return `ruby "${testFile}"`;
-    case 'phpunit':
-      return `./vendor/bin/phpunit "${testFile}"`;
-    case 'exunit':
-      return `mix test "${testFile}"`;
-    default:
-      // Fallback: try running with the framework name as command
-      return `${framework} "${testFile}"`;
+  case 'pytest':
+    // Use `python -m pytest` instead of bare `pytest` because mise creates
+    // shims for `python` but NOT for pip-installed tools like `pytest`.
+    // `python -m pytest` routes through the python shim which is always available.
+    return `python -m pytest "${testFile}" -x -v`;
+  case 'rspec':
+    // When bundle install failed (e.g., native extensions missing), fall back
+    // to bare `rspec` which was installed via `gem install rspec`.
+    if (options?.bundleInstallFailed) {
+      return `rspec "${testFile}" --format documentation`;
+    }
+    return `bundle exec rspec "${testFile}" --format documentation`;
+  case 'vitest':
+    return `npx vitest run "${testFile}"`;
+  case 'jest':
+    return `npx jest "${testFile}" --no-coverage`;
+  case 'mocha':
+    return `npx mocha "${testFile}"`;
+  case 'minitest':
+    return `ruby "${testFile}"`;
+  case 'phpunit':
+    return `./vendor/bin/phpunit "${testFile}"`;
+  case 'exunit':
+    return `mix test "${testFile}"`;
+  default:
+    // Fallback: try running with the framework name as command
+    return `${framework} "${testFile}"`;
   }
 }
 
@@ -138,7 +138,7 @@ export function extractValidateRedTest(
   // Try flat format: validationData IS the per-issue object (has redTests at top level)
   if (!data && validationData.redTests) {
     data = validationData;
-    logger.debug(`[MITIGATE] Using flat validation data format (redTests at top level)`);
+    logger.debug('[MITIGATE] Using flat validation data format (redTests at top level)');
   }
 
   if (!data) {
@@ -414,22 +414,22 @@ export async function verifyFixWithValidateRedTest(
 
 function getDefaultTestFile(framework: string): string {
   switch (framework.toLowerCase()) {
-    case 'pytest':
-      return 'tests/test_vulnerability_validation.py';
-    case 'rspec':
-      return 'spec/vulnerability_validation_spec.rb';
-    case 'vitest':
-    case 'jest':
-      return '__tests__/vulnerability_validation.test.ts';
-    case 'mocha':
-      return 'test/vulnerability_validation.test.js';
-    case 'minitest':
-      return 'test/test_vulnerability_validation.rb';
-    case 'phpunit':
-      return 'tests/VulnerabilityValidationTest.php';
-    case 'exunit':
-      return 'test/vulnerability_validation_test.exs';
-    default:
-      return 'test_vulnerability_validation.txt';
+  case 'pytest':
+    return 'tests/test_vulnerability_validation.py';
+  case 'rspec':
+    return 'spec/vulnerability_validation_spec.rb';
+  case 'vitest':
+  case 'jest':
+    return '__tests__/vulnerability_validation.test.ts';
+  case 'mocha':
+    return 'test/vulnerability_validation.test.js';
+  case 'minitest':
+    return 'test/test_vulnerability_validation.rb';
+  case 'phpunit':
+    return 'tests/VulnerabilityValidationTest.php';
+  case 'exunit':
+    return 'test/vulnerability_validation_test.exs';
+  default:
+    return 'test_vulnerability_validation.txt';
   }
 }

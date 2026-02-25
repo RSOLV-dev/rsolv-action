@@ -87,7 +87,7 @@ describe('PhaseExecutor - No Credential Exchange in Backend Pipeline', () => {
       id: 'issue-123',
       number: 123,
       title: 'CWE-79: XSS vulnerability in login.js',
-      body: `## Security Vulnerability\n\nCWE-79 Cross-Site Scripting in #### \`app/login.js\`\n\nUser input is not sanitized.`,
+      body: '## Security Vulnerability\n\nCWE-79 Cross-Site Scripting in #### `app/login.js`\n\nUser input is not sanitized.',
       labels: ['rsolv:detected'],
       assignees: [],
       repository: {

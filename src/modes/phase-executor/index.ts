@@ -1370,7 +1370,7 @@ export class PhaseExecutor {
         });
         logger.info(`[MITIGATE] Phase data stored for issue #${issue.number}`);
       } catch (storeError) {
-        logger.warn(`[MITIGATE] Failed to store phase data (non-fatal):`, storeError);
+        logger.warn('[MITIGATE] Failed to store phase data (non-fatal):', storeError);
       }
 
       return {
