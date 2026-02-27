@@ -821,15 +821,21 @@ export class PhaseExecutor {
       }
 
       // Count validated issues
+      // validation data is nested under a dynamic key: data.validation[`issue_${N}`].validated
+      const isValidated = (result: ExecuteResult): boolean => {
+        const validation = result.data?.validation as Record<string, Record<string, unknown>> | undefined;
+        if (!validation) return false;
+        return Object.values(validation).some(v => v?.validated === true);
+      };
       const validatedIssues = validationResults.filter(
-        v => v.result.success && (v.result.data?.validation as Record<string, unknown> | undefined)?.validated
+        v => v.result.success && isValidated(v.result)
       );
       logger.info(`${validatedIssues.length} of ${issues.length} issues validated`);
 
       // Phase 3: MITIGATE - Fix validated vulnerabilities
       const mitigationResults = [];
       for (const validation of validationResults) {
-        if (validation.result.success && (validation.result.data?.validation as Record<string, unknown> | undefined)?.validated) {
+        if (validation.result.success && isValidated(validation.result)) {
           try {
             logger.info(`Mitigating issue #${validation.issue.number}`);
             const mitigateResult = await this.executeMitigate({
