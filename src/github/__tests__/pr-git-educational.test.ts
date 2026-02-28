@@ -65,7 +65,14 @@ describe('Educational PR Creation', () => {
         title: 'Fix XSS vulnerability',
         description: 'Fixed XSS by sanitizing input',
         vulnerabilityType: 'XSS',
-        severity: 'high'
+        severity: 'high',
+        cwe: 'CWE-79',
+        educationalContent: {
+          title: 'Cross-Site Scripting (XSS)',
+          description: 'XSS allows attackers to inject malicious scripts into web pages viewed by other users.',
+          prevention: 'Sanitize and escape all user input before rendering in HTML context.',
+          example: "fetch('/api?q=<script>alert(1)</script>')",
+        },
       };
 
       // GitHub API already mocked at module level
@@ -79,7 +86,7 @@ describe('Educational PR Creation', () => {
 
       // Mocks are reset in beforeEach
 
-      // GREEN: Educational content should be included
+      // GREEN: Educational content should be included (platform-provided)
       expect(result.educationalContent).toBeDefined();
       expect(result.educationalContent).toContain('What is Cross-Site Scripting');
       expect(result.educationalContent).toContain('How this fix prevents');
@@ -188,7 +195,13 @@ describe('Educational PR Creation', () => {
         tests: [
           'Verify malicious scripts are blocked',
           'Ensure legitimate HTML still works'
-        ]
+        ],
+        educationalContent: {
+          title: 'Cross-Site Scripting (XSS)',
+          description: 'XSS allows attackers to inject malicious scripts into web pages viewed by other users.',
+          prevention: 'Sanitize and escape all user input before rendering in HTML context.',
+          example: "fetch('/api?q=<script>alert(1)</script>')",
+        },
       };
 
       // Mock execSync
@@ -343,7 +356,13 @@ describe('Educational PR Creation', () => {
         description: 'Fixed SQLi',
         vulnerabilityType: 'SQLi',
         severity: 'critical',
-        cwe: '89'
+        cwe: '89',
+        educationalContent: {
+          title: 'SQL Injection',
+          description: 'SQL injection allows attackers to execute arbitrary SQL commands.',
+          prevention: 'Use parameterized queries or prepared statements.',
+          example: "SELECT * FROM users WHERE id = '1' OR '1'='1'",
+        },
       };
 
       const result = await createEducationalPullRequest(
@@ -355,7 +374,7 @@ describe('Educational PR Creation', () => {
 
       expect(result.success).toBe(true);
 
-      // Verify attack example section is present
+      // Verify attack example section is present (platform content has example)
       expect(globalPRBody).toContain('🎯 Attack Example');
       expect(globalPRBody).toContain('How this vulnerability could be exploited');
     });
@@ -449,7 +468,13 @@ describe('Educational PR Creation', () => {
         description: 'Added __proto__ guard',
         vulnerabilityType: 'prototype_pollution',
         severity: 'high',
-        cwe: '1321'
+        cwe: '1321',
+        educationalContent: {
+          title: 'Prototype Pollution',
+          description: 'Prototype pollution allows attackers to modify object prototypes, affecting all instances.',
+          prevention: 'Guard against __proto__, constructor, and prototype property assignments.',
+          example: 'obj[userInput] = value; // if userInput is "__proto__", pollutes all objects',
+        },
       };
 
       const result = await createEducationalPullRequest(
@@ -461,7 +486,7 @@ describe('Educational PR Creation', () => {
 
       expect(result.success).toBe(true);
 
-      // Should use Prototype Pollution education, NOT XSS fallback
+      // Should use Prototype Pollution education (platform-provided), NOT XSS fallback
       expect(globalPRBody).toContain('Prototype Pollution');
       expect(globalPRBody).not.toContain('What is Cross-Site Scripting');
       expect(globalPRBody).toContain('__proto__');
@@ -484,7 +509,13 @@ describe('Educational PR Creation', () => {
         description: 'Replaced eval with safe parsing',
         vulnerabilityType: 'code_injection',
         severity: 'critical',
-        cwe: '94'
+        cwe: '94',
+        educationalContent: {
+          title: 'Code Injection',
+          description: 'Code injection allows attackers to execute arbitrary code through eval() or similar constructs.',
+          prevention: 'Never pass user input to eval(). Use safe parsing alternatives.',
+          example: 'eval(userInput); // Attacker controls what code runs',
+        },
       };
 
       const result = await createEducationalPullRequest(
@@ -496,7 +527,7 @@ describe('Educational PR Creation', () => {
 
       expect(result.success).toBe(true);
 
-      // Should use Code Injection education, NOT XSS fallback
+      // Should use Code Injection education (platform-provided), NOT XSS fallback
       expect(globalPRBody).toContain('Code Injection');
       expect(globalPRBody).toContain('eval()');
       expect(globalPRBody).not.toContain('What is Cross-Site Scripting');
@@ -519,7 +550,12 @@ describe('Educational PR Creation', () => {
         description: 'Moved secrets to env vars',
         vulnerabilityType: 'hardcoded_secrets',
         severity: 'high',
-        cwe: '798'
+        cwe: '798',
+        educationalContent: {
+          title: 'Hardcoded Credentials',
+          description: 'Hardcoded credentials in source code can be extracted by attackers.',
+          prevention: 'Store secrets in environment variables or a secrets manager.',
+        },
       };
 
       const result = await createEducationalPullRequest(
@@ -531,9 +567,119 @@ describe('Educational PR Creation', () => {
 
       expect(result.success).toBe(true);
 
-      // Should use Hardcoded Credentials education
+      // Should use Hardcoded Credentials education (platform-provided)
       expect(globalPRBody).toContain('Hardcoded Credentials');
       expect(globalPRBody).toContain('environment variables');
+    });
+
+    test('should use platform-provided educational content when present', async () => {
+      const issue = {
+        id: '700',
+        number: 700,
+        title: 'Weak crypto vulnerability',
+        body: 'MD5 in use',
+        repository: {
+          fullName: 'user/repo',
+          defaultBranch: 'main'
+        }
+      };
+
+      const summary = {
+        title: 'Fix weak cryptography',
+        description: 'Replaced MD5 with bcrypt',
+        vulnerabilityType: 'weak_crypto',
+        severity: 'high',
+        cwe: 'CWE-327',
+        educationalContent: {
+          title: 'Use of a Broken or Risky Cryptographic Algorithm',
+          description: 'MD5 and SHA-1 are cryptographically broken.',
+          prevention: 'Use vetted cryptographic libraries with Argon2id or bcrypt.',
+        },
+      };
+
+      const result = await createEducationalPullRequest(
+        issue,
+        'platform123',
+        summary,
+        { rsolvApiKey: 'test' }
+      );
+
+      expect(result.success).toBe(true);
+
+      // Platform content should be used in PR body
+      expect(globalPRBody).toContain('Use of a Broken or Risky Cryptographic Algorithm');
+      expect(globalPRBody).toContain('vetted cryptographic');
+      // And in the educational content return value
+      expect(result.educationalContent).toContain('Use of a Broken or Risky Cryptographic Algorithm');
+    });
+
+    test('should fall back to generic education when no platform content', async () => {
+      const issue = {
+        id: '701',
+        number: 701,
+        title: 'Security issue',
+        body: 'Vulnerability found',
+        repository: {
+          fullName: 'user/repo',
+          defaultBranch: 'main'
+        }
+      };
+
+      const summary = {
+        title: 'Fix security issue',
+        description: 'Applied fix',
+        vulnerabilityType: 'buffer_overflow',
+        severity: 'critical',
+        cwe: 'CWE-120',
+        // No educationalContent — tests generic fallback
+      };
+
+      const result = await createEducationalPullRequest(
+        issue,
+        'generic456',
+        summary,
+        { rsolvApiKey: 'test' }
+      );
+
+      expect(result.success).toBe(true);
+
+      // Generic fallback uses CWE MITRE link, not XSS content
+      expect(globalPRBody).toContain('Buffer Overflow');
+      expect(globalPRBody).toContain('CWE-120');
+      expect(globalPRBody).toContain('cwe.mitre.org/data/definitions/120.html');
+      expect(globalPRBody).not.toContain('Cross-Site Scripting');
+    });
+
+    test('should not crash with null CWE in generic fallback', async () => {
+      const issue = {
+        id: '702',
+        number: 702,
+        title: 'Unknown vuln',
+        body: 'Some issue',
+        repository: {
+          fullName: 'user/repo',
+          defaultBranch: 'main'
+        }
+      };
+
+      const summary = {
+        title: 'Fix unknown issue',
+        description: 'Applied fix',
+        // No vulnerabilityType, no cwe, no educationalContent
+      };
+
+      const result = await createEducationalPullRequest(
+        issue,
+        'nullcwe789',
+        summary,
+        { rsolvApiKey: 'test' }
+      );
+
+      expect(result.success).toBe(true);
+
+      // Should render with generic "Security Vulnerability" title, no crash
+      expect(globalPRBody).toContain('Security Vulnerability');
+      expect(globalPRBody).not.toContain('Cross-Site Scripting');
     });
 
     test('should work without validationData (backward compatibility)', async () => {
