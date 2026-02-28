@@ -54,6 +54,12 @@ export interface MitigationResult {
   title?: string;
   description?: string;
   files_mentioned?: string[];
+  educational_content?: {
+    title: string;
+    description: string;
+    prevention: string;
+    example?: string;
+  };
   error?: string;
 }
 
@@ -294,6 +300,7 @@ export class MitigationClient {
         title: data.title as string | undefined,
         description: data.description as string | undefined,
         files_mentioned: data.files_mentioned as string[] | undefined,
+        educational_content: data.educational_content as MitigationResult['educational_content'],
       };
     }
 

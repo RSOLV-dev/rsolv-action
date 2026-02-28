@@ -1345,6 +1345,7 @@ export class PhaseExecutor {
           severity: scanData.analysisData.severity || 'medium',
           cwe: scanData.analysisData.cwe,
           isAiGenerated: scanData.analysisData.isAiGenerated,
+          educationalContent: result.educational_content,
         },
         this.config,
         diffStats,
