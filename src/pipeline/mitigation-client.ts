@@ -36,6 +36,7 @@ export interface MitigationContext {
     complexity: string;
     recommended_approach?: string;
     related_files?: string[];
+    cwe?: string;
   };
   repoPath: string;
   namespace: string;

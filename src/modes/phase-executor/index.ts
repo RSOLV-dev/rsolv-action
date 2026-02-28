@@ -1258,6 +1258,7 @@ export class PhaseExecutor {
             analysisData.estimatedComplexity === 'complex' ? 'high' : 'medium',
           recommended_approach: analysisData.suggestedApproach,
           related_files: analysisData.filesToModify,
+          cwe: analysisData.cwe,
         },
         repoPath: process.cwd(),
         namespace: `${issue.repository?.owner || ''}/${issue.repository?.name || ''}`,

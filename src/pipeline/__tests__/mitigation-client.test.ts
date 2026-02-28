@@ -323,6 +323,86 @@ describe('MitigationClient', () => {
       expect(result.error).toContain('reconnect');
     });
 
+    it('includes analysis.cwe in start session params when provided', async () => {
+      const contextWithCwe: MitigationContext = {
+        ...context,
+        analysis: {
+          ...context.analysis,
+          cwe: 'CWE-798',
+        },
+      };
+
+      // Mock start session
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          session_id: 'sess_m_abc123',
+          stream_url: '/api/v1/mitigation/stream/sess_m_abc123',
+        }),
+      });
+
+      // Mock SSE stream with immediate complete
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: new Map([['content-type', 'text/event-stream']]),
+        body: createSSEStream([
+          { type: 'complete', id: 1, data: { success: true, title: 'Fixed', description: 'Done', files_mentioned: [] } },
+        ]),
+      });
+
+      await client.runMitigation(contextWithCwe);
+
+      // Verify start session included analysis.cwe
+      const startCall = mockFetch.mock.calls[0];
+      const body = JSON.parse(startCall[1].body);
+      expect(body.context.analysis.cwe).toBe('CWE-798');
+    });
+
+    it('passes educational_content from SSE complete event to result', async () => {
+      // Mock start session
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          session_id: 'sess_m_abc123',
+          stream_url: '/api/v1/mitigation/stream/sess_m_abc123',
+        }),
+      });
+
+      // Mock SSE stream with complete event including educational_content
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: new Map([['content-type', 'text/event-stream']]),
+        body: createSSEStream([
+          {
+            type: 'complete',
+            id: 1,
+            data: {
+              success: true,
+              title: 'Fixed Hardcoded Credentials',
+              description: 'Replaced hardcoded API key with env var',
+              files_mentioned: ['config/secrets.js'],
+              educational_content: {
+                title: 'Hardcoded Credentials',
+                description: 'Using hardcoded credentials in source code...',
+                prevention: 'Use environment variables or secret managers...',
+              },
+            },
+          },
+        ]),
+      });
+
+      const result = await client.runMitigation(context);
+
+      expect(result.success).toBe(true);
+      expect(result.educational_content).toBeDefined();
+      expect(result.educational_content?.title).toBe('Hardcoded Credentials');
+      expect(result.educational_content?.prevention).toContain('environment variables');
+    });
+
     it('handles start session failure', async () => {
       // Mock start session failure
       mockFetch.mockResolvedValueOnce({
