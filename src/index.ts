@@ -67,8 +67,8 @@ async function run(): Promise<ActionStatus> {
       };
     }
 
-    // Handle three-phase modes
-    if (mode === 'scan' || mode === 'validate' || mode === 'mitigate' || mode === 'full') {
+    // Handle three-phase modes (including RFC-126 process mode)
+    if (mode === 'scan' || mode === 'validate' || mode === 'mitigate' || mode === 'full' || mode === 'process') {
       const executor = new PhaseExecutor(config);
 
       // Get repository information
@@ -92,6 +92,7 @@ async function run(): Promise<ActionStatus> {
           : undefined,
         createPR: config.createPR,
         prType: process.env.RSOLV_EDUCATIONAL_PR !== 'false' ? 'educational' : 'standard',
+        pipelineRunId: process.env.RSOLV_PIPELINE_RUN_ID || undefined,
       });
 
       // Set outputs for GitHub Actions
@@ -102,6 +103,14 @@ async function run(): Promise<ActionStatus> {
         // Set generic phase_results output
         if (result.data) {
           fs.appendFileSync(outputFile, `phase_results=${JSON.stringify(result)}\n`);
+        }
+
+        // RFC-126: Set pipeline_run_id output for downstream steps
+        if (result.data) {
+          const resultData = result.data as Record<string, unknown>;
+          if (resultData.pipeline_run_id) {
+            fs.appendFileSync(outputFile, `pipeline_run_id=${resultData.pipeline_run_id}\n`);
+          }
         }
 
         // Set specific outputs based on mode
@@ -136,7 +145,7 @@ async function run(): Promise<ActionStatus> {
     }
 
     // If we get here, the mode wasn't handled
-    throw new Error(`Unsupported mode: ${mode}. Supported modes: scan, validate, mitigate, full, billing`);
+    throw new Error(`Unsupported mode: ${mode}. Supported modes: scan, validate, mitigate, full, process, billing`);
   } catch (error) {
     logger.error('Action failed', error);
     return { 

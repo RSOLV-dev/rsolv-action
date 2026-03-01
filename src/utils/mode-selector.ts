@@ -3,9 +3,9 @@
  * Implements RFC-041 mode selection decisions
  */
 
-export type ExecutionMode = 'scan' | 'validate' | 'mitigate' | 'full' | 'validate-only' | 'validate-and-fix' | 'fix-only' | 'billing';
+export type ExecutionMode = 'scan' | 'validate' | 'mitigate' | 'full' | 'validate-only' | 'validate-and-fix' | 'fix-only' | 'billing' | 'process';
 
-const VALID_MODES: ExecutionMode[] = ['scan', 'validate', 'mitigate', 'full', 'validate-only', 'validate-and-fix', 'fix-only', 'billing'];
+const VALID_MODES: ExecutionMode[] = ['scan', 'validate', 'mitigate', 'full', 'validate-only', 'validate-and-fix', 'fix-only', 'billing', 'process'];
 
 export interface ModeRequirements {
   requiresIssue: boolean;
@@ -129,6 +129,13 @@ export function getModeRequirements(mode: ExecutionMode): ModeRequirements {
       requiresValidation: false
     };
 
+  case 'process':
+    return {
+      requiresIssue: false, // Process mode discovers work via GET /pending-issues
+      requiresScanData: false,
+      requiresValidation: false
+    };
+
   default:
     throw new Error(`Unknown mode: ${mode}`);
   }
@@ -153,6 +160,8 @@ export function getModeDescription(mode: ExecutionMode): string {
     return 'Run all phases: scan, validate, and mitigate';
   case 'billing':
     return 'Trigger billing for merged PR (RFC-091)';
+  case 'process':
+    return 'Process pending issues for a pipeline run (RFC-126)';
   default:
     return 'Unknown mode';
   }

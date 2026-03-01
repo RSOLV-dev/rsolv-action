@@ -51,6 +51,9 @@ export interface ExecuteOptions {
   createPR?: boolean;
   prType?: string;
   includeBeforeAfter?: boolean;
+
+  // RFC-126: Pipeline run coordination
+  pipelineRunId?: string;
 }
 
 export interface ExecuteResult {
@@ -261,6 +264,10 @@ export class PhaseExecutor {
         };
       }
 
+    case 'process':
+      // RFC-126: Process pending issues from a prior scan
+      return this.executeProcess(options);
+
     case 'full':
       // Run all phases
       return this.executeAllPhases(options);
@@ -358,6 +365,114 @@ export class PhaseExecutor {
         success: false,
         phase: 'scan',
         error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  }
+
+  /**
+   * RFC-126: Process pending issues for an existing pipeline run.
+   *
+   * Discovers work via GET /pending-issues instead of GitHub label queries.
+   * For each pending issue:
+   * - validate actions → start validation session
+   * - mitigate actions → start mitigation session, create PR, PATCH pr_url
+   *
+   * Idempotent: empty pending = no-op.
+   */
+  async executeProcess(options: ExecuteOptions): Promise<ExecuteResult> {
+    const pipelineRunId = options.pipelineRunId || process.env.RSOLV_PIPELINE_RUN_ID;
+
+    if (!pipelineRunId) {
+      return {
+        success: false,
+        phase: 'process',
+        error: 'pipeline_run_id is required for mode=process',
+      };
+    }
+
+    try {
+      const { PipelineRunClient } = await import('../../pipeline/pipeline-run-client.js');
+      const runClient = new PipelineRunClient({
+        apiUrl: process.env.RSOLV_API_URL || 'https://api.rsolv.dev',
+        apiKey: this.config.rsolvApiKey || this.config.apiKey || '',
+      });
+
+      logger.info(`[PROCESS] Getting pending issues for run ${pipelineRunId}`);
+      const pendingIssues = await runClient.getPendingIssues(pipelineRunId);
+
+      if (pendingIssues.length === 0) {
+        logger.info('[PROCESS] No pending issues — nothing to do');
+        return {
+          success: true,
+          phase: 'process',
+          message: 'No pending issues',
+          data: { pipeline_run_id: pipelineRunId, processed: 0 },
+        };
+      }
+
+      logger.info(`[PROCESS] Found ${pendingIssues.length} pending issues`);
+
+      const validateIssues = pendingIssues.filter(i => i.pending_action === 'validate');
+      const mitigateIssues = pendingIssues.filter(i => i.pending_action === 'mitigate');
+
+      let validatedCount = 0;
+      let mitigatedCount = 0;
+
+      // Process validations
+      for (const issue of validateIssues) {
+        logger.info(`[PROCESS] Validating issue #${issue.issue_number} (${issue.cwe_id})`);
+        try {
+          await this.executeValidate({
+            ...options,
+            issueNumber: issue.issue_number,
+          });
+          validatedCount++;
+        } catch (err) {
+          logger.error(`[PROCESS] Validation failed for issue #${issue.issue_number}`, err);
+        }
+      }
+
+      // Process mitigations
+      for (const issue of mitigateIssues) {
+        logger.info(`[PROCESS] Mitigating issue #${issue.issue_number} (${issue.cwe_id})`);
+        try {
+          const result = await this.executeMitigate({
+            ...options,
+            issueNumber: issue.issue_number,
+            usePriorValidation: true,
+          });
+
+          // Report PR if created
+          if (result.success && result.data) {
+            const resultData = result.data as Record<string, unknown>;
+            const prUrl = resultData.pr_url as string | undefined;
+            const prNumber = resultData.pr_number as number | undefined;
+            if (prUrl && prNumber) {
+              await runClient.reportPR(pipelineRunId, issue.issue_number, prUrl, prNumber);
+            }
+          }
+          mitigatedCount++;
+        } catch (err) {
+          logger.error(`[PROCESS] Mitigation failed for issue #${issue.issue_number}`, err);
+        }
+      }
+
+      return {
+        success: true,
+        phase: 'process',
+        message: `Processed ${validatedCount} validations, ${mitigatedCount} mitigations`,
+        data: {
+          pipeline_run_id: pipelineRunId,
+          validated: validatedCount,
+          mitigated: mitigatedCount,
+        },
+      };
+    } catch (error) {
+      logger.error('[PROCESS] Process mode failed', error);
+      return {
+        success: false,
+        phase: 'process',
+        error: error instanceof Error ? error.message : String(error),
       };
     }
   }

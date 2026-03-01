@@ -92,6 +92,10 @@ inputs:
     description: 'Create Pull Request after successful mitigation (default: true for production)'
     required: false
     default: 'true'
+  pipeline_run_id:
+    description: 'RFC-126: Pipeline run ID from a prior scan step (required for mode=process)'
+    required: false
+    default: ''
 runs:
   using: 'docker'
   image: 'Dockerfile'
@@ -114,6 +118,7 @@ runs:
     RSOLV_EXECUTABLE_TESTS: ${{ inputs.executable_tests }}
     RSOLV_CLAUDE_MAX_TURNS: ${{ inputs.claude_max_turns }}
     RSOLV_CREATE_PR: ${{ inputs.create_pr }}
+    RSOLV_PIPELINE_RUN_ID: ${{ inputs.pipeline_run_id }}
 outputs:
   has_issues:
     description: 'Whether issues were found for processing'
@@ -129,3 +134,5 @@ outputs:
     description: 'GitHub issues created from scan results (JSON array)'
   issues_created:
     description: 'Number of GitHub issues created from scan results'
+  pipeline_run_id:
+    description: 'RFC-126: Pipeline run ID (set by scan and process modes for downstream steps)'
