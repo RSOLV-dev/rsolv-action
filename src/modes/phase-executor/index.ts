@@ -449,7 +449,7 @@ export class PhaseExecutor {
       };
 
       // Delegate to the backend-orchestrated path
-      return await this.executeValidateForIssue(issueContext, scanData);
+      return await this.executeValidateForIssue(issueContext, scanData, options.pipelineRunId);
 
     } catch (error) {
       logger.error('Validation phase failed', error);
@@ -707,7 +707,7 @@ export class PhaseExecutor {
       } as unknown as ScanPhaseData;
 
       logger.info('[MITIGATE] Delegating to backend-orchestrated executeMitigateForIssue');
-      return await this.executeMitigateForIssue(issueContext, scanData, validationData);
+      return await this.executeMitigateForIssue(issueContext, scanData, validationData, options.pipelineRunId);
     } catch (error) {
       const totalTime = Date.now() - startTime;
       logger.error('[MITIGATE] FAILED: Mitigation phase failed', {
@@ -926,21 +926,22 @@ export class PhaseExecutor {
           );
           mitigationResults.push(mitigateResult);
 
-          // Store mitigation with pipelineRunId for billing
-          if (pipelineRunId && mitigateResult.data) {
+          // RFC-126: Report PR URL to platform via PATCH endpoint
+          if (pipelineRunId && mitigateResult.success && mitigateResult.data) {
             try {
-              const repoFullName = `${validation.issue.repository?.owner || ''}/${validation.issue.repository?.name || ''}`;
-              const commitSha = (mitigateResult.data.commitHash as string) || this.getCurrentCommitSha();
-              await this.storePhaseData('mitigation', {
-                [`issue-${validation.issue.number}`]: mitigateResult.data,
-              }, {
-                repo: repoFullName,
-                issueNumber: validation.issue.number,
-                commitSha,
-                pipelineRunId,
-              });
-            } catch (storeErr) {
-              logger.warn('[FULL] Failed to store mitigation with pipelineRunId:', storeErr);
+              const prUrl = (mitigateResult.data as Record<string, unknown>).prUrl as string | undefined;
+              const prNumber = (mitigateResult.data as Record<string, unknown>).prNumber as number | undefined;
+              if (prUrl && prNumber) {
+                const { PipelineRunClient } = await import('../../pipeline/pipeline-run-client.js');
+                const runClient = new PipelineRunClient({
+                  apiUrl: process.env.RSOLV_API_URL || 'https://api.rsolv.dev',
+                  apiKey: this.config.rsolvApiKey || this.config.apiKey || '',
+                });
+                await runClient.reportPR(pipelineRunId, validation.issue.number, prUrl, prNumber);
+                logger.info(`[FULL] Reported PR #${prNumber} for issue #${validation.issue.number}`);
+              }
+            } catch (reportErr) {
+              logger.warn('[FULL] Failed to report PR URL:', reportErr);
             }
           }
         } catch (error) {
