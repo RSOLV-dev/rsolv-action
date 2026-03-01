@@ -30,6 +30,15 @@ export interface RunSummary {
   issues: Record<string, unknown>;
 }
 
+export interface RecoverySummary {
+  run_id: string;
+  status: string;
+  issues: Record<string, unknown>;
+  reconciled: number;
+  failed: number;
+  live: number;
+}
+
 export interface PipelineRunChannelConfig {
   wsUrl: string;
   apiKey: string;
@@ -38,6 +47,7 @@ export interface PipelineRunChannelConfig {
   onComplete?: (summary: RunSummary) => void;
   onStatusChange?: (status: string) => void;
   onError?: (error: string) => void;
+  onRecovered?: (summary: RecoverySummary) => void;
 }
 
 /**
@@ -280,6 +290,10 @@ export class PipelineRunChannel {
         break;
       case 'error':
         this.config.onError?.(payload.error as string);
+        break;
+      case 'run_recovered':
+        console.log(`[PipelineRunChannel] Run recovered after node failure: reconciled=${payload.reconciled}, failed=${payload.failed}, live=${payload.live}`);
+        this.config.onRecovered?.(payload as unknown as RecoverySummary);
         break;
     }
   }
