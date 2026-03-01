@@ -347,13 +347,14 @@ export class PhaseExecutor {
               usePriorValidation: true,
             });
 
-            // Report PR if created
+            // Report PR if created (executeMitigateForIssue returns pullRequestUrl/pullRequestNumber)
             if (result.success && result.data) {
               const resultData = result.data as Record<string, unknown>;
-              const prUrl = resultData.pr_url as string | undefined;
-              const prNumber = resultData.pr_number as number | undefined;
+              const prUrl = (resultData.pullRequestUrl || resultData.prUrl || resultData.pr_url) as string | undefined;
+              const prNumber = (resultData.pullRequestNumber || resultData.prNumber || resultData.pr_number) as number | undefined;
               if (prUrl && prNumber) {
                 await runClient.reportPR(pipelineRunId, issue.issue_number, prUrl, prNumber);
+                logger.info(`[PROCESS] Reported PR #${prNumber} for issue #${issue.issue_number}`);
               }
             }
             mitigatedCount++;
@@ -929,8 +930,9 @@ export class PhaseExecutor {
           // RFC-126: Report PR URL to platform via PATCH endpoint
           if (pipelineRunId && mitigateResult.success && mitigateResult.data) {
             try {
-              const prUrl = (mitigateResult.data as Record<string, unknown>).prUrl as string | undefined;
-              const prNumber = (mitigateResult.data as Record<string, unknown>).prNumber as number | undefined;
+              const mData = mitigateResult.data as Record<string, unknown>;
+              const prUrl = (mData.pullRequestUrl || mData.prUrl || mData.pr_url) as string | undefined;
+              const prNumber = (mData.pullRequestNumber || mData.prNumber || mData.pr_number) as number | undefined;
               if (prUrl && prNumber) {
                 const { PipelineRunClient } = await import('../../pipeline/pipeline-run-client.js');
                 const runClient = new PipelineRunClient({
