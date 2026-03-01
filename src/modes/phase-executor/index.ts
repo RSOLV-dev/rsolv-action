@@ -221,9 +221,9 @@ export class PhaseExecutor {
             apiKey: this.config.rsolvApiKey || this.config.apiKey || '',
           });
 
-          const createdIssues = scanResult.createdIssues.map((issue: Record<string, unknown>) => ({
-            issue_number: issue.number as number,
-            cwe_id: (issue.cweId as string) || (issue.cwe_id as string) || '',
+          const createdIssues = scanResult.createdIssues.map((issue: { number: number; cweId?: string; cwe_id?: string }) => ({
+            issue_number: issue.number,
+            cwe_id: issue.cweId || issue.cwe_id || '',
           }));
 
           const runResult = await runClient.createRun({
@@ -837,7 +837,7 @@ export class PhaseExecutor {
             },
           };
 
-          const validateResult = await this.executeValidateForIssue(issue, issueScanData);
+          const validateResult = await this.executeValidateForIssue(issue, issueScanData, pipelineRunId);
           validationResults.push({ issue, result: validateResult });
 
           // Store validation with pipelineRunId for billing
@@ -902,7 +902,8 @@ export class PhaseExecutor {
           const mitigateResult = await this.executeMitigateForIssue(
             validation.issue,
             mitigateScanData,
-            validation.result.data
+            validation.result.data,
+            pipelineRunId
           );
           mitigationResults.push(mitigateResult);
 
@@ -1066,7 +1067,8 @@ export class PhaseExecutor {
    */
   async executeValidateForIssue(
     issue: IssueContext,
-    scanData: ScanPhaseData
+    scanData: ScanPhaseData,
+    pipelineRunId?: string
   ): Promise<ExecuteResult> {
     // RFC-096 Phase F: Backend-orchestrated pipeline is the sole code path
     try {
@@ -1105,6 +1107,7 @@ export class PhaseExecutor {
 
       // Build context for the backend orchestrator
       const repoFullName = `${issue.repository?.owner || ''}/${issue.repository?.name || ''}`;
+      const commitSha = this.getCurrentCommitSha();
       const validationContext: ValidationContext = {
         vulnerability: {
           type: vulnerabilityType,
@@ -1119,6 +1122,10 @@ export class PhaseExecutor {
         namespace: repoFullName,
         repo: repoFullName,
         repoPath: process.cwd(),
+        // RFC-126: Pass pipeline context so platform can store execution records
+        pipeline_run_id: pipelineRunId,
+        issue_number: issue.number,
+        commit_sha: commitSha,
       };
 
       // Run the backend-orchestrated validation
@@ -1140,8 +1147,7 @@ export class PhaseExecutor {
         backendOrchestrated: true,
       };
 
-      // Store phase data
-      const commitSha = this.getCurrentCommitSha();
+      // Store phase data (no-op: storage is server-side via RFC-126)
       await this.storePhaseData('validation', {
         [`issue-${issue.number}`]: validationData,
       }, {
@@ -1307,7 +1313,8 @@ export class PhaseExecutor {
   async executeMitigateForIssue(
     issue: IssueContext,
     scanData: ScanPhaseData,
-    validationData: unknown
+    validationData: unknown,
+    pipelineRunId?: string
   ): Promise<ExecuteResult> {
     const startTime = Date.now();
 
@@ -1338,6 +1345,7 @@ export class PhaseExecutor {
       const { analysisData } = scanData;
 
       // Build context for the backend orchestrator
+      const commitSha = this.getCurrentCommitSha();
       const mitigationContext: MitigationContext = {
         issue: {
           title: issue.title,
@@ -1354,6 +1362,10 @@ export class PhaseExecutor {
         },
         repoPath: process.cwd(),
         namespace: `${issue.repository?.owner || ''}/${issue.repository?.name || ''}`,
+        // RFC-126: Pipeline context for server-side storage
+        pipeline_run_id: pipelineRunId,
+        issue_number: issue.number,
+        commit_sha: commitSha,
       };
 
       // Include validation data if available

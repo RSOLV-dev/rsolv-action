@@ -52,6 +52,10 @@ export interface ValidationContext {
   repoPath: string;
   /** Full repo name (owner/repo) — platform uses this to enrich from stored SCAN data */
   repo: string;
+  // RFC-126: Pipeline context for server-side storage
+  pipeline_run_id?: string;
+  issue_number?: number;
+  commit_sha?: string;
   /** Optional — platform auto-resolves from stored project_shape when omitted */
   framework?: {
     name: string;
@@ -239,6 +243,17 @@ export class ValidationClient {
 
     if (context.project_shape) {
       sessionContext.project_shape = context.project_shape;
+    }
+
+    // RFC-126: Include pipeline context for server-side storage
+    if (context.pipeline_run_id) {
+      sessionContext.pipeline_run_id = context.pipeline_run_id;
+    }
+    if (context.issue_number !== undefined) {
+      sessionContext.issue_number = context.issue_number;
+    }
+    if (context.commit_sha) {
+      sessionContext.commit_sha = context.commit_sha;
     }
 
     return sessionContext;
