@@ -35,13 +35,15 @@ inputs:
   mode:
     description: |
       Operation mode - choose based on your workflow:
-      - 'scan': Full repository scan, creates GitHub issues (recommended starting point)
-      - 'validate': Generate RED tests for labeled issues (use in separate job after scan)
-      - 'mitigate': Apply fixes to validated issues (use in separate job after validate)
-      - 'full': Run all three phases in single job (can consume many credits at once)
-      - 'billing': Trigger billing for merged PR (RFC-091) - use on pull_request.closed with merged=true
+      - 'scan': Scan repository for vulnerabilities, create GitHub issues, register a PipelineRun (recommended starting point)
+      - 'process': Process pending work for an existing PipelineRun (use in a separate job after scan, pass pipeline_run_id)
+      - 'full': Run all phases in a single job — scan, validate, and mitigate (simplest setup, uses more credits at once)
+      - 'validate': Validate a single issue via backend orchestration (advanced, requires issue_number)
+      - 'mitigate': Mitigate a single validated issue via backend orchestration (advanced, requires issue_number)
 
-      For production use, see workflow templates in RSOLV-action repo for multi-job patterns.
+      Recommended patterns:
+      - Single-job: mode=full (easiest, good for small repos)
+      - Multi-job:  Job 1: mode=scan → Job 2: mode=process with pipeline_run_id from Job 1
     required: false
     default: 'scan'
   scan_mode:

@@ -57,12 +57,13 @@ jobs:
           mode: 'scan'  # Start with scan only (recommended)
 ```
 
-**Option B: Full Pipeline** (Advanced - better control)
+**Option B: Scan + Process Pipeline** (Recommended for production)
 
-Separate jobs for scan, validate, and fix phases with dependencies.
+Two-job pipeline: scan detects issues, process handles validation and fixes.
+No label-polling delays — the platform tracks what work remains.
 
 ```yaml
-name: RSOLV Full Pipeline
+name: RSOLV Security Pipeline
 
 on:
   push:
@@ -73,31 +74,22 @@ on:
 jobs:
   scan:
     runs-on: ubuntu-latest
+    outputs:
+      pipeline_run_id: ${{ steps.rsolv.outputs.pipeline_run_id }}
     permissions:
       contents: write
       issues: write
     steps:
       - uses: actions/checkout@v4
-      - uses: RSOLV-dev/rsolv-action@v3
+      - id: rsolv
+        uses: RSOLV-dev/rsolv-action@v3
         with:
           rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
           mode: 'scan'
 
-  validate:
+  process:
     needs: scan
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      issues: write
-    steps:
-      - uses: actions/checkout@v4
-      - uses: RSOLV-dev/rsolv-action@v3
-        with:
-          rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
-          mode: 'validate'
-
-  mitigate:
-    needs: validate
+    if: needs.scan.outputs.pipeline_run_id
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -108,7 +100,34 @@ jobs:
       - uses: RSOLV-dev/rsolv-action@v3
         with:
           rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
-          mode: 'mitigate'
+          mode: 'process'
+          pipeline_run_id: ${{ needs.scan.outputs.pipeline_run_id }}
+```
+
+**Option C: Full Pipeline** (Simplest setup)
+
+All three phases in one job. Good for small repos or getting started quickly.
+
+```yaml
+name: RSOLV Full Pipeline
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: RSOLV-dev/rsolv-action@v3
+        with:
+          rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
+          mode: 'full'
 ```
 
 ## How It Works
@@ -128,7 +147,8 @@ Every fix is proven with tests that fail before and pass after—no guesswork.
 | Input | Description | Required | Default |
 |-------|-------------|----------|---------|
 | `rsolvApiKey` | RSOLV API key (get at rsolv.dev/signup) | Yes | - |
-| `mode` | Operation mode: `scan`, `validate`, `mitigate`, or `full` | No | `scan` |
+| `mode` | Operation mode: `scan`, `process`, `full`, `validate`, or `mitigate` | No | `scan` |
+| `pipeline_run_id` | Pipeline run ID from a prior scan step (required for `process` mode) | No | - |
 | `github-token` | GitHub token (auto-provided by Actions) | No | `${{ github.token }}` |
 | `max_issues` | Maximum issues to process per run | No | `1` |
 
