@@ -208,18 +208,46 @@ export class PhaseExecutor {
         maxIssues: this.config.maxIssues
       });
 
-      // Store scan results
+      // RFC-126: Register PipelineRun with platform after scan
       const commitSha = options.commitSha || this.getCurrentCommitSha();
-      await this.storePhaseData('scan', { ...scanResult }, {
-        repo: `${repository.owner}/${repository.name}`,
-        commitSha
-      });
+      const namespace = `${repository.owner}/${repository.name}`;
+      let pipelineRunId: string | undefined;
+
+      if (scanResult.createdIssues && scanResult.createdIssues.length > 0) {
+        try {
+          const { PipelineRunClient } = await import('../../pipeline/pipeline-run-client.js');
+          const runClient = new PipelineRunClient({
+            apiUrl: process.env.RSOLV_API_URL || 'https://api.rsolv.dev',
+            apiKey: this.config.rsolvApiKey || this.config.apiKey || '',
+          });
+
+          const createdIssues = scanResult.createdIssues.map((issue: Record<string, unknown>) => ({
+            issue_number: issue.number as number,
+            cwe_id: (issue.cweId as string) || (issue.cwe_id as string) || '',
+          }));
+
+          const runResult = await runClient.createRun({
+            commitSha,
+            branch: process.env.GITHUB_REF_NAME || 'main',
+            mode: 'scan',
+            namespace,
+            createdIssues,
+            vulnerabilities: scanResult.vulnerabilities || [],
+            manifestFiles: scanResult.manifestFiles || {},
+          });
+
+          pipelineRunId = runResult.pipeline_run_id;
+          logger.info(`[SCAN] Registered PipelineRun: ${pipelineRunId} with ${createdIssues.length} issues`);
+        } catch (err) {
+          logger.warn('[SCAN] Failed to register PipelineRun (non-fatal):', err);
+        }
+      }
 
       return {
         success: true,
         phase: 'scan',
         message: `Found ${scanResult.vulnerabilities.length} vulnerabilities`,
-        data: { scan: scanResult }
+        data: { scan: scanResult, pipeline_run_id: pipelineRunId }
       };
     } catch (error) {
       logger.error('Scan phase failed', error);
