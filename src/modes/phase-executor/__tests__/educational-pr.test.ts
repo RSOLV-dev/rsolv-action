@@ -1,787 +1,336 @@
 /**
- * TDD Tests for Educational PR Feature in PhaseExecutor
- * RED phase - These tests should fail initially
+ * Educational PR tests for PhaseExecutor
+ *
+ * HISTORY: This file originally contained 10 tests under describe.skip that tested the
+ * deprecated executor.execute('mitigate', ...) -> processIssues -> createMitigationPR path.
+ * That code path was replaced by RFC-096 backend-orchestrated pipeline:
+ *   executeMitigateForIssue -> MitigationClient (SSE) -> createEducationalPullRequest
+ *
+ * COVERAGE: The educational content flow is now tested by:
+ *   - src/github/__tests__/pr-git-educational.test.ts (16 tests)
+ *     Tests createEducationalPullRequest directly: platform-provided content,
+ *     generic fallback, CWE links, validation data, attack examples
+ *   - mitigate-standalone.test.ts — executeMitigateStandalone delegates correctly
+ *   - mitigate-for-issue-storage.test.ts — MITIGATE result storage
+ *
+ * This file tests the integration point: executeMitigateForIssue passes
+ * educational_content from the SSE completion event to createEducationalPullRequest.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { PhaseExecutor } from '../index.js';
-import { ActionConfig, IssueContext } from '../../../types/index.js';
-import * as fs from 'fs/promises';
+import type { ActionConfig, IssueContext } from '../../../types/index.js';
 
-// Use vi.hoisted for mocks
-const {
-  mockCreateEducationalPullRequest,
-  mockCreatePullRequestFromGit,
-  mockGetIssue,
-  mockProcessIssues
-} = vi.hoisted(() => ({
-  mockCreateEducationalPullRequest: vi.fn(),
-  mockCreatePullRequestFromGit: vi.fn(),
-  mockGetIssue: vi.fn(),
-  mockProcessIssues: vi.fn()
+// vi.hoisted runs before vi.mock hoisting — safe to reference in factory functions
+const { mockCreateEducationalPullRequest, mockRunMitigation } = vi.hoisted(() => ({
+  mockCreateEducationalPullRequest: vi.fn().mockResolvedValue({
+    success: true,
+    pullRequestUrl: 'https://github.com/test/repo/pull/1',
+    pullRequestNumber: 1,
+    branchName: 'rsolv/fix-issue-42',
+    commitHash: 'abc123',
+    educationalContent: 'Platform-provided content',
+  }),
+  mockRunMitigation: vi.fn(),
 }));
 
-// Mock the GitHub modules
+// Mock TestRunner
+vi.mock('../../../ai/test-runner.js', () => ({
+  TestRunner: vi.fn().mockImplementation(() => ({
+    ensureRuntime: vi.fn().mockResolvedValue(undefined),
+    runTests: vi.fn(),
+  })),
+}));
+
+// Track what createEducationalPullRequest receives
 vi.mock('../../../github/pr-git-educational.js', () => ({
-  createEducationalPullRequest: mockCreateEducationalPullRequest
+  createEducationalPullRequest: mockCreateEducationalPullRequest,
 }));
 
-vi.mock('../../../github/pr-git.js', () => ({
-  createPullRequestFromGit: mockCreatePullRequestFromGit
-}));
-
+// Mock GitHub API
 vi.mock('../../../github/api.js', () => ({
-  getIssue: mockGetIssue,
-  getGitHubClient: vi.fn(() => ({}))
+  getIssue: vi.fn(),
+  getIssues: vi.fn(),
+  addLabels: vi.fn(),
+  removeLabel: vi.fn(),
+  getGitHubClient: vi.fn().mockReturnValue({
+    rest: {
+      pulls: { create: vi.fn().mockResolvedValue({ data: { number: 1, html_url: '' } }) },
+      issues: { addLabels: vi.fn(), createComment: vi.fn() },
+      repos: { getBranch: vi.fn().mockRejectedValue(new Error('not found')) },
+      git: { createRef: vi.fn() },
+    },
+  }),
 }));
 
-vi.mock('../../../utils/github-client.js', () => ({
-  createPullRequest: vi.fn().mockResolvedValue({
-    url: 'https://github.com/test/repo/pull/1',
-    number: 1
-  })
+// Mock MitigationClient — returns educational_content from platform Registry
+vi.mock('../../../pipeline/mitigation-client.js', () => ({
+  MitigationClient: vi.fn().mockImplementation(() => ({
+    runMitigation: mockRunMitigation,
+  })),
 }));
 
-vi.mock('../../../validation/enricher.js', () => ({
-  ValidationEnricher: class {
-    async enrichIssue() {
-      return {
-        issueNumber: 123,
-        validationTimestamp: new Date(),
-        vulnerabilities: [
-          {
-            file: 'test.js',
-            line: 10,
-            type: 'sql_injection',
-            confidence: 'high',
-            description: 'SQL Injection vulnerability'
-          }
-        ],
-        enriched: true,
-        validated: true
-      };
-    }
-  },
-  EnhancedValidationEnricher: class {
-    async enrichIssue() {
-      return {
-        issueNumber: 123,
-        validationTimestamp: new Date(),
-        vulnerabilities: [
-          {
-            file: 'test.js',
-            line: 10,
-            type: 'sql_injection',
-            confidence: 'high',
-            description: 'SQL Injection vulnerability'
-          }
-        ],
-        enriched: true,
-        validated: true
-      };
-    }
-  }
+// Mock child_process for git operations
+vi.mock('child_process', () => ({
+  exec: vi.fn(),
+  execSync: vi.fn().mockImplementation((cmd: string) => {
+    if (cmd === 'git diff --name-only') return 'src/config.py\n';
+    if (cmd === 'git rev-parse HEAD') return 'abc123def456\n';
+    if (cmd.startsWith('git config user.name') && !cmd.includes('"')) return 'Test User';
+    if (cmd.startsWith('git add')) return '';
+    if (cmd.startsWith('git commit')) return '';
+    if (cmd.startsWith('git diff HEAD~1 --stat')) return ' 1 file changed, 3 insertions(+), 1 deletion(-)\n';
+    return '';
+  }),
 }));
 
-vi.mock('../../../ai/unified-processor.js', () => ({
-  processIssues: mockProcessIssues
-}));
+// Import PhaseExecutor AFTER mocks are set up
+import { PhaseExecutor } from '../index.js';
 
-// NOTE: These tests are skipped because they require complex E2E mocking of the full mitigation pipeline.
-// The implementation IS correct - createMitigationPR properly calls createEducationalPullRequest when prType='educational'.
-// However, the production path goes through processIssues->git-based-processor which also handles educational PRs correctly.
-// These tests would need proper integration test infrastructure to fully verify the E2E flow.
-// The implementation has been manually verified and all existing tests pass.
-describe.skip('PhaseExecutor Educational PR (TDD - Integration Tests)', () => {
+describe('PhaseExecutor Educational PR — SSE integration', () => {
   let executor: PhaseExecutor;
   let mockConfig: ActionConfig;
-  const testDir = '.rsolv/phase-data';
 
-  beforeEach(async () => {
-    // Force local storage for tests
-    process.env.USE_PLATFORM_STORAGE = 'false';
+  const mockIssue: IssueContext = {
+    number: 42,
+    title: 'CWE-798: Hardcoded API key in config.py',
+    body: '#### `src/config.py`\n- **Line 8**: Hardcoded API key detected',
+    labels: ['rsolv:detected'],
+    repository: { owner: 'test-owner', name: 'test-repo' },
+    url: 'https://github.com/test-owner/test-repo/issues/42',
+  };
 
-    // Clean up test directory
-    try {
-      await fs.rm(testDir, { recursive: true, force: true });
-    } catch (e) {
-      // Directory might not exist
-    }
-    await fs.mkdir(testDir, { recursive: true });
+  const platformEducation = {
+    title: 'Hardcoded Credentials',
+    description: 'Hardcoded credentials (passwords, API keys, tokens) in source code can be extracted by attackers who gain access to the codebase.',
+    prevention: 'Store secrets in environment variables or a secrets manager. Never commit credentials to version control.',
+  };
 
-    // Set GITHUB_TOKEN for validation
-    process.env.GITHUB_TOKEN = 'test-github-token';
-
-    // Setup default mock behaviors
-    mockGetIssue.mockResolvedValue({
-      id: 'issue-123',
-      number: 123,
-      title: 'SQL Injection vulnerability',
-      body: '## Vulnerabilities\n- SQL Injection in database.js',
-      labels: ['rsolv:automate', 'rsolv:validated'], // Add rsolv:validated to bypass auto-validation
-      repository: {
-        owner: 'test-owner',
-        name: 'test-repo',
-        fullName: 'test-owner/test-repo',
-        defaultBranch: 'main'
-      }
-    });
-
-    // Mock educational PR creation
-    mockCreateEducationalPullRequest.mockResolvedValue({
-      success: true,
-      message: 'Educational PR created successfully',
-      pullRequestUrl: 'https://github.com/test/repo/pull/1',
-      pullRequestNumber: 1,
-      branchName: 'rsolv/fix-issue-123',
-      commitHash: 'abc123def456',
-      educationalContent: [
-        '## 🎯 Attack Example',
-        'SQL Injection allows attackers to...',
-        '## 📖 Learning Resources',
-        'OWASP Top 10',
-        '## 🧪 Validation Tests',
-        'Link to rsolv/validate/issue-123 branch'
-      ].join('\n')
-    });
-
-    // Mock standard PR creation
-    mockCreatePullRequestFromGit.mockResolvedValue({
-      success: true,
-      message: 'Standard PR created successfully',
-      pullRequestUrl: 'https://github.com/test/repo/pull/2',
-      pullRequestNumber: 2,
-      branchName: 'rsolv/fix-issue-123',
-      commitHash: 'abc123def456'
-    });
-
-    // Mock processIssues to return a successful fix with PR URL
-    mockProcessIssues.mockResolvedValue([{
-      issueId: 'test-issue',
-      success: true,
-      message: 'Successfully created fix',
-      pullRequestUrl: 'https://github.com/test-owner/test-repo/pull/1',
-      solution: {
-        commitHash: 'abc123def456',
-        summary: {
-          title: 'Fix SQL Injection',
-          description: 'Applied parameterized queries',
-          vulnerabilityType: 'sql_injection',
-          severity: 'high',
-          cwe: 'CWE-89'
-        }
-      }
-    }]);
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.RSOLV_TESTING_MODE = 'true';
+    process.env.GITHUB_SHA = 'abc123';
 
     mockConfig = {
-      repository: 'test-owner/test-repo',
-      issueLabel: 'rsolv:automate',
-      apiKey: 'test-api-key',
-      rsolvApiKey: 'test-rsolv-key',
-      openaiApiKey: 'test-openai-key',
-      githubToken: 'test-github-token'
-    };
+      rsolvApiKey: 'rsolv_test_key_123',
+      githubToken: 'github_test_token',
+      aiProvider: { name: 'claude-code', useVendedCredentials: true },
+      repository: { owner: 'test-owner', name: 'test-repo' },
+      issueLabel: 'rsolv:detected',
+      maxIssues: 1,
+      fixValidation: { enabled: false },
+    } as ActionConfig;
+
+    // Default: MitigationClient returns result WITH educational_content from platform
+    mockRunMitigation.mockResolvedValue({
+      success: true,
+      title: 'fix: Replace hardcoded API key with env var',
+      description: 'Replaced hardcoded API key with os.environ lookup',
+      educational_content: platformEducation,
+    });
 
     executor = new PhaseExecutor(mockConfig);
 
-    // Reset all mock call counts FIRST
-    vi.clearAllMocks();
-
-    // THEN mock the phaseDataClient to return validation data when requested
-    // (after clearAllMocks so it doesn't get cleared)
-    vi.spyOn(executor.phaseDataClient, 'retrievePhaseResults').mockImplementation(async (repo, issueNumber, commitSha) => {
-      return {
-        validation: {
-          issueNumber: issueNumber,
-          analysisData: {
-            issueType: 'sql_injection',
-            severity: 'high',
-            cwe: 'CWE-89'
-          },
-          tests: ['test1.js'],
+    // Mock scan data retrieval (VALIDATE data from prior phase)
+    executor.phaseDataClient.retrievePhaseResults = vi.fn().mockResolvedValue({
+      validation: {
+        'issue-42': {
           validated: true,
-          vulnerabilities: [
-            {
-              file: 'database.js',
-              line: 42,
-              type: 'sql_injection',
-              confidence: 'high',
-              description: 'SQL Injection vulnerability',
-              vendor: 'semgrep'
-            }
-          ],
-          hasSpecificVulnerabilities: true
-        }
-      };
+          classification: 'validated',
+          backendOrchestrated: true,
+        },
+      },
     });
   });
 
-  afterEach(async () => {
-    // Clean up
-    try {
-      await fs.rm(testDir, { recursive: true, force: true });
-    } catch (e) {
-      // Ignore cleanup errors
-    }
-    delete process.env.GITHUB_TOKEN;
-    delete process.env.USE_PLATFORM_STORAGE;
+  afterEach(() => {
+    delete process.env.RSOLV_TESTING_MODE;
+    delete process.env.GITHUB_SHA;
   });
 
-  describe('Educational PR Creation', () => {
-    it('should call createEducationalPullRequest when prType is educational', async () => {
-      // This test should FAIL initially because createMitigationPR uses a stub
-
-      // Provide validation data to bypass auto-validation
-      // IMPORTANT: Validation data must be nested by issue key (issue-123)
-      const validationData = {
-        validation: {
-          'issue-123': {
-            issueNumber: 123,
-            analysisData: {
-              issueType: 'sql_injection',
-              severity: 'high',
-              cwe: 'CWE-89'
-            },
-            tests: ['test1.js'],
-            validated: true,
-            vulnerabilities: [
-              {
-                file: 'database.js',
-                line: 42,
-                type: 'sql_injection',
-                confidence: 'high',
-                description: 'SQL Injection vulnerability',
-                vendor: 'semgrep'
-              }
-            ],
-            hasSpecificVulnerabilities: true
-          }
-        }
-      };
-
-      const options = {
-        repository: {
-          owner: 'test-owner',
-          name: 'test-repo',
-          defaultBranch: 'main'
+  describe('platform-provided educational content', () => {
+    it('passes educational_content from SSE result to createEducationalPullRequest', async () => {
+      await executor.executeMitigateForIssue(mockIssue, {
+        analysisData: {
+          issueType: 'hardcoded_secrets',
+          vulnerabilityType: 'hardcoded_secrets',
+          severity: 'high',
+          cwe: 'CWE-798',
+          canBeFixed: true,
         },
-        issueNumber: 123,
-        createPR: true,
-        prType: 'educational' as const,
-        validationData, // Provide validation data upfront
-        usePriorValidation: false
-      };
+      }, undefined);
 
-      // Debug: Log what we're passing
-      console.log('Options being passed:', JSON.stringify({
-        hasValidationData: !!options.validationData,
-        validationDataKeys: options.validationData ? Object.keys(options.validationData) : [],
-        prType: options.prType
-      }, null, 2));
+      expect(mockCreateEducationalPullRequest).toHaveBeenCalledTimes(1);
 
-      // Execute mitigate phase
-      const result = await executor.execute('mitigate', options);
+      // 3rd argument is the summary object — should include educationalContent
+      const summary = mockCreateEducationalPullRequest.mock.calls[0][2];
+      expect(summary.educationalContent).toEqual(platformEducation);
+      expect(summary.educationalContent.title).toBe('Hardcoded Credentials');
+      expect(summary.educationalContent.prevention).toContain('environment variables');
+    });
 
-      // Debug: Log the result to see what's happening
-      console.log('Test result:', JSON.stringify(result, null, 2));
-      console.log('mockCreateEducationalPullRequest called?', mockCreateEducationalPullRequest.mock.calls.length);
-      console.log('mockProcessIssues called?', mockProcessIssues.mock.calls.length);
+    it('passes CWE from scan data to createEducationalPullRequest summary', async () => {
+      await executor.executeMitigateForIssue(mockIssue, {
+        analysisData: {
+          issueType: 'hardcoded_secrets',
+          vulnerabilityType: 'hardcoded_secrets',
+          severity: 'high',
+          cwe: 'CWE-798',
+          canBeFixed: true,
+        },
+      }, undefined);
 
-      // Verify educational PR function was called
-      expect(mockCreateEducationalPullRequest).toHaveBeenCalled();
-      expect(mockCreateEducationalPullRequest).toHaveBeenCalledWith(
-        expect.objectContaining({
-          number: 123,
-          title: expect.any(String)
-        }),
-        expect.any(String), // commitHash
-        expect.objectContaining({
-          title: expect.any(String),
-          description: expect.any(String),
-          vulnerabilityType: expect.any(String)
-        }),
-        expect.objectContaining({
-          repository: 'test-owner/test-repo'
-        }),
-        expect.anything(), // diffStats (optional)
-        expect.anything()  // validationData (optional)
+      const summary = mockCreateEducationalPullRequest.mock.calls[0][2];
+      expect(summary.cwe).toBe('CWE-798');
+    });
+
+    it('passes issue context as first argument', async () => {
+      await executor.executeMitigateForIssue(mockIssue, {
+        analysisData: {
+          issueType: 'hardcoded_secrets',
+          vulnerabilityType: 'hardcoded_secrets',
+          severity: 'high',
+          cwe: 'CWE-798',
+          canBeFixed: true,
+        },
+      }, undefined);
+
+      const issueArg = mockCreateEducationalPullRequest.mock.calls[0][0];
+      expect(issueArg.number).toBe(42);
+      expect(issueArg.title).toContain('CWE-798');
+    });
+
+    it('passes config as fourth argument', async () => {
+      await executor.executeMitigateForIssue(mockIssue, {
+        analysisData: {
+          issueType: 'hardcoded_secrets',
+          vulnerabilityType: 'hardcoded_secrets',
+          severity: 'high',
+          cwe: 'CWE-798',
+          canBeFixed: true,
+        },
+      }, undefined);
+
+      const configArg = mockCreateEducationalPullRequest.mock.calls[0][3];
+      expect(configArg.rsolvApiKey).toBe('rsolv_test_key_123');
+      expect(configArg.githubToken).toBe('github_test_token');
+    });
+  });
+
+  describe('missing educational content (generic fallback)', () => {
+    it('passes undefined educationalContent when platform omits it', async () => {
+      // Backend returns result WITHOUT educational_content
+      mockRunMitigation.mockResolvedValue({
+        success: true,
+        title: 'fix: Remove eval usage',
+        description: 'Replaced eval with safe alternative',
+        // No educational_content — unknown CWE or platform didn't enrich
+      });
+
+      await executor.executeMitigateForIssue(mockIssue, {
+        analysisData: {
+          issueType: 'code_injection',
+          vulnerabilityType: 'code_injection',
+          severity: 'critical',
+          cwe: 'CWE-94',
+          canBeFixed: true,
+        },
+      }, undefined);
+
+      const summary = mockCreateEducationalPullRequest.mock.calls[0][2];
+      // educationalContent should be undefined — createEducationalPullRequest
+      // will call buildGenericEducation internally
+      expect(summary.educationalContent).toBeUndefined();
+    });
+
+    it('still creates PR successfully without platform educational content', async () => {
+      mockRunMitigation.mockResolvedValue({
+        success: true,
+        title: 'fix: Sanitize input',
+        description: 'Added input validation',
+      });
+
+      const result = await executor.executeMitigateForIssue(mockIssue, {
+        analysisData: {
+          issueType: 'xss',
+          vulnerabilityType: 'xss',
+          severity: 'high',
+          cwe: 'CWE-79',
+          canBeFixed: true,
+        },
+      }, undefined);
+
+      expect(result.success).toBe(true);
+      expect(mockCreateEducationalPullRequest).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('diff stats forwarding', () => {
+    it('passes diff stats to createEducationalPullRequest', async () => {
+      await executor.executeMitigateForIssue(mockIssue, {
+        analysisData: {
+          issueType: 'hardcoded_secrets',
+          vulnerabilityType: 'hardcoded_secrets',
+          severity: 'high',
+          cwe: 'CWE-798',
+          canBeFixed: true,
+        },
+      }, undefined);
+
+      // 5th argument is diffStats
+      const diffStats = mockCreateEducationalPullRequest.mock.calls[0][4];
+      expect(diffStats).toBeDefined();
+      expect(diffStats.filesChanged).toBeGreaterThanOrEqual(1);
+      expect(typeof diffStats.insertions).toBe('number');
+      expect(typeof diffStats.deletions).toBe('number');
+    });
+  });
+
+  describe('mitigation failure', () => {
+    it('returns failure when MitigationClient reports no success', async () => {
+      mockRunMitigation.mockResolvedValue({
+        success: false,
+        error: 'Max turns reached without resolution',
+      });
+
+      const result = await executor.executeMitigateForIssue(mockIssue, {
+        analysisData: {
+          issueType: 'sql_injection',
+          vulnerabilityType: 'sql_injection',
+          severity: 'critical',
+          cwe: 'CWE-89',
+          canBeFixed: true,
+        },
+      }, undefined);
+
+      expect(result.success).toBe(false);
+      expect(mockCreateEducationalPullRequest).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('result storage', () => {
+    it('stores mitigation result with backendOrchestrated flag', async () => {
+      const storePhaseDataSpy = vi.spyOn(executor, 'storePhaseData' as never);
+
+      await executor.executeMitigateForIssue(mockIssue, {
+        analysisData: {
+          issueType: 'hardcoded_secrets',
+          vulnerabilityType: 'hardcoded_secrets',
+          severity: 'high',
+          cwe: 'CWE-798',
+          canBeFixed: true,
+        },
+      }, undefined);
+
+      const mitigationStoreCall = storePhaseDataSpy.mock.calls.find(
+        (call: unknown[]) => call[0] === 'mitigation'
       );
 
-      // Verify result includes educational PR details
-      expect(result).toMatchObject({
-        success: true,
-        issueNumber: 123,
-        prCreated: true,
-        prType: 'educational'
-      });
-    });
-
-    it('should include vulnerability education in PR', async () => {
-      // Provide validation data to bypass auto-validation
-      // IMPORTANT: Validation data must be nested by issue key (issue-123)
-      const validationData = {
-        validation: {
-          'issue-123': {
-            issueNumber: 123,
-            analysisData: {
-              issueType: 'sql_injection',
-              severity: 'high',
-              cwe: 'CWE-89'
-            },
-            tests: ['test1.js'],
-            validated: true,
-            vulnerabilities: [
-              {
-                file: 'database.js',
-                line: 42,
-                type: 'sql_injection',
-                confidence: 'high',
-                description: 'SQL Injection vulnerability',
-                vendor: 'semgrep'
-              }
-            ],
-            hasSpecificVulnerabilities: true
-          }
-        }
-      };
-
-      const options = {
-        repository: {
-          owner: 'test-owner',
-          name: 'test-repo',
-          defaultBranch: 'main'
-        },
-        issueNumber: 123,
-        createPR: true,
-        prType: 'educational' as const,
-        validationData
-      };
-
-      const result = await executor.execute('mitigate', options);
-
-      // Verify the mock was called
-      expect(mockCreateEducationalPullRequest).toHaveBeenCalled();
-
-      // Get the actual call to verify parameters
-      const callArgs = mockCreateEducationalPullRequest.mock.calls[0];
-
-      // Verify vulnerability type was passed
-      expect(callArgs[2]).toMatchObject({
-        vulnerabilityType: expect.stringMatching(/sql|injection|security/i)
-      });
-    });
-
-    it('should include validation branch links when validation data is available', async () => {
-      // First create validation data
-      const scanResult = await executor.execute('scan', {
-        repository: {
-          owner: 'test-owner',
-          name: 'test-repo'
-        }
-      });
-
-      // Mock validation to create validation branch
-      const validationResult = await executor.execute('validate', {
-        repository: {
-          owner: 'test-owner',
-          name: 'test-repo'
-        },
-        issueNumber: 123,
-        usePriorScan: true
-      });
-
-      // Now run mitigation with educational PR
-      const options = {
-        repository: {
-          owner: 'test-owner',
-          name: 'test-repo',
-          defaultBranch: 'main'
-        },
-        issueNumber: 123,
-        createPR: true,
-        prType: 'educational' as const,
-        usePriorValidation: true
-      };
-
-      const result = await executor.execute('mitigate', options);
-
-      // Verify educational PR was created with validation data
-      expect(mockCreateEducationalPullRequest).toHaveBeenCalled();
-
-      const callArgs = mockCreateEducationalPullRequest.mock.calls[0];
-
-      // Validation data should be passed as last parameter
-      expect(callArgs[5]).toBeDefined(); // validationData parameter
-    });
-
-    it('should use standard PR when prType is not educational', async () => {
-      // Provide validation data to bypass auto-validation
-      // IMPORTANT: Validation data must be nested by issue key (issue-123)
-      const validationData = {
-        validation: {
-          'issue-123': {
-            issueNumber: 123,
-            analysisData: {
-              issueType: 'sql_injection',
-              severity: 'high',
-              cwe: 'CWE-89'
-            },
-            tests: ['test1.js'],
-            validated: true,
-            vulnerabilities: [
-              {
-                file: 'database.js',
-                line: 42,
-                type: 'sql_injection',
-                confidence: 'high',
-                description: 'SQL Injection vulnerability',
-                vendor: 'semgrep'
-              }
-            ],
-            hasSpecificVulnerabilities: true
-          }
-        }
-      };
-
-      const options = {
-        repository: {
-          owner: 'test-owner',
-          name: 'test-repo',
-          defaultBranch: 'main'
-        },
-        issueNumber: 123,
-        createPR: true,
-        prType: 'standard' as const,
-        validationData
-      };
-
-      const result = await executor.execute('mitigate', options);
-
-      // Verify educational PR function was NOT called
-      expect(mockCreateEducationalPullRequest).not.toHaveBeenCalled();
-
-      // Verify result shows standard PR
-      expect(result).toMatchObject({
-        success: true,
-        prType: 'standard'
-      });
-    });
-
-    it('should use standard PR when prType is undefined', async () => {
-      // Provide validation data to bypass auto-validation
-      // IMPORTANT: Validation data must be nested by issue key (issue-123)
-      const validationData = {
-        validation: {
-          'issue-123': {
-            issueNumber: 123,
-            analysisData: {
-              issueType: 'sql_injection',
-              severity: 'high',
-              cwe: 'CWE-89'
-            },
-            tests: ['test1.js'],
-            validated: true,
-            vulnerabilities: [
-              {
-                file: 'database.js',
-                line: 42,
-                type: 'sql_injection',
-                confidence: 'high',
-                description: 'SQL Injection vulnerability',
-                vendor: 'semgrep'
-              }
-            ],
-            hasSpecificVulnerabilities: true
-          }
-        }
-      };
-
-      const options = {
-        repository: {
-          owner: 'test-owner',
-          name: 'test-repo',
-          defaultBranch: 'main'
-        },
-        issueNumber: 123,
-        createPR: true,
-        validationData
-        // prType is undefined
-      };
-
-      const result = await executor.execute('mitigate', options);
-
-      // Verify educational PR function was NOT called
-      expect(mockCreateEducationalPullRequest).not.toHaveBeenCalled();
-    });
-
-    it('should pass complete configuration to educational PR function', async () => {
-      // Provide validation data to bypass auto-validation
-      // IMPORTANT: Validation data must be nested by issue key (issue-123)
-      const validationData = {
-        validation: {
-          'issue-123': {
-            issueNumber: 123,
-            analysisData: {
-              issueType: 'sql_injection',
-              severity: 'high',
-              cwe: 'CWE-89'
-            },
-            tests: ['test1.js'],
-            validated: true,
-            vulnerabilities: [
-              {
-                file: 'database.js',
-                line: 42,
-                type: 'sql_injection',
-                confidence: 'high',
-                description: 'SQL Injection vulnerability',
-                vendor: 'semgrep'
-              }
-            ],
-            hasSpecificVulnerabilities: true
-          }
-        }
-      };
-
-      const options = {
-        repository: {
-          owner: 'test-owner',
-          name: 'test-repo',
-          defaultBranch: 'main'
-        },
-        issueNumber: 123,
-        createPR: true,
-        prType: 'educational' as const,
-        validationData
-      };
-
-      await executor.execute('mitigate', options);
-
-      expect(mockCreateEducationalPullRequest).toHaveBeenCalled();
-
-      const callArgs = mockCreateEducationalPullRequest.mock.calls[0];
-
-      // Verify issue context (1st parameter)
-      expect(callArgs[0]).toMatchObject({
-        number: 123,
-        title: expect.any(String),
-        repository: expect.objectContaining({
-          owner: 'test-owner',
-          name: 'test-repo'
-        })
-      });
-
-      // Verify commit hash (2nd parameter)
-      expect(callArgs[1]).toMatch(/^[a-f0-9]+$/);
-
-      // Verify summary (3rd parameter)
-      expect(callArgs[2]).toMatchObject({
-        title: expect.any(String),
-        description: expect.any(String)
-      });
-
-      // Verify config (4th parameter)
-      expect(callArgs[3]).toMatchObject({
-        repository: 'test-owner/test-repo',
-        githubToken: expect.any(String)
-      });
-    });
-
-    it('should handle educational PR creation failure gracefully', async () => {
-      // Mock failure
-      mockCreateEducationalPullRequest.mockResolvedValueOnce({
-        success: false,
-        message: 'Failed to create PR',
-        error: 'GitHub API error'
-      });
-
-      // Provide validation data to bypass auto-validation
-      // IMPORTANT: Validation data must be nested by issue key (issue-123)
-      const validationData = {
-        validation: {
-          'issue-123': {
-            issueNumber: 123,
-            analysisData: {
-              issueType: 'sql_injection',
-              severity: 'high',
-              cwe: 'CWE-89'
-            },
-            tests: ['test1.js'],
-            validated: true,
-            vulnerabilities: [
-              {
-                file: 'database.js',
-                line: 42,
-                type: 'sql_injection',
-                confidence: 'high',
-                description: 'SQL Injection vulnerability',
-                vendor: 'semgrep'
-              }
-            ],
-            hasSpecificVulnerabilities: true
-          }
-        }
-      };
-
-      const options = {
-        repository: {
-          owner: 'test-owner',
-          name: 'test-repo',
-          defaultBranch: 'main'
-        },
-        issueNumber: 123,
-        createPR: true,
-        prType: 'educational' as const,
-        validationData
-      };
-
-      // Should throw or return failure
-      await expect(async () => {
-        await executor.execute('mitigate', options);
-      }).rejects.toThrow(/Educational PR creation failed/i);
-    });
-
-    it('should include all required PR sections in educational content', async () => {
-      // Provide validation data to bypass auto-validation
-      // IMPORTANT: Validation data must be nested by issue key (issue-123)
-      const validationData = {
-        validation: {
-          'issue-123': {
-            issueNumber: 123,
-            analysisData: {
-              issueType: 'sql_injection',
-              severity: 'high',
-              cwe: 'CWE-89'
-            },
-            tests: ['test1.js'],
-            validated: true,
-            vulnerabilities: [
-              {
-                file: 'database.js',
-                line: 42,
-                type: 'sql_injection',
-                confidence: 'high',
-                description: 'SQL Injection vulnerability',
-                vendor: 'semgrep'
-              }
-            ],
-            hasSpecificVulnerabilities: true
-          }
-        }
-      };
-
-      const options = {
-        repository: {
-          owner: 'test-owner',
-          name: 'test-repo',
-          defaultBranch: 'main'
-        },
-        issueNumber: 123,
-        createPR: true,
-        prType: 'educational' as const,
-        validationData
-      };
-
-      await executor.execute('mitigate', options);
-
-      expect(mockCreateEducationalPullRequest).toHaveBeenCalled();
-
-      // The mock returns educational content with key sections
-      const mockResult = mockCreateEducationalPullRequest.mock.results[0].value;
-      const educationalContent = (await mockResult).educationalContent || '';
-
-      // Verify key educational sections are present
-      expect(educationalContent).toContain('Attack Example');
-      expect(educationalContent).toContain('Learning Resources');
-      expect(educationalContent).toContain('Validation Tests');
-    });
-  });
-
-  describe('Edge Cases', () => {
-    it('should handle missing vulnerability type gracefully', async () => {
-      // Mock processIssues to return fix without vulnerabilityType
-      mockProcessIssues.mockResolvedValueOnce([{
-        issueId: 'test-issue',
-        success: true,
-        message: 'Successfully created fix',
-        solution: {
-          commitHash: 'abc123def456',
-          summary: {
-            title: 'Fix Security Issue',
-            description: 'Applied fix'
-            // vulnerabilityType is missing
-          }
-        }
-      }]);
-
-      // Provide validation data to bypass auto-validation
-      const validationData = {
-        validation: {
-          issueNumber: 123,
-          analysisData: {
-            // issueType is missing
-            severity: 'high'
-          },
-          tests: ['test1.js'],
-          validated: true
-        }
-      };
-
-      const options = {
-        repository: {
-          owner: 'test-owner',
-          name: 'test-repo',
-          defaultBranch: 'main'
-        },
-        issueNumber: 123,
-        createPR: true,
-        prType: 'educational' as const,
-        validationData
-      };
-
-      const result = await executor.execute('mitigate', options);
-
-      // Should still call educational PR with default vulnerability type
-      expect(mockCreateEducationalPullRequest).toHaveBeenCalled();
-
-      const callArgs = mockCreateEducationalPullRequest.mock.calls[0];
-      expect(callArgs[2].vulnerabilityType).toBeDefined();
-    });
-
-    it('should handle missing CWE gracefully', async () => {
-      // Provide validation data to bypass auto-validation
-      const validationData = {
-        validation: {
-          issueNumber: 123,
-          analysisData: {
-            issueType: 'sql_injection',
-            severity: 'high'
-            // cwe is missing
-          },
-          tests: ['test1.js'],
-          validated: true
-        }
-      };
-
-      const options = {
-        repository: {
-          owner: 'test-owner',
-          name: 'test-repo',
-          defaultBranch: 'main'
-        },
-        issueNumber: 123,
-        createPR: true,
-        prType: 'educational' as const,
-        validationData
-      };
-
-      await executor.execute('mitigate', options);
-
-      expect(mockCreateEducationalPullRequest).toHaveBeenCalled();
-
-      // Should still succeed even without CWE
-      const callArgs = mockCreateEducationalPullRequest.mock.calls[0];
-      expect(callArgs[2]).toBeDefined();
+      expect(mitigationStoreCall).toBeDefined();
+      const storedData = mitigationStoreCall![1] as Record<string, Record<string, unknown>>;
+      const issueData = storedData['issue-42'];
+      expect(issueData).toBeDefined();
+      expect(issueData.backendOrchestrated).toBe(true);
+      expect(issueData.prUrl).toBe('https://github.com/test/repo/pull/1');
     });
   });
 });
