@@ -1,15 +1,9 @@
 import { loadConfig } from './config/index.js';
-import { detectIssuesFromAllPlatforms } from './platforms/issue-detector.js';
-import { securityCheck } from './utils/security.js';
 import { logger } from './utils/logger.js';
-import { processIssues } from './ai/unified-processor.js';
-import { setupContainer } from './containers/setup.js';
 import { ActionStatus } from './types/index.js';
-import { ScanOrchestrator } from './scanner/index.js';
 import { getRepositoryDetails } from './github/api.js';
 import { getExecutionMode, getModeDescription } from './utils/mode-selector.js';
 import { PhaseExecutor } from './modes/phase-executor/index.js';
-import { executeBillingMode, getPRContextFromEvent } from './modes/billing-mode.js';
 
 async function run(): Promise<ActionStatus> {
   try {
@@ -23,51 +17,16 @@ async function run(): Promise<ActionStatus> {
     // Log startup information
     logger.info('Starting RSOLV action v2.0 - Enhanced Logging Active');
     logger.info(`Build timestamp: ${new Date().toISOString()}`);
-    
+
     // Load configuration
     const config = await loadConfig();
     logger.info('Configuration loaded successfully');
-    
+
     // Get execution mode using new mode selector
     const mode = getExecutionMode();
     logger.info(`Execution mode: ${mode} - ${getModeDescription(mode)}`);
-    
-    // RFC-091: Handle billing mode
-    if (mode === 'billing') {
-      const prContext = getPRContextFromEvent();
-      if (!prContext) {
-        return {
-          success: false,
-          message: 'Failed to get PR context from event. Billing mode requires pull_request event.',
-        };
-      }
 
-      const billingResult = await executeBillingMode(
-        {
-          apiUrl: process.env.RSOLV_API_URL || 'https://api.rsolv.dev',
-          apiKey: config.rsolvApiKey || '',
-        },
-        prContext
-      );
-
-      // Set outputs for GitHub Actions
-      if (process.env.GITHUB_OUTPUT) {
-        const fs = await import('fs');
-        const outputFile = process.env.GITHUB_OUTPUT;
-        fs.appendFileSync(outputFile, `billing_status=${billingResult.billingStatus || 'unknown'}\n`);
-        fs.appendFileSync(outputFile, `billing_skipped=${billingResult.skipped || false}\n`);
-        if (billingResult.fixAttemptId) {
-          fs.appendFileSync(outputFile, `fix_attempt_id=${billingResult.fixAttemptId}\n`);
-        }
-      }
-
-      return {
-        success: billingResult.success,
-        message: billingResult.message,
-      };
-    }
-
-    // Handle three-phase modes (including RFC-126 process mode)
+    // Handle pipeline modes (RFC-126: scan, process, full; legacy: validate, mitigate)
     if (mode === 'scan' || mode === 'validate' || mode === 'mitigate' || mode === 'full' || mode === 'process') {
       const executor = new PhaseExecutor(config);
 
@@ -115,15 +74,15 @@ async function run(): Promise<ActionStatus> {
 
         // Set specific outputs based on mode
         if (mode === 'scan' && result.data) {
-          const scanData = result.data as any;
+          const scanData = result.data as Record<string, unknown>;
           // PhaseExecutor wraps scan results as { scan: ScanResult }
-          const scanResult = scanData.scan || scanData;
+          const scanResult = (scanData.scan || scanData) as Record<string, unknown>;
           if (scanResult.createdIssues) {
             fs.appendFileSync(
               outputFile,
               `created_issues=${JSON.stringify(scanResult.createdIssues)}\n`
             );
-            fs.appendFileSync(outputFile, `issues_created=${scanResult.createdIssues.length}\n`);
+            fs.appendFileSync(outputFile, `issues_created=${(scanResult.createdIssues as unknown[]).length}\n`);
           }
           if (scanResult.vulnerabilities) {
             fs.appendFileSync(
@@ -145,12 +104,12 @@ async function run(): Promise<ActionStatus> {
     }
 
     // If we get here, the mode wasn't handled
-    throw new Error(`Unsupported mode: ${mode}. Supported modes: scan, validate, mitigate, full, process, billing`);
+    throw new Error(`Unsupported mode: ${mode}. Supported modes: scan, validate, mitigate, full, process`);
   } catch (error) {
     logger.error('Action failed', error);
-    return { 
-      success: false, 
-      message: `RSOLV action failed: ${error instanceof Error ? error.message : String(error)}` 
+    return {
+      success: false,
+      message: `RSOLV action failed: ${error instanceof Error ? error.message : String(error)}`
     };
   }
 }

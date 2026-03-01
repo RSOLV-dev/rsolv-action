@@ -3,7 +3,9 @@
  * Implements RFC-041 three-phase architecture
  */
 
-import { PhaseDataClient, type PhaseData, type ScanVulnerability } from '../phase-data-client/index.js';
+// PhaseDataClient removed (RFC-126: storage is now platform-driven)
+type PhaseData = Record<string, unknown>;
+type ScanVulnerability = Record<string, unknown>;
 import { ScanOrchestrator } from '../../scanner/index.js';
 import { analyzeIssue } from '../../ai/analyzer.js';
 import { TestGeneratingSecurityAnalyzer } from '../../ai/test-generating-security-analyzer.js';
@@ -86,7 +88,6 @@ type ValidationItem = {
 };
 
 export class PhaseExecutor {
-  public phaseDataClient: PhaseDataClient;
   public scanner?: ScanOrchestrator;
   private config: ActionConfig;
 
@@ -95,10 +96,6 @@ export class PhaseExecutor {
 
   constructor(config: ActionConfig) {
     this.config = config;
-    this.phaseDataClient = new PhaseDataClient(
-      config.rsolvApiKey || config.apiKey || '',
-      process.env.RSOLV_API_URL
-    );
     // Lazy initialize scanner only when needed to avoid token requirement in tests
   }
 
@@ -121,148 +118,13 @@ export class PhaseExecutor {
 
     case 'validate':
     case 'validate-only':
-      // Support multiple validation modes
-      if (options.issues && options.issues.length > 0) {
-        // Standalone validation with issues
-        return this.executeValidateStandalone(options);
-      } else if (options.issueNumber || options.scanData) {
-        // Original validation mode
-        return this.executeValidate(options);
-      } else {
-        // Auto-detect issues by label when no specific issues provided
-        logger.info('[VALIDATE] No specific issues provided, detecting issues by label');
-
-        // Pass max_issues to detection layer to avoid fetching too many
-        const maxIssues = this.config.maxIssues || 5;
-        logger.info(`[VALIDATE] Detecting up to ${maxIssues} issues with label '${this.config.issueLabel}'`);
-
-        const { detectIssuesFromAllPlatforms } = await import('../../platforms/issue-detector.js');
-        const detectedIssues = await detectIssuesFromAllPlatforms({ ...this.config, maxIssues });
-
-        if (detectedIssues.length === 0) {
-          throw new Error(`No issues found with label '${this.config.issueLabel}'`);
-        }
-
-        logger.info(`[VALIDATE] Found ${detectedIssues.length} issues to validate (limited by max_issues: ${maxIssues})`);
-
-        return this.executeValidateStandalone({ ...options, issues: detectedIssues });
-      }
+      // RFC-126: Single-issue backend-orchestrated validation
+      return this.executeValidate(options);
 
     case 'mitigate':
     case 'fix-only':
-      // Support multiple mitigation modes (similar to validation)
-      if (options.issues && options.issues.length > 0) {
-        // Standalone mitigation with issues
-        return this.executeMitigateStandalone(options);
-      } else if (options.issueNumber) {
-        // Single issue mitigation
-        return this.executeMitigate(options);
-      } else {
-        // RFC-124: Detect validated issues by label (no retry loop needed —
-        // Coordinator ensures durable state, and standalone mitigate runs
-        // in a separate workflow with sufficient propagation time)
-        logger.info('[MITIGATE] No specific issues provided, detecting validated issues by label');
-
-        const labelToUse = 'rsolv:validated';
-        const maxIssues = this.config.maxIssues || 5;
-        logger.info(`[MITIGATE] Detecting up to ${maxIssues} issues with label '${labelToUse}'`);
-
-        const { detectIssuesFromAllPlatforms } = await import('../../platforms/issue-detector.js');
-        const detectedIssues = await detectIssuesFromAllPlatforms({
-          ...this.config,
-          issueLabel: labelToUse,
-          maxIssues
-        });
-
-        if (detectedIssues.length === 0) {
-          logger.warn(`[MITIGATE] No issues found with label '${labelToUse}'`);
-          return {
-            success: false,
-            phase: 'mitigate',
-            error: `No validated issues found with label '${labelToUse}'. Please run validation phase first.`
-          };
-        }
-
-        logger.info(`[MITIGATE] Found ${detectedIssues.length} validated issues to mitigate`);
-
-        return this.executeMitigateStandalone({
-          ...options,
-          issues: detectedIssues,
-          usePriorValidation: true
-        });
-      }
-      
-    case 'validate-and-fix':
-      // Run validate and mitigate for specific issues
-      // This mode is used when issue_number is provided with the selective workflow
-      if (options.issueNumber) {
-        // Fetch the specific issue
-        logger.info(`[VALIDATE-AND-FIX] Processing specific issue #${options.issueNumber}`);
-        const { getIssue } = await import('../../github/api.js');
-        const [owner, name] = process.env.GITHUB_REPOSITORY!.split('/');
-        const issue = await getIssue(owner, name, options.issueNumber);
-
-        if (!issue) {
-          throw new Error(`Issue #${options.issueNumber} not found`);
-        }
-
-        // First validate
-        const validateResult = await this.executeValidateStandalone({
-          ...options,
-          issues: [issue]
-        });
-
-        if (!validateResult.success) {
-          return validateResult;
-        }
-
-        // Then mitigate if validation succeeded
-        const mitigateResult = await this.executeMitigateStandalone({
-          ...options,
-          issues: [issue],
-          usePriorValidation: true
-        });
-
-        return {
-          success: mitigateResult.success,
-          phase: 'validate-and-fix',
-          message: `Processed issue #${options.issueNumber}: validation ${validateResult.success ? 'succeeded' : 'failed'}, mitigation ${mitigateResult.success ? 'succeeded' : 'failed'}`,
-          data: {
-            validation: validateResult.data,
-            mitigation: mitigateResult.data
-          }
-        };
-      } else {
-        // Auto-detect issues if no specific issue provided
-        logger.info('[VALIDATE-AND-FIX] No specific issue provided, detecting issues by label');
-        const maxIssues = this.config.maxIssues || 5;
-        const { detectIssuesFromAllPlatforms } = await import('../../platforms/issue-detector.js');
-        const detectedIssues = await detectIssuesFromAllPlatforms({ ...this.config, maxIssues });
-
-        if (detectedIssues.length === 0) {
-          throw new Error(`No issues found with label '${this.config.issueLabel}'`);
-        }
-
-        // Validate all
-        const validateResult = await this.executeValidateStandalone({ ...options, issues: detectedIssues });
-
-        // Mitigate validated ones
-        const mitigateResult = await this.executeMitigateStandalone({
-          ...options,
-          issues: detectedIssues,
-          usePriorValidation: true
-        });
-
-        return {
-          success: validateResult.success && mitigateResult.success,
-          phase: 'validate-and-fix',
-          message: `Processed ${detectedIssues.length} issues`,
-          data: {
-            validation: validateResult.data,
-            mitigation: mitigateResult.data
-          }
-        };
-      }
+      // RFC-126: Single-issue backend-orchestrated mitigation
+      return this.executeMitigate(options);
 
     case 'process':
       // RFC-126: Process pending issues from a prior scan
@@ -662,7 +524,7 @@ export class PhaseExecutor {
       } else {
         // Retrieve from storage
         try {
-          const dataPromise = this.phaseDataClient.retrievePhaseResults(
+          const dataPromise = this.retrievePhaseData(
             `${options.repository.owner}/${options.repository.name}`,
             options.issueNumber,
             commitSha
@@ -736,7 +598,7 @@ export class PhaseExecutor {
           
           logger.info('[MITIGATE] Step 3a: Validation succeeded, retrieving stored data...');
           // Get the validation data that was just stored
-          const dataPromise2 = this.phaseDataClient.retrievePhaseResults(
+          const dataPromise2 = this.retrievePhaseData(
             `${options.repository.owner}/${options.repository.name}`,
             options.issueNumber,
             commitSha
@@ -1077,43 +939,26 @@ export class PhaseExecutor {
   }
 
   /**
-   * Store phase data using PhaseDataClient
+   * @deprecated RFC-126: Storage is now server-side (Orchestrator.complete_with_storage).
+   * Retained as no-op to avoid breaking callers during transition.
    */
   async storePhaseData(
-    phase: 'scan' | 'validation' | 'mitigation',
-    data: Record<string, unknown>,
-    metadata: PhaseMetadata & { commitSha: string }
+    _phase: 'scan' | 'validation' | 'mitigation',
+    _data: Record<string, unknown>,
+    _metadata: PhaseMetadata & { commitSha: string }
   ): Promise<void> {
-    const phaseData: PhaseData = {};
-    
-    if (phase === 'scan') {
-      phaseData.scan = {
-        vulnerabilities: (data.vulnerabilities || []) as ScanVulnerability[],
-        timestamp: new Date().toISOString(),
-        commitHash: metadata.commitSha || '',
-        // RFC-101: Include manifest files for project shape detection
-        ...(data.manifestFiles ? { manifest_files: data.manifestFiles } : {})
-      };
-    } else if (phase === 'validation') {
-      // PhaseDataClient expects client-side key 'validate', not 'validation'
-      (phaseData as Record<string, unknown>).validate = data;
-    } else if (phase === 'mitigation') {
-      // PhaseDataClient expects client-side key 'mitigate', not 'mitigation'
-      (phaseData as Record<string, unknown>).mitigate = data;
-    }
-
-    await this.phaseDataClient.storePhaseResults(
-      phase === 'validation' ? 'validate' : phase === 'mitigation' ? 'mitigate' : phase,
-      phaseData,
-      metadata
-    );
+    // No-op: storage is handled server-side by Phases.store_from_session
   }
 
   /**
-   * Retrieve phase data using PhaseDataClient
+   * Retrieve phase data from platform (read-only).
    */
   async retrievePhaseData(repo: string, issueNumber: number, commitSha: string): Promise<PhaseData | null> {
-    return this.phaseDataClient.retrievePhaseResults(repo, issueNumber, commitSha);
+    const client = new (await import('../phase-data-client/index.js')).PhaseDataClient(
+      this.config.rsolvApiKey || this.config.apiKey || '',
+      process.env.RSOLV_API_URL
+    );
+    return client.retrievePhaseResults(repo, issueNumber, commitSha);
   }
 
   /**
@@ -1167,17 +1012,7 @@ export class PhaseExecutor {
         gitStatus
       };
       
-      // Store scan results  
-      const commitSha = this.getCurrentCommitSha();
-      await this.phaseDataClient.storePhaseResults(
-        'scan',
-        { scan: scanResult },
-        {
-          repo: `${issue.repository.owner}/${issue.repository.name}`,
-          issueNumber: issue.number,
-          commitSha
-        }
-      );
+      // RFC-126: Scan storage now handled server-side via POST /api/v1/pipeline-runs
       
       return {
         success: true,
@@ -1762,7 +1597,7 @@ export class PhaseExecutor {
           // Check for prior scan data if requested
           let scanData: ScanPhaseData | null = null;
           if (options.usePriorScan) {
-            const priorData = await this.phaseDataClient.retrievePhaseResults(
+            const priorData = await this.retrievePhaseData(
               `${issue.repository.owner}/${issue.repository.name}`,
               issue.number,
               this.getCurrentCommitSha()
@@ -2093,7 +1928,7 @@ ${validation.falsePositive ?
       if (!options.issues || options.issues.length === 0) {
         // Try to retrieve from PhaseDataClient if we have repository info
         if (options.repository && options.issueNumber) {
-          const phaseData = await this.phaseDataClient.retrievePhaseResults(
+          const phaseData = await this.retrievePhaseData(
             `${options.repository.owner}/${options.repository.name}`,
             options.issueNumber,
             await this.getCurrentCommitSha()
@@ -2146,7 +1981,7 @@ ${validation.falsePositive ?
         const collectedValidation: Record<string, unknown> = {};
 
         for (const issue of options.issues) {
-          const phaseData = await this.phaseDataClient.retrievePhaseResults(
+          const phaseData = await this.retrievePhaseData(
             issue.repository.fullName,
             issue.number,
             await this.getCurrentCommitSha()

@@ -1,11 +1,19 @@
 /**
- * Mode selection utilities for three-phase architecture
- * Implements RFC-041 mode selection decisions
+ * Mode selection utilities for RFC-126 pipeline architecture.
+ *
+ * Three primary modes:
+ * - scan: Scan repository, create issues, register PipelineRun
+ * - process: Discover and execute pending work for an existing PipelineRun
+ * - full: Run all phases in a single job (scan → validate → mitigate)
+ *
+ * Legacy aliases kept for backward compatibility:
+ * - validate / validate-only → single-issue backend-orchestrated validation
+ * - mitigate / fix-only → single-issue backend-orchestrated mitigation
  */
 
-export type ExecutionMode = 'scan' | 'validate' | 'mitigate' | 'full' | 'validate-only' | 'validate-and-fix' | 'fix-only' | 'billing' | 'process';
+export type ExecutionMode = 'scan' | 'validate' | 'mitigate' | 'full' | 'validate-only' | 'fix-only' | 'process';
 
-const VALID_MODES: ExecutionMode[] = ['scan', 'validate', 'mitigate', 'full', 'validate-only', 'validate-and-fix', 'fix-only', 'billing', 'process'];
+const VALID_MODES: ExecutionMode[] = ['scan', 'validate', 'mitigate', 'full', 'validate-only', 'fix-only', 'process'];
 
 export interface ModeRequirements {
   requiresIssue: boolean;
@@ -19,21 +27,21 @@ export interface ModeRequirements {
  */
 export function getModeFromArgs(): string | undefined {
   const args = process.argv.slice(2);
-  
+
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
-    
+
     // Handle --mode=value syntax
     if (arg.startsWith('--mode=')) {
       return arg.substring('--mode='.length);
     }
-    
+
     // Handle --mode value syntax
     if (arg === '--mode' && i + 1 < args.length) {
       return args[i + 1];
     }
   }
-  
+
   return undefined;
 }
 
@@ -42,10 +50,9 @@ export function getModeFromArgs(): string | undefined {
  * 1. CLI args (highest priority)
  * 2. RSOLV_MODE environment variable
  * 3. Legacy RSOLV_SCAN_MODE (for backward compatibility)
- * 4. Default to 'fix' mode
+ * 4. Default to 'full' mode
  */
 export function getExecutionMode(): ExecutionMode {
-  // 1. Check CLI args first
   const cliMode = getModeFromArgs();
   if (cliMode) {
     const normalizedCliMode = cliMode.toLowerCase();
@@ -54,7 +61,6 @@ export function getExecutionMode(): ExecutionMode {
     }
   }
 
-  // 2. Check RSOLV_MODE env var or GitHub Actions input
   const envMode = process.env.RSOLV_MODE || process.env.INPUT_MODE;
   if (envMode) {
     const normalizedEnvMode = envMode.toLowerCase();
@@ -63,13 +69,11 @@ export function getExecutionMode(): ExecutionMode {
     }
   }
 
-  // 3. Check legacy RSOLV_SCAN_MODE for backward compatibility
   const legacyMode = process.env.RSOLV_SCAN_MODE;
   if (legacyMode && legacyMode.toLowerCase() === 'scan') {
     return 'scan';
   }
 
-  // 4. Default to 'full' mode (all phases)
   return 'full';
 }
 
@@ -86,55 +90,21 @@ export function validateMode(mode: string): boolean {
 export function getModeRequirements(mode: ExecutionMode): ModeRequirements {
   switch (mode) {
   case 'scan':
-    return {
-      requiresIssue: false,
-      requiresScanData: false,
-      requiresValidation: false
-    };
+    return { requiresIssue: false, requiresScanData: false, requiresValidation: false };
 
   case 'validate':
   case 'validate-only':
-    return {
-      requiresIssue: true, // Or scan data
-      requiresScanData: false, // Either/or with issue
-      requiresValidation: false
-    };
+    return { requiresIssue: true, requiresScanData: false, requiresValidation: false };
 
   case 'mitigate':
   case 'fix-only':
-    return {
-      requiresIssue: true,
-      requiresScanData: false,
-      requiresValidation: true
-    };
-
-  case 'validate-and-fix':
-    return {
-      requiresIssue: true,
-      requiresScanData: false,
-      requiresValidation: false // Will run validation then mitigation
-    };
+    return { requiresIssue: true, requiresScanData: false, requiresValidation: true };
 
   case 'full':
-    return {
-      requiresIssue: false, // Full mode does everything
-      requiresScanData: false,
-      requiresValidation: false
-    };
-
-  case 'billing':
-    return {
-      requiresIssue: false, // Billing mode uses PR context, not issue
-      requiresScanData: false,
-      requiresValidation: false
-    };
+    return { requiresIssue: false, requiresScanData: false, requiresValidation: false };
 
   case 'process':
-    return {
-      requiresIssue: false, // Process mode discovers work via GET /pending-issues
-      requiresScanData: false,
-      requiresValidation: false
-    };
+    return { requiresIssue: false, requiresScanData: false, requiresValidation: false };
 
   default:
     throw new Error(`Unknown mode: ${mode}`);
@@ -154,12 +124,8 @@ export function getModeDescription(mode: ExecutionMode): string {
   case 'mitigate':
   case 'fix-only':
     return 'Fix validated vulnerabilities';
-  case 'validate-and-fix':
-    return 'Validate and fix vulnerabilities for specific issues';
   case 'full':
     return 'Run all phases: scan, validate, and mitigate';
-  case 'billing':
-    return 'Trigger billing for merged PR (RFC-091)';
   case 'process':
     return 'Process pending issues for a pipeline run (RFC-126)';
   default:
