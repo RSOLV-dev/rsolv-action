@@ -40,6 +40,10 @@ export interface MitigationContext {
   };
   repoPath: string;
   namespace: string;
+  // RFC-126: Pipeline context for server-side storage
+  pipeline_run_id?: string;
+  issue_number?: number;
+  commit_sha?: string;
   validationData?: {
     red_test?: {
       test_path: string;
@@ -196,6 +200,17 @@ export class MitigationClient {
 
     if (context.validationData) {
       sessionContext.validation_data = context.validationData;
+    }
+
+    // RFC-126: Include pipeline context for server-side storage
+    if (context.pipeline_run_id) {
+      sessionContext.pipeline_run_id = context.pipeline_run_id;
+    }
+    if (context.issue_number !== undefined) {
+      sessionContext.issue_number = context.issue_number;
+    }
+    if (context.commit_sha) {
+      sessionContext.commit_sha = context.commit_sha;
     }
 
     return sessionContext;
