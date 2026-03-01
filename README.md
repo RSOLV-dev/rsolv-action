@@ -51,7 +51,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: RSOLV Security Scan
-        uses: RSOLV-dev/rsolv-action@v3
+        uses: RSOLV-dev/rsolv-action@v4
         with:
           rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
           mode: 'scan'  # Start with scan only (recommended)
@@ -82,7 +82,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - id: rsolv
-        uses: RSOLV-dev/rsolv-action@v3
+        uses: RSOLV-dev/rsolv-action@v4
         with:
           rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
           mode: 'scan'
@@ -97,7 +97,7 @@ jobs:
       pull-requests: write
     steps:
       - uses: actions/checkout@v4
-      - uses: RSOLV-dev/rsolv-action@v3
+      - uses: RSOLV-dev/rsolv-action@v4
         with:
           rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
           mode: 'process'
@@ -124,7 +124,7 @@ jobs:
       pull-requests: write
     steps:
       - uses: actions/checkout@v4
-      - uses: RSOLV-dev/rsolv-action@v3
+      - uses: RSOLV-dev/rsolv-action@v4
         with:
           rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
           mode: 'full'
