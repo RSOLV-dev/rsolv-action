@@ -123,6 +123,7 @@ export class PhaseDataClient {
       repo: string;
       issueNumber?: number;
       commitSha: string;
+      pipelineRunId?: string;
     }
   ): Promise<StoreResult> {
     // If platform storage is disabled, go straight to local
@@ -173,10 +174,13 @@ export class PhaseDataClient {
 
     // Try to store on platform, fall back to local on platform errors only
     try {
-      const requestPayload = {
+      const requestPayload: Record<string, unknown> = {
         phase: platformPhase,
         data: phaseSpecificData,
-        ...metadata
+        repo: metadata.repo,
+        issueNumber: metadata.issueNumber,
+        commitSha: metadata.commitSha,
+        ...(metadata.pipelineRunId ? { pipeline_run_id: metadata.pipelineRunId } : {}),
       };
 
       const url = `${this.baseUrl}/api/v1/phases/store`;

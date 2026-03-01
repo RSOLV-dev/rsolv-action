@@ -155,44 +155,24 @@ export class PhaseExecutor {
         // Single issue mitigation
         return this.executeMitigate(options);
       } else {
-        // Auto-detect issues by label when no specific issues provided
-        logger.info('[MITIGATE] No specific issues provided, detecting issues by label');
+        // RFC-124: Detect validated issues by label (no retry loop needed —
+        // Coordinator ensures durable state, and standalone mitigate runs
+        // in a separate workflow with sufficient propagation time)
+        logger.info('[MITIGATE] No specific issues provided, detecting validated issues by label');
 
-        // MITIGATE always targets validated issues — override config default of 'rsolv:detected'
         const labelToUse = 'rsolv:validated';
         const maxIssues = this.config.maxIssues || 5;
         logger.info(`[MITIGATE] Detecting up to ${maxIssues} issues with label '${labelToUse}'`);
 
         const { detectIssuesFromAllPlatforms } = await import('../../platforms/issue-detector.js');
-
-        // Retry with backoff to handle GitHub API label propagation delay.
-        // When VALIDATE adds labels seconds before MITIGATE runs, the GitHub
-        // issue listing API may not reflect the label change immediately.
-        let detectedIssues = await detectIssuesFromAllPlatforms({
+        const detectedIssues = await detectIssuesFromAllPlatforms({
           ...this.config,
           issueLabel: labelToUse,
           maxIssues
         });
 
         if (detectedIssues.length === 0) {
-          const retryDelays = [5000, 10000, 15000]; // 5s, 10s, 15s
-          for (const delay of retryDelays) {
-            logger.info(`[MITIGATE] No issues found yet, retrying in ${delay / 1000}s (GitHub API label propagation delay)...`);
-            await new Promise(resolve => setTimeout(resolve, delay));
-            detectedIssues = await detectIssuesFromAllPlatforms({
-              ...this.config,
-              issueLabel: labelToUse,
-              maxIssues
-            });
-            if (detectedIssues.length > 0) {
-              logger.info(`[MITIGATE] Found ${detectedIssues.length} issues after retry`);
-              break;
-            }
-          }
-        }
-
-        if (detectedIssues.length === 0) {
-          logger.warn(`[MITIGATE] No issues found with label '${labelToUse}' after retries`);
+          logger.warn(`[MITIGATE] No issues found with label '${labelToUse}'`);
           return {
             success: false,
             phase: 'mitigate',
@@ -725,36 +705,89 @@ export class PhaseExecutor {
   }
 
   /**
-   * Execute all phases with proper orchestration
+   * Execute all phases with PipelineRun Coordinator orchestration (RFC-124).
+   *
+   * Creates a PipelineRun via Channel, registers issues after SCAN,
+   * reports progress during VALIDATE/MITIGATE, and passes pipelineRunId
+   * to all storePhaseData calls for billing and observability.
+   *
    * SCAN (creates issues) -> VALIDATE (tests them) -> MITIGATE (fixes them)
    */
   async executeAllPhases(options: ExecuteOptions): Promise<ExecuteResult> {
+    const wsUrl = (process.env.RSOLV_API_URL || 'https://api.rsolv.dev')
+      .replace(/^http/, 'ws') + '/action/websocket';
+    const apiKey = this.config.rsolvApiKey || this.config.apiKey || '';
+
+    // Import Channel client
+    const { PipelineRunChannel } = await import('../../pipeline/pipeline-run-channel.js');
+    const channel = new PipelineRunChannel({ wsUrl, apiKey });
+
+    let pipelineRunId: string | undefined;
+
     try {
-      logger.info('Executing all phases: scan, validate, mitigate');
+      logger.info('[FULL] Executing all phases with PipelineRun Coordinator');
+
+      // Connect to Coordinator via Channel
+      try {
+        await channel.connect();
+        const repoFullName = options.repository
+          ? `${options.repository.owner}/${options.repository.name}`
+          : 'unknown/unknown';
+        const { runId } = await channel.createRun({
+          commitSha: options.commitSha || this.getCurrentCommitSha(),
+          branch: process.env.GITHUB_REF_NAME,
+          mode: 'full',
+          maxIssues: this.config.maxIssues || 3,
+        });
+        pipelineRunId = runId;
+        logger.info(`[FULL] PipelineRun created: ${pipelineRunId}`);
+
+        // Transition to scanning
+        await channel.transitionStatus('scanning');
+      } catch (channelError) {
+        // Channel connection is non-fatal — run without Coordinator
+        logger.warn('[FULL] Channel connection failed, running without Coordinator:', channelError);
+      }
 
       // Phase 1: SCAN - Creates GitHub issues
       const scanResult = await this.executeScan(options);
       if (!scanResult.success) {
+        if (pipelineRunId) {
+          try { await channel.fail(scanResult.error || 'Scan failed'); } catch { /* */ }
+        }
         return scanResult;
       }
 
       // Extract created issues from scan results
       const scanData = scanResult.data?.scan as Record<string, unknown> | undefined;
       const createdIssues = (scanData?.createdIssues || []) as Array<{ number: number }>;
-      logger.info(`Scan created ${createdIssues.length} issues (limited by max_issues: ${this.config.maxIssues})`);
+      logger.info(`[FULL] Scan created ${createdIssues.length} issues (limited by max_issues: ${this.config.maxIssues})`);
 
       if (createdIssues.length === 0) {
-        logger.info('No issues created by scan, skipping validation and mitigation');
+        logger.info('[FULL] No issues created by scan, skipping validation and mitigation');
+        if (pipelineRunId) {
+          try { await channel.complete(); } catch { /* */ }
+        }
         return {
           success: true,
           phase: 'full',
           message: 'No vulnerabilities found to process',
-          data: {
-            scan: scanResult.data,
-            validations: [],
-            mitigations: []
-          }
+          data: { scan: scanResult.data, validations: [], mitigations: [], pipelineRunId }
         };
+      }
+
+      // Register issues with Coordinator
+      if (pipelineRunId && channel.isConnected()) {
+        try {
+          const issuesForChannel = createdIssues.map(ci => ({
+            issue_number: ci.number,
+            cwe_id: undefined as string | undefined,
+          }));
+          await channel.registerIssues(issuesForChannel);
+          logger.info(`[FULL] Registered ${issuesForChannel.length} issues with Coordinator`);
+        } catch (err) {
+          logger.warn('[FULL] Failed to register issues with Coordinator:', err);
+        }
       }
 
       // Import GitHub API for fetching issue details
@@ -764,7 +797,6 @@ export class PhaseExecutor {
       const issues: IssueContext[] = [];
       for (const createdIssue of createdIssues) {
         try {
-          logger.info(`Fetching details for issue #${createdIssue.number}`);
           const issue = await getIssue(
             options.repository!.owner,
             options.repository!.name,
@@ -772,30 +804,26 @@ export class PhaseExecutor {
           );
           issues.push(issue);
         } catch (error) {
-          logger.error(`Failed to fetch issue #${createdIssue.number}:`, error);
-          // Continue with other issues even if one fails
+          logger.error(`[FULL] Failed to fetch issue #${createdIssue.number}:`, error);
         }
       }
 
       if (issues.length === 0) {
-        logger.warn('Failed to fetch any issue details, cannot proceed');
-        return {
-          success: false,
-          phase: 'full',
-          error: 'Failed to fetch issue details after scan'
-        };
+        if (pipelineRunId) {
+          try { await channel.fail('Failed to fetch issue details after scan'); } catch { /* */ }
+        }
+        return { success: false, phase: 'full', error: 'Failed to fetch issue details after scan' };
       }
 
-      // Phase 2: VALIDATE - Test each issue for false positives via backend pipeline
-      logger.info(`Validating ${issues.length} issues via backend pipeline`);
+      // Phase 2: VALIDATE - Test each issue via backend pipeline
+      logger.info(`[FULL] Validating ${issues.length} issues via backend pipeline`);
       const validationResults: Array<{issue: IssueContext, result: ExecuteResult}> = [];
 
       for (const issue of issues) {
         try {
-          logger.info(`Validating issue #${issue.number}`);
+          logger.info(`[FULL] Validating issue #${issue.number}`);
 
-          // Build ScanPhaseData from issue analysis
-          const scanData: ScanPhaseData = {
+          const issueScanData: ScanPhaseData = {
             analysisData: {
               canBeFixed: true,
               issueType: 'security',
@@ -804,59 +832,108 @@ export class PhaseExecutor {
             },
           };
 
-          // Delegate to backend-orchestrated validation
-          // executeValidateForIssue handles storage, labels, and git commit
-          const validateResult = await this.executeValidateForIssue(issue, scanData);
+          const validateResult = await this.executeValidateForIssue(issue, issueScanData);
           validationResults.push({ issue, result: validateResult });
+
+          // Store validation with pipelineRunId for billing
+          if (pipelineRunId) {
+            try {
+              const repoFullName = `${issue.repository?.owner || ''}/${issue.repository?.name || ''}`;
+              const commitSha = this.getCurrentCommitSha();
+              const validationEntry = validateResult.data?.validation as Record<string, unknown> | undefined;
+              if (validationEntry) {
+                await this.storePhaseData('validation', validationEntry, {
+                  repo: repoFullName,
+                  issueNumber: issue.number,
+                  commitSha,
+                  pipelineRunId,
+                });
+              }
+            } catch (storeErr) {
+              logger.warn(`[FULL] Failed to store validation with pipelineRunId:`, storeErr);
+            }
+          }
         } catch (error) {
-          logger.error(`Validation failed for issue #${issue.number}:`, error);
+          logger.error(`[FULL] Validation failed for issue #${issue.number}:`, error);
           validationResults.push({
             issue,
-            result: {
-              success: false,
-              phase: 'validate',
-              error: error instanceof Error ? error.message : String(error)
-            }
+            result: { success: false, phase: 'validate', error: error instanceof Error ? error.message : String(error) }
           });
         }
       }
 
       // Count validated issues
-      // validation data is nested under a dynamic key: data.validation[`issue_${N}`].validated
       const isValidated = (result: ExecuteResult): boolean => {
         const validation = result.data?.validation as Record<string, Record<string, unknown>> | undefined;
         if (!validation) return false;
         return Object.values(validation).some(v => v?.validated === true);
       };
-      const validatedIssues = validationResults.filter(
-        v => v.result.success && isValidated(v.result)
-      );
-      logger.info(`${validatedIssues.length} of ${issues.length} issues validated`);
+      const validatedIssues = validationResults.filter(v => v.result.success && isValidated(v.result));
+      logger.info(`[FULL] ${validatedIssues.length} of ${issues.length} issues validated`);
 
       // Phase 3: MITIGATE - Fix validated vulnerabilities
-      const mitigationResults = [];
-      for (const validation of validationResults) {
-        if (validation.result.success && isValidated(validation.result)) {
-          try {
-            logger.info(`Mitigating issue #${validation.issue.number}`);
-            const mitigateResult = await this.executeMitigate({
-              ...options,
-              issueNumber: validation.issue.number
-              // Don't pass validationData - executeMitigate will fetch it from the backend
-            });
-            mitigationResults.push(mitigateResult);
-          } catch (error) {
-            logger.error(`Mitigation failed for issue #${validation.issue.number}:`, error);
-            mitigationResults.push({
-              success: false,
-              phase: 'mitigate',
-              error: error instanceof Error ? error.message : String(error)
-            });
+      // Coordinator knows which issues are validated — no label polling needed
+      const mitigationResults: ExecuteResult[] = [];
+      for (const validation of validatedIssues) {
+        try {
+          logger.info(`[FULL] Mitigating issue #${validation.issue.number}`);
+
+          // Build scan data for mitigation
+          const cweId = this.extractCweFromIssue(validation.issue);
+          const mitigateScanData: ScanPhaseData = {
+            analysisData: {
+              issueType: 'security',
+              vulnerabilityType: cweId,
+              severity: 'medium',
+              estimatedComplexity: 'moderate',
+              suggestedApproach: `Fix ${cweId} vulnerability`,
+              filesToModify: [],
+              cwe: cweId,
+              isAiGenerated: true,
+            },
+          } as unknown as ScanPhaseData;
+
+          // Use validation data from the result (no label polling, no retrieval needed)
+          const mitigateResult = await this.executeMitigateForIssue(
+            validation.issue,
+            mitigateScanData,
+            validation.result.data
+          );
+          mitigationResults.push(mitigateResult);
+
+          // Store mitigation with pipelineRunId for billing
+          if (pipelineRunId && mitigateResult.data) {
+            try {
+              const repoFullName = `${validation.issue.repository?.owner || ''}/${validation.issue.repository?.name || ''}`;
+              const commitSha = (mitigateResult.data.commitHash as string) || this.getCurrentCommitSha();
+              await this.storePhaseData('mitigation', {
+                [`issue-${validation.issue.number}`]: mitigateResult.data,
+              }, {
+                repo: repoFullName,
+                issueNumber: validation.issue.number,
+                commitSha,
+                pipelineRunId,
+              });
+            } catch (storeErr) {
+              logger.warn('[FULL] Failed to store mitigation with pipelineRunId:', storeErr);
+            }
           }
+        } catch (error) {
+          logger.error(`[FULL] Mitigation failed for issue #${validation.issue.number}:`, error);
+          mitigationResults.push({
+            success: false,
+            phase: 'mitigate',
+            error: error instanceof Error ? error.message : String(error)
+          });
         }
       }
 
       const successfulMitigations = mitigationResults.filter(m => m.success).length;
+
+      // Complete the run
+      if (pipelineRunId && channel.isConnected()) {
+        try { await channel.complete(); } catch { /* */ }
+      }
 
       return {
         success: true,
@@ -865,16 +942,22 @@ export class PhaseExecutor {
         data: {
           scan: scanResult.data,
           validations: validationResults.map(v => v.result),
-          mitigations: mitigationResults
+          mitigations: mitigationResults,
+          pipelineRunId,
         }
       };
     } catch (error) {
-      logger.error('Full execution failed', error);
+      logger.error('[FULL] Full execution failed', error);
+      if (pipelineRunId && channel.isConnected()) {
+        try { await channel.fail(error instanceof Error ? error.message : String(error)); } catch { /* */ }
+      }
       return {
         success: false,
         phase: 'full',
         error: error instanceof Error ? error.message : String(error)
       };
+    } finally {
+      channel.disconnect();
     }
   }
 
