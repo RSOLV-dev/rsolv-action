@@ -228,13 +228,6 @@ describe('Phase Decomposition - processIssueWithGit refactoring', () => {
     };
 
     executor = new PhaseExecutor(mockConfig);
-
-    // Mock phaseDataClient.storePhaseResults to avoid platform storage errors
-    executor.phaseDataClient.storePhaseResults = vi.fn(() => Promise.resolve({
-      success: true,
-      storage: 'platform',
-      message: 'Mock phase data stored successfully'
-    }));
   });
 
   afterEach(() => {
@@ -268,22 +261,11 @@ describe('Phase Decomposition - processIssueWithGit refactoring', () => {
       expect(result.error).toContain('Uncommitted changes');
     });
 
-    test('executeScanForIssue should store scan results in PhaseDataClient', async () => {
-      const storeSpy = vi.fn(() => Promise.resolve());
-      executor.phaseDataClient.storePhaseResults = storeSpy;
-      
-      await executor.executeScanForIssue(mockIssue);
-      
-      expect(storeSpy).toHaveBeenCalledWith(
-        'scan',
-        expect.objectContaining({
-          scan: expect.objectContaining({
-            analysisData: expect.any(Object),
-            canBeFixed: expect.any(Boolean)
-          })
-        }),
-        expect.any(Object)
-      );
+    test('executeScanForIssue returns scan result (RFC-126: storage is server-side)', async () => {
+      const result = await executor.executeScanForIssue(mockIssue);
+
+      expect(result.success).toBe(true);
+      expect(result.data).toBeDefined();
     });
   });
 

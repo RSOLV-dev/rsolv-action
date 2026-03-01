@@ -444,18 +444,11 @@ describe('PhaseExecutor', () => {
   // Removed duplicate tests that were using incorrect mock patterns
 
   describe('phase data persistence', () => {
-    test('should store phase results using PhaseDataClient', async () => {
+    test('storePhaseData is a no-op (RFC-126: storage is server-side)', async () => {
       const { PhaseExecutor } = await import('../phase-executor');
       executor = new PhaseExecutor(mockConfig);
 
-      // Mock PhaseDataClient - needs to be async
-      const mockStore = vi.fn(async () => ({ success: true, id: 'phase-123' }));
-      // @ts-expect-error - mocking phaseDataClient for testing
-      executor.phaseDataClient = { 
-        storePhaseResults: mockStore,
-        retrievePhaseResults: vi.fn(async () => null)
-      };
-
+      // storePhaseData should complete without error (no-op)
       await executor.storePhaseData('scan', {
         vulnerabilities: []
       }, {
@@ -463,11 +456,7 @@ describe('PhaseExecutor', () => {
         commitSha: 'abc123'
       });
 
-      expect(mockStore).toHaveBeenCalledWith(
-        'scan',
-        expect.objectContaining({ scan: expect.objectContaining({ vulnerabilities: [] }) }),
-        expect.objectContaining({ repo: 'test/repo' })
-      );
+      // No assertion needed beyond not throwing
     });
 
     test('should retrieve phase results using PhaseDataClient', async () => {
