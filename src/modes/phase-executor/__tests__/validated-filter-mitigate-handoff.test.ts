@@ -63,6 +63,20 @@ vi.mock('child_process', () => ({
   execSync: vi.fn().mockReturnValue('abc123\n'),
 }));
 
+// RFC-124: Mock PipelineRunChannel to prevent real WebSocket connections
+vi.mock('../../../pipeline/pipeline-run-channel.js', () => ({
+  PipelineRunChannel: vi.fn().mockImplementation(() => ({
+    connect: vi.fn().mockResolvedValue(undefined),
+    createRun: vi.fn().mockResolvedValue({ runId: 'mock-run-id' }),
+    transitionStatus: vi.fn().mockResolvedValue(undefined),
+    registerIssues: vi.fn().mockResolvedValue(undefined),
+    complete: vi.fn().mockResolvedValue(undefined),
+    fail: vi.fn().mockResolvedValue(undefined),
+    disconnect: vi.fn(),
+    isConnected: vi.fn().mockReturnValue(true),
+  })),
+}));
+
 describe('executeAllPhases validated filter → MITIGATE handoff', () => {
   let executor: PhaseExecutor;
   let mockConfig: ActionConfig;
@@ -122,8 +136,9 @@ describe('executeAllPhases validated filter → MITIGATE handoff', () => {
 
     mockGetIssue.mockResolvedValueOnce(mockIssue);
 
-    // Mock executeMitigate — we want to verify it gets CALLED
-    const mockExecuteMitigate = vi.fn().mockResolvedValue({
+    // RFC-124: Mock executeMitigateForIssue — executeAllPhases now calls it directly
+    // (no longer goes through executeMitigate which did label polling)
+    const mockExecuteMitigateForIssue = vi.fn().mockResolvedValue({
       success: true,
       phase: 'mitigate',
       data: { mitigation: { fixed: true } }
@@ -132,16 +147,17 @@ describe('executeAllPhases validated filter → MITIGATE handoff', () => {
     executor._setTestDependencies({
       scanner: mockScanOrchestrator,
     });
-    executor.executeMitigate = mockExecuteMitigate;
+    executor.executeMitigateForIssue = mockExecuteMitigateForIssue;
+    // Also mock storePhaseData to prevent real API calls
+    executor.storePhaseData = vi.fn().mockResolvedValue(undefined);
 
     // Act
     const result = await executor.executeAllPhases({ repository: mockConfig.repository });
 
-    // Assert: MITIGATE must be called for the validated issue
-    expect(mockExecuteMitigate).toHaveBeenCalledTimes(1);
-    expect(mockExecuteMitigate).toHaveBeenCalledWith(
-      expect.objectContaining({ issueNumber: 154 })
-    );
+    // Assert: executeMitigateForIssue must be called for the validated issue
+    expect(mockExecuteMitigateForIssue).toHaveBeenCalledTimes(1);
+    // First arg is IssueContext with number 154
+    expect(mockExecuteMitigateForIssue.mock.calls[0][0].number).toBe(154);
 
     // The result message should report 1 validated and 1 mitigated
     expect(result.message).toContain('1 validated');
@@ -166,12 +182,13 @@ describe('executeAllPhases validated filter → MITIGATE handoff', () => {
 
     mockGetIssue.mockResolvedValueOnce(mockIssue);
 
-    const mockExecuteMitigate = vi.fn().mockResolvedValue({
+    const mockExecuteMitigateForIssue = vi.fn().mockResolvedValue({
       success: true, phase: 'mitigate', data: {}
     });
 
     executor._setTestDependencies({ scanner: mockScanOrchestrator });
-    executor.executeMitigate = mockExecuteMitigate;
+    executor.executeMitigateForIssue = mockExecuteMitigateForIssue;
+    executor.storePhaseData = vi.fn().mockResolvedValue(undefined);
 
     // Act
     const result = await executor.executeAllPhases({ repository: mockConfig.repository });
