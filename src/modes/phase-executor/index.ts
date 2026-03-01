@@ -302,49 +302,68 @@ export class PhaseExecutor {
 
       logger.info(`[PROCESS] Found ${pendingIssues.length} pending issues`);
 
-      const validateIssues = pendingIssues.filter(i => i.pending_action === 'validate');
-      const mitigateIssues = pendingIssues.filter(i => i.pending_action === 'mitigate');
-
       let validatedCount = 0;
       let mitigatedCount = 0;
 
-      // Process validations
-      for (const issue of validateIssues) {
-        logger.info(`[PROCESS] Validating issue #${issue.issue_number} (${issue.cwe_id})`);
-        try {
-          await this.executeValidate({
-            ...options,
-            issueNumber: issue.issue_number,
-          });
-          validatedCount++;
-        } catch (err) {
-          logger.error(`[PROCESS] Validation failed for issue #${issue.issue_number}`, err);
+      // Loop: process all pending work, re-querying after each pass.
+      // Validations create mitigate-ready issues, so we loop until no pending work remains.
+      const MAX_PASSES = 5;
+      for (let pass = 0; pass < MAX_PASSES; pass++) {
+        const pending = pass === 0
+          ? pendingIssues
+          : await runClient.getPendingIssues(pipelineRunId);
+
+        if (pending.length === 0) {
+          logger.info(`[PROCESS] Pass ${pass + 1}: no pending work remaining`);
+          break;
         }
-      }
 
-      // Process mitigations
-      for (const issue of mitigateIssues) {
-        logger.info(`[PROCESS] Mitigating issue #${issue.issue_number} (${issue.cwe_id})`);
-        try {
-          const result = await this.executeMitigate({
-            ...options,
-            issueNumber: issue.issue_number,
-            usePriorValidation: true,
-          });
+        logger.info(`[PROCESS] Pass ${pass + 1}: ${pending.length} pending issues`);
 
-          // Report PR if created
-          if (result.success && result.data) {
-            const resultData = result.data as Record<string, unknown>;
-            const prUrl = resultData.pr_url as string | undefined;
-            const prNumber = resultData.pr_number as number | undefined;
-            if (prUrl && prNumber) {
-              await runClient.reportPR(pipelineRunId, issue.issue_number, prUrl, prNumber);
-            }
+        const toValidate = pending.filter(i => i.pending_action === 'validate');
+        const toMitigate = pending.filter(i => i.pending_action === 'mitigate');
+
+        // Process validations
+        for (const issue of toValidate) {
+          logger.info(`[PROCESS] Validating issue #${issue.issue_number} (${issue.cwe_id})`);
+          try {
+            await this.executeValidate({
+              ...options,
+              issueNumber: issue.issue_number,
+            });
+            validatedCount++;
+          } catch (err) {
+            logger.error(`[PROCESS] Validation failed for issue #${issue.issue_number}`, err);
           }
-          mitigatedCount++;
-        } catch (err) {
-          logger.error(`[PROCESS] Mitigation failed for issue #${issue.issue_number}`, err);
         }
+
+        // Process mitigations
+        for (const issue of toMitigate) {
+          logger.info(`[PROCESS] Mitigating issue #${issue.issue_number} (${issue.cwe_id})`);
+          try {
+            const result = await this.executeMitigate({
+              ...options,
+              issueNumber: issue.issue_number,
+              usePriorValidation: true,
+            });
+
+            // Report PR if created
+            if (result.success && result.data) {
+              const resultData = result.data as Record<string, unknown>;
+              const prUrl = resultData.pr_url as string | undefined;
+              const prNumber = resultData.pr_number as number | undefined;
+              if (prUrl && prNumber) {
+                await runClient.reportPR(pipelineRunId, issue.issue_number, prUrl, prNumber);
+              }
+            }
+            mitigatedCount++;
+          } catch (err) {
+            logger.error(`[PROCESS] Mitigation failed for issue #${issue.issue_number}`, err);
+          }
+        }
+
+        // If we only had mitigations (no new validations), no need to re-query
+        if (toValidate.length === 0) break;
       }
 
       return {
