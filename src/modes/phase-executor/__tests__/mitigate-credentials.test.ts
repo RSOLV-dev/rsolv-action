@@ -119,7 +119,7 @@ describe('PhaseExecutor - Mitigate Phase Credential Handling', () => {
     });
 
     // Mock phase data retrieval
-    executor.phaseDataClient.retrievePhaseResults = vi.fn().mockResolvedValue({
+    executor.retrievePhaseData = vi.fn().mockResolvedValue({
       validation: {
         'issue-123': {
           validated: true,
@@ -164,7 +164,7 @@ describe('PhaseExecutor - Mitigate Phase Credential Handling', () => {
     });
 
     // Mock phase data retrieval
-    executorNoKey.phaseDataClient.retrievePhaseResults = vi.fn().mockResolvedValue({
+    executorNoKey.retrievePhaseData = vi.fn().mockResolvedValue({
       validation: {
         'issue-123': {
           validated: true,

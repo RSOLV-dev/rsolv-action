@@ -131,7 +131,7 @@ describe('PhaseExecutor Educational PR — SSE integration', () => {
     executor = new PhaseExecutor(mockConfig);
 
     // Mock scan data retrieval (VALIDATE data from prior phase)
-    executor.phaseDataClient.retrievePhaseResults = vi.fn().mockResolvedValue({
+    executor.retrievePhaseData = vi.fn().mockResolvedValue({
       validation: {
         'issue-42': {
           validated: true,
