@@ -18,6 +18,14 @@ import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
 import { PhaseExecutor } from '../index.js';
 import type { ActionConfig, IssueContext } from '../../../types/index.js';
 
+// Mock TestRunner to prevent ensureRuntime from hanging
+vi.mock('../../../ai/test-runner.js', () => ({
+  TestRunner: vi.fn().mockImplementation(() => ({
+    ensureRuntime: vi.fn().mockResolvedValue(undefined),
+    runTests: vi.fn(),
+  })),
+}));
+
 // Mock GitHub API
 vi.mock('../../../github/api.js', () => ({
   getIssue: vi.fn(),
@@ -51,6 +59,7 @@ vi.mock('../../../pipeline/validation-client.js', () => ({
 
 // Mock child_process for git operations
 vi.mock('child_process', () => ({
+  exec: vi.fn(),
   execSync: vi.fn().mockReturnValue('abc123\n'),
 }));
 

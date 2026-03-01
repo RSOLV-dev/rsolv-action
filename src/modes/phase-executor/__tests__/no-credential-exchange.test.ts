@@ -13,6 +13,14 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { PhaseExecutor, ExecuteOptions } from '../index.js';
 import type { ActionConfig, IssueContext } from '../../../types/index.js';
 
+// Mock TestRunner to prevent ensureRuntime from hanging
+vi.mock('../../../ai/test-runner.js', () => ({
+  TestRunner: vi.fn().mockImplementation(() => ({
+    ensureRuntime: vi.fn().mockResolvedValue(undefined),
+    runTests: vi.fn(),
+  })),
+}));
+
 // Mock dependencies
 vi.mock('../../../ai/analyzer.js', () => ({
   analyzeIssue: vi.fn().mockRejectedValue(new Error('analyzeIssue should NOT be called in backend-orchestrated path')),
@@ -50,6 +58,7 @@ vi.mock('fs', () => ({
 }));
 
 vi.mock('child_process', () => ({
+  exec: vi.fn(),
   execSync: vi.fn().mockImplementation((cmd: string) => {
     if (typeof cmd === 'string' && cmd.includes('git rev-parse HEAD')) return 'abc123def456';
     if (typeof cmd === 'string' && cmd.includes('git config user.name')) return 'test';

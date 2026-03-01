@@ -10,6 +10,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { ActionConfig } from '../../../types/index.js';
 
+// Mock TestRunner to prevent ensureRuntime from hanging
+vi.mock('../../../ai/test-runner.js', () => ({
+  TestRunner: vi.fn().mockImplementation(() => ({
+    ensureRuntime: vi.fn().mockResolvedValue(undefined),
+    runTests: vi.fn(),
+  })),
+}));
+
 // Mock MitigationClient
 vi.mock('../../../pipeline/mitigation-client.js', () => ({
   MitigationClient: vi.fn().mockImplementation(() => ({
@@ -49,6 +57,7 @@ vi.mock('../../../github/api.js', () => ({
 
 // Mock child_process for git operations
 vi.mock('child_process', () => ({
+  exec: vi.fn(),
   execSync: vi.fn().mockImplementation((cmd: string) => {
     if (cmd === 'git diff --name-only') return 'src/fix.ts\n';
     if (cmd === 'git rev-parse HEAD') return 'abc123\n';

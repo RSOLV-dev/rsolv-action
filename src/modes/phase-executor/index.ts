@@ -21,6 +21,7 @@ import { execSync } from 'child_process';
 import { extractValidateRedTest } from '../../ai/validate-test-reuse.js';
 import { MitigationClient, type MitigationContext } from '../../pipeline/mitigation-client.js';
 import { ValidationClient, type ValidationContext } from '../../pipeline/validation-client.js';
+import { TestRunner, type TestFramework } from '../../ai/test-runner.js';
 import { applyValidationLabels } from './utils/label-manager.js';
 
 export interface ExecuteOptions {
@@ -1026,6 +1027,21 @@ export class PhaseExecutor {
       // Determine framework from existing test infrastructure
       const frameworkName = this.detectTestFramework();
 
+      // Ensure the runtime is available for bash tool requests during the SSE session.
+      // The backend AI sends bash commands (e.g., "bundle exec rspec") that need the
+      // runtime installed. Without this, executeBash() has mise shims on PATH but no
+      // actual runtime binary, causing the AI to fall back to JS.
+      if (frameworkName !== 'unknown') {
+        try {
+          const testRunner = new TestRunner();
+          await testRunner.ensureRuntime(frameworkName as TestFramework, process.cwd());
+          logger.info(`[VALIDATE] Runtime ensured for framework: ${frameworkName}`);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          logger.warn(`[VALIDATE] Failed to ensure runtime for ${frameworkName}: ${message} — continuing anyway`);
+        }
+      }
+
       // Build context for the backend orchestrator
       const repoFullName = `${issue.repository?.owner || ''}/${issue.repository?.name || ''}`;
       const validationContext: ValidationContext = {
@@ -1236,6 +1252,21 @@ export class PhaseExecutor {
 
     try {
       logger.info(`[MITIGATE] Starting backend-orchestrated mitigation for issue #${issue.number}`);
+
+      // Ensure the runtime is available for bash tool requests during MITIGATE.
+      // Same rationale as VALIDATE: the backend AI sends bash commands that need
+      // the runtime installed (e.g., "bundle exec rspec" to verify the fix).
+      const frameworkName = this.detectTestFramework();
+      if (frameworkName !== 'unknown') {
+        try {
+          const testRunner = new TestRunner();
+          await testRunner.ensureRuntime(frameworkName as TestFramework, process.cwd());
+          logger.info(`[MITIGATE] Runtime ensured for framework: ${frameworkName}`);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          logger.warn(`[MITIGATE] Failed to ensure runtime for ${frameworkName}: ${message} — continuing anyway`);
+        }
+      }
 
       const rsolvApiUrl = process.env.RSOLV_API_URL || 'https://api.rsolv.dev';
       const mitigationClient = new MitigationClient({

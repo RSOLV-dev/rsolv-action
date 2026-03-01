@@ -8,6 +8,14 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { PhaseExecutor } from '../index.js';
 import { ActionConfig } from '../../../types/index.js';
 
+// Mock TestRunner to prevent ensureRuntime from hanging
+vi.mock('../../../ai/test-runner.js', () => ({
+  TestRunner: vi.fn().mockImplementation(() => ({
+    ensureRuntime: vi.fn().mockResolvedValue(undefined),
+    runTests: vi.fn(),
+  })),
+}));
+
 // Mock MitigationClient to capture config
 const mockRunMitigation = vi.fn();
 vi.mock('../../../pipeline/mitigation-client.js', () => ({
@@ -57,6 +65,7 @@ vi.mock('../../../github/api.js', () => ({
 
 // Mock child_process for git operations
 vi.mock('child_process', () => ({
+  exec: vi.fn(),
   execSync: vi.fn().mockImplementation((cmd: string) => {
     if (cmd === 'git diff --name-only') return 'src/fix.ts\n';
     if (cmd.startsWith('git config user.name') && !cmd.includes('"')) return 'Test User';
