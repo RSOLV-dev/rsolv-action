@@ -28,6 +28,48 @@ export interface EducationalPrResult {
 export type { ValidationData } from '../types/validation.js';
 
 /**
+ * Build a descriptive PR title that includes vulnerability type and CWE.
+ *
+ * Examples:
+ *   "[RSOLV] Fix SQL Injection (CWE-89) in user.rb (fixes #42)"
+ *   "[RSOLV] Fix Weak Cryptography vulnerability (fixes #15)"
+ */
+function buildPrTitle(
+  prefix: string,
+  summary: { title?: string; vulnerabilityType?: string; cwe?: string },
+  issue: IssueContext
+): string {
+  const vuln = summary.vulnerabilityType;
+  const cwe = summary.cwe;
+
+  // Build a descriptive vulnerability phrase
+  let vulnPhrase: string;
+  if (vuln && vuln !== 'security' && vuln !== 'unknown') {
+    // Humanize: "sql_injection" → "SQL Injection", "xss" → "XSS"
+    const humanized = humanizeVulnType(vuln);
+    vulnPhrase = cwe ? `${humanized} (${cwe})` : humanized;
+  } else if (cwe) {
+    vulnPhrase = `${cwe} vulnerability`;
+  } else {
+    // Fall back to the AI-generated title (stripped of generic prefixes)
+    const title = (summary.title || 'Security fix applied')
+      .replace(/^(Security fix applied|Fix applied)\s*[-:]?\s*/i, '');
+    vulnPhrase = title || 'Security fix applied';
+  }
+
+  return `${prefix}[RSOLV] Fix ${vulnPhrase} (fixes #${issue.number})`;
+}
+
+function humanizeVulnType(vulnType: string): string {
+  const acronyms = new Set(['xss', 'csrf', 'ssrf', 'sql', 'xxe', 'ldap', 'rce']);
+  return vulnType
+    .replace(/[_-]/g, ' ')
+    .split(' ')
+    .map(word => acronyms.has(word.toLowerCase()) ? word.toUpperCase() : word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
+/**
  * PR section titles - extracted as constants for maintainability
  */
 const PR_SECTIONS = {
@@ -176,10 +218,11 @@ export async function createEducationalPullRequest(
     
     try {
       const prTitlePrefix = summary.isTestMode && summary.validationFailed ? '[TEST MODE] ' : '';
+      const prTitle = buildPrTitle(prTitlePrefix, summary, issue);
       const { data: pullRequest } = await github.pulls.create({
         owner,
         repo,
-        title: `${prTitlePrefix}[RSOLV] ${summary.title} (fixes #${issue.number})`,
+        title: prTitle,
         body: prBody,
         head: branchName,
         base: issue.repository.defaultBranch || 'main',
@@ -212,6 +255,26 @@ export async function createEducationalPullRequest(
         }
       }
       
+      // Apply rsolv:mitigated label to the issue
+      try {
+        await github.issues.addLabels({
+          owner,
+          repo,
+          issue_number: issue.number,
+          labels: ['rsolv:mitigated']
+        });
+        // Remove rsolv:validated since it's now mitigated
+        await github.issues.removeLabel({
+          owner,
+          repo,
+          issue_number: issue.number,
+          name: 'rsolv:validated'
+        }).catch(() => { /* label may not exist */ });
+        logger.info(`[PR] Applied rsolv:mitigated label to issue #${issue.number}`);
+      } catch (labelErr) {
+        logger.warn(`[PR] Failed to apply mitigated label to issue #${issue.number}:`, labelErr);
+      }
+
       return {
         success: true,
         message: `Created educational pull request #${pullRequest.number}`,
