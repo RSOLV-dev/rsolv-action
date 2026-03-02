@@ -848,12 +848,13 @@ export class PhaseExecutor {
         try {
           logger.info(`[FULL] Validating issue #${issue.number}`);
 
+          const cweId = this.extractCweFromIssue(issue);
           const issueScanData: ScanPhaseData = {
             analysisData: {
               canBeFixed: true,
               issueType: 'security',
-              vulnerabilityType: 'security',
-              cwe: this.extractCweFromIssue(issue),
+              vulnerabilityType: this.extractVulnTypeFromIssue(issue),
+              cwe: cweId,
             },
           };
 
@@ -905,13 +906,14 @@ export class PhaseExecutor {
 
           // Build scan data for mitigation
           const cweId = this.extractCweFromIssue(validation.issue);
+          const vulnType = this.extractVulnTypeFromIssue(validation.issue);
           const mitigateScanData: ScanPhaseData = {
             analysisData: {
               issueType: 'security',
-              vulnerabilityType: cweId,
+              vulnerabilityType: vulnType,
               severity: 'medium',
               estimatedComplexity: 'moderate',
-              suggestedApproach: `Fix ${cweId} vulnerability`,
+              suggestedApproach: `Fix ${vulnType} vulnerability`,
               filesToModify: [],
               cwe: cweId,
               isAiGenerated: true,
@@ -1326,6 +1328,31 @@ export class PhaseExecutor {
     if (bodyMatch) return bodyMatch[0];
 
     return 'CWE-unknown';
+  }
+
+  /**
+   * Extract a human-readable vulnerability type from the issue.
+   * Parses the rsolv:vuln-* label or the issue title.
+   *
+   * Examples:
+   *   label "rsolv:vuln-sql_injection" → "sql_injection"
+   *   title "SQL Injection vulnerabilities found in 1 file" → "sql_injection"
+   */
+  private extractVulnTypeFromIssue(issue: IssueContext): string {
+    const labels = issue.labels || [];
+    for (const label of labels) {
+      const labelStr = typeof label === 'string' ? label : (label as { name?: string }).name || '';
+      const vulnMatch = labelStr.match(/^rsolv:vuln-(.+)$/);
+      if (vulnMatch) return vulnMatch[1];
+    }
+
+    // Parse from issue title: "🔒 SQL Injection vulnerabilities found in ..."
+    const titleMatch = issue.title?.match(/🔒\s+(.+?)\s+vulnerabilit/);
+    if (titleMatch) {
+      return titleMatch[1].toLowerCase().replace(/\s+/g, '_').replace(/[()]/g, '');
+    }
+
+    return 'security';
   }
 
   /**
