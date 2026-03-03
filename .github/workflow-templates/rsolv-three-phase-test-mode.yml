@@ -1,9 +1,8 @@
-# RSOLV Three-Phase Workflow with Test Mode
+# RSOLV Scan + Process with Test Mode
 #
-# This workflow template demonstrates the complete RSOLV three-phase process:
-# 1. SCAN - Detect vulnerabilities using AST analysis
-# 2. VALIDATE - Generate RED tests that fail on vulnerable code
-# 3. MITIGATE - Fix vulnerabilities using Claude Code AI
+# This workflow uses the scan+matrix process pattern with test mode enabled:
+# 1. SCAN: Detect vulnerabilities using AST analysis
+# 2. PROCESS: Validate + fix each issue independently via matrix strategy
 #
 # Test Mode Features:
 # - Creates PRs even when validation fails (for inspection)
@@ -11,7 +10,7 @@
 # - Prevents rollback of attempted fixes in test mode
 # - Marks PRs with [TEST MODE] prefix when validation failed
 
-name: RSOLV Three-Phase Security Fix (Test Mode)
+name: RSOLV Scan + Process (Test Mode)
 
 on:
   workflow_dispatch:
@@ -30,69 +29,72 @@ on:
   #   # Run weekly on Sundays at 2 AM UTC
   #   - cron: '0 2 * * 0'
 
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
 jobs:
-  rsolv-three-phase:
+  scan:
+    name: Scan for Vulnerabilities
     runs-on: ubuntu-latest
-
-    permissions:
-      contents: write
-      pull-requests: write
-      issues: write
-
+    outputs:
+      pipeline_run_id: ${{ steps.rsolv.outputs.pipeline_run_id }}
+      issue_numbers: ${{ steps.rsolv.outputs.issue_numbers }}
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
-          # Use a PAT if available for better API limits
           token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
 
-      - name: Run RSOLV Three-Phase Workflow
-        uses: RSOLV-dev/rsolv-action@v3
+      - name: RSOLV Scan
+        id: rsolv
+        uses: RSOLV-dev/RSOLV-action@v4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+          RSOLV_TESTING_MODE: 'true'
         with:
-          # RSOLV API key for accessing vulnerability patterns
           rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
-
-          # Run all three phases
-          mode: 'full'
-
-          # Limit issues processed (optional)
+          mode: 'scan'
           max_issues: ${{ github.event.inputs.max_issues || '2' }}
 
-          # Enable educational PR content
-          educational_pr: 'true'
+  process:
+    name: "Process Issue #${{ matrix.issue_number }}"
+    needs: scan
+    if: needs.scan.outputs.issue_numbers != '[]'
+    strategy:
+      matrix:
+        issue_number: ${{ fromJSON(needs.scan.outputs.issue_numbers) }}
+      fail-fast: false
+      max-parallel: 1
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
 
+      - uses: RSOLV-dev/RSOLV-action@v4
         env:
-          # GitHub token for creating PRs
           GITHUB_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
-
           # Enable test mode - creates PRs even when validation fails
-          # Useful for deliberate vulnerability repos or when tests have false positives
           RSOLV_TESTING_MODE: 'true'
-
-          # Enable debug logging (optional)
-          RSOLV_DEBUG: 'false'
-
           # Use Claude Code with vended credentials
           AI_PROVIDER: 'claude-code'
           USE_VENDED_CREDENTIALS: 'true'
-
-          # Disable if you don't want educational content in PRs
-          # RSOLV_EDUCATIONAL_PR: 'false'
-
-          # Enable to capture full AI conversation for debugging validation/mitigation
-          # RSOLV_DEBUG_CONVERSATION: 'true'
+        with:
+          rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
+          mode: 'process'
+          pipeline_run_id: ${{ needs.scan.outputs.pipeline_run_id }}
+          issue_number: ${{ matrix.issue_number }}
 
       - name: Summary
         if: always()
         run: |
-          echo "## RSOLV Three-Phase Workflow Complete" >> $GITHUB_STEP_SUMMARY
+          echo "## RSOLV Process Complete for Issue #${{ matrix.issue_number }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Test Mode Enabled" >> $GITHUB_STEP_SUMMARY
           echo "- PRs created even when validation fails" >> $GITHUB_STEP_SUMMARY
           echo "- Failed validations marked with [TEST MODE] prefix" >> $GITHUB_STEP_SUMMARY
           echo "- Useful for inspecting attempted fixes" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Check the created PRs for security fixes." >> $GITHUB_STEP_SUMMARY
 
 # Configuration Notes:
 #
@@ -114,17 +116,5 @@ jobs:
 # - Learning from attempted fixes that didn't pass validation
 #
 # Debug Options:
-# - RSOLV_DEBUG: 'true' — Verbose action logging
-# - RSOLV_DEBUG_CONVERSATION: 'true' — Capture full AI conversation transcripts
-#   Useful for inspecting how Claude Code generates tests and fixes
-#
-# Phases Explained:
-# 1. SCAN: Uses AST analysis to detect vulnerabilities with high precision
-# 2. VALIDATE: Generates tests that fail on vulnerable code (RED tests)
-# 3. MITIGATE: Uses Claude Code to fix vulnerabilities, guided by the tests
-#
-# The three-phase approach ensures:
-# - High-confidence vulnerability detection (AST-based)
-# - Test-driven fixes (RED-GREEN-REFACTOR)
-# - Minimal false positives
-# - Educational PR content to help developers understand the fixes
+# - RSOLV_DEBUG: 'true' -- Verbose action logging
+# - RSOLV_DEBUG_CONVERSATION: 'true' -- Capture full AI conversation transcripts

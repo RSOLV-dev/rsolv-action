@@ -16,7 +16,7 @@ In your GitHub repository:
 Create `.github/workflows/rsolv.yml`:
 
 ```yaml
-name: RSOLV Security
+name: RSOLV Security Pipeline
 
 on:
   push:
@@ -25,34 +25,57 @@ on:
     - cron: '0 0 * * 1'  # Weekly scans
   workflow_dispatch:
 
-permissions:
-  contents: write
-  issues: write
-  pull-requests: write
-
 jobs:
   scan:
     runs-on: ubuntu-latest
+    outputs:
+      pipeline_run_id: ${{ steps.rsolv.outputs.pipeline_run_id }}
+      issue_numbers: ${{ steps.rsolv.outputs.issue_numbers }}
+    permissions:
+      contents: write
+      issues: write
     steps:
       - uses: actions/checkout@v4
-      - uses: RSOLV-dev/rsolv-action@main
-        with:
-          api_key: ${{ secrets.RSOLV_API_KEY }}
-          scan_mode: scan
+      - id: rsolv
+        uses: RSOLV-dev/RSOLV-action@v4
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
+          mode: 'scan'
+          max_issues: '3'
 
-  fix:
+  process:
+    needs: scan
+    if: needs.scan.outputs.issue_numbers != '[]'
+    strategy:
+      matrix:
+        issue_number: ${{ fromJSON(needs.scan.outputs.issue_numbers) }}
+      fail-fast: false
+      max-parallel: 1
     runs-on: ubuntu-latest
-    if: github.event_name == 'issues' && contains(github.event.issue.labels.*.name, 'rsolv:automate')
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
-      - uses: RSOLV-dev/rsolv-action@main
-        with:
-          api_key: ${{ secrets.RSOLV_API_KEY }}
+      - uses: RSOLV-dev/RSOLV-action@v4
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
+          mode: 'process'
+          pipeline_run_id: ${{ needs.scan.outputs.pipeline_run_id }}
+          issue_number: ${{ matrix.issue_number }}
 ```
+
+**How this works:**
+- The `scan` job detects vulnerabilities and outputs `issue_numbers` (a JSON array) and `pipeline_run_id`
+- The `process` job uses a matrix strategy to handle each issue independently
+- Each matrix cell gets a fresh checkout -- no shared working directory between fixes
+- One vulnerability per PR, no scope leak between fixes
+- `fail-fast: false` ensures one failure does not block other fixes
 
 ## 4. Run Your First Scan
 1. Go to **Actions** tab

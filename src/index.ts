@@ -83,6 +83,11 @@ async function run(): Promise<ActionStatus> {
               `created_issues=${JSON.stringify(scanResult.createdIssues)}\n`
             );
             fs.appendFileSync(outputFile, `issues_created=${(scanResult.createdIssues as unknown[]).length}\n`);
+
+            // Flat array of issue numbers for GitHub Actions matrix consumption
+            const issueNumbers = (scanResult.createdIssues as Array<{ number: number }>)
+              .map(issue => issue.number);
+            fs.appendFileSync(outputFile, `issue_numbers=${JSON.stringify(issueNumbers)}\n`);
           }
           if (scanResult.vulnerabilities) {
             fs.appendFileSync(

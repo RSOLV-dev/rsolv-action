@@ -287,15 +287,25 @@ export class PhaseExecutor {
         apiKey: this.config.rsolvApiKey || this.config.apiKey || '',
       });
 
+      // Per-issue filter: when issue_number is provided (matrix mode), process only that issue
+      const issueFilter = options.issueNumber;
+      if (issueFilter) {
+        logger.info(`[PROCESS] Filtering to single issue #${issueFilter} (matrix mode)`);
+      }
+
       logger.info(`[PROCESS] Getting pending issues for run ${pipelineRunId}`);
-      const pendingIssues = await runClient.getPendingIssues(pipelineRunId);
+      const allPendingIssues = await runClient.getPendingIssues(pipelineRunId);
+      const pendingIssues = issueFilter
+        ? allPendingIssues.filter(i => i.issue_number === issueFilter)
+        : allPendingIssues;
 
       if (pendingIssues.length === 0) {
-        logger.info('[PROCESS] No pending issues — nothing to do');
+        const detail = issueFilter ? ` for issue #${issueFilter}` : '';
+        logger.info(`[PROCESS] No pending issues${detail} — nothing to do`);
         return {
           success: true,
           phase: 'process',
-          message: 'No pending issues',
+          message: `No pending issues${detail}`,
           data: { pipeline_run_id: pipelineRunId, processed: 0 },
         };
       }
@@ -309,9 +319,12 @@ export class PhaseExecutor {
       // Validations create mitigate-ready issues, so we loop until no pending work remains.
       const MAX_PASSES = 5;
       for (let pass = 0; pass < MAX_PASSES; pass++) {
-        const pending = pass === 0
+        const allPending = pass === 0
           ? pendingIssues
           : await runClient.getPendingIssues(pipelineRunId);
+        const pending = issueFilter
+          ? allPending.filter(i => i.issue_number === issueFilter)
+          : allPending;
 
         if (pending.length === 0) {
           logger.info(`[PROCESS] Pass ${pass + 1}: no pending work remaining`);
@@ -739,6 +752,8 @@ export class PhaseExecutor {
    * SCAN (creates issues) -> VALIDATE (tests them) -> MITIGATE (fixes them)
    */
   async executeAllPhases(options: ExecuteOptions): Promise<ExecuteResult> {
+    logger.warn('[FULL] DEPRECATED: mode=full will be removed in a future release. Use mode=scan + mode=process with GitHub Actions matrix strategy for per-issue isolation. See https://docs.rsolv.dev/docs/workflows');
+
     const wsUrl = (process.env.RSOLV_API_URL || 'https://api.rsolv.dev')
       .replace(/^http/, 'ws') + '/action/websocket';
     const apiKey = this.config.rsolvApiKey || this.config.apiKey || '';

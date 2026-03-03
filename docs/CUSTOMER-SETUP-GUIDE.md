@@ -19,12 +19,13 @@ This guide will walk you through setting up RSOLV to automatically find and fix 
 5. Value: Your RSOLV API key (starts with `rsolv_`)
 6. Click **Add secret**
 
-### Step 2: Create the Security Scan Workflow
+### Step 2: Create the Workflow
 
-Create `.github/workflows/rsolv-security-scan.yml`:
+Create a single workflow file at `.github/workflows/rsolv-security.yml` that handles
+both scanning and fixing:
 
 ```yaml
-name: RSOLV Security Scan
+name: RSOLV Security Pipeline
 
 on:
   # Run on every push to main branch
@@ -36,97 +37,82 @@ on:
   # Allow manual runs
   workflow_dispatch:
 
-permissions:
-  contents: read
-  issues: write
-
 jobs:
-  security-scan:
+  scan:
     runs-on: ubuntu-latest
+    outputs:
+      pipeline_run_id: ${{ steps.rsolv.outputs.pipeline_run_id }}
+      issue_numbers: ${{ steps.rsolv.outputs.issue_numbers }}
+    permissions:
+      contents: write
+      issues: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        
+
       - name: Run RSOLV Security Scan
-        uses: RSOLV-dev/rsolv-action@main
-        with:
-          api_key: ${{ secrets.RSOLV_API_KEY }}
-          scan_mode: scan
+        id: rsolv
+        uses: RSOLV-dev/RSOLV-action@v4
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          
-      - name: Display scan results
-        if: always()
-        run: |
-          echo "=== Security Scan Complete ==="
-          echo "Check the Issues tab for vulnerabilities found"
-```
+        with:
+          rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
+          mode: 'scan'
+          max_issues: '3'
 
-### Step 3: Create the Fix Workflow
-
-Create `.github/workflows/rsolv-fix-issues.yml`:
-
-```yaml
-name: RSOLV Fix Issues
-
-on:
-  # Trigger when issues are created or labeled
-  issues:
-    types: [opened, labeled]
-  # Allow manual runs for specific issues
-  workflow_dispatch:
-    inputs:
-      issue_number:
-        description: 'Specific issue number to process'
-        required: false
-        type: string
-
-permissions:
-  contents: write
-  issues: write  
-  pull-requests: write
-
-jobs:
-  fix-vulnerabilities:
+  process:
+    needs: scan
+    if: needs.scan.outputs.issue_numbers != '[]'
+    strategy:
+      matrix:
+        issue_number: ${{ fromJSON(needs.scan.outputs.issue_numbers) }}
+      fail-fast: false
+      max-parallel: 1
     runs-on: ubuntu-latest
-    # Only run if issue has the rsolv:automate label
-    if: contains(github.event.issue.labels.*.name, 'rsolv:automate') || github.event_name == 'workflow_dispatch'
-    
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-      
-      - name: Run RSOLV Action
-        uses: RSOLV-dev/rsolv-action@main
-        with:
-          api_key: ${{ secrets.RSOLV_API_KEY }}
-          issue_label: 'rsolv:automate'
+
+      - name: Process vulnerability fix
+        uses: RSOLV-dev/RSOLV-action@v4
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
+          mode: 'process'
+          pipeline_run_id: ${{ needs.scan.outputs.pipeline_run_id }}
+          issue_number: ${{ matrix.issue_number }}
 ```
+
+This single workflow handles both scanning and fixing. The scan job detects
+vulnerabilities, then the process job handles each one independently using
+GitHub Actions matrix strategy -- one vulnerability per PR, no scope leak.
 
 ## How It Works
 
-### 1. Finding Vulnerabilities
-- RSOLV scans your codebase using 172+ security patterns
+### 1. SCAN Phase -- Finding Vulnerabilities
+- RSOLV scans your codebase using 170+ security patterns with AST validation
 - Detects OWASP Top 10 vulnerabilities, CVEs, and framework-specific issues
 - Groups similar vulnerabilities to avoid issue spam
+- Outputs `pipeline_run_id` and `issue_numbers` for the process step
 
-### 2. Creating Issues
-- Creates detailed GitHub issues for each vulnerability type
-- Includes affected files, line numbers, and code snippets
-- Adds severity labels (high, medium, low)
-- Automatically applies `rsolv:automate` label for processing
+### 2. VALIDATE Phase -- Proving Vulnerabilities Exist
+- For each issue, RSOLV generates an executable RED test that exploits the vulnerability
+- If the test does not fail, the vulnerability is not reported (false positive filtering)
+- Test frameworks: Jest, pytest, RSpec, ExUnit -- whatever your project already uses
 
-### 3. Fixing Issues
-- When issues are labeled with `rsolv:automate`, RSOLV generates fixes
-- Creates pull requests with:
+### 3. MITIGATE Phase -- Applying Fixes
+- AI generates a fix that makes the RED test pass (GREEN)
+- Creates one pull request per vulnerability
+- Each PR includes:
   - Detailed explanation of the vulnerability
-  - The fix implementation
+  - The fix implementation with the proving test
   - Educational content about why this fix works
-  - Testing recommendations
+  - Compliance mapping (SOC2, PCI-DSS, etc.)
 
 ## Configuration Options
 
@@ -229,10 +215,10 @@ All paying customers receive access to the complete pattern library with no tier
 - Verify API key is valid
 - Ensure repository has vulnerabilities (try our demo patterns)
 
-### Fix workflow not triggering
-- Verify issue has `rsolv:automate` label
-- Check workflow permissions
-- Ensure API key has fix permissions
+### Process job not running
+- Verify the scan job found issues (check `issue_numbers` output is not `[]`)
+- Check workflow permissions (`contents: write`, `issues: write`, `pull-requests: write`)
+- Ensure API key is valid and active
 
 ### API key errors
 - Keys should start with `rsolv_`

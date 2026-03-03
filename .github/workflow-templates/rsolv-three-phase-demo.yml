@@ -1,10 +1,20 @@
-name: RSOLV Three-Phase Security Demo
+# RSOLV Scan + Matrix Process Demo
+#
+# This workflow demonstrates the RSOLV scan+matrix process pattern:
+# 1. SCAN: Detect vulnerabilities and output issue numbers + pipeline run ID
+# 2. PROCESS: Matrix job processes each issue independently (validate + mitigate)
+#
+# The scan job produces outputs consumed by a matrix strategy, so each issue
+# gets its own isolated runner. This replaces the old three-job sequential
+# (scan -> validate -> mitigate) pattern.
+
+name: RSOLV Scan + Matrix Process Demo
 
 on:
   workflow_dispatch:
     inputs:
       max_issues:
-        description: 'Maximum number of issues to process per phase'
+        description: 'Maximum number of issues to process'
         required: false
         type: number
         default: 5
@@ -20,125 +30,76 @@ permissions:
   pull-requests: write
 
 jobs:
-  # Phase 1: SCAN - Detect vulnerabilities
   scan:
-    name: "Phase 1: SCAN - Detect Vulnerabilities"
+    name: "Scan - Detect Vulnerabilities"
     runs-on: ubuntu-latest
     outputs:
-      issues_created: ${{ steps.scan.outputs.issues_created }}
+      pipeline_run_id: ${{ steps.rsolv.outputs.pipeline_run_id }}
+      issue_numbers: ${{ steps.rsolv.outputs.issue_numbers }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: RSOLV Scan - Detect Vulnerabilities
-        id: scan
-        uses: RSOLV-dev/rsolv-action@v3
+      - name: RSOLV Scan
+        id: rsolv
+        uses: RSOLV-dev/RSOLV-action@v4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEBUG: ${{ inputs.debug && 'rsolv:*' || '' }}
         with:
           rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
           mode: 'scan'
           max_issues: ${{ inputs.max_issues }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DEBUG: ${{ inputs.debug && 'rsolv:*' || '' }}
 
       - name: Scan Results Summary
         run: |
-          echo "Phase 1: SCAN Complete"
-          echo "Issues created: ${{ steps.scan.outputs.issues_created }}"
-          echo "Check the Issues tab for vulnerabilities with 'rsolv:detected' label"
+          echo "Scan Complete"
+          echo "Pipeline Run ID: ${{ steps.rsolv.outputs.pipeline_run_id }}"
+          echo "Issue numbers: ${{ steps.rsolv.outputs.issue_numbers }}"
 
-  # Phase 2: VALIDATE - Validate vulnerabilities using AST analysis
-  validate:
-    name: "Phase 2: VALIDATE - AST Validation"
-    runs-on: ubuntu-latest
+  process:
+    name: "Process Issue #${{ matrix.issue_number }}"
     needs: scan
-    if: needs.scan.result == 'success'
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: RSOLV Validate - AST Analysis
-        id: validate
-        uses: RSOLV-dev/rsolv-action@v3
-        with:
-          rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
-          mode: 'validate'
-          issue_label: 'rsolv:detected'
-          max_issues: ${{ inputs.max_issues }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DEBUG: ${{ inputs.debug && 'rsolv:*' || '' }}
-          LOG_LEVEL: 'debug'
-          # Uncomment the following line for testing with known vulnerable repositories
-          # RSOLV_TESTING_MODE: 'true'
-
-      - name: Validation Results Summary
-        run: |
-          echo "Phase 2: VALIDATE Complete"
-          echo "Validated issues have been updated with AST analysis results"
-          echo "False positives have been marked and closed"
-
-  # Phase 3: MITIGATE - Generate fixes using Claude Code
-  # ADR-037: Multi-issue MITIGATE has architectural bugs.
-  # Always process 1 issue at a time in MITIGATE regardless of max_issues input.
-  mitigate:
-    name: "Phase 3: MITIGATE - Generate Fixes"
+    if: needs.scan.outputs.issue_numbers != '[]'
+    strategy:
+      matrix:
+        issue_number: ${{ fromJSON(needs.scan.outputs.issue_numbers) }}
+      fail-fast: false
+      max-parallel: 1
     runs-on: ubuntu-latest
-    needs: [scan, validate]
-    if: needs.scan.result == 'success'
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Git for PR Creation
-        run: |
-          git config --global user.name "RSOLV Bot"
-          git config --global user.email "bot@rsolv.dev"
-
-      - name: RSOLV Mitigate - Generate Fixes
-        id: mitigate
-        uses: RSOLV-dev/rsolv-action@v3
-        with:
-          rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
-          mode: 'mitigate'
-          issue_label: 'rsolv:validated'
-          max_issues: 1  # ADR-037: multi-issue MITIGATE has known bugs, keep at 1
+      - uses: RSOLV-dev/RSOLV-action@v4
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DEBUG: ${{ inputs.debug && 'rsolv:*' || '' }}
+        with:
+          rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
+          mode: 'process'
+          pipeline_run_id: ${{ needs.scan.outputs.pipeline_run_id }}
+          issue_number: ${{ matrix.issue_number }}
 
-      - name: Mitigation Results Summary
-        run: |
-          echo "Phase 3: MITIGATE Complete"
-          echo "Pull requests have been created for validated vulnerabilities"
-          echo "Check the Pull Requests tab for fix proposals"
-
-  # Final Summary
   summary:
     name: "Demo Complete Summary"
     runs-on: ubuntu-latest
-    needs: [scan, validate, mitigate]
+    needs: [scan, process]
     if: always()
     steps:
       - name: Generate Demo Summary
         run: |
-          echo "RSOLV Three-Phase Security Demo Complete!"
+          echo "RSOLV Scan + Process Demo Complete"
           echo ""
           echo "## Results Summary:"
           echo ""
-          echo "### Phase 1: SCAN"
+          echo "### Scan"
           echo "- Status: ${{ needs.scan.result }}"
-          echo "- Issues Created: ${{ needs.scan.outputs.issues_created || 'N/A' }}"
+          echo "- Pipeline Run ID: ${{ needs.scan.outputs.pipeline_run_id || 'N/A' }}"
+          echo "- Issue Numbers: ${{ needs.scan.outputs.issue_numbers || '[]' }}"
           echo ""
-          echo "### Phase 2: VALIDATE"
-          echo "- Status: ${{ needs.validate.result }}"
-          echo "- Description: AST validation to reduce false positives"
-          echo ""
-          echo "### Phase 3: MITIGATE"
-          echo "- Status: ${{ needs.mitigate.result }}"
-          echo "- Description: Automated fix generation using Claude Code"
+          echo "### Process"
+          echo "- Status: ${{ needs.process.result }}"
+          echo "- Each issue was processed independently via matrix strategy"
           echo ""
           echo "## Next Steps:"
           echo "1. Review created issues in the Issues tab"
-          echo "2. Check validation results (issues updated with AST analysis)"
-          echo "3. Review and merge pull requests with fixes"
+          echo "2. Review and merge pull requests with fixes"
