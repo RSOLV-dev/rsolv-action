@@ -23,44 +23,13 @@ In your repository: Settings → Secrets → New repository secret
 
 ### 3. Choose Your Workflow
 
-**Option A: Simple Scan** (Recommended for first-time users)
+**Recommended: Scan + Matrix Process** (Production workflow)
 
-Detects vulnerabilities and creates GitHub issues. Perfect for getting started.
+Two-job pipeline with per-issue isolation. The scan job detects vulnerabilities, then
+a matrix strategy processes each issue independently -- one vulnerability per PR,
+no scope leak between fixes.
 
 Create `.github/workflows/rsolv-security.yml`:
-
-```yaml
-name: RSOLV Security
-
-on:
-  push:
-    branches: [main]
-  pull_request:
-  schedule:
-    - cron: '0 0 * * 0'  # Weekly scan
-
-jobs:
-  security:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      issues: write
-      pull-requests: write
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: RSOLV Security Scan
-        uses: RSOLV-dev/rsolv-action@v4
-        with:
-          rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
-          mode: 'scan'  # Start with scan only (recommended)
-```
-
-**Option B: Scan + Process Pipeline** (Recommended for production)
-
-Two-job pipeline: scan detects issues, process handles validation and fixes.
-No label-polling delays — the platform tracks what work remains.
 
 ```yaml
 name: RSOLV Security Pipeline
@@ -69,27 +38,37 @@ on:
   push:
     branches: [main]
   schedule:
-    - cron: '0 0 * * 0'
+    - cron: '0 0 * * 0'  # Weekly scan
+  workflow_dispatch:
 
 jobs:
   scan:
     runs-on: ubuntu-latest
     outputs:
       pipeline_run_id: ${{ steps.rsolv.outputs.pipeline_run_id }}
+      issue_numbers: ${{ steps.rsolv.outputs.issue_numbers }}
     permissions:
       contents: write
       issues: write
     steps:
       - uses: actions/checkout@v4
       - id: rsolv
-        uses: RSOLV-dev/rsolv-action@v4
+        uses: RSOLV-dev/RSOLV-action@v4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
           mode: 'scan'
+          max_issues: '3'
 
   process:
     needs: scan
-    if: needs.scan.outputs.pipeline_run_id
+    if: needs.scan.outputs.issue_numbers != '[]'
+    strategy:
+      matrix:
+        issue_number: ${{ fromJSON(needs.scan.outputs.issue_numbers) }}
+      fail-fast: false
+      max-parallel: 1
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -97,19 +76,66 @@ jobs:
       pull-requests: write
     steps:
       - uses: actions/checkout@v4
-      - uses: RSOLV-dev/rsolv-action@v4
+      - uses: RSOLV-dev/RSOLV-action@v4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
           mode: 'process'
           pipeline_run_id: ${{ needs.scan.outputs.pipeline_run_id }}
+          issue_number: ${{ matrix.issue_number }}
 ```
 
-**Option C: Full Pipeline** (Simplest setup)
+**Why this pattern?**
 
-All three phases in one job. Good for small repos or getting started quickly.
+- Each matrix cell gets a fresh `actions/checkout` -- no shared working directory
+- One vulnerability per PR, no scope leak between fixes
+- `fail-fast: false` ensures one failure does not block other fixes
+- `max-parallel: 1` avoids branch conflicts (increase if your repo can handle concurrent PRs)
+- `pipeline_run_id` connects scan results to each process step
+- `issue_numbers` output drives the GitHub Actions matrix strategy
+
+**Scan Only** (Assessment mode)
+
+Run scan without processing fixes. Good for understanding your security posture first.
 
 ```yaml
-name: RSOLV Full Pipeline
+name: RSOLV Security Scan
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 0 * * 0'
+  workflow_dispatch:
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: RSOLV Security Scan
+        uses: RSOLV-dev/RSOLV-action@v4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
+          mode: 'scan'
+```
+
+**Legacy (deprecated): Full Pipeline**
+
+> **Deprecated.** `mode: 'full'` runs all phases in a single job. It logs a deprecation
+> warning at runtime. Use the scan+matrix pattern above instead for per-issue isolation
+> and independent PRs.
+
+```yaml
+name: RSOLV Full Pipeline (deprecated)
 
 on:
   push:
@@ -124,10 +150,12 @@ jobs:
       pull-requests: write
     steps:
       - uses: actions/checkout@v4
-      - uses: RSOLV-dev/rsolv-action@v4
+      - uses: RSOLV-dev/RSOLV-action@v4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
-          mode: 'full'
+          mode: 'full'  # deprecated -- use scan+matrix instead
 ```
 
 ## How It Works
@@ -147,8 +175,9 @@ Every fix is proven with tests that fail before and pass after—no guesswork.
 | Input | Description | Required | Default |
 |-------|-------------|----------|---------|
 | `rsolvApiKey` | RSOLV API key (get at rsolv.dev/signup) | Yes | - |
-| `mode` | Operation mode: `scan`, `process`, `full`, `validate`, or `mitigate` | No | `scan` |
+| `mode` | Operation mode: `scan`, `process`, or `full` (deprecated) | No | `scan` |
 | `pipeline_run_id` | Pipeline run ID from a prior scan step (required for `process` mode) | No | - |
+| `issue_number` | Issue number to process (used with matrix strategy in `process` mode) | No | - |
 | `github-token` | GitHub token (auto-provided by Actions) | No | `${{ github.token }}` |
 | `max_issues` | Maximum issues to process per run | No | `1` |
 

@@ -8,10 +8,7 @@
 # 2. Add 'rsolv:validate' label to specific issues you want to process
 # 3. The workflow will trigger and process only labeled issues
 #
-# Example: Testing only XSS and XXE vulnerabilities
-# - Add 'rsolv:validate' label to XSS issue
-# - Add 'rsolv:validate' label to XXE issue
-# - Workflow runs validation and mitigation only on those two
+# Or use the manual dispatch to scan+matrix process all issues at once.
 
 name: RSOLV Selective Processing
 
@@ -20,169 +17,101 @@ on:
   issues:
     types: [labeled]
 
-  # Manual trigger with issue selection
+  # Manual trigger: scan+matrix for batch processing
   workflow_dispatch:
     inputs:
-      issue_numbers:
-        description: 'Comma-separated issue numbers to process (e.g., 926,925)'
+      max_issues:
+        description: 'Maximum number of issues to scan'
         required: false
+        default: '5'
         type: string
-      mode:
-        description: 'Processing mode'
-        required: false
-        default: 'validate-and-fix'
-        type: choice
-        options:
-          - validate-only
-          - validate-and-fix
-          - fix-only
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
 
 jobs:
-  process-labeled-issues:
-    # Only run if the rsolv:validate label was added
+  # Single-issue processing when rsolv:validate label is added
+  process-labeled-issue:
     if: |
       github.event_name == 'issues' &&
       github.event.label.name == 'rsolv:validate'
     runs-on: ubuntu-latest
 
-    permissions:
-      contents: write
-      pull-requests: write
-      issues: write
-
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
 
-      - name: Process Single Labeled Issue
-        uses: RSOLV-dev/rsolv-action@v3
-        with:
-          rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
-
-          # Process only the specific issue that was labeled
-          issue_number: ${{ github.event.issue.number }}
-
-          # Run validation and mitigation phases
-          mode: 'validate-and-fix'
-
-          # Enable educational PR content
-          educational_pr: 'true'
-
+      - name: Process Labeled Issue
+        uses: RSOLV-dev/RSOLV-action@v4
         env:
           GITHUB_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
-          RSOLV_TESTING_MODE: 'true'
-          RSOLV_DEBUG: 'true'
-          AI_PROVIDER: 'claude-code'
-          USE_VENDED_CREDENTIALS: 'true'
+        with:
+          rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
+          mode: 'process'
+          issue_number: ${{ github.event.issue.number }}
 
-  process-manual-selection:
-    # Only run on manual workflow dispatch
+  # Scan+matrix for manual dispatch: scan all, then process each via matrix
+  scan:
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    outputs:
+      pipeline_run_id: ${{ steps.rsolv.outputs.pipeline_run_id }}
+      issue_numbers: ${{ steps.rsolv.outputs.issue_numbers }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
 
-    permissions:
-      contents: write
-      pull-requests: write
-      issues: write
+      - name: RSOLV Scan
+        id: rsolv
+        uses: RSOLV-dev/RSOLV-action@v4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+        with:
+          rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
+          mode: 'scan'
+          max_issues: ${{ inputs.max_issues || '5' }}
+
+  process-matrix:
+    name: "Process Issue #${{ matrix.issue_number }}"
+    needs: scan
+    if: needs.scan.outputs.issue_numbers != '[]'
+    runs-on: ubuntu-latest
 
     strategy:
       matrix:
-        # Parse comma-separated issue numbers into array
-        issue: ${{ fromJson(format('[{0}]', github.event.inputs.issue_numbers || '')) }}
-      fail-fast: false  # Continue processing other issues if one fails
-      max-parallel: 2   # Process 2 issues concurrently to avoid rate limits
+        issue_number: ${{ fromJSON(needs.scan.outputs.issue_numbers) }}
+      fail-fast: false
+      max-parallel: 2
 
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
 
-      - name: Process Issue ${{ matrix.issue }}
-        if: matrix.issue != ''
-        uses: RSOLV-dev/rsolv-action@v3
-        with:
-          rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
-
-          # Process specific issue from matrix
-          issue_number: ${{ matrix.issue }}
-
-          # Use mode from input
-          mode: ${{ github.event.inputs.mode }}
-
-          # Enable educational PR content
-          educational_pr: 'true'
-
+      - name: Process Issue ${{ matrix.issue_number }}
+        uses: RSOLV-dev/RSOLV-action@v4
         env:
           GITHUB_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
-          RSOLV_TESTING_MODE: 'true'
-          RSOLV_DEBUG: 'false'
-          AI_PROVIDER: 'claude-code'
-          USE_VENDED_CREDENTIALS: 'true'
-
-  process-all-labeled:
-    # Alternative job to process ALL issues with rsolv:validate label
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.issue_numbers == ''
-    runs-on: ubuntu-latest
-
-    permissions:
-      contents: write
-      pull-requests: write
-      issues: read
-
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
-
-      - name: Process All Labeled Issues
-        uses: RSOLV-dev/rsolv-action@v3
         with:
           rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
-
-          # Process all issues with the label
-          issue_label: 'rsolv:validate'
-
-          # Run validation and mitigation phases
-          mode: 'validate-and-fix'
-
-          # Limit concurrent processing
-          max_issues: '5'
-
-          # Enable educational PR content
-          educational_pr: 'true'
-
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
-          RSOLV_TESTING_MODE: 'true'
-          RSOLV_DEBUG: 'false'
-          AI_PROVIDER: 'claude-code'
-          USE_VENDED_CREDENTIALS: 'true'
+          mode: 'process'
+          pipeline_run_id: ${{ needs.scan.outputs.pipeline_run_id }}
+          issue_number: ${{ matrix.issue_number }}
 
 # Usage Examples:
 #
-# 1. Process specific issues manually:
-#    - Go to Actions tab
-#    - Select "RSOLV Selective Processing"
-#    - Click "Run workflow"
-#    - Enter issue numbers: "926,925" (for XSS and XXE)
-#    - Select mode: "validate-and-fix"
-#
-# 2. Auto-process when label is added:
+# 1. Process a single issue via label:
 #    - Go to issue #926 (XSS)
 #    - Add label "rsolv:validate"
 #    - Workflow automatically triggers for that issue
 #
-# 3. Process all labeled issues:
-#    - Add "rsolv:validate" label to multiple issues
-#    - Run workflow without specifying issue numbers
-#    - All labeled issues will be processed
-#
-# Benefits:
-# - Test specific vulnerability types without processing all
-# - Avoid complex multi-file vulnerabilities during testing
-# - Focus on simpler issues for faster iteration
-# - Can still do full runs when needed
+# 2. Scan and process all issues via manual dispatch:
+#    - Go to Actions tab
+#    - Select "RSOLV Selective Processing"
+#    - Click "Run workflow"
+#    - Set max_issues (default: 5)
+#    - Each detected issue gets its own matrix job

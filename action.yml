@@ -136,5 +136,7 @@ outputs:
     description: 'GitHub issues created from scan results (JSON array)'
   issues_created:
     description: 'Number of GitHub issues created from scan results'
+  issue_numbers:
+    description: 'Flat JSON array of issue numbers for GitHub Actions matrix strategy (e.g., [230,231,232])'
   pipeline_run_id:
     description: 'RFC-126: Pipeline run ID (set by scan and process modes for downstream steps)'

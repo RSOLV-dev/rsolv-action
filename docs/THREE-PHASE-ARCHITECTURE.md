@@ -18,56 +18,111 @@ Each phase can run independently or as part of a complete pipeline.
 - **Testability**: Clear separation makes testing easier
 - **Scalability**: Process multiple issues efficiently
 
+## Operation Modes
+
+The action supports three modes:
+
+| Mode | Description | Status |
+|------|-------------|--------|
+| `scan` | Detect vulnerabilities, create issues, output `pipeline_run_id` and `issue_numbers` | **Recommended** (first job) |
+| `process` | Run VALIDATE + MITIGATE for a single issue from a prior scan | **Recommended** (matrix job) |
+| `full` | Run all phases in a single job | **Deprecated** -- logs a runtime warning |
+
 ## Usage Examples
 
-### GitHub Action Usage
+### Recommended: Scan + Matrix Process
 
-The three-phase architecture can be used in GitHub Actions with the `mode` input:
+The recommended integration pattern uses a two-job pipeline with GitHub Actions
+matrix strategy for per-issue isolation:
 
 ```yaml
-name: RSOLV Security Fix
+name: RSOLV Security Pipeline
+
 on:
-  issues:
-    types: [opened, labeled]
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 0 * * 0'
+  workflow_dispatch:
 
 jobs:
-  security-fix:
+  scan:
     runs-on: ubuntu-latest
+    outputs:
+      pipeline_run_id: ${{ steps.rsolv.outputs.pipeline_run_id }}
+      issue_numbers: ${{ steps.rsolv.outputs.issue_numbers }}
+    permissions:
+      contents: write
+      issues: write
     steps:
-    - uses: actions/checkout@v4
-    - uses: rsolv-dev/RSOLV-action@v2
-      with:
-        api_key: ${{ secrets.RSOLV_API_KEY }}
-        mode: 'full'  # Run all phases: scan, validate, mitigate
-        issue_number: ${{ github.event.issue.number }}
+      - uses: actions/checkout@v4
+      - id: rsolv
+        uses: RSOLV-dev/RSOLV-action@v4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
+          mode: 'scan'
+          max_issues: '3'
+
+  process:
+    needs: scan
+    if: needs.scan.outputs.issue_numbers != '[]'
+    strategy:
+      matrix:
+        issue_number: ${{ fromJSON(needs.scan.outputs.issue_numbers) }}
+      fail-fast: false
+      max-parallel: 1
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: RSOLV-dev/RSOLV-action@v4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
+          mode: 'process'
+          pipeline_run_id: ${{ needs.scan.outputs.pipeline_run_id }}
+          issue_number: ${{ matrix.issue_number }}
 ```
 
-#### Individual Phase Examples
+**Why this pattern:**
+- Each matrix cell gets a fresh `actions/checkout` -- no shared working directory
+- One vulnerability per PR, no scope leak between fixes
+- `fail-fast: false` ensures one failure does not block other fixes
+- `pipeline_run_id` connects scan results to each process step
+- `issue_numbers` output drives the GitHub Actions matrix strategy
 
-**Scan Only** - Find vulnerabilities and create issues:
+### Scan Only
+
+Find vulnerabilities and create issues without applying fixes:
+
 ```yaml
-- uses: rsolv-dev/RSOLV-action@v2
+- id: rsolv
+  uses: RSOLV-dev/RSOLV-action@v4
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   with:
+    rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
     mode: 'scan'
-    api_key: ${{ secrets.RSOLV_API_KEY }}
 ```
 
-**Validate Only** - Generate tests for existing issues:
-```yaml
-- uses: rsolv-dev/RSOLV-action@v2
-  with:
-    mode: 'validate'
-    issue_number: ${{ github.event.issue.number }}
-    api_key: ${{ secrets.RSOLV_API_KEY }}
-```
+### Legacy (deprecated): Full Mode
 
-**Mitigate Only** - Apply fixes using existing validation data:
+> **Deprecated.** `mode: 'full'` runs all phases in a single job and logs a deprecation
+> warning at runtime. Use the scan+matrix pattern above instead.
+
 ```yaml
-- uses: rsolv-dev/RSOLV-action@v2
+- uses: RSOLV-dev/RSOLV-action@v4
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   with:
-    mode: 'mitigate'
-    issue_number: ${{ github.event.issue.number }}
-    api_key: ${{ secrets.RSOLV_API_KEY }}
+    rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
+    mode: 'full'  # deprecated -- use scan+matrix instead
 ```
 
 ### CLI Usage
@@ -236,27 +291,19 @@ if (!result.success) {
 
 ## GitHub Action Integration
 
-Use the three-phase architecture in GitHub Actions:
+The recommended GitHub Actions integration is the scan+matrix pattern shown
+above in the Usage Examples section. The scan job outputs `pipeline_run_id`
+and `issue_numbers`, which the process job consumes via matrix strategy.
 
-```yaml
-- name: Run RSOLV Three-Phase
-  uses: rsolv/action@v1
-  with:
-    mode: 'three-phase'
-    github-token: ${{ secrets.GITHUB_TOKEN }}
-    anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
-```
+Key inputs for the action:
 
-Or run specific phases:
-
-```yaml
-- name: Validate Only
-  uses: rsolv/action@v1
-  with:
-    mode: 'validate'
-    issues: '1,2,3'
-    format: 'github-actions'
-```
+| Input | Description |
+|-------|-------------|
+| `rsolvApiKey` | RSOLV API key (required) |
+| `mode` | `scan`, `process`, or `full` (deprecated) |
+| `pipeline_run_id` | Pipeline run ID from scan step (required for `process`) |
+| `issue_number` | Issue number to process (used with matrix strategy) |
+| `max_issues` | Maximum issues to process per scan run |
 
 ## Configuration
 
@@ -304,9 +351,30 @@ const config: ActionConfig = {
 **Issue**: "Fix validation failed after max iterations"
 - **Solution**: Increase `maxIterations` or review issue complexity
 
-## Migration from Legacy Mode
+## Migration from Legacy Modes
 
-If you're migrating from the legacy `fix` mode:
+### From `mode: 'full'` (deprecated)
+
+Replace your single-job `full` workflow with the scan+matrix pattern:
+
+```yaml
+# Old way (deprecated) -- single job, all phases together
+- uses: RSOLV-dev/RSOLV-action@v4
+  with:
+    rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
+    mode: 'full'
+
+# New way -- two jobs, per-issue isolation via matrix
+# See the "Recommended: Scan + Matrix Process" example above
+```
+
+### From label-polling workflows
+
+If your workflow triggered on `issues: [opened, labeled]` with `rsolv:automate`
+labels, replace it with the scan+matrix pattern. The platform now tracks work
+directly through `pipeline_run_id` -- no label-polling delays.
+
+### From the legacy `fix` mode (programmatic)
 
 ```typescript
 // Old way (deprecated)

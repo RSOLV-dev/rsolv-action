@@ -4,92 +4,130 @@ RSOLV can now proactively scan your repository for security vulnerabilities and 
 
 ## How It Works
 
-1. **Scan Mode**: RSOLV scans your entire repository for security vulnerabilities
+1. **Scan**: RSOLV scans your entire repository for security vulnerabilities using 170+ patterns with AST validation
 2. **Issue Creation**: Vulnerabilities are grouped by type and GitHub issues are created
-3. **Fix Mode**: RSOLV processes the created issues and generates fix PRs
+3. **Process**: Each issue is processed independently -- VALIDATE generates a RED test, MITIGATE applies the fix
 
 ## Usage
 
-### Basic Scan Workflow
+### Recommended: Scan + Matrix Process
+
+The recommended workflow uses a two-job pipeline with GitHub Actions matrix strategy.
+Each issue is processed in isolation with a fresh checkout -- one vulnerability per PR,
+no scope leak between fixes.
 
 ```yaml
-name: Security Scan and Fix
+name: RSOLV Security Pipeline
 
 on:
   schedule:
     - cron: '0 0 * * 1'  # Weekly on Mondays
+  push:
+    branches: [main]
   workflow_dispatch:
 
 jobs:
   scan:
     runs-on: ubuntu-latest
+    outputs:
+      pipeline_run_id: ${{ steps.rsolv.outputs.pipeline_run_id }}
+      issue_numbers: ${{ steps.rsolv.outputs.issue_numbers }}
+    permissions:
+      contents: write
+      issues: write
     steps:
-      - uses: actions/checkout@v3
-      
+      - uses: actions/checkout@v4
+
       - name: Run Security Scan
-        uses: RSOLV-dev/rsolv-action@main
-        with:
-          api_key: ${{ secrets.RSOLV_API_KEY }}
-          scan_mode: scan
+        id: rsolv
+        uses: RSOLV-dev/RSOLV-action@v4
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
+          mode: 'scan'
+          max_issues: '3'
+
+      - name: Display Results
+        run: |
+          echo "Pipeline run: ${{ steps.rsolv.outputs.pipeline_run_id }}"
+          echo "Issues found: ${{ steps.rsolv.outputs.issue_numbers }}"
+
+  process:
+    needs: scan
+    if: needs.scan.outputs.issue_numbers != '[]'
+    strategy:
+      matrix:
+        issue_number: ${{ fromJSON(needs.scan.outputs.issue_numbers) }}
+      fail-fast: false
+      max-parallel: 1
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Process vulnerability fix
+        uses: RSOLV-dev/RSOLV-action@v4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
+          mode: 'process'
+          pipeline_run_id: ${{ needs.scan.outputs.pipeline_run_id }}
+          issue_number: ${{ matrix.issue_number }}
 ```
 
-### Complete Scan and Fix Workflow
+### Scan Only
+
+Use scan mode alone to assess your security posture without applying fixes:
 
 ```yaml
-name: Complete Security Workflow
+name: RSOLV Security Scan
 
 on:
+  schedule:
+    - cron: '0 0 * * 1'
   workflow_dispatch:
 
 jobs:
-  scan-and-create-issues:
+  scan:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
     steps:
-      - uses: actions/checkout@v3
-      
-      - name: Scan for Vulnerabilities
-        id: scan
-        uses: RSOLV-dev/rsolv-action@main
-        with:
-          api_key: ${{ secrets.RSOLV_API_KEY }}
-          scan_mode: scan
+      - uses: actions/checkout@v4
+
+      - name: Run Security Scan
+        id: rsolv
+        uses: RSOLV-dev/RSOLV-action@v4
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          
-      - name: Display Results
-        run: |
-          echo "Found vulnerabilities: ${{ steps.scan.outputs.scan_results }}"
-          echo "Created issues: ${{ steps.scan.outputs.created_issues }}"
-  
-  fix-vulnerabilities:
-    needs: scan-and-create-issues
-    runs-on: ubuntu-latest
-    if: success()
-    steps:
-      - uses: actions/checkout@v3
-      
-      - name: Fix Security Issues
-        uses: RSOLV-dev/rsolv-action@main
         with:
-          api_key: ${{ secrets.RSOLV_API_KEY }}
-          scan_mode: fix
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
+          mode: 'scan'
 ```
 
 ## Configuration Options
 
 ### Action Inputs
 
-- `scan_mode`: Set to `scan` for vulnerability detection or `fix` for processing issues (default: `fix`)
-- `api_key`: Your RSOLV API key (required)
-- `issue_label`: Label to apply to created issues (default: `rsolv:automate`)
+| Input | Description | Required | Default |
+|-------|-------------|----------|---------|
+| `rsolvApiKey` | Your RSOLV API key | Yes | - |
+| `mode` | `scan`, `process`, or `full` (deprecated) | No | `scan` |
+| `pipeline_run_id` | Pipeline run ID from a prior scan step (required for `process`) | No | - |
+| `issue_number` | Issue number to process (used with matrix strategy) | No | - |
+| `max_issues` | Maximum issues to process per scan run | No | `1` |
 
 ### Outputs
 
 When in scan mode:
+- `pipeline_run_id`: Unique identifier connecting scan results to process steps
+- `issue_numbers`: JSON array of issue numbers (e.g., `[42, 43, 45]`) for use with `fromJSON()` in matrix strategy
 - `scan_results`: JSON object containing all discovered vulnerabilities
 - `created_issues`: Array of GitHub issues created from the scan
 
@@ -137,25 +175,27 @@ on:
 jobs:
   test-scan:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
     steps:
       - name: Checkout NodeGoat
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: OWASP/NodeGoat
-          
+
       - name: Run RSOLV Scan
-        uses: RSOLV-dev/rsolv-action@main
-        with:
-          api_key: ${{ secrets.RSOLV_API_KEY }}
-          scan_mode: scan
+        uses: RSOLV-dev/RSOLV-action@v4
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
+          mode: 'scan'
 ```
 
 ## Limitations
 
-- **Phase 1**: Uses regex-based pattern matching (170 patterns)
-- **Phase 2** (Coming Soon): Semgrep integration for semantic analysis (20,000+ rules)
+- Pattern matching uses 170+ regex-based patterns with AST validation for false positive filtering
 - Large repositories may take several minutes to scan
 - Binary files and files over 1MB are skipped
 
