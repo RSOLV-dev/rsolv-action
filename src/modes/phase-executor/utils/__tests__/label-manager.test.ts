@@ -4,7 +4,7 @@
  * Tests the extracted label management logic that maps backend classification
  * strings to GitHub label operations.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { applyValidationLabels } from '../label-manager.js';
 
 // Mock the github api module
@@ -13,7 +13,17 @@ vi.mock('../../../../github/api.js', () => ({
   removeLabel: vi.fn(),
 }));
 
+vi.mock('../../../../utils/logger.js', () => ({
+  logger: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  },
+}));
+
 import { addLabels, removeLabel } from '../../../../github/api.js';
+import { logger } from '../../../../utils/logger.js';
 
 const mockAddLabels = vi.mocked(addLabels);
 const mockRemoveLabel = vi.mocked(removeLabel);
@@ -122,5 +132,61 @@ describe('applyValidationLabels', () => {
 
     expect(mockAddLabels).not.toHaveBeenCalled();
     expect(mockRemoveLabel).not.toHaveBeenCalled();
+  });
+
+  describe('retry behavior', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('retries on GitHub API failure up to 3 times', async () => {
+      mockAddLabels
+        .mockRejectedValueOnce(new Error('rate limit'))
+        .mockRejectedValueOnce(new Error('rate limit'))
+        .mockRejectedValueOnce(new Error('rate limit'));
+
+      const promise = applyValidationLabels(issueInfo, 'infrastructure_failure');
+      // Advance through retry delays (1s + 2s)
+      await vi.advanceTimersByTimeAsync(1000);
+      await vi.advanceTimersByTimeAsync(2000);
+      await promise;
+
+      // Should have attempted 3 times
+      expect(mockAddLabels).toHaveBeenCalledTimes(3);
+    });
+
+    it('succeeds on second attempt after initial failure', async () => {
+      mockAddLabels
+        .mockRejectedValueOnce(new Error('network timeout'))
+        .mockResolvedValueOnce(undefined);
+
+      const promise = applyValidationLabels(issueInfo, 'infrastructure_failure');
+      await vi.advanceTimersByTimeAsync(1000);
+      await promise;
+
+      expect(mockAddLabels).toHaveBeenCalledTimes(2);
+    });
+
+    it('logs warning after all retries exhausted', async () => {
+      mockAddLabels
+        .mockRejectedValueOnce(new Error('API error'))
+        .mockRejectedValueOnce(new Error('API error'))
+        .mockRejectedValueOnce(new Error('API error'));
+
+      const promise = applyValidationLabels(issueInfo, 'infrastructure_failure');
+      await vi.advanceTimersByTimeAsync(1000);
+      await vi.advanceTimersByTimeAsync(2000);
+      await promise;
+
+      // The outer catch logs a final warning
+      expect(logger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to update labels'),
+        expect.any(Error)
+      );
+    });
   });
 });
