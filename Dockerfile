@@ -78,7 +78,9 @@ RUN apt-get update && \
       # Started on-demand by ensurePostgresql() in test-runner — NOT running by default
       postgresql postgresql-client \
       # RFC-103 B2: shared-mime-info for Ruby mimemagic/marcel gems (MIME type detection)
-      shared-mime-info && \
+      shared-mime-info \
+      # zstd required by mise installer (ships .tar.zst archives)
+      zstd && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install mise for multi-runtime support (Ruby, Python, Java, etc.)
