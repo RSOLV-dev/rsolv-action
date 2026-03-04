@@ -16,6 +16,20 @@
 import { addLabels, removeLabel } from '../../../github/api.js';
 import { logger } from '../../../utils/logger.js';
 
+async function withRetry<T>(fn: () => Promise<T>, label: string, maxAttempts = 3): Promise<T> {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      if (attempt === maxAttempts) throw error;
+      const delay = attempt * 1000;
+      logger.warn(`[LABELS] ${label} failed (attempt ${attempt}/${maxAttempts}), retrying in ${delay}ms`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  throw new Error('unreachable');
+}
+
 export interface LabelIssueInfo {
   owner: string;
   repo: string;
@@ -40,43 +54,43 @@ export async function applyValidationLabels(
     switch (classification) {
     case 'validated':
       logger.info(`[LABELS] Adding 'rsolv:validated' to issue #${issueNumber}`);
-      await addLabels(owner, repo, issueNumber, ['rsolv:validated']);
+      await withRetry(() => addLabels(owner, repo, issueNumber, ['rsolv:validated']), `addLabels(rsolv:validated, #${issueNumber})`);
       if (currentLabels.includes('rsolv:detected')) {
         logger.info(`[LABELS] Removing 'rsolv:detected' from issue #${issueNumber}`);
-        await removeLabel(owner, repo, issueNumber, 'rsolv:detected');
+        await withRetry(() => removeLabel(owner, repo, issueNumber, 'rsolv:detected'), `removeLabel(rsolv:detected, #${issueNumber})`);
       }
       break;
 
     case 'false_positive':
       logger.info(`[LABELS] Adding 'rsolv:false-positive' to issue #${issueNumber}`);
-      await addLabels(owner, repo, issueNumber, ['rsolv:false-positive']);
+      await withRetry(() => addLabels(owner, repo, issueNumber, ['rsolv:false-positive']), `addLabels(rsolv:false-positive, #${issueNumber})`);
       if (currentLabels.includes('rsolv:detected')) {
         logger.info(`[LABELS] Removing 'rsolv:detected' from issue #${issueNumber}`);
-        await removeLabel(owner, repo, issueNumber, 'rsolv:detected');
+        await withRetry(() => removeLabel(owner, repo, issueNumber, 'rsolv:detected'), `removeLabel(rsolv:detected, #${issueNumber})`);
       }
       break;
 
     case 'infrastructure_failure':
       logger.info(`[LABELS] Adding 'rsolv:validation-inconclusive' to issue #${issueNumber} (infrastructure)`);
-      await addLabels(owner, repo, issueNumber, ['rsolv:validation-inconclusive']);
+      await withRetry(() => addLabels(owner, repo, issueNumber, ['rsolv:validation-inconclusive']), `addLabels(rsolv:validation-inconclusive, #${issueNumber})`);
       // Keep rsolv:detected — vulnerability may be real
       break;
 
     case 'inconclusive':
       logger.info(`[LABELS] Adding 'rsolv:validation-inconclusive' to issue #${issueNumber} (static test)`);
-      await addLabels(owner, repo, issueNumber, ['rsolv:validation-inconclusive']);
+      await withRetry(() => addLabels(owner, repo, issueNumber, ['rsolv:validation-inconclusive']), `addLabels(rsolv:validation-inconclusive, #${issueNumber})`);
       // Keep rsolv:detected — behavioral test needed
       break;
 
     case 'no_test_framework':
       logger.info(`[LABELS] Adding 'rsolv:validation-unavailable' to issue #${issueNumber} (no test framework)`);
-      await addLabels(owner, repo, issueNumber, ['rsolv:validation-unavailable']);
+      await withRetry(() => addLabels(owner, repo, issueNumber, ['rsolv:validation-unavailable']), `addLabels(rsolv:validation-unavailable, #${issueNumber})`);
       // Keep rsolv:detected — vulnerability may be real
       break;
 
     case 'max_turns_exceeded':
       logger.info(`[LABELS] Adding 'rsolv:validation-inconclusive' to issue #${issueNumber} (max turns exceeded)`);
-      await addLabels(owner, repo, issueNumber, ['rsolv:validation-inconclusive']);
+      await withRetry(() => addLabels(owner, repo, issueNumber, ['rsolv:validation-inconclusive']), `addLabels(rsolv:validation-inconclusive, #${issueNumber})`);
       // Keep rsolv:detected — vulnerability likely real, just ran out of turns
       break;
 
