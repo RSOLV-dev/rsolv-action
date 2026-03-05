@@ -120,8 +120,11 @@ export function setupClaudeCodeMock() {
       }
 
       // Handle branch switching (git checkout without -b)
+      // Supports: git checkout <ref>, git checkout --quiet <ref>, git checkout <ref> --quiet
       if (cmd.includes('git checkout') && !cmd.includes('-b')) {
-        const match = cmd.match(/git checkout\s+["']?([^\s"']+)["']?/);
+        // Strip flags (--quiet, --force, etc.) to extract the ref
+        const stripped = cmd.replace(/\s+--\w+/g, '');
+        const match = stripped.match(/git checkout\s+["']?([^\s"']+)["']?/);
         if (match) {
           const branchName = match[1];
           if (mockGitState.branches.has(branchName)) {
