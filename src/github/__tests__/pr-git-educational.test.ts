@@ -339,7 +339,7 @@ describe('Educational PR Creation', () => {
       expect(globalPRBody).toContain('0 failed, 3 passed, 3 total');
     });
 
-    test('should include attack example section when vulnerability has examples', async () => {
+    test('should NOT include attack example section (removed — content was mislabeled fix guidance)', async () => {
       const issue = {
         id: '101',
         number: 789,
@@ -374,9 +374,10 @@ describe('Educational PR Creation', () => {
 
       expect(result.success).toBe(true);
 
-      // Verify attack example section is present (platform content has example)
-      expect(globalPRBody).toContain('🎯 Attack Example');
-      expect(globalPRBody).toContain('How this vulnerability could be exploited');
+      // Attack Example section removed — education.example contains fix recommendations,
+      // not attack scenarios. Content already appears under "Understanding This Fix".
+      // See ROADMAP.md backlog for adding real attack_example field.
+      expect(globalPRBody).not.toContain('🎯 Attack Example');
     });
 
     test('should include learning resources section with CWE link', async () => {

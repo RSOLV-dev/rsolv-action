@@ -576,9 +576,6 @@ function generateEducationalPrBody(
   // RFC-041: Test Results (RED → GREEN)
   sections.push(...generateTestResultsSection(validationData));
 
-  // RFC-041: Attack Examples
-  sections.push(...generateAttackExampleSection(education));
-
   // Learning Resources
   sections.push(...generateLearningResourcesSection(summary, education));
 
