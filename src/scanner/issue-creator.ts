@@ -65,6 +65,83 @@ const VULNERABILITY_TYPE_NAMES: Record<string, string> = {
 };
 
 /**
+ * CWE-specific vulnerability names for precise issue titles.
+ * Falls back to VULNERABILITY_TYPE_NAMES when CWE is unknown/unmapped.
+ */
+const CWE_NAMES: Record<string, string> = {
+  'CWE-22': 'Path Traversal',
+  'CWE-77': 'Command Injection',
+  'CWE-78': 'OS Command Injection',
+  'CWE-79': 'Cross-Site Scripting (XSS)',
+  'CWE-89': 'SQL Injection',
+  'CWE-90': 'LDAP Injection',
+  'CWE-91': 'XML Injection',
+  'CWE-94': 'Code Injection',
+  'CWE-95': 'Eval Injection',
+  'CWE-98': 'Remote File Inclusion',
+  'CWE-256': 'Weak Password Storage',
+  'CWE-259': 'Hardcoded Password',
+  'CWE-284': 'Broken Access Control',
+  'CWE-287': 'Broken Authentication',
+  'CWE-295': 'Improper Certificate Validation',
+  'CWE-307': 'Brute Force Vulnerability',
+  'CWE-327': 'Weak Cryptographic Algorithm',
+  'CWE-328': 'Weak Hash Without Salt',
+  'CWE-330': 'Insecure Random Number Generation',
+  'CWE-338': 'Cryptographically Weak PRNG',
+  'CWE-352': 'Cross-Site Request Forgery (CSRF)',
+  'CWE-502': 'Insecure Deserialization',
+  'CWE-521': 'Weak Password Requirements',
+  'CWE-601': 'Open Redirect',
+  'CWE-611': 'XML External Entity (XXE)',
+  'CWE-643': 'XPath Injection',
+  'CWE-798': 'Hardcoded Credentials',
+  'CWE-918': 'Server-Side Request Forgery (SSRF)',
+  'CWE-1321': 'Prototype Pollution',
+};
+
+/**
+ * Get CWE-specific name, falling back to pattern type name
+ */
+function getCweSpecificName(cweId: string | undefined, patternType: string): string {
+  if (cweId && CWE_NAMES[cweId]) {
+    return CWE_NAMES[cweId];
+  }
+  return getVulnerabilityTypeName(patternType);
+}
+
+/**
+ * OWASP Top 10 2021 categories for generating clickable links
+ */
+const OWASP_TOP10_2021: Record<string, { title: string; slug: string }> = {
+  'A01': { title: 'Broken Access Control', slug: 'A01_2021-Broken_Access_Control' },
+  'A02': { title: 'Cryptographic Failures', slug: 'A02_2021-Cryptographic_Failures' },
+  'A03': { title: 'Injection', slug: 'A03_2021-Injection' },
+  'A04': { title: 'Insecure Design', slug: 'A04_2021-Insecure_Design' },
+  'A05': { title: 'Security Misconfiguration', slug: 'A05_2021-Security_Misconfiguration' },
+  'A06': { title: 'Vulnerable and Outdated Components', slug: 'A06_2021-Vulnerable_and_Outdated_Components' },
+  'A07': { title: 'Identification and Authentication Failures', slug: 'A07_2021-Identification_and_Authentication_Failures' },
+  'A08': { title: 'Software and Data Integrity Failures', slug: 'A08_2021-Software_and_Data_Integrity_Failures' },
+  'A09': { title: 'Security Logging and Monitoring Failures', slug: 'A09_2021-Security_Logging_and_Monitoring_Failures' },
+  'A10': { title: 'Server-Side Request Forgery', slug: 'A10_2021-Server-Side_Request_Forgery_(SSRF)' },
+};
+
+/**
+ * Format OWASP category as a clickable link, e.g.
+ * "A03:2021 Injection" → "[A03:2021 - Injection](https://owasp.org/Top10/A03_2021-Injection/)"
+ */
+function formatOwaspLink(owaspCategory: string): string {
+  const match = owaspCategory.match(/^(A\d{2}):(\d{4})/);
+  if (!match) return owaspCategory;
+
+  const code = match[1];
+  const entry = OWASP_TOP10_2021[code];
+  if (!entry) return owaspCategory;
+
+  return `[${code}:${match[2]} - ${entry.title}](https://owasp.org/Top10/${entry.slug}/)`;
+}
+
+/**
  * Get human-readable name for a vulnerability type
  */
 function getVulnerabilityTypeName(type: string): string {
@@ -321,7 +398,8 @@ export class IssueCreator {
 
   private generateIssueTitle(group: VulnerabilityGroup): string {
     const vulnType = group.type || 'security-vulnerability';
-    const readableType = getVulnerabilityTypeName(vulnType);
+    const cweId = group.vulnerabilities[0]?.cweId;
+    const readableType = getCweSpecificName(cweId, vulnType);
     const fileCount = group.files.length;
     const fileText = fileCount === 1 ? 'file' : 'files';
 
@@ -335,7 +413,8 @@ export class IssueCreator {
     sections.push('## Security Vulnerability Report');
     sections.push('');
     const vulnType = group.type || 'security-vulnerability';
-    const readableType = getVulnerabilityTypeName(vulnType);
+    const cweId = group.vulnerabilities[0]?.cweId;
+    const readableType = getCweSpecificName(cweId, vulnType);
     sections.push(`**Type**: ${readableType}`);
     sections.push(`**Severity**: ${group.severity.toUpperCase()}`);
     sections.push(`**Total Instances**: ${group.count}`);
@@ -351,7 +430,7 @@ export class IssueCreator {
         classificationLines.push(`- **CWE**: [${representative.cweId}](https://cwe.mitre.org/data/definitions/${cweNum}.html)`);
       }
       if (representative.owaspCategory) {
-        classificationLines.push(`- **OWASP**: ${representative.owaspCategory}`);
+        classificationLines.push(`- **OWASP**: ${formatOwaspLink(representative.owaspCategory)}`);
       }
       if (representative.confidence !== undefined) {
         classificationLines.push(`- **Confidence**: ${representative.confidence}%`);

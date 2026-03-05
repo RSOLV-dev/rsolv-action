@@ -165,7 +165,7 @@ export class GitBasedTestValidator {
 
     try {
       // Checkout commit
-      execSync(`git checkout ${commit} --quiet`, { cwd: this.repoPath });
+      execSync(`git checkout --quiet ${commit}`, { cwd: this.repoPath });
 
       // Run each RED test individually
       const testResults = redTests.map((redTest, index) =>
@@ -184,7 +184,7 @@ export class GitBasedTestValidator {
       };
     } finally {
       // Restore original branch
-      execSync(`git checkout ${currentBranch} --quiet`, { cwd: this.repoPath });
+      execSync(`git checkout --quiet ${currentBranch}`, { cwd: this.repoPath });
     }
   }
 
