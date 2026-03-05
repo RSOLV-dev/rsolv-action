@@ -27,14 +27,18 @@ import {
   type ValidateRedTest,
 } from '../validate-test-reuse.js';
 
-// Check if pytest is available
+// Check if pytest is available via the SAME command the test runner uses.
+// getTestCommand('pytest', ...) returns `python -m pytest ...`, so we must
+// verify that `python -m pytest` works — not just bare `pytest`.
+// A bare `pytest` binary existing but `python -m pytest` failing is the
+// exact mismatch that caused this test to be "flaky".
 let hasPytest = false;
 try {
-  execSync('python3 -m pytest --version', { stdio: 'pipe' });
+  execSync('python -m pytest --version', { stdio: 'pipe' });
   hasPytest = true;
 } catch {
   try {
-    execSync('pytest --version', { stdio: 'pipe' });
+    execSync('python3 -m pytest --version', { stdio: 'pipe' });
     hasPytest = true;
   } catch {
     hasPytest = false;

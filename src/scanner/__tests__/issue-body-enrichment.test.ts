@@ -69,9 +69,9 @@ describe('Issue Body Enrichment', () => {
     expect(body).toContain('cwe.mitre.org');
   });
 
-  it('should include OWASP category when available', () => {
+  it('should include OWASP category as clickable link', () => {
     const body = generateBody(createGroup());
-    expect(body).toContain('A03:2021 Injection');
+    expect(body).toContain('[A03:2021 - Injection](https://owasp.org/Top10/A03_2021-Injection/)');
   });
 
   it('should include confidence score', () => {

@@ -336,7 +336,7 @@ export async function verifyFixWithValidateRedTest(
   try {
     // Step 1: Checkout vulnerable commit and run RED test (expect FAIL)
     logger.info(`[MITIGATE] Checking out vulnerable commit ${vulnerableCommit.substring(0, 8)} for RED test verification`);
-    execSync(`git checkout ${vulnerableCommit} --quiet`, {
+    execSync(`git checkout --quiet ${vulnerableCommit}`, {
       cwd: workingDir,
       encoding: 'utf-8',
     });
@@ -353,7 +353,7 @@ export async function verifyFixWithValidateRedTest(
 
     // Step 2: Checkout fixed commit and run RED test (expect PASS)
     logger.info(`[MITIGATE] Checking out fixed commit ${fixedCommit.substring(0, 8)} for RED test verification`);
-    execSync(`git checkout ${fixedCommit} --quiet`, {
+    execSync(`git checkout --quiet ${fixedCommit}`, {
       cwd: workingDir,
       encoding: 'utf-8',
     });
@@ -370,7 +370,7 @@ export async function verifyFixWithValidateRedTest(
   } finally {
     // Restore original HEAD
     try {
-      execSync(`git checkout ${originalHead} --quiet`, {
+      execSync(`git checkout --quiet ${originalHead}`, {
         cwd: workingDir,
         encoding: 'utf-8',
       });
