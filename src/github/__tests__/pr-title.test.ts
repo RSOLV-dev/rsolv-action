@@ -119,4 +119,75 @@ describe('PR title format', () => {
       expect(title).toBe('[RSOLV] Fix Security fix applied (fixes #1)');
     });
   });
+
+  describe('CWE-specific names in PR titles', () => {
+    // These tests verify that when a CWE has a specific name in CWE_NAMES,
+    // the PR title uses that name instead of the generic humanized pattern type.
+    // Import the exported function from issue-creator
+    let getCweSpecificName: (cweId: string | undefined, patternType: string) => string;
+
+    beforeAll(async () => {
+      const mod = await import('../../scanner/issue-creator.js');
+      getCweSpecificName = mod.getCweSpecificName;
+    });
+
+    function buildPrTitleWithCwe(
+      prefix: string,
+      summary: { title?: string; vulnerabilityType?: string; cwe?: string },
+      issueNumber: number
+    ): string {
+      const vuln = summary.vulnerabilityType;
+      const cwe = summary.cwe;
+
+      let vulnPhrase: string;
+      if (vuln && vuln !== 'security' && vuln !== 'unknown') {
+        // Use CWE-specific name when available, fall back to humanized type
+        const displayName = cwe
+          ? getCweSpecificName(cwe, vuln)
+          : humanizeVulnType(vuln);
+        vulnPhrase = cwe ? `${displayName} (${cwe})` : displayName;
+      } else if (cwe) {
+        vulnPhrase = `${cwe} vulnerability`;
+      } else {
+        const title = (summary.title || 'Security fix applied')
+          .replace(/^(Security fix applied|Fix applied)\s*[-:]?\s*/i, '');
+        vulnPhrase = title || 'Security fix applied';
+      }
+      return `${prefix}[RSOLV] Fix ${vulnPhrase} (fixes #${issueNumber})`;
+    }
+
+    function humanizeVulnType(vulnType: string): string {
+      const acronyms = new Set(['xss', 'csrf', 'ssrf', 'sql', 'xxe', 'ldap', 'rce']);
+      return vulnType
+        .replace(/[_-]/g, ' ')
+        .split(' ')
+        .map(word => acronyms.has(word.toLowerCase()) ? word.toUpperCase() : word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+    }
+
+    it('uses CWE-specific name for CWE-256 instead of generic type', () => {
+      const title = buildPrTitleWithCwe('', { vulnerabilityType: 'weak_cryptography', cwe: 'CWE-256' }, 42);
+      expect(title).toBe('[RSOLV] Fix Weak Password Storage (CWE-256) (fixes #42)');
+    });
+
+    it('uses CWE-specific name for CWE-327', () => {
+      const title = buildPrTitleWithCwe('', { vulnerabilityType: 'weak_cryptography', cwe: 'CWE-327' }, 15);
+      expect(title).toBe('[RSOLV] Fix Weak Cryptographic Algorithm (CWE-327) (fixes #15)');
+    });
+
+    it('falls back to humanized type for unknown CWE', () => {
+      const title = buildPrTitleWithCwe('', { vulnerabilityType: 'weak_cryptography', cwe: 'CWE-99999' }, 7);
+      expect(title).toBe('[RSOLV] Fix Weak Cryptography (CWE-99999) (fixes #7)');
+    });
+
+    it('uses humanized type when no CWE provided', () => {
+      const title = buildPrTitleWithCwe('', { vulnerabilityType: 'sql_injection' }, 3);
+      expect(title).toBe('[RSOLV] Fix SQL Injection (fixes #3)');
+    });
+
+    it('uses CWE-specific name for CWE-798', () => {
+      const title = buildPrTitleWithCwe('', { vulnerabilityType: 'hardcoded_secrets', cwe: 'CWE-798' }, 10);
+      expect(title).toBe('[RSOLV] Fix Hardcoded Credentials (CWE-798) (fixes #10)');
+    });
+  });
 });
