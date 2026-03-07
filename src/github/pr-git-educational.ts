@@ -9,6 +9,7 @@ import { logger } from '../utils/logger.js';
 import { getGitHubClient } from './api.js';
 import { execSync } from 'child_process';
 import { RsolvApiClient } from '../external/api-client.js';
+import { getCweSpecificName } from '../scanner/issue-creator.js';
 
 /**
  * Enhanced PR result with educational content
@@ -45,9 +46,10 @@ function buildPrTitle(
   // Build a descriptive vulnerability phrase
   let vulnPhrase: string;
   if (vuln && vuln !== 'security' && vuln !== 'unknown') {
-    // Humanize: "sql_injection" → "SQL Injection", "xss" → "XSS"
-    const humanized = humanizeVulnType(vuln);
-    vulnPhrase = cwe ? `${humanized} (${cwe})` : humanized;
+    // Use CWE-specific name when available (e.g., CWE-256 → "Weak Password Storage")
+    // Falls back to humanized pattern type for unknown CWEs
+    const displayName = cwe ? getCweSpecificName(cwe, vuln) : humanizeVulnType(vuln);
+    vulnPhrase = cwe ? `${displayName} (${cwe})` : displayName;
   } else if (cwe) {
     vulnPhrase = `${cwe} vulnerability`;
   } else {

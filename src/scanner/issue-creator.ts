@@ -103,7 +103,7 @@ const CWE_NAMES: Record<string, string> = {
 /**
  * Get CWE-specific name, falling back to pattern type name
  */
-function getCweSpecificName(cweId: string | undefined, patternType: string): string {
+export function getCweSpecificName(cweId: string | undefined, patternType: string): string {
   if (cweId && CWE_NAMES[cweId]) {
     return CWE_NAMES[cweId];
   }
