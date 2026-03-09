@@ -78,7 +78,8 @@ function parseAnalysisResponse(response: string, issue: IssueContext): AnalysisD
           requiredContext: jsonData.requiredContext || [],
           suggestedApproach: jsonData.suggestedApproach || '',
           confidenceScore: jsonData.confidenceScore || 0.7,
-          canBeFixed: jsonData.canBeFixed !== undefined ? jsonData.canBeFixed : true
+          canBeFixed: jsonData.canBeFixed !== undefined ? jsonData.canBeFixed : true,
+          owaspCategory: jsonData.owaspCategory || undefined
         };
       }
     } catch (jsonError) {
@@ -149,6 +150,10 @@ function parseAnalysisResponse(response: string, issue: IssueContext): AnalysisD
       canBeFixed: filesToModify.length > 0 && suggestedApproach.length > 0
     });
     
+    // Extract OWASP category from issue body (e.g. "A03:2021")
+    const issueText = `${issue.title} ${issue.body || ''}`;
+    const owaspMatch = issueText.match(/(A\d{2}:\d{4})/);
+
     // Build analysis data object
     return {
       issueType,
@@ -157,7 +162,8 @@ function parseAnalysisResponse(response: string, issue: IssueContext): AnalysisD
       requiredContext: [],
       suggestedApproach,
       confidenceScore: 0.7,
-      canBeFixed: (filesToModify.length > 0 || suggestedApproach.length > 50) && suggestedApproach.length > 0
+      canBeFixed: (filesToModify.length > 0 || suggestedApproach.length > 50) && suggestedApproach.length > 0,
+      owaspCategory: owaspMatch ? owaspMatch[1] : undefined
     };
   } catch (error) {
     logger.error('Error parsing AI analysis response', error);

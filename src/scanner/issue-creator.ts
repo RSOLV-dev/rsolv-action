@@ -130,7 +130,7 @@ const OWASP_TOP10_2021: Record<string, { title: string; slug: string }> = {
  * Format OWASP category as a clickable link, e.g.
  * "A03:2021 Injection" → "[A03:2021 - Injection](https://owasp.org/Top10/A03_2021-Injection/)"
  */
-function formatOwaspLink(owaspCategory: string): string {
+export function formatOwaspLink(owaspCategory: string): string {
   const match = owaspCategory.match(/^(A\d{2}):(\d{4})/);
   if (!match) return owaspCategory;
 

@@ -1513,6 +1513,7 @@ export class PhaseExecutor {
           vulnerabilityType: scanData.analysisData.vulnerabilityType || 'security',
           severity: scanData.analysisData.severity || 'medium',
           cwe: scanData.analysisData.cwe,
+          owaspCategory: scanData.analysisData.owaspCategory,
           isAiGenerated: scanData.analysisData.isAiGenerated,
           educationalContent: result.educational_content,
         },

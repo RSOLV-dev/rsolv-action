@@ -129,6 +129,7 @@ export interface AnalysisData {
   cwe?: string;
   isAiGenerated?: boolean;
   cannotFixReason?: string;
+  owaspCategory?: string;
 }
 
 export type IssueType = 
