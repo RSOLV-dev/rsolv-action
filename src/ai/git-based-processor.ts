@@ -686,6 +686,7 @@ This is attempt ${iteration + 1} of ${maxIterations}.`
             vulnerabilityType: analysisData.vulnerabilityType || 'security',
             severity: analysisData.severity || 'medium',
             cwe: analysisData.cwe,
+            owaspCategory: analysisData.owaspCategory,
             isAiGenerated: analysisData.isAiGenerated,
             ...testModeFlags
           },
