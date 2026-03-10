@@ -104,7 +104,10 @@ export const FixResultSchema = {
       type: 'string',
       enum: ['PASS', 'FAIL'],
       description: 'Whether all tests pass'
-    }
+    },
+    fix_summary: { type: 'string', description: 'Concise 1-2 sentence overview of the security fix' },
+    changes_explanation: { type: 'string', description: 'Three-tier explanation: line-level, concept-level, and business-level changes' },
+    risk_assessment: { type: 'string', description: 'Before/after security posture comparison' }
   },
   required: ['title', 'description']
 };
@@ -119,6 +122,9 @@ export interface FixResultOutput {
   files?: Array<{ path: string; changes: string }>;
   tests?: string[];
   finalStatus?: 'PASS' | 'FAIL';
+  fix_summary?: string;
+  changes_explanation?: string;
+  risk_assessment?: string;
 }
 
 /**
