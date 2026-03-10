@@ -120,6 +120,26 @@ describe('applyValidationLabels', () => {
     ).resolves.not.toThrow();
   });
 
+  it('maps test_passed_unexpectedly to rsolv:validation-inconclusive', async () => {
+    await applyValidationLabels(issueInfo, 'test_passed_unexpectedly');
+
+    expect(mockAddLabels).toHaveBeenCalledWith(
+      'test-org', 'test-repo', 42, ['rsolv:validation-inconclusive']
+    );
+    // Keep rsolv:detected — test passed unexpectedly, needs investigation
+    expect(mockRemoveLabel).not.toHaveBeenCalled();
+  });
+
+  it('maps static_test to rsolv:validation-inconclusive', async () => {
+    await applyValidationLabels(issueInfo, 'static_test');
+
+    expect(mockAddLabels).toHaveBeenCalledWith(
+      'test-org', 'test-repo', 42, ['rsolv:validation-inconclusive']
+    );
+    // Keep rsolv:detected — static test, behavioral test needed
+    expect(mockRemoveLabel).not.toHaveBeenCalled();
+  });
+
   it('handles unknown classification gracefully (no-op)', async () => {
     await applyValidationLabels(issueInfo, 'unknown_value');
 

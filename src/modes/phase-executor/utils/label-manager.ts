@@ -11,6 +11,8 @@
  *   inconclusive         → add rsolv:validation-inconclusive, keep rsolv:detected
  *   no_test_framework    → add rsolv:validation-unavailable, keep rsolv:detected
  *   max_turns_exceeded   → add rsolv:validation-inconclusive, keep rsolv:detected
+ *   test_passed_unexpectedly → add rsolv:validation-inconclusive, keep rsolv:detected
+ *   static_test          → add rsolv:validation-inconclusive, keep rsolv:detected
  */
 
 import { addLabels, removeLabel } from '../../../github/api.js';
@@ -92,6 +94,16 @@ export async function applyValidationLabels(
       logger.info(`[LABELS] Adding 'rsolv:validation-inconclusive' to issue #${issueNumber} (max turns exceeded)`);
       await withRetry(() => addLabels(owner, repo, issueNumber, ['rsolv:validation-inconclusive']), `addLabels(rsolv:validation-inconclusive, #${issueNumber})`);
       // Keep rsolv:detected — vulnerability likely real, just ran out of turns
+      break;
+
+    case 'test_passed_unexpectedly':
+      logger.info(`[LABELS] Adding 'rsolv:validation-inconclusive' to issue #${issueNumber} (test passed unexpectedly)`);
+      await withRetry(() => addLabels(owner, repo, issueNumber, ['rsolv:validation-inconclusive']), `addLabels(rsolv:validation-inconclusive, #${issueNumber})`);
+      break;
+
+    case 'static_test':
+      logger.info(`[LABELS] Adding 'rsolv:validation-inconclusive' to issue #${issueNumber} (static test)`);
+      await withRetry(() => addLabels(owner, repo, issueNumber, ['rsolv:validation-inconclusive']), `addLabels(rsolv:validation-inconclusive, #${issueNumber})`);
       break;
 
     default:
