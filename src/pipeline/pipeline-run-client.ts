@@ -100,6 +100,33 @@ export class PipelineRunClient {
   /**
    * PATCH /api/v1/pipeline-runs/:id/issues/:number — report PR details.
    */
+  /**
+   * GET /api/v1/pipeline-runs/:id/issues/:number/pr-body — get platform-assembled PR body.
+   */
+  async fetchPrBody(pipelineRunId: string, issueNumber: number): Promise<string | null> {
+    try {
+      const response = await fetch(
+        `${this.apiUrl}/api/v1/pipeline-runs/${pipelineRunId}/issues/${issueNumber}/pr-body`,
+        {
+          method: 'GET',
+          headers: {
+            'x-api-key': this.apiKey,
+          },
+        }
+      );
+
+      if (!response.ok) return null;
+
+      const data = await response.json() as { pr_body?: string };
+      return data.pr_body || null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * PATCH /api/v1/pipeline-runs/:id/issues/:number — report PR details.
+   */
   async reportPR(
     pipelineRunId: string,
     issueNumber: number,

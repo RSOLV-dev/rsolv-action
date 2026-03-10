@@ -10,6 +10,7 @@ import { getGitHubClient } from './api.js';
 import { execSync } from 'child_process';
 import { RsolvApiClient } from '../external/api-client.js';
 import { getCweSpecificName, formatOwaspLink } from '../scanner/issue-creator.js';
+import { PipelineRunClient } from '../pipeline/pipeline-run-client.js';
 
 /**
  * Enhanced PR result with educational content
@@ -123,7 +124,9 @@ export async function createEducationalPullRequest(
     deletions: number;
     filesChanged: number;
   },
-  validationData?: ValidationData  // RFC-041: Validation phase data
+  validationData?: ValidationData,  // RFC-041: Validation phase data
+  pipelineRunId?: string,
+  pipelineRunClient?: PipelineRunClient
 ): Promise<EducationalPrResult> {
   try {
     // Validate commitHash parameter
@@ -209,11 +212,22 @@ export async function createEducationalPullRequest(
       }
     }
     
+    // Try fetching platform-assembled PR body (graceful degradation)
+    let platformBody: string | null = null;
+    if (pipelineRunId && pipelineRunClient) {
+      platformBody = await pipelineRunClient.fetchPrBody(pipelineRunId, issue.number);
+      if (platformBody) {
+        logger.info(`[PR] Using platform-assembled PR body for issue #${issue.number}`);
+      } else {
+        logger.debug(`[PR] Platform PR body unavailable for issue #${issue.number}, using local generation`);
+      }
+    }
+
     // Generate educational content
     const educationalContent = generateEducationalContent(summary, issue);
 
-    // Generate comprehensive PR body with validation data (RFC-041, RFC-058)
-    const prBody = generateEducationalPrBody(issue, summary, educationalContent, diffStats, validationData);
+    // Use platform body if available, otherwise generate locally
+    const prBody = platformBody || generateEducationalPrBody(issue, summary, educationalContent, diffStats, validationData);
     
     // Create the pull request
     const github = getGitHubClient();
