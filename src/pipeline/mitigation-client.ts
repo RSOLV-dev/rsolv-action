@@ -65,6 +65,9 @@ export interface MitigationResult {
     prevention: string;
     example?: string;
   };
+  fix_summary?: string;
+  changes_explanation?: string;
+  risk_assessment?: string;
   error?: string;
 }
 
@@ -317,6 +320,9 @@ export class MitigationClient {
         description: data.description as string | undefined,
         files_mentioned: data.files_mentioned as string[] | undefined,
         educational_content: data.educational_content as MitigationResult['educational_content'],
+        fix_summary: data.fix_summary as string | undefined,
+        changes_explanation: data.changes_explanation as string | undefined,
+        risk_assessment: data.risk_assessment as string | undefined,
       };
     }
 
