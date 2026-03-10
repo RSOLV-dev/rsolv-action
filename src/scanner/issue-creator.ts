@@ -532,7 +532,10 @@ export class IssueCreator {
       'prototype_pollution': 'Prototype pollution vulnerabilities occur when an attacker can modify an object\'s prototype, allowing them to inject properties that are inherited by all objects. This can lead to denial of service, property injection, or in some cases remote code execution by polluting the prototype chain.',
       'prototype-pollution': 'Prototype pollution vulnerabilities occur when an attacker can modify an object\'s prototype, allowing them to inject properties that are inherited by all objects. This can lead to denial of service, property injection, or in some cases remote code execution by polluting the prototype chain.',
       'code_injection': 'Code injection vulnerabilities occur when user input is passed to functions that execute code dynamically, such as eval(). This can allow attackers to execute arbitrary code in the application context.',
-      'code-injection': 'Code injection vulnerabilities occur when user input is passed to functions that execute code dynamically, such as eval(). This can allow attackers to execute arbitrary code in the application context.'
+      'code-injection': 'Code injection vulnerabilities occur when user input is passed to functions that execute code dynamically, such as eval(). This can allow attackers to execute arbitrary code in the application context.',
+      'template_injection': 'Server-side template injection (SSTI) allows attackers to inject template directives that execute on the server, potentially leading to remote code execution.',
+      'template-injection': 'Server-side template injection (SSTI) allows attackers to inject template directives that execute on the server, potentially leading to remote code execution.',
+      'improper_input_validation': 'Improper input validation fails to adequately check user-supplied data before processing, allowing malicious input to reach sensitive operations.',
     };
 
     return descriptions[type] || 'This type of vulnerability can compromise the security of your application.';
