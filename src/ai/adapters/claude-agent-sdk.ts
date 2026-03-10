@@ -58,6 +58,9 @@ export interface GitSolutionResult {
     description: string;
     securityImpact: string;
     tests: string[];
+    fix_summary?: string;
+    changes_explanation?: string;
+    risk_assessment?: string;
   };
   error?: string;
   isTestMode?: boolean;
@@ -755,7 +758,10 @@ Important:
           title: structuredOutput.title,
           description: structuredOutput.description,
           securityImpact: structuredOutput.securityImpact || 'Security vulnerability addressed',
-          tests: structuredOutput.tests || []
+          tests: structuredOutput.tests || [],
+          fix_summary: structuredOutput.fix_summary,
+          changes_explanation: structuredOutput.changes_explanation,
+          risk_assessment: structuredOutput.risk_assessment,
         } : undefined
       };
 
@@ -847,7 +853,10 @@ Important:
           title: structuredOutput.title,
           description: structuredOutput.description,
           securityImpact: structuredOutput.securityImpact || '',
-          tests: structuredOutput.tests || []
+          tests: structuredOutput.tests || [],
+          fix_summary: structuredOutput.fix_summary,
+          changes_explanation: structuredOutput.changes_explanation,
+          risk_assessment: structuredOutput.risk_assessment,
         } : undefined
       };
 
@@ -997,7 +1006,10 @@ Do NOT make any changes yet.`;
           title: structuredOutput.title,
           description: structuredOutput.description,
           securityImpact: structuredOutput.securityImpact || '',
-          tests: structuredOutput.tests || []
+          tests: structuredOutput.tests || [],
+          fix_summary: structuredOutput.fix_summary,
+          changes_explanation: structuredOutput.changes_explanation,
+          risk_assessment: structuredOutput.risk_assessment,
         } : undefined
       };
 
@@ -1084,7 +1096,10 @@ This is single-pass mode - gather context and fix in one session.`;
           title: structuredOutput.title,
           description: structuredOutput.description,
           securityImpact: structuredOutput.securityImpact || '',
-          tests: structuredOutput.tests || []
+          tests: structuredOutput.tests || [],
+          fix_summary: structuredOutput.fix_summary,
+          changes_explanation: structuredOutput.changes_explanation,
+          risk_assessment: structuredOutput.risk_assessment,
         } : undefined
       };
 

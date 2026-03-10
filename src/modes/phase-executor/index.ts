@@ -1527,7 +1527,7 @@ export class PhaseExecutor {
 
       // Store mitigation phase data for cross-phase persistence
       const issueKey = `issue-${issue.number}`;
-      const mitigationResult = {
+      const mitigationResult: Record<string, unknown> = {
         fixed: prResult.success,
         prUrl: prResult.pullRequestUrl,
         prNumber: prResult.pullRequestNumber,
@@ -1536,6 +1536,11 @@ export class PhaseExecutor {
         backendOrchestrated: true,
         timestamp: new Date().toISOString(),
       };
+
+      // Include content fields for PR body generation (Task 7)
+      if (result.fix_summary) mitigationResult.fix_summary = result.fix_summary;
+      if (result.changes_explanation) mitigationResult.changes_explanation = result.changes_explanation;
+      if (result.risk_assessment) mitigationResult.risk_assessment = result.risk_assessment;
 
       try {
         await this.storePhaseData('mitigation', {
