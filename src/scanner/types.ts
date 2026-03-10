@@ -48,6 +48,7 @@ export interface CreatedIssue {
   url: string;
   vulnerabilityType: string;
   fileCount: number;
+  cweId?: string;
 }
 
 export type IssueLabel = string | { name?: string };

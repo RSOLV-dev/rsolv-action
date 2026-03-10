@@ -343,7 +343,8 @@ export class IssueCreator {
       title,
       url: existingIssue.html_url,
       vulnerabilityType: group.type,
-      fileCount: group.files.length
+      fileCount: group.files.length,
+      cweId: group.vulnerabilities[0]?.cweId
     };
   }
 
@@ -392,7 +393,8 @@ export class IssueCreator {
       title: forgeIssue.title,
       url: forgeIssue.url,
       vulnerabilityType: group.type,
-      fileCount: group.files.length
+      fileCount: group.files.length,
+      cweId: group.vulnerabilities[0]?.cweId
     };
   }
 
