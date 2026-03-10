@@ -1509,6 +1509,16 @@ export class PhaseExecutor {
       // Create PR
       logger.info(`[MITIGATE] Creating PR from commit ${commitHash.substring(0, 8)}`);
 
+      // Build PipelineRunClient for platform PR body fetch (graceful degradation)
+      let prRunClient: import('../../pipeline/pipeline-run-client.js').PipelineRunClient | undefined;
+      if (pipelineRunId) {
+        const { PipelineRunClient } = await import('../../pipeline/pipeline-run-client.js');
+        prRunClient = new PipelineRunClient({
+          apiUrl: process.env.RSOLV_API_URL || 'https://api.rsolv.dev',
+          apiKey: this.config.rsolvApiKey || this.config.apiKey || '',
+        });
+      }
+
       const prResult = await createEducationalPullRequest(
         issue,
         commitHash,
@@ -1524,7 +1534,9 @@ export class PhaseExecutor {
         },
         this.config,
         diffStats,
-        validationData as PrValidationData
+        validationData as PrValidationData,
+        pipelineRunId,
+        prRunClient
       );
 
       const duration = Date.now() - startTime;
