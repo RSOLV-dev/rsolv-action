@@ -25,6 +25,7 @@ import { MitigationClient, type MitigationContext } from '../../pipeline/mitigat
 import { ValidationClient, type ValidationContext } from '../../pipeline/validation-client.js';
 import { TestRunner, type TestFramework } from '../../ai/test-runner.js';
 import { applyValidationLabels } from './utils/label-manager.js';
+import { extractOwaspFromIssue } from './utils/extract-owasp.js';
 
 export interface ExecuteOptions {
   repository?: {
@@ -459,6 +460,7 @@ export class PhaseExecutor {
           issueType: 'security',
           vulnerabilityType: 'security',
           cwe: this.extractCweFromIssue(issueContext),
+          owaspCategory: extractOwaspFromIssue(issueContext.body ?? ''),
         },
       };
 
@@ -717,6 +719,7 @@ export class PhaseExecutor {
           filesToModify: [],
           cwe: cweId,
           isAiGenerated: true,
+          owaspCategory: extractOwaspFromIssue(issueContext.body ?? ''),
         },
       } as unknown as ScanPhaseData;
 
@@ -870,6 +873,7 @@ export class PhaseExecutor {
               issueType: 'security',
               vulnerabilityType: this.extractVulnTypeFromIssue(issue),
               cwe: cweId,
+              owaspCategory: extractOwaspFromIssue(issue.body ?? ''),
             },
           };
 
@@ -932,6 +936,7 @@ export class PhaseExecutor {
               filesToModify: [],
               cwe: cweId,
               isAiGenerated: true,
+              owaspCategory: extractOwaspFromIssue(validation.issue.body ?? ''),
             },
           } as unknown as ScanPhaseData;
 
@@ -1731,6 +1736,7 @@ export class PhaseExecutor {
                 filesToModify: [],
                 cwe: cweId,
                 canBeFixed: true,
+                owaspCategory: extractOwaspFromIssue(issue.body ?? ''),
               },
               canBeFixed: true,
               usedPriorScan: false,
@@ -2153,6 +2159,7 @@ ${validation.falsePositive ?
             filesToModify: [],
             cwe: cweId,
             isAiGenerated: true,
+            owaspCategory: extractOwaspFromIssue(issue.body ?? ''),
           },
         } as unknown as ScanPhaseData;
 
