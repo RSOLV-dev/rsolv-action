@@ -982,7 +982,10 @@ export class TestRunner {
 
       // Default: install to system Python (uv or pip, both with --break-system-packages)
       this.pythonTestPrefix = '';
-      const ensurePytest = `${sysInstall} pytest`;
+      // Django projects need pytest-django for django.test.Client, settings, and DB access
+      const isDjango = await this.fileExists(path.join(workingDir, 'manage.py'));
+      const testPkgs = isDjango ? 'pytest pytest-django' : 'pytest';
+      const ensurePytest = `${sysInstall} ${testPkgs}`;
 
       if (await this.fileExists(path.join(workingDir, 'requirements.txt'))) {
         return `${sysDeps} && (${sysInstall} -r requirements.txt || echo "Some deps failed, continuing...") && ${ensurePytest}`;

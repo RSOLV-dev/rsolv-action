@@ -834,6 +834,29 @@ describe('TestRunner', () => {
       );
       expect(installCall).toBeDefined();
     });
+
+    test('should install pytest-django alongside pytest when manage.py exists (Django project)', async () => {
+      mockFsAccess.mockImplementation((filePath: string) => {
+        if (filePath.endsWith('requirements.txt')) return Promise.resolve();
+        if (filePath.endsWith('manage.py')) return Promise.resolve();
+        return Promise.reject(new Error('ENOENT'));
+      });
+      mockExecAsync.mockResolvedValue({ stdout: '', stderr: '' });
+
+      await runner.runTests({
+        framework: 'pytest',
+        testFile: 'tests/test_security.py',
+        testName: 'test_vulnerability',
+        workingDir: '/tmp/python-repo'
+      });
+
+      const calls = mockExecAsync.mock.calls;
+      const installCall = calls.find((call: unknown[]) =>
+        typeof call[0] === 'string' && call[0].includes('requirements.txt')
+      );
+      expect(installCall).toBeDefined();
+      expect(installCall![0]).toContain('pytest-django');
+    });
   });
 
   describe('Java Version Detection (RFC-103)', () => {
