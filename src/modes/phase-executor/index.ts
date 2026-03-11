@@ -195,19 +195,27 @@ export class PhaseExecutor {
       }
 
       // Full repository scan (original behavior)
-      const scanResult = await this.getScanner().performScan({
+      // RFC-133: Pass scanOutput from config; fall back to createIssues for backward compat
+      const scanConfig: import('../../scanner/types.js').ScanConfig = {
         mode: 'scan',
         repository: {
           ...repository,
           defaultBranch: repository.defaultBranch || 'main'
         },
-        createIssues: true,
         batchSimilar: true,
         issueLabel: this.config.issueLabel || 'rsolv:automate',
         enableASTValidation: process.env.RSOLV_ENABLE_AST_VALIDATION !== 'false',
         rsolvApiKey: this.config.rsolvApiKey,
         maxIssues: this.config.maxIssues
-      });
+      };
+
+      if (this.config.scanOutput) {
+        scanConfig.scanOutput = this.config.scanOutput as import('../../scanner/types.js').ScanOutputDestination[];
+      } else {
+        scanConfig.createIssues = true;
+      }
+
+      const scanResult = await this.getScanner().performScan(scanConfig);
 
       // RFC-126: Register PipelineRun with platform after scan
       const commitSha = options.commitSha || this.getCurrentCommitSha();

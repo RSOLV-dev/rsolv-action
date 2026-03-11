@@ -9,13 +9,28 @@ export interface ScanConfig {
     name: string;
     defaultBranch: string;
   };
-  createIssues: boolean;
+  createIssues?: boolean; // Deprecated: use scanOutput. Kept for backward compat.
+  scanOutput?: ScanOutputDestination[]; // RFC-133: where findings go (default: ['issues'])
   batchSimilar?: boolean;
-  issueLabel: string;
+  issueLabel?: string;
   enableASTValidation?: boolean;
   astValidationBatchSize?: number;
   rsolvApiKey?: string; // Needed for validation API
   maxIssues?: number; // Limit number of issues to create
+  scanDirectory?: string;
+  excludePaths?: string[];
+}
+
+export type ScanOutputDestination = 'issues' | 'report' | 'dashboard';
+
+export interface ScanReport {
+  json: {
+    repository: string;
+    scanDate: string;
+    findings: VulnerabilityGroup[];
+    stats: { totalFiles: number; scannedFiles: number; totalVulnerabilities: number };
+  };
+  markdown: string;
 }
 
 export interface ScanResult {
@@ -31,6 +46,8 @@ export interface ScanResult {
   skippedFalsePositive?: number;
   /** RFC-101: Manifest/config file contents for project shape detection */
   manifestFiles?: Record<string, string>;
+  /** RFC-133: Structured scan report when scan_output includes 'report' */
+  scanReport?: ScanReport;
 }
 
 export interface VulnerabilityGroup {

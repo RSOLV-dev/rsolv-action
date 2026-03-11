@@ -99,6 +99,16 @@ async function run(): Promise<ActionStatus> {
               `security_findings=${JSON.stringify(scanResult.vulnerabilities)}\n`
             );
           }
+
+          // RFC-133: Write scan report files when scan_output includes 'report'
+          if (scanResult.scanReport) {
+            const report = scanResult.scanReport as { json: Record<string, unknown>; markdown: string };
+            const reportDir = process.env.GITHUB_WORKSPACE || '.';
+            fs.writeFileSync(`${reportDir}/rsolv-scan-report.json`, JSON.stringify(report.json, null, 2));
+            fs.writeFileSync(`${reportDir}/rsolv-scan-report.md`, report.markdown);
+            fs.appendFileSync(outputFile, `scan_report_path=${reportDir}/rsolv-scan-report.json\n`);
+            logger.info('Scan report written to rsolv-scan-report.json and rsolv-scan-report.md');
+          }
         }
       }
 

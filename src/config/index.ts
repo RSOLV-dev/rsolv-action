@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { ActionConfig } from '../types/index.js';
 import { logger } from '../utils/logger.js';
 import { DEFAULT_MODEL } from './models.js';
+import { parseScanOutput } from '../scanner/scan-output.js';
 
 // Zod schema for validating configuration
 const AiProviderConfigSchema = z.object({
@@ -72,7 +73,8 @@ const ActionConfigSchema = z.object({
   fixValidation: FixValidationConfigSchema.optional(),
   executableTests: z.boolean().optional(), // RFC-060 Phase 5.1: Enable executable test flow
   claudeMaxTurns: z.number().min(1).max(20).optional(), // RFC-060 Phase 5.1: Maximum Claude iterations (1-20)
-  createPR: z.boolean().optional() // Create Pull Request after successful mitigation (default: true)
+  createPR: z.boolean().optional(), // Create Pull Request after successful mitigation (default: true)
+  scanOutput: z.array(z.string()).optional() // RFC-133: where scan findings go
 });
 
 /**
@@ -223,10 +225,15 @@ async function loadConfigFromFile(configPath: string): Promise<Partial<ActionCon
     const fileContent = fs.readFileSync(configPath, 'utf8');
     
     // Parse YAML or JSON
-    const fileConfig = yaml.load(fileContent) as Partial<ActionConfig>;
-    
+    const fileConfig = yaml.load(fileContent) as Partial<ActionConfig> & { scanOutput?: string | string[] };
+
+    // RFC-133: Normalize scanOutput from YAML (may be string or array)
+    if (fileConfig?.scanOutput !== undefined) {
+      fileConfig.scanOutput = parseScanOutput(fileConfig.scanOutput as string | string[]);
+    }
+
     logger.debug('Configuration file loaded successfully');
-    
+
     return fileConfig || {};
   } catch (error) {
     logger.error(`Error loading configuration from file ${configPath}`, error);
@@ -296,6 +303,11 @@ function loadConfigFromEnv(): Partial<ActionConfig> {
   // Handle createPR configuration (default: true)
   if (process.env.RSOLV_CREATE_PR !== undefined) {
     envConfig.createPR = process.env.RSOLV_CREATE_PR === 'true';
+  }
+
+  // RFC-133: Handle scanOutput — parse comma-separated string from action input
+  if (process.env.RSOLV_SCAN_OUTPUT) {
+    envConfig.scanOutput = parseScanOutput(process.env.RSOLV_SCAN_OUTPUT);
   }
 
   // Parse environment variables JSON string if available
