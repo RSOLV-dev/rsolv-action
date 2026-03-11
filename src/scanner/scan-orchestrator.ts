@@ -83,11 +83,11 @@ export class ScanOrchestrator {
   }
 
   private async fetchTiers(): Promise<SeverityTierMap> {
-    const apiBaseUrl = process.env.RSOLV_API_BASE_URL || process.env.API_BASE_URL || '';
+    const apiBaseUrl = process.env.RSOLV_API_URL || 'https://api.rsolv.dev';
     const apiKey = process.env.RSOLV_API_KEY || '';
 
-    if (!apiBaseUrl || !apiKey) {
-      throw new Error('RSOLV_API_BASE_URL and RSOLV_API_KEY are required for severity tier prioritization');
+    if (!apiKey) {
+      throw new Error('RSOLV_API_KEY is required for severity tier prioritization');
     }
 
     return fetchSeverityTiers(apiBaseUrl, apiKey);

@@ -71,7 +71,7 @@ describe('ScanOrchestrator - max_issues bug', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // fetchTiers reads env vars; mock them to avoid throwing
-    process.env.RSOLV_API_BASE_URL = 'https://api.test.com';
+    process.env.RSOLV_API_URL = 'https://api.test.com';
     process.env.RSOLV_API_KEY = 'test-key';
     orchestrator = new ScanOrchestrator();
   });
