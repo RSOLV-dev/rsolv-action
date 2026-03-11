@@ -205,7 +205,8 @@ describe('executeMitigateForIssue phase data storage', () => {
       (call: unknown[]) => call[0] === 'mitigation'
     );
 
-    // Should NOT store when mitigation failed
+    // storePhaseData is a no-op stub — storage is platform-side via Orchestrator.
+    // Failure notification to Coordinator is handled by Orchestrator.fail_with_notification.
     expect(mitigationStoreCall).toBeUndefined();
   });
 });

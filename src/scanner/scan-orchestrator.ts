@@ -4,7 +4,8 @@ import { GitHubAdapter } from '../forge/github-adapter.js';
 import { logger } from '../utils/logger.js';
 import { ensureLabelsExist } from '../github/label-manager.js';
 import type { ScanConfig, ScanResult } from './types.js';
-import { prioritizeFindings } from './finding-prioritizer.js';
+import { prioritizeFindings, fetchSeverityTiers } from './finding-prioritizer.js';
+import type { SeverityTierMap } from './finding-prioritizer.js';
 
 export class ScanOrchestrator {
   private scanner: RepositoryScanner;
@@ -23,19 +24,22 @@ export class ScanOrchestrator {
       // Ensure all required labels exist first
       if (config.createIssues && process.env.GITHUB_TOKEN) {
         await ensureLabelsExist(
-          config.repository.owner, 
-          config.repository.name, 
+          config.repository.owner,
+          config.repository.name,
           process.env.GITHUB_TOKEN
         );
       }
-      
+
       // Perform the scan
       const scanResult = await this.scanner.scan(config);
-      
+
       // Create issues if configured and vulnerabilities found
       if (config.createIssues && scanResult.groupedVulnerabilities.length > 0) {
+        // RFC-133: Fetch CWE severity tiers from platform (single source of truth)
+        const tiers = await this.fetchTiers();
+
         // RFC-133: Prioritize by CWE severity tier before applying max_issues cap
-        const prioritized = prioritizeFindings(scanResult.groupedVulnerabilities);
+        const prioritized = prioritizeFindings(scanResult.groupedVulnerabilities, tiers);
 
         // Respect max_issues limit in logging
         const maxIssues = config.maxIssues;
@@ -76,6 +80,17 @@ export class ScanOrchestrator {
       logger.error('Scan failed:', error);
       throw error;
     }
+  }
+
+  private async fetchTiers(): Promise<SeverityTierMap> {
+    const apiBaseUrl = process.env.RSOLV_API_BASE_URL || process.env.API_BASE_URL || '';
+    const apiKey = process.env.RSOLV_API_KEY || '';
+
+    if (!apiBaseUrl || !apiKey) {
+      throw new Error('RSOLV_API_BASE_URL and RSOLV_API_KEY are required for severity tier prioritization');
+    }
+
+    return fetchSeverityTiers(apiBaseUrl, apiKey);
   }
 
   private logScanSummary(result: ScanResult): void {

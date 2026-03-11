@@ -47,6 +47,22 @@ vi.mock('../../github/api.js', () => ({
 vi.mock('../../github/label-manager.js', () => ({
   ensureLabelsExist: vi.fn(),
 }));
+vi.mock('../finding-prioritizer.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../finding-prioritizer.js')>();
+  return {
+    ...actual,
+    fetchSeverityTiers: vi.fn().mockResolvedValue({
+      'CWE-89': 'critical',
+      'CWE-78': 'critical',
+      'CWE-94': 'critical',
+      'CWE-502': 'critical',
+      'CWE-79': 'high',
+      'CWE-22': 'high',
+      'CWE-327': 'medium',
+      'CWE-798': 'low',
+    }),
+  };
+});
 
 describe('ScanOrchestrator - max_issues bug', () => {
   let orchestrator: ScanOrchestrator;
@@ -54,6 +70,9 @@ describe('ScanOrchestrator - max_issues bug', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // fetchTiers reads env vars; mock them to avoid throwing
+    process.env.RSOLV_API_BASE_URL = 'https://api.test.com';
+    process.env.RSOLV_API_KEY = 'test-key';
     orchestrator = new ScanOrchestrator();
   });
 

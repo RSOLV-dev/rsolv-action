@@ -8,12 +8,21 @@
  */
 import { describe, it, expect } from 'vitest';
 import { prioritizeFindings, getCweSeverityTier } from '../finding-prioritizer.js';
+import type { SeverityTierMap } from '../finding-prioritizer.js';
 import type { VulnerabilityGroup } from '../types.js';
+
+/** Tier map matching what the platform serves — only the CWEs relevant to pygoat */
+const TIERS: SeverityTierMap = {
+  'CWE-89': 'critical',
+  'CWE-502': 'critical',
+  'CWE-94': 'critical',
+  'CWE-78': 'critical',
+  'CWE-327': 'medium',
+  'CWE-798': 'low',
+};
 
 describe('RFC-133 E2E: pygoat scan prioritization', () => {
   it('verifies real pygoat findings are prioritized correctly with max_issues=3', () => {
-    // These are the actual vulnerability types pygoat produces across runs.
-    // Each entry represents a SCAN finding (metadata only, no actual vulnerable code).
     const pygoatFindings: VulnerabilityGroup[] = [
       // Insertion order matches what the scanner produces (pre-prioritization)
       {
@@ -85,21 +94,17 @@ describe('RFC-133 E2E: pygoat scan prioritization', () => {
     expect(oldTop3).toEqual(['hardcoded_secrets', 'insecure_deserialization', 'code_injection']);
 
     // WITH prioritization: should be all Critical CWEs, ordered by confidence
-    const prioritized = prioritizeFindings(pygoatFindings);
+    const prioritized = prioritizeFindings(pygoatFindings, TIERS);
     const newTop3 = prioritized.slice(0, 3).map(g => g.type);
 
-    // SQL injection (CWE-89, confidence 90) should be first
-    // Insecure deserialization (CWE-502, confidence 85) second
-    // Code injection (CWE-94, confidence 80) third
-    // Hardcoded secrets (CWE-798, Low tier) should NOT be in top 3
     expect(newTop3).toEqual(['sql_injection', 'insecure_deserialization', 'code_injection']);
     expect(newTop3).not.toContain('hardcoded_secrets');
 
     // Verify CWE tiers are correct
-    expect(getCweSeverityTier('CWE-89')).toBe('critical');
-    expect(getCweSeverityTier('CWE-502')).toBe('critical');
-    expect(getCweSeverityTier('CWE-94')).toBe('critical');
-    expect(getCweSeverityTier('CWE-798')).toBe('low');
+    expect(getCweSeverityTier('CWE-89', TIERS)).toBe('critical');
+    expect(getCweSeverityTier('CWE-502', TIERS)).toBe('critical');
+    expect(getCweSeverityTier('CWE-94', TIERS)).toBe('critical');
+    expect(getCweSeverityTier('CWE-798', TIERS)).toBe('low');
 
     // Hardcoded secrets should be last
     expect(prioritized[prioritized.length - 1].type).toBe('hardcoded_secrets');
