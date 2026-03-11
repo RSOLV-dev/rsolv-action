@@ -55,7 +55,7 @@ inputs:
     required: false
     default: 'true'
   max_issues:
-    description: 'Maximum number of issues to process in a single run (RFC-133)'
+    description: 'Maximum number of issues to process in a single run'
     required: false
     default: '3'
   issue_number:
