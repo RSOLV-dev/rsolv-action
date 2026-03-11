@@ -24,6 +24,7 @@ export interface ActionConfig {
   executableTests?: boolean; // RFC-060 Phase 5.1: Enable executable test flow (RSOLV_EXECUTABLE_TESTS)
   claudeMaxTurns?: number; // RFC-060 Phase 5.1: Maximum Claude iterations for test generation (default: 5)
   createPR?: boolean; // Create Pull Request after successful mitigation (default: true)
+  scanOutput?: string[]; // RFC-133: where scan findings go ('issues', 'report', 'dashboard')
 }
 
 export interface FixValidationConfig {

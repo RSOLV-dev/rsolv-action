@@ -3,7 +3,7 @@ import { IssueCreator } from './issue-creator.js';
 import { GitHubAdapter } from '../forge/github-adapter.js';
 import { logger } from '../utils/logger.js';
 import { ensureLabelsExist } from '../github/label-manager.js';
-import type { ScanConfig, ScanResult } from './types.js';
+import type { ScanConfig, ScanResult, ScanReport, VulnerabilityGroup } from './types.js';
 import { prioritizeFindings, fetchSeverityTiers } from './finding-prioritizer.js';
 import type { SeverityTierMap } from './finding-prioritizer.js';
 
@@ -19,10 +19,17 @@ export class ScanOrchestrator {
 
   async performScan(config: ScanConfig): Promise<ScanResult> {
     logger.info('Starting proactive security scan');
-    
+
+    // RFC-133: Resolve whether to create issues from scanOutput or legacy createIssues
+    const shouldCreateIssues = config.scanOutput
+      ? config.scanOutput.includes('issues')
+      : config.createIssues ?? true;
+
+    const shouldGenerateReport = config.scanOutput?.includes('report') ?? false;
+
     try {
       // Ensure all required labels exist first
-      if (config.createIssues && process.env.GITHUB_TOKEN) {
+      if (shouldCreateIssues && process.env.GITHUB_TOKEN) {
         await ensureLabelsExist(
           config.repository.owner,
           config.repository.name,
@@ -33,15 +40,17 @@ export class ScanOrchestrator {
       // Perform the scan
       const scanResult = await this.scanner.scan(config);
 
+      // RFC-133: Fetch tiers once — needed for both issue creation and report
+      let tiers: SeverityTierMap | undefined;
+      let prioritized: VulnerabilityGroup[] | undefined;
+
+      if (scanResult.groupedVulnerabilities.length > 0 && (shouldCreateIssues || shouldGenerateReport)) {
+        tiers = await this.fetchTiers();
+        prioritized = prioritizeFindings(scanResult.groupedVulnerabilities, tiers);
+      }
+
       // Create issues if configured and vulnerabilities found
-      if (config.createIssues && scanResult.groupedVulnerabilities.length > 0) {
-        // RFC-133: Fetch CWE severity tiers from platform (single source of truth)
-        const tiers = await this.fetchTiers();
-
-        // RFC-133: Prioritize by CWE severity tier before applying max_issues cap
-        const prioritized = prioritizeFindings(scanResult.groupedVulnerabilities, tiers);
-
-        // Respect max_issues limit in logging
+      if (shouldCreateIssues && prioritized && prioritized.length > 0) {
         const maxIssues = config.maxIssues;
         const groupsToProcess = maxIssues ?
           Math.min(maxIssues, prioritized.length) :
@@ -51,7 +60,6 @@ export class ScanOrchestrator {
                     (maxIssues && prioritized.length > maxIssues ?
                       ` (limited by max_issues: ${maxIssues})` : ''));
 
-        // Slice the prioritized groups to respect max_issues limit
         const groupsToCreate = prioritized.slice(0, groupsToProcess);
 
         const result = await this.issueCreator.createIssuesFromGroups(
@@ -71,15 +79,60 @@ export class ScanOrchestrator {
           logger.info(`Skipped ${result.skippedFalsePositive} false positive issues`);
         }
       }
-      
+
+      // RFC-133: Generate structured report (includes ALL findings, not capped)
+      if (shouldGenerateReport && prioritized) {
+        scanResult.scanReport = this.buildReport(scanResult, prioritized);
+        logger.info(`Generated scan report with ${prioritized.length} findings`);
+      }
+
       // Output summary
       this.logScanSummary(scanResult);
-      
+
       return scanResult;
     } catch (error) {
       logger.error('Scan failed:', error);
       throw error;
     }
+  }
+
+  private buildReport(scanResult: ScanResult, prioritizedGroups: VulnerabilityGroup[]): ScanReport {
+    const json = {
+      repository: scanResult.repository,
+      scanDate: scanResult.scanDate,
+      findings: prioritizedGroups,
+      stats: {
+        totalFiles: scanResult.totalFiles,
+        scannedFiles: scanResult.scannedFiles,
+        totalVulnerabilities: scanResult.vulnerabilities.length,
+      },
+    };
+
+    const markdown = this.buildMarkdownReport(scanResult, prioritizedGroups);
+
+    return { json, markdown };
+  }
+
+  private buildMarkdownReport(scanResult: ScanResult, groups: VulnerabilityGroup[]): string {
+    const lines: string[] = [
+      '# RSOLV Scan Report',
+      '',
+      `**Repository:** ${scanResult.repository}`,
+      `**Date:** ${scanResult.scanDate}`,
+      `**Files scanned:** ${scanResult.scannedFiles}/${scanResult.totalFiles}`,
+      `**Total vulnerabilities:** ${scanResult.vulnerabilities.length}`,
+      '',
+      '## Findings by Severity',
+      '',
+      '| Type | Severity | Files | Count |',
+      '|------|----------|-------|-------|',
+    ];
+
+    for (const group of groups) {
+      lines.push(`| ${group.type} | ${group.severity} | ${group.files.join(', ')} | ${group.count} |`);
+    }
+
+    return lines.join('\n');
   }
 
   private async fetchTiers(): Promise<SeverityTierMap> {
@@ -127,6 +180,11 @@ export class ScanOrchestrator {
       if (result.skippedFalsePositive) {
         logger.info(`  - ${result.skippedFalsePositive} false positive issues`);
       }
+      logger.info('');
+    }
+
+    if (result.scanReport) {
+      logger.info('Scan report generated (available as workflow artifact)');
       logger.info('');
     }
 
