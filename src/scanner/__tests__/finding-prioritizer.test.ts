@@ -1,7 +1,24 @@
 import { describe, it, expect } from 'vitest';
-import { prioritizeFindings, getCweSeverityTier } from '../finding-prioritizer.js';
+import { prioritizeFindings, getCweSeverityTier, fetchSeverityTiers } from '../finding-prioritizer.js';
+import type { SeverityTierMap } from '../finding-prioritizer.js';
 import type { VulnerabilityGroup } from '../types.js';
 import type { Severity } from '../../security/types.js';
+
+/** Tier map matching what the platform serves via Registry.severity_tiers/0 */
+const TIERS: SeverityTierMap = {
+  'CWE-89': 'critical',   // SQL injection
+  'CWE-78': 'critical',   // Command injection
+  'CWE-94': 'critical',   // Code injection
+  'CWE-502': 'critical',  // Insecure deserialization
+  'CWE-79': 'high',       // XSS
+  'CWE-22': 'high',       // Path traversal
+  'CWE-352': 'high',      // CSRF
+  'CWE-918': 'high',      // SSRF
+  'CWE-327': 'medium',    // Weak crypto algorithm
+  'CWE-338': 'medium',    // Weak random
+  'CWE-798': 'low',       // Hardcoded credentials
+  'CWE-200': 'low',       // Information exposure
+};
 
 function makeGroup(overrides: {
   type: string;
@@ -31,31 +48,31 @@ function makeGroup(overrides: {
 describe('finding-prioritizer', () => {
   describe('getCweSeverityTier', () => {
     it('returns Critical for CWE-89 (SQL injection)', () => {
-      expect(getCweSeverityTier('CWE-89')).toBe('critical');
+      expect(getCweSeverityTier('CWE-89', TIERS)).toBe('critical');
     });
 
     it('returns Critical for CWE-78 (command injection)', () => {
-      expect(getCweSeverityTier('CWE-78')).toBe('critical');
+      expect(getCweSeverityTier('CWE-78', TIERS)).toBe('critical');
     });
 
     it('returns High for CWE-79 (XSS)', () => {
-      expect(getCweSeverityTier('CWE-79')).toBe('high');
+      expect(getCweSeverityTier('CWE-79', TIERS)).toBe('high');
     });
 
     it('returns Medium for CWE-327 (weak crypto)', () => {
-      expect(getCweSeverityTier('CWE-327')).toBe('medium');
+      expect(getCweSeverityTier('CWE-327', TIERS)).toBe('medium');
     });
 
     it('returns Low for CWE-798 (hardcoded credentials)', () => {
-      expect(getCweSeverityTier('CWE-798')).toBe('low');
+      expect(getCweSeverityTier('CWE-798', TIERS)).toBe('low');
     });
 
     it('returns undefined for unknown CWE', () => {
-      expect(getCweSeverityTier('CWE-99999')).toBeUndefined();
+      expect(getCweSeverityTier('CWE-99999', TIERS)).toBeUndefined();
     });
 
     it('returns undefined when no CWE provided', () => {
-      expect(getCweSeverityTier(undefined)).toBeUndefined();
+      expect(getCweSeverityTier(undefined, TIERS)).toBeUndefined();
     });
   });
 
@@ -66,7 +83,7 @@ describe('finding-prioritizer', () => {
         makeGroup({ type: 'sql_injection', severity: 'high', cweId: 'CWE-89', confidence: 80 }),
       ];
 
-      const result = prioritizeFindings(groups);
+      const result = prioritizeFindings(groups, TIERS);
 
       expect(result[0].type).toBe('sql_injection');
       expect(result[1].type).toBe('hardcoded_secrets');
@@ -78,7 +95,7 @@ describe('finding-prioritizer', () => {
         makeGroup({ type: 'command_injection', severity: 'high', cweId: 'CWE-78' }),
       ];
 
-      const result = prioritizeFindings(groups);
+      const result = prioritizeFindings(groups, TIERS);
 
       expect(result[0].type).toBe('command_injection');
       expect(result[1].type).toBe('xss');
@@ -91,7 +108,7 @@ describe('finding-prioritizer', () => {
         makeGroup({ type: 'code_injection', severity: 'critical', cweId: 'CWE-94', confidence: 85 }),
       ];
 
-      const result = prioritizeFindings(groups);
+      const result = prioritizeFindings(groups, TIERS);
 
       expect(result.map(g => g.type)).toEqual([
         'command_injection',  // 95 confidence
@@ -107,7 +124,7 @@ describe('finding-prioritizer', () => {
         makeGroup({ type: 'another_vuln', severity: 'high' }),
       ];
 
-      const result = prioritizeFindings(groups);
+      const result = prioritizeFindings(groups, TIERS);
 
       // CWE-89 Critical tier first, then pattern severity high, then low
       expect(result[0].type).toBe('sql_injection');
@@ -122,7 +139,7 @@ describe('finding-prioritizer', () => {
         makeGroup({ type: 'path_traversal', severity: 'medium', cweId: 'CWE-22' }),
       ];
 
-      const result = prioritizeFindings(groups);
+      const result = prioritizeFindings(groups, TIERS);
 
       // CWE-22 is High tier, CWE-798 is Low tier — CWE tier wins
       expect(result[0].type).toBe('path_traversal');
@@ -136,25 +153,24 @@ describe('finding-prioritizer', () => {
       ];
       const original = [...groups];
 
-      prioritizeFindings(groups);
+      prioritizeFindings(groups, TIERS);
 
       expect(groups[0].type).toBe(original[0].type);
       expect(groups[1].type).toBe(original[1].type);
     });
 
     it('handles empty array', () => {
-      expect(prioritizeFindings([])).toEqual([]);
+      expect(prioritizeFindings([], TIERS)).toEqual([]);
     });
 
     it('handles single element', () => {
       const groups = [makeGroup({ type: 'sql_injection', severity: 'critical', cweId: 'CWE-89' })];
-      const result = prioritizeFindings(groups);
+      const result = prioritizeFindings(groups, TIERS);
       expect(result).toHaveLength(1);
       expect(result[0].type).toBe('sql_injection');
     });
 
     it('uses max confidence from group vulnerabilities', () => {
-      // Group with multiple vulns — prioritizer should use the highest confidence
       const highConfGroup: VulnerabilityGroup = {
         type: 'sql_injection',
         severity: 'critical',
@@ -175,7 +191,7 @@ describe('finding-prioritizer', () => {
         ],
       };
 
-      const result = prioritizeFindings([lowConfGroup, highConfGroup]);
+      const result = prioritizeFindings([lowConfGroup, highConfGroup], TIERS);
 
       // Both Critical tier, but sql_injection group has max confidence 95 > 80
       expect(result[0].type).toBe('sql_injection');
@@ -183,11 +199,6 @@ describe('finding-prioritizer', () => {
     });
 
     it('reproduces the pygoat problem: SQLi should outrank hardcoded creds', () => {
-      // This is the exact scenario from Run 015-018:
-      // pygoat scans find hardcoded_secrets (CWE-798), insecure_deserialization (CWE-502),
-      // code_injection (CWE-94), AND sql_injection (CWE-89).
-      // With max_issues=3, the old insertion-order gives: creds, deserialization, code_injection
-      // With severity prioritization: sql_injection, deserialization, code_injection (all Critical tier)
       const groups = [
         makeGroup({ type: 'hardcoded_secrets', severity: 'high', cweId: 'CWE-798', confidence: 90 }),
         makeGroup({ type: 'insecure_deserialization', severity: 'critical', cweId: 'CWE-502', confidence: 85 }),
@@ -197,7 +208,7 @@ describe('finding-prioritizer', () => {
         makeGroup({ type: 'weak_cryptography', severity: 'medium', cweId: 'CWE-327', confidence: 70 }),
       ];
 
-      const result = prioritizeFindings(groups);
+      const result = prioritizeFindings(groups, TIERS);
       const top3 = result.slice(0, 3);
 
       // All three top slots should be Critical tier CWEs
@@ -209,6 +220,65 @@ describe('finding-prioritizer', () => {
 
       // hardcoded_secrets should be last (Low tier)
       expect(result[result.length - 1].type).toBe('hardcoded_secrets');
+    });
+  });
+
+  describe('fetchSeverityTiers', () => {
+    it('fetches tier map from platform API', async () => {
+      const mockResponse = {
+        ok: true,
+        json: async () => ({ tiers: { 'CWE-89': 'critical', 'CWE-798': 'low' } }),
+        status: 200,
+        statusText: 'OK',
+      };
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = async () => mockResponse as Response;
+
+      try {
+        const tiers = await fetchSeverityTiers('https://api.example.com', 'test-key');
+        expect(tiers).toEqual({ 'CWE-89': 'critical', 'CWE-798': 'low' });
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
+
+    it('throws on non-OK response', async () => {
+      const mockResponse = {
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error',
+      };
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = async () => mockResponse as Response;
+
+      try {
+        await expect(fetchSeverityTiers('https://api.example.com', 'test-key'))
+          .rejects.toThrow('Failed to fetch severity tiers: 500 Internal Server Error');
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
+
+    it('sends x-api-key header', async () => {
+      let capturedHeaders: HeadersInit | undefined;
+      const mockResponse = {
+        ok: true,
+        json: async () => ({ tiers: {} }),
+        status: 200,
+        statusText: 'OK',
+      };
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = async (_url: any, init: any) => {
+        capturedHeaders = init?.headers;
+        return mockResponse as Response;
+      };
+
+      try {
+        await fetchSeverityTiers('https://api.example.com', 'my-api-key');
+        expect(capturedHeaders).toEqual({ 'x-api-key': 'my-api-key' });
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
     });
   });
 });
