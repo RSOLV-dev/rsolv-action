@@ -4,6 +4,7 @@ import { GitHubAdapter } from '../forge/github-adapter.js';
 import { logger } from '../utils/logger.js';
 import { ensureLabelsExist } from '../github/label-manager.js';
 import type { ScanConfig, ScanResult } from './types.js';
+import { prioritizeFindings } from './finding-prioritizer.js';
 
 export class ScanOrchestrator {
   private scanner: RepositoryScanner;
@@ -33,18 +34,21 @@ export class ScanOrchestrator {
       
       // Create issues if configured and vulnerabilities found
       if (config.createIssues && scanResult.groupedVulnerabilities.length > 0) {
+        // RFC-133: Prioritize by CWE severity tier before applying max_issues cap
+        const prioritized = prioritizeFindings(scanResult.groupedVulnerabilities);
+
         // Respect max_issues limit in logging
         const maxIssues = config.maxIssues;
         const groupsToProcess = maxIssues ?
-          Math.min(maxIssues, scanResult.groupedVulnerabilities.length) :
-          scanResult.groupedVulnerabilities.length;
+          Math.min(maxIssues, prioritized.length) :
+          prioritized.length;
 
         logger.info(`Creating issues for ${groupsToProcess} vulnerability groups` +
-                    (maxIssues && scanResult.groupedVulnerabilities.length > maxIssues ?
+                    (maxIssues && prioritized.length > maxIssues ?
                       ` (limited by max_issues: ${maxIssues})` : ''));
 
-        // Slice the groups to respect max_issues limit
-        const groupsToCreate = scanResult.groupedVulnerabilities.slice(0, groupsToProcess);
+        // Slice the prioritized groups to respect max_issues limit
+        const groupsToCreate = prioritized.slice(0, groupsToProcess);
 
         const result = await this.issueCreator.createIssuesFromGroups(
           groupsToCreate,
