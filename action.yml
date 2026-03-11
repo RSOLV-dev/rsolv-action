@@ -55,9 +55,9 @@ inputs:
     required: false
     default: 'true'
   max_issues:
-    description: 'Maximum number of issues to process in a single run'
+    description: 'Maximum number of issues to process in a single run (RFC-133)'
     required: false
-    default: '1'
+    default: '3'
   issue_number:
     description: 'Specific issue number to process (for workflow_dispatch)'
     required: false
