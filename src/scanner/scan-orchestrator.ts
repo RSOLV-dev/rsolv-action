@@ -64,7 +64,7 @@ export class ScanOrchestrator {
 
         const result = await this.issueCreator.createIssuesFromGroups(
           groupsToCreate,
-          config
+          { ...config, createIssues: true }
         );
 
         scanResult.createdIssues = result.issues;
