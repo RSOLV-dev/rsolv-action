@@ -290,6 +290,106 @@ describe('ScanOrchestrator - max_issues bug', () => {
       expect(result.createdIssues).toHaveLength(5);
     });
 
+    it('should prioritize by CWE severity tier before slicing by max_issues', async () => {
+      const config: ScanConfig = {
+        repository: {
+          owner: 'test',
+          name: 'repo',
+          defaultBranch: 'main'
+        },
+        createIssues: true,
+        maxIssues: 2,
+        scanDirectory: '.',
+        excludePaths: []
+      };
+
+      // Groups in insertion order: low-tier CWE first, critical-tier CWE last
+      const groups: VulnerabilityGroup[] = [
+        {
+          type: 'hardcoded_secrets',
+          severity: 'high',
+          count: 3,
+          files: ['config.py'],
+          vulnerabilities: [{
+            type: 'hardcoded_secrets',
+            severity: 'high',
+            confidence: 90,
+            message: 'Hardcoded secret',
+            filePath: 'config.py',
+            line: 10,
+            column: 5,
+            snippet: 'SECRET = "abc"',
+            description: 'Hardcoded credential',
+            cweId: 'CWE-798',
+          }]
+        },
+        {
+          type: 'weak_cryptography',
+          severity: 'medium',
+          count: 1,
+          files: ['crypto.py'],
+          vulnerabilities: [{
+            type: 'weak_cryptography',
+            severity: 'medium',
+            confidence: 80,
+            message: 'Weak crypto',
+            filePath: 'crypto.py',
+            line: 20,
+            column: 5,
+            snippet: 'md5()',
+            description: 'Weak hash',
+            cweId: 'CWE-327',
+          }]
+        },
+        {
+          type: 'sql_injection',
+          severity: 'critical',
+          count: 2,
+          files: ['db.py'],
+          vulnerabilities: [{
+            type: 'sql_injection',
+            severity: 'critical',
+            confidence: 85,
+            message: 'SQL injection',
+            filePath: 'db.py',
+            line: 30,
+            column: 5,
+            snippet: 'query(user_input)',
+            description: 'SQL injection via user input',
+            cweId: 'CWE-89',
+          }]
+        },
+      ];
+
+      orchestrator['scanner'].scan = vi.fn().mockResolvedValue({
+        vulnerabilities: groups.flatMap(g => g.vulnerabilities),
+        groupedVulnerabilities: groups,
+        stats: { totalFiles: 3, scannedFiles: 3, vulnerabilities: 6 },
+        createdIssues: []
+      });
+
+      const createIssuesSpy = vi.spyOn(orchestrator['issueCreator'], 'createIssuesFromGroups')
+        .mockResolvedValue({
+          issues: [
+            { number: 1, title: 'SQLi', url: 'url1', vulnerabilityType: 'sql_injection', fileCount: 1 },
+            { number: 2, title: 'Weak crypto', url: 'url2', vulnerabilityType: 'weak_cryptography', fileCount: 1 }
+          ],
+          skippedValidated: 0,
+          skippedFalsePositive: 0
+        });
+
+      await orchestrator.performScan(config);
+
+      // With max_issues=2, prioritization should pick:
+      // 1. sql_injection (CWE-89 = Critical tier)
+      // 2. weak_cryptography (CWE-327 = Medium tier)
+      // NOT hardcoded_secrets (CWE-798 = Low tier) despite being first in insertion order
+      const passedGroups = createIssuesSpy.mock.calls[0][0];
+      expect(passedGroups).toHaveLength(2);
+      expect(passedGroups[0].type).toBe('sql_injection');
+      expect(passedGroups[1].type).toBe('weak_cryptography');
+    });
+
     it('should handle edge cases correctly', async () => {
       const config: ScanConfig = {
         repository: {
