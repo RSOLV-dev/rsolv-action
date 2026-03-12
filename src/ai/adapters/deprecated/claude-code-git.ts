@@ -13,7 +13,6 @@ import { execSync } from 'child_process';
 import path from 'path';
 import type { AnalysisWithTestsResult } from '../../test-generating-security-analyzer.js';
 import type { ValidationResult } from '../../git-based-test-validator.js';
-import { TestAwareEnhancement, TestAwareOptions } from '../../test-discovery/test-aware-enhancement.js';
 
 /**
  * Result from git-based solution generation
@@ -55,7 +54,6 @@ interface PhaseStatus {
 
 export class GitBasedClaudeCodeAdapter {
   private cliAdapter: RetryableClaudeCodeCLI;
-  private testAwareEnhancement: TestAwareEnhancement;
   protected config: AIConfig;
   protected repoPath: string;
   protected claudeConfig: any;
@@ -65,7 +63,6 @@ export class GitBasedClaudeCodeAdapter {
     this.repoPath = repoPath;
     this.claudeConfig = config.claudeCodeConfig || config.useStructuredPhases ? { useStructuredPhases: config.useStructuredPhases } : undefined;
     this.cliAdapter = new RetryableClaudeCodeCLI(config, repoPath, credentialManager);
-    this.testAwareEnhancement = new TestAwareEnhancement();
   }
 
   /**
@@ -504,34 +501,6 @@ npm test -- --grep "security"
 ${this.getVulnerabilitySpecificGuidance(issueContext)}
 
 `;
-
-    // Add test-aware enhancement if enabled
-    try {
-      const testAwareContext = await this.testAwareEnhancement.enhanceContext(
-        issueContext,
-        analysis,
-        this.repoPath,
-        {
-          enabled: true,
-          vulnerableFilePath: analysis.relatedFiles?.[0],
-          testDiscoveryRoot: this.repoPath,
-          discoveryTimeout: 30000,
-          includeTestContent: true,
-          verbose: process.env.RSOLV_DEBUG_CONVERSATION === 'true'
-        }
-      );
-
-      if (testAwareContext) {
-        const testAwarePromptEnhancement = this.testAwareEnhancement.generatePromptEnhancement(testAwareContext);
-        prompt += testAwarePromptEnhancement;
-        logger.info('[TestAware] Successfully added test-aware context to prompt');
-      } else {
-        logger.info('[TestAware] No test-aware context available, continuing without enhancement');
-      }
-    } catch (error) {
-      logger.warn('[TestAware] Failed to enhance prompt with test awareness:', error);
-      // Continue without test enhancement
-    }
 
     // Add the rest of the original prompt
     prompt += this.constructPrompt(issueContext, analysis);
