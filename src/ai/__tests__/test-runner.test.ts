@@ -23,7 +23,7 @@ vi.mock('fs/promises', () => ({
   readFile: mockFsReadFile
 }));
 
-import { TestRunner, type TestRunResult } from '../test-runner.js';
+import { TestRunner } from '../test-runner.js';
 
 describe('TestRunner', () => {
   let runner: TestRunner;
@@ -33,414 +33,17 @@ describe('TestRunner', () => {
     runner = new TestRunner();
   });
 
-  describe('Framework Command Execution', () => {
-    test('should execute Jest command correctly', async () => {
-      mockExecAsync.mockResolvedValue({
-        stdout: 'Test suite failed',
-        stderr: ''
-      } as any);
-
-      const result = await runner.runTests({
-        framework: 'jest',
-        testFile: 'src/__tests__/user.test.js',
-        testName: 'should be vulnerable to SQL injection',
-        workingDir: '/tmp/test-repo'
-      });
-
-      expect(mockExecAsync).toHaveBeenCalledWith(
-        expect.stringContaining('npx jest'),
-        expect.objectContaining({
-          cwd: '/tmp/test-repo',
-          timeout: 30000
-        })
-      );
-      expect(result).toBeDefined();
-    });
-
-    test('should execute Vitest command correctly', async () => {
-      mockExecAsync.mockResolvedValue({
-        stdout: 'Test suite failed',
-        stderr: ''
-      } as any);
-
-      const result = await runner.runTests({
-        framework: 'vitest',
-        testFile: 'src/__tests__/user.test.ts',
-        testName: 'should be vulnerable to XSS',
-        workingDir: '/tmp/test-repo'
-      });
-
-      expect(mockExecAsync).toHaveBeenCalledWith(
-        expect.stringContaining('npx vitest run'),
-        expect.objectContaining({
-          cwd: '/tmp/test-repo',
-          timeout: 30000
-        })
-      );
-      expect(result).toBeDefined();
-    });
-
-    test('should execute RSpec command correctly', async () => {
-      mockExecAsync.mockResolvedValue({
-        stdout: 'Failures: 1',
-        stderr: ''
-      } as any);
-
-      const result = await runner.runTests({
-        framework: 'rspec',
-        testFile: 'spec/user_spec.rb',
-        testName: 'should be vulnerable to command injection',
-        workingDir: '/tmp/ruby-repo'
-      });
-
-      expect(mockExecAsync).toHaveBeenCalledWith(
-        expect.stringContaining('bundle exec rspec'),
-        expect.objectContaining({
-          cwd: '/tmp/ruby-repo',
-          timeout: 30000
-        })
-      );
-      expect(result).toBeDefined();
-    });
-
-    test('should execute pytest command correctly', async () => {
-      mockExecAsync.mockResolvedValue({
-        stdout: '1 failed',
-        stderr: ''
-      } as any);
-
-      const result = await runner.runTests({
-        framework: 'pytest',
-        testFile: 'tests/test_user.py',
-        testName: 'test_sql_injection_vulnerability',
-        workingDir: '/tmp/python-repo'
-      });
-
-      expect(mockExecAsync).toHaveBeenCalledWith(
-        expect.stringContaining('pytest'),
-        expect.objectContaining({
-          cwd: '/tmp/python-repo',
-          timeout: 30000
-        })
-      );
-      expect(result).toBeDefined();
-    });
-
-    test('should execute Minitest command correctly', async () => {
-      mockExecAsync.mockResolvedValue({
-        stdout: '1 failures',
-        stderr: ''
-      } as any);
-
-      const result = await runner.runTests({
-        framework: 'minitest',
-        testFile: 'test/user_test.rb',
-        testName: 'test_xss_vulnerability',
-        workingDir: '/tmp/rails-repo'
-      });
-
-      // RFC-101 v3.8.67+: BUNDLE_IGNORE_RUBY_VERSION=1 added to allow bundler
-      // to install gems despite Ruby version mismatch from apt-get fallback
-      expect(mockExecAsync).toHaveBeenCalledWith(
-        'BUNDLE_IGNORE_RUBY_VERSION=1 ruby "test/user_test.rb" -n "test_xss_vulnerability"',
-        expect.objectContaining({
-          cwd: '/tmp/rails-repo',
-          timeout: 30000
-        })
-      );
-      expect(result).toBeDefined();
-    });
-
-    test('should execute Mocha command correctly', async () => {
-      mockExecAsync.mockResolvedValue({
-        stdout: '1 failing',
-        stderr: ''
-      } as any);
-
-      const result = await runner.runTests({
-        framework: 'mocha',
-        testFile: 'test/security.test.js',
-        testName: 'should be vulnerable to XSS',
-        workingDir: '/tmp/node-repo'
-      });
-
-      expect(mockExecAsync).toHaveBeenCalledWith(
-        'npx mocha "test/security.test.js" --grep "should be vulnerable to XSS"',
-        expect.objectContaining({
-          cwd: '/tmp/node-repo',
-          timeout: 30000
-        })
-      );
-      expect(result).toBeDefined();
-    });
-
-    test('should execute PHPUnit command correctly', async () => {
-      mockExecAsync.mockResolvedValue({
-        stdout: 'FAILURES!',
-        stderr: ''
-      } as any);
-
-      const result = await runner.runTests({
-        framework: 'phpunit',
-        testFile: 'tests/SecurityTest.php',
-        testName: 'testSqlInjectionVulnerability',
-        workingDir: '/tmp/php-repo'
-      });
-
-      expect(mockExecAsync).toHaveBeenCalledWith(
-        'vendor/bin/phpunit "tests/SecurityTest.php" --filter "testSqlInjectionVulnerability"',
-        expect.objectContaining({
-          cwd: '/tmp/php-repo',
-          timeout: 30000
-        })
-      );
-      expect(result).toBeDefined();
-    });
-
-    test('should execute JUnit command correctly', async () => {
-      mockExecAsync.mockResolvedValue({
-        stdout: 'Tests run: 1, Failures: 1',
-        stderr: ''
-      } as any);
-
-      const result = await runner.runTests({
-        framework: 'junit',
-        testFile: 'src/test/java/SecurityTest.java',
-        testName: 'testSqlInjection',
-        workingDir: '/tmp/java-repo'
-      });
-
-      // RFC-101 v3.8.70: Maven uses ClassName#methodName format, not file path
-      // This is the standard Maven Surefire pattern for running specific tests
-      expect(mockExecAsync).toHaveBeenCalledWith(
-        'mvn test -Dtest="SecurityTest#testSqlInjection"',
-        expect.objectContaining({
-          cwd: '/tmp/java-repo',
-          timeout: 30000
-        })
-      );
-      expect(result).toBeDefined();
-    });
-
-    test('should execute Go testing command correctly', async () => {
-      mockExecAsync.mockResolvedValue({
-        stdout: 'FAIL',
-        stderr: ''
-      } as any);
-
-      const result = await runner.runTests({
-        framework: 'testing',
-        testFile: './pkg/security/auth_test.go',
-        testName: 'TestSQLInjection',
-        workingDir: '/tmp/go-repo'
-      });
-
-      expect(mockExecAsync).toHaveBeenCalledWith(
-        'go test "./pkg/security/auth_test.go" -run "TestSQLInjection"',
-        expect.objectContaining({
-          cwd: '/tmp/go-repo',
-          timeout: 30000
-        })
-      );
-      expect(result).toBeDefined();
-    });
-
-    test('should execute ExUnit command correctly', async () => {
-      mockExecAsync.mockResolvedValue({
-        stdout: '1 failure',
-        stderr: ''
-      } as any);
-
-      const result = await runner.runTests({
-        framework: 'exunit',
-        testFile: 'test/security_test.exs',
-        testName: 'test SQL injection vulnerability',
-        workingDir: '/tmp/elixir-repo'
-      });
-
-      expect(mockExecAsync).toHaveBeenCalledWith(
-        'mix test "test/security_test.exs" --only "test SQL injection vulnerability"',
-        expect.objectContaining({
-          cwd: '/tmp/elixir-repo',
-          timeout: 30000
-        })
-      );
-      expect(result).toBeDefined();
-    });
-  });
-
-  describe('Test Result Detection', () => {
-    test('should return failure for vulnerable code (RED test failing)', async () => {
-      mockExecAsync.mockRejectedValue({
-        code: 1,
-        stdout: 'FAIL src/__tests__/user.test.js\n  ✕ should be vulnerable to SQL injection',
-        stderr: ''
-      } as any);
-
-      const result = await runner.runTests({
-        framework: 'jest',
-        testFile: 'src/__tests__/user.test.js',
-        testName: 'should be vulnerable to SQL injection',
-        workingDir: '/tmp/test-repo'
-      });
-
-      expect(result.passed).toBe(false);
-      expect(result.output).toContain('should be vulnerable to SQL injection');
-    });
-
-    test('should return success when RED test passes (catches vulnerability)', async () => {
-      mockExecAsync.mockResolvedValue({
-        stdout: 'PASS src/__tests__/user.test.js\n  ✓ should be vulnerable to SQL injection',
-        stderr: ''
-      } as any);
-
-      const result = await runner.runTests({
-        framework: 'jest',
-        testFile: 'src/__tests__/user.test.js',
-        testName: 'should be vulnerable to SQL injection',
-        workingDir: '/tmp/test-repo'
-      });
-
-      expect(result.passed).toBe(true);
-      expect(result.output).toContain('✓');
-    });
-  });
-
-  describe('Timeout Handling', () => {
-    test('should enforce 30-second timeout', async () => {
-      mockExecAsync.mockRejectedValue({
-        killed: true,
-        signal: 'SIGTERM',
-        code: null,
-        stdout: '',
-        stderr: '',
-        message: 'Timeout'
-      } as any);
-
-      const result = await runner.runTests({
-        framework: 'jest',
-        testFile: 'src/__tests__/slow.test.js',
-        testName: 'very slow test',
-        workingDir: '/tmp/test-repo'
-      });
-
-      expect(result.timedOut).toBe(true);
-      expect(result.passed).toBe(false);
-    });
-
-    test('should allow custom timeout override', async () => {
-      mockExecAsync.mockResolvedValue({
-        stdout: 'Tests passed',
-        stderr: ''
-      } as any);
-
-      await runner.runTests({
-        framework: 'jest',
-        testFile: 'src/__tests__/user.test.js',
-        testName: 'test',
-        workingDir: '/tmp/test-repo',
-        timeout: 60000
-      });
-
-      expect(mockExecAsync).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.objectContaining({
-          timeout: 60000
-        })
-      );
-    });
-  });
-
-  describe('Output Capture', () => {
-    test('should capture stdout and stderr', async () => {
-      mockExecAsync.mockResolvedValue({
-        stdout: 'Test output line 1\nTest output line 2',
-        stderr: 'Warning: deprecated API'
-      } as any);
-
-      const result = await runner.runTests({
-        framework: 'jest',
-        testFile: 'src/__tests__/user.test.js',
-        testName: 'test',
-        workingDir: '/tmp/test-repo'
-      });
-
-      expect(result.output).toContain('Test output line 1');
-      expect(result.output).toContain('Test output line 2');
-      expect(result.stderr).toContain('Warning: deprecated API');
-    });
-
-    test('should return structured results', async () => {
-      mockExecAsync.mockResolvedValue({
-        stdout: 'PASS',
-        stderr: ''
-      } as any);
-
-      const result = await runner.runTests({
-        framework: 'jest',
-        testFile: 'src/__tests__/user.test.js',
-        testName: 'test',
-        workingDir: '/tmp/test-repo'
-      });
-
-      expect(result).toHaveProperty('passed');
-      expect(result).toHaveProperty('output');
-      expect(result).toHaveProperty('stderr');
-      expect(result).toHaveProperty('timedOut');
-      expect(result).toHaveProperty('exitCode');
-      expect(typeof result.passed).toBe('boolean');
-      expect(typeof result.output).toBe('string');
-      expect(typeof result.timedOut).toBe('boolean');
-    });
-  });
-
-  describe('Error Handling', () => {
-    test('should handle test execution errors gracefully', async () => {
-      mockExecAsync.mockRejectedValue(new Error('Command not found'));
-
-      const result = await runner.runTests({
-        framework: 'jest',
-        testFile: 'src/__tests__/user.test.js',
-        testName: 'test',
-        workingDir: '/tmp/test-repo'
-      });
-
-      expect(result.passed).toBe(false);
-      expect(result.error).toBeDefined();
-    });
-
-    test('should handle missing test framework gracefully', async () => {
-      mockExecAsync.mockRejectedValue({
-        code: 127,
-        message: 'command not found: jest'
-      } as any);
-
-      const result = await runner.runTests({
-        framework: 'jest',
-        testFile: 'src/__tests__/user.test.js',
-        testName: 'test',
-        workingDir: '/tmp/test-repo'
-      });
-
-      expect(result.passed).toBe(false);
-      expect(result.exitCode).toBe(127);
-    });
-  });
-
   describe('Ruby bundle install fallback (booksapp fix)', () => {
     beforeEach(() => {
       mockFsAccess.mockRejectedValue(new Error('ENOENT'));
     });
 
-    test('should fall back to gem install rspec when bundle install fails', async () => {
-      // Mock: Gemfile exists
+    test('should fall back to gem install rspec when bundle install fails via ensureDependencies', async () => {
       mockFsAccess.mockImplementation((filePath: string) => {
         if (filePath.endsWith('Gemfile')) return Promise.resolve();
         return Promise.reject(new Error('ENOENT'));
       });
 
-      // Make bundle install fail (e.g., mysql2 native extension error),
-      // but subsequent gem install rspec succeeds
       mockExecAsync.mockImplementation((cmd: string) => {
         if (typeof cmd === 'string' && cmd.includes('bundle install')) {
           return Promise.reject(new Error('Gem::Ext::BuildError: Failed to build mysql2'));
@@ -448,58 +51,19 @@ describe('TestRunner', () => {
         return Promise.resolve({ stdout: '', stderr: '' });
       });
 
-      await runner.runTests({
-        framework: 'rspec',
-        testFile: 'spec/vulnerability_spec.rb',
-        testName: 'test vulnerability',
-        workingDir: '/tmp/ruby-repo'
-      });
+      await runner.ensureDependencies('rspec', '/tmp/ruby-repo');
 
       const calls = mockExecAsync.mock.calls.map((c: unknown[]) => c[0] as string);
-      // Should have attempted gem install rspec as fallback
       const gemInstallCall = calls.find((c: string) => c.includes('gem install rspec'));
       expect(gemInstallCall).toBeDefined();
     });
 
-    test('should use rspec directly (not bundle exec) when bundle install failed', async () => {
-      // Mock: Gemfile exists
+    test('should expose bundleInstallFailed flag for external consumers', async () => {
       mockFsAccess.mockImplementation((filePath: string) => {
         if (filePath.endsWith('Gemfile')) return Promise.resolve();
         return Promise.reject(new Error('ENOENT'));
       });
 
-      // Make bundle install fail, gem install succeeds, test execution resolves
-      mockExecAsync.mockImplementation((cmd: string) => {
-        if (typeof cmd === 'string' && cmd.includes('bundle install')) {
-          return Promise.reject(new Error('Gem::Ext::BuildError: Failed to build mysql2'));
-        }
-        return Promise.resolve({ stdout: 'Failures: 1', stderr: '' });
-      });
-
-      await runner.runTests({
-        framework: 'rspec',
-        testFile: 'spec/vulnerability_spec.rb',
-        testName: 'test vulnerability',
-        workingDir: '/tmp/ruby-repo'
-      });
-
-      const calls = mockExecAsync.mock.calls.map((c: unknown[]) => c[0] as string);
-      // The test execution command should use rspec directly, not bundle exec rspec
-      const testCall = calls.find((c: string) =>
-        c.includes('rspec') && c.includes('spec/vulnerability_spec.rb') && !c.includes('bundle exec')
-      );
-      expect(testCall).toBeDefined();
-    });
-
-    test('should expose bundleInstallFailed flag for external consumers (validation-mode.ts)', async () => {
-      // validation-mode.ts creates a TestRunner for setup, then uses its own runTest() method.
-      // It needs to check TestRunner.bundleInstallFailed to know whether to use 'rspec' vs 'bundle exec rspec'.
-      mockFsAccess.mockImplementation((filePath: string) => {
-        if (filePath.endsWith('Gemfile')) return Promise.resolve();
-        return Promise.reject(new Error('ENOENT'));
-      });
-
-      // Make bundle install fail, gem install rspec succeeds
       mockExecAsync.mockImplementation((cmd: string) => {
         if (typeof cmd === 'string' && cmd.includes('bundle install')) {
           return Promise.reject(new Error('Gem::Ext::BuildError: Failed to build mysql2'));
@@ -507,41 +71,9 @@ describe('TestRunner', () => {
         return Promise.resolve({ stdout: '', stderr: '' });
       });
 
-      // Verify flag is false before ensureDependencies
       expect(runner.bundleInstallFailed).toBe(false);
-
       await runner.ensureDependencies('rspec', '/tmp/ruby-repo');
-
-      // After ensureDependencies with bundle install failure, flag should be true
       expect(runner.bundleInstallFailed).toBe(true);
-    });
-
-    test('should still use bundle exec rspec when bundle install succeeds', async () => {
-      // Mock: Gemfile exists
-      mockFsAccess.mockImplementation((filePath: string) => {
-        if (filePath.endsWith('Gemfile')) return Promise.resolve();
-        return Promise.reject(new Error('ENOENT'));
-      });
-
-      // Everything succeeds
-      mockExecAsync.mockResolvedValue({ stdout: 'Failures: 1', stderr: '' });
-
-      await runner.runTests({
-        framework: 'rspec',
-        testFile: 'spec/vulnerability_spec.rb',
-        testName: 'test vulnerability',
-        workingDir: '/tmp/ruby-repo'
-      });
-
-      const calls = mockExecAsync.mock.calls.map((c: unknown[]) => c[0] as string);
-      // Test execution should use bundle exec rspec
-      const testCall = calls.find((c: string) =>
-        c.includes('bundle exec rspec') && c.includes('spec/vulnerability_spec.rb')
-      );
-      expect(testCall).toBeDefined();
-      // Should NOT have called gem install rspec
-      const gemInstallCall = calls.find((c: string) => c.includes('gem install rspec'));
-      expect(gemInstallCall).toBeUndefined();
     });
   });
 
@@ -561,12 +93,7 @@ describe('TestRunner', () => {
 
       mockExecAsync.mockResolvedValue({ stdout: '', stderr: '' });
 
-      await runner.runTests({
-        framework: 'phpunit',
-        testFile: 'tests/SecurityTest.php',
-        testName: 'testVulnerability',
-        workingDir: '/tmp/php-repo'
-      });
+      await runner.ensureDependencies('phpunit', '/tmp/php-repo');
 
       // Verify composer install includes --ignore-platform-reqs
       const calls = mockExecAsync.mock.calls;
@@ -586,12 +113,7 @@ describe('TestRunner', () => {
 
       mockExecAsync.mockResolvedValue({ stdout: '', stderr: '' });
 
-      await runner.runTests({
-        framework: 'exunit',
-        testFile: 'test/security_test.exs',
-        testName: 'test vulnerability',
-        workingDir: '/tmp/elixir-repo'
-      });
+      await runner.ensureDependencies('exunit', '/tmp/elixir-repo');
 
       // Verify mix deps command sets MIX_ENV=test for proper test isolation
       const calls = mockExecAsync.mock.calls;
@@ -614,12 +136,7 @@ describe('TestRunner', () => {
       // Default mock: which python, which uv, and install all succeed
       mockExecAsync.mockResolvedValue({ stdout: '', stderr: '' });
 
-      await runner.runTests({
-        framework: 'pytest',
-        testFile: 'tests/test_security.py',
-        testName: 'test_vulnerability',
-        workingDir: '/tmp/python-repo'
-      });
+      await runner.ensureDependencies('pytest', '/tmp/python-repo');
 
       const calls = mockExecAsync.mock.calls;
       const installCall = calls.find((call: unknown[]) =>
@@ -637,12 +154,7 @@ describe('TestRunner', () => {
       });
       mockExecAsync.mockResolvedValue({ stdout: '', stderr: '' });
 
-      await runner.runTests({
-        framework: 'pytest',
-        testFile: 'tests/test_security.py',
-        testName: 'test_vulnerability',
-        workingDir: '/tmp/python-repo'
-      });
+      await runner.ensureDependencies('pytest', '/tmp/python-repo');
 
       const calls = mockExecAsync.mock.calls;
       const installCall = calls.find((call: unknown[]) =>
@@ -660,12 +172,7 @@ describe('TestRunner', () => {
       });
       mockExecAsync.mockResolvedValue({ stdout: '', stderr: '' });
 
-      await runner.runTests({
-        framework: 'pytest',
-        testFile: 'tests/test_security.py',
-        testName: 'test_vulnerability',
-        workingDir: '/tmp/python-repo'
-      });
+      await runner.ensureDependencies('pytest', '/tmp/python-repo');
 
       const calls = mockExecAsync.mock.calls;
       const installCall = calls.find((call: unknown[]) =>
@@ -682,23 +189,13 @@ describe('TestRunner', () => {
       });
       mockExecAsync.mockResolvedValue({ stdout: '', stderr: '' });
 
-      await runner.runTests({
-        framework: 'pytest',
-        testFile: 'tests/test_security.py',
-        testName: 'test_vulnerability',
-        workingDir: '/tmp/python-repo'
-      });
+      await runner.ensureDependencies('pytest', '/tmp/python-repo');
 
       const calls = mockExecAsync.mock.calls;
       const installCall = calls.find((call: unknown[]) =>
         typeof call[0] === 'string' && call[0].includes('poetry install')
       );
       expect(installCall).toBeDefined();
-      // Should use poetry run for test execution
-      const testCall = calls.find((call: unknown[]) =>
-        typeof call[0] === 'string' && call[0].includes('poetry run pytest')
-      );
-      expect(testCall).toBeDefined();
     });
 
     test('should detect Pipfile.lock and use pipenv install', async () => {
@@ -708,23 +205,13 @@ describe('TestRunner', () => {
       });
       mockExecAsync.mockResolvedValue({ stdout: '', stderr: '' });
 
-      await runner.runTests({
-        framework: 'pytest',
-        testFile: 'tests/test_security.py',
-        testName: 'test_vulnerability',
-        workingDir: '/tmp/python-repo'
-      });
+      await runner.ensureDependencies('pytest', '/tmp/python-repo');
 
       const calls = mockExecAsync.mock.calls;
       const installCall = calls.find((call: unknown[]) =>
         typeof call[0] === 'string' && call[0].includes('pipenv install')
       );
       expect(installCall).toBeDefined();
-      // Should use pipenv run for test execution
-      const testCall = calls.find((call: unknown[]) =>
-        typeof call[0] === 'string' && call[0].includes('pipenv run pytest')
-      );
-      expect(testCall).toBeDefined();
     });
 
     test('should detect uv.lock and use uv sync', async () => {
@@ -734,23 +221,13 @@ describe('TestRunner', () => {
       });
       mockExecAsync.mockResolvedValue({ stdout: '', stderr: '' });
 
-      await runner.runTests({
-        framework: 'pytest',
-        testFile: 'tests/test_security.py',
-        testName: 'test_vulnerability',
-        workingDir: '/tmp/python-repo'
-      });
+      await runner.ensureDependencies('pytest', '/tmp/python-repo');
 
       const calls = mockExecAsync.mock.calls;
       const installCall = calls.find((call: unknown[]) =>
         typeof call[0] === 'string' && call[0].includes('uv sync')
       );
       expect(installCall).toBeDefined();
-      // Should use uv run for test execution
-      const testCall = calls.find((call: unknown[]) =>
-        typeof call[0] === 'string' && call[0].includes('uv run pytest')
-      );
-      expect(testCall).toBeDefined();
     });
 
     test('should fall back to pip with --break-system-packages when uv unavailable', async () => {
@@ -767,12 +244,7 @@ describe('TestRunner', () => {
         return Promise.resolve({ stdout: '', stderr: '' });
       });
 
-      await runner.runTests({
-        framework: 'pytest',
-        testFile: 'tests/test_security.py',
-        testName: 'test_vulnerability',
-        workingDir: '/tmp/python-repo'
-      });
+      await runner.ensureDependencies('pytest', '/tmp/python-repo');
 
       const calls = mockExecAsync.mock.calls;
       const installCall = calls.find((call: unknown[]) =>
@@ -798,12 +270,7 @@ describe('TestRunner', () => {
         return Promise.resolve({ stdout: '', stderr: '' });
       });
 
-      await runner.runTests({
-        framework: 'pytest',
-        testFile: 'tests/test_security.py',
-        testName: 'test_vulnerability',
-        workingDir: '/tmp/python-repo'
-      });
+      await runner.ensureDependencies('pytest', '/tmp/python-repo');
 
       const calls = mockExecAsync.mock.calls;
       const installCall = calls.find((call: unknown[]) =>
@@ -821,12 +288,7 @@ describe('TestRunner', () => {
       });
       mockExecAsync.mockResolvedValue({ stdout: '', stderr: '' });
 
-      await runner.runTests({
-        framework: 'pytest',
-        testFile: 'tests/test_security.py',
-        testName: 'test_vulnerability',
-        workingDir: '/tmp/python-repo'
-      });
+      await runner.ensureDependencies('pytest', '/tmp/python-repo');
 
       const calls = mockExecAsync.mock.calls;
       const installCall = calls.find((call: unknown[]) =>
@@ -843,12 +305,7 @@ describe('TestRunner', () => {
       });
       mockExecAsync.mockResolvedValue({ stdout: '', stderr: '' });
 
-      await runner.runTests({
-        framework: 'pytest',
-        testFile: 'tests/test_security.py',
-        testName: 'test_vulnerability',
-        workingDir: '/tmp/python-repo'
-      });
+      await runner.ensureDependencies('pytest', '/tmp/python-repo');
 
       const calls = mockExecAsync.mock.calls;
       const installCall = calls.find((call: unknown[]) =>
@@ -993,12 +450,7 @@ describe('TestRunner', () => {
         return Promise.resolve({ stdout: '', stderr: '' });
       });
 
-      await runner.runTests({
-        framework: 'junit4',
-        testFile: 'src/test/java/SecurityTest.java',
-        testName: 'testVulnerability',
-        workingDir: '/tmp/java-repo'
-      });
+      await runner.ensureRuntime('junit4', '/tmp/java-repo');
 
       const calls = mockExecAsync.mock.calls.map((c: unknown[]) => c[0] as string);
       // Should use temurin vendor prefix for mise installation
@@ -1243,12 +695,7 @@ describe('TestRunner', () => {
       });
       mockExecAsync.mockResolvedValue({ stdout: '', stderr: '' });
 
-      await runner.runTests({
-        framework: 'exunit',
-        testFile: 'test/security_test.exs',
-        testName: 'test vulnerability',
-        workingDir: '/tmp/elixir-repo'
-      });
+      await runner.ensureDependencies('exunit', '/tmp/elixir-repo');
 
       const calls = mockExecAsync.mock.calls.map((c: unknown[]) => c[0] as string);
 

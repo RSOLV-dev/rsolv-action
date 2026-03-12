@@ -10,14 +10,15 @@ import { describe, test, expect, beforeEach, vi } from 'vitest';
 import { PhaseExecutor } from '../index.js';
 import type { ActionConfig, IssueContext, ScanPhaseData } from '../../../types/index.js';
 
-// Track ensureRuntime calls
+// Track ensureRuntime and ensureDependencies calls
 const mockEnsureRuntime = vi.fn().mockResolvedValue(undefined);
+const mockEnsureDependencies = vi.fn().mockResolvedValue(undefined);
 
 // Mock TestRunner — the key assertion target
 vi.mock('../../../ai/test-runner.js', () => {
   const MockTestRunner = vi.fn().mockImplementation(() => ({
     ensureRuntime: mockEnsureRuntime,
-    runTests: vi.fn(),
+    ensureDependencies: mockEnsureDependencies,
   }));
   return {
     TestRunner: MockTestRunner,
@@ -216,6 +217,61 @@ describe('Runtime setup before pipeline sessions', () => {
 
     // With unknown framework, ensureRuntime should not be called
     // (or called with 'unknown' which returns early)
+    expect(mockRunValidation).toHaveBeenCalledTimes(1);
+  });
+
+  test('executeValidateForIssue calls ensureDependencies after ensureRuntime', async () => {
+    const callOrder: string[] = [];
+    mockEnsureRuntime.mockImplementation(async () => {
+      callOrder.push('ensureRuntime');
+    });
+    mockEnsureDependencies.mockImplementation(async () => {
+      callOrder.push('ensureDependencies');
+    });
+    mockRunValidation.mockImplementation(async () => {
+      callOrder.push('runValidation');
+      return {
+        validated: true, test_path: 'spec/test_spec.rb',
+        test_code: 'test', framework: 'rspec',
+        test_command: 'bundle exec rspec',
+        classification: { tier: 'behavioral' },
+      };
+    });
+
+    const executor = new PhaseExecutor(baseConfig);
+    await executor.executeValidateForIssue(issue, scanData);
+
+    expect(callOrder).toEqual(['ensureRuntime', 'ensureDependencies', 'runValidation']);
+  });
+
+  test('executeMitigateForIssue calls ensureDependencies after ensureRuntime', async () => {
+    const callOrder: string[] = [];
+    mockEnsureRuntime.mockImplementation(async () => {
+      callOrder.push('ensureRuntime');
+    });
+    mockEnsureDependencies.mockImplementation(async () => {
+      callOrder.push('ensureDependencies');
+    });
+    mockRunMitigation.mockImplementation(async () => {
+      callOrder.push('runMitigation');
+      return { success: true, title: 'fix', description: 'Fixed' };
+    });
+
+    const executor = new PhaseExecutor(baseConfig);
+    await executor.executeMitigateForIssue(issue, scanData, null);
+
+    expect(callOrder).toEqual(['ensureRuntime', 'ensureDependencies', 'runMitigation']);
+  });
+
+  test('ensureDependencies failure does not prevent session from starting', async () => {
+    mockEnsureDependencies.mockRejectedValueOnce(new Error('bundle install failed: mysql2 native extension'));
+
+    const executor = new PhaseExecutor(baseConfig);
+    await executor.executeValidateForIssue(issue, scanData);
+
+    // Session should still proceed (ensureDependencies failure is non-fatal)
+    expect(mockEnsureRuntime).toHaveBeenCalledTimes(1);
+    expect(mockEnsureDependencies).toHaveBeenCalledTimes(1);
     expect(mockRunValidation).toHaveBeenCalledTimes(1);
   });
 });

@@ -243,6 +243,7 @@ export class PhaseExecutor {
             createdIssues,
             vulnerabilities: scanResult.vulnerabilities || [],
             manifestFiles: scanResult.manifestFiles || {},
+            fileList: scanResult.fileList || [],
           });
 
           pipelineRunId = runResult.pipeline_run_id;
@@ -1151,6 +1152,13 @@ export class PhaseExecutor {
           const testRunner = new TestRunner();
           await testRunner.ensureRuntime(frameworkName as TestFramework, process.cwd());
           logger.info(`[VALIDATE] Runtime ensured for framework: ${frameworkName}`);
+          try {
+            await testRunner.ensureDependencies(frameworkName as TestFramework, process.cwd());
+            logger.info(`[VALIDATE] Dependencies ensured for framework: ${frameworkName}`);
+          } catch (depErr) {
+            const depMessage = depErr instanceof Error ? depErr.message : String(depErr);
+            logger.warn(`[VALIDATE] Failed to ensure dependencies for ${frameworkName}: ${depMessage} — continuing anyway`);
+          }
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
           logger.warn(`[VALIDATE] Failed to ensure runtime for ${frameworkName}: ${message} — continuing anyway`);
@@ -1398,7 +1406,7 @@ export class PhaseExecutor {
     try {
       logger.info(`[MITIGATE] Starting backend-orchestrated mitigation for issue #${issue.number}`);
 
-      // Ensure the runtime is available for bash tool requests during MITIGATE.
+      // Ensure the runtime and dependencies are available for bash tool requests during MITIGATE.
       // Same rationale as VALIDATE: the backend AI sends bash commands that need
       // the runtime installed (e.g., "bundle exec rspec" to verify the fix).
       const frameworkName = this.detectTestFramework();
@@ -1407,6 +1415,13 @@ export class PhaseExecutor {
           const testRunner = new TestRunner();
           await testRunner.ensureRuntime(frameworkName as TestFramework, process.cwd());
           logger.info(`[MITIGATE] Runtime ensured for framework: ${frameworkName}`);
+          try {
+            await testRunner.ensureDependencies(frameworkName as TestFramework, process.cwd());
+            logger.info(`[MITIGATE] Dependencies ensured for framework: ${frameworkName}`);
+          } catch (depErr) {
+            const depMessage = depErr instanceof Error ? depErr.message : String(depErr);
+            logger.warn(`[MITIGATE] Failed to ensure dependencies for ${frameworkName}: ${depMessage} — continuing anyway`);
+          }
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
           logger.warn(`[MITIGATE] Failed to ensure runtime for ${frameworkName}: ${message} — continuing anyway`);
