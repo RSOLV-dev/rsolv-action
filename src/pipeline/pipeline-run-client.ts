@@ -48,6 +48,7 @@ export class PipelineRunClient {
     createdIssues: Array<{ issue_number: number; cwe_id: string }>;
     vulnerabilities?: unknown[];
     manifestFiles?: Record<string, string>;
+    fileList?: string[];
   }): Promise<CreateRunResult> {
     const response = await fetch(`${this.apiUrl}/api/v1/pipeline-runs`, {
       method: 'POST',
@@ -63,6 +64,7 @@ export class PipelineRunClient {
         created_issues: params.createdIssues,
         vulnerabilities: params.vulnerabilities || [],
         manifest_files: params.manifestFiles || {},
+        files_scanned: params.fileList || [],
       }),
     });
 

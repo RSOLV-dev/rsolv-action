@@ -46,6 +46,8 @@ export interface ScanResult {
   skippedFalsePositive?: number;
   /** RFC-101: Manifest/config file contents for project shape detection */
   manifestFiles?: Record<string, string>;
+  /** Scanned file paths for platform-side test discovery (PhaseContext) */
+  fileList?: string[];
   /** RFC-133: Structured scan report when scan_output includes 'report' */
   scanReport?: ScanReport;
 }
