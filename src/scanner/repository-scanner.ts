@@ -195,7 +195,8 @@ export class RepositoryScanner {
       vulnerabilities,
       groupedVulnerabilities,
       createdIssues: [], // Will be populated if issues are created
-      manifestFiles: Object.keys(manifestFiles).length > 0 ? manifestFiles : undefined
+      manifestFiles: Object.keys(manifestFiles).length > 0 ? manifestFiles : undefined,
+      fileList: files.map(f => f.path),
     };
   }
 
