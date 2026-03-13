@@ -103,7 +103,7 @@ vi.mock('fs', async () => {
       return false;
     }),
     readFileSync: vi.fn().mockImplementation((p: string) => {
-      if (p.endsWith('Gemfile')) return "gem 'rspec-rails'\ngem 'rails'";
+      if (p.endsWith('Gemfile')) return 'gem \'rspec-rails\'\ngem \'rails\'';
       return '';
     }),
   };
