@@ -355,7 +355,7 @@ function buildGenericEducation(cwe?: string, vulnerabilityType?: string): Educat
     title: titleCased,
     description: cweNum
       ? `This vulnerability (CWE-${cweNum}) can compromise application security. See https://cwe.mitre.org/data/definitions/${cweNum}.html for detailed information.`
-      : `This vulnerability can compromise application security if not properly addressed.`,
+      : 'This vulnerability can compromise application security if not properly addressed.',
     prevention: 'Follow secure coding practices: validate and sanitize all inputs, apply the principle of least privilege, and keep dependencies updated.',
   };
 }

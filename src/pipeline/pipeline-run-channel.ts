@@ -276,25 +276,25 @@ export class PipelineRunChannel {
 
     // Handle server pushes
     switch (event) {
-      case 'validate':
-        this.config.onValidate?.(payload.issues as IssueInstruction[]);
-        break;
-      case 'mitigate':
-        this.config.onMitigate?.(payload.issues as IssueInstruction[]);
-        break;
-      case 'complete':
-        this.config.onComplete?.(payload as unknown as RunSummary);
-        break;
-      case 'status_change':
-        this.config.onStatusChange?.(payload.status as string);
-        break;
-      case 'error':
-        this.config.onError?.(payload.error as string);
-        break;
-      case 'run_recovered':
-        console.log(`[PipelineRunChannel] Run recovered after node failure: reconciled=${payload.reconciled}, failed=${payload.failed}, live=${payload.live}`);
-        this.config.onRecovered?.(payload as unknown as RecoverySummary);
-        break;
+    case 'validate':
+      this.config.onValidate?.(payload.issues as IssueInstruction[]);
+      break;
+    case 'mitigate':
+      this.config.onMitigate?.(payload.issues as IssueInstruction[]);
+      break;
+    case 'complete':
+      this.config.onComplete?.(payload as unknown as RunSummary);
+      break;
+    case 'status_change':
+      this.config.onStatusChange?.(payload.status as string);
+      break;
+    case 'error':
+      this.config.onError?.(payload.error as string);
+      break;
+    case 'run_recovered':
+      console.log(`[PipelineRunChannel] Run recovered after node failure: reconciled=${payload.reconciled}, failed=${payload.failed}, live=${payload.live}`);
+      this.config.onRecovered?.(payload as unknown as RecoverySummary);
+      break;
     }
   }
 
