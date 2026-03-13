@@ -904,7 +904,7 @@ export class PhaseExecutor {
                 });
               }
             } catch (storeErr) {
-              logger.warn(`[FULL] Failed to store validation with pipelineRunId:`, storeErr);
+              logger.warn('[FULL] Failed to store validation with pipelineRunId:', storeErr);
             }
           }
         } catch (error) {
