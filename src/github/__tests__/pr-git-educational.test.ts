@@ -71,7 +71,7 @@ describe('Educational PR Creation', () => {
           title: 'Cross-Site Scripting (XSS)',
           description: 'XSS allows attackers to inject malicious scripts into web pages viewed by other users.',
           prevention: 'Sanitize and escape all user input before rendering in HTML context.',
-          example: "fetch('/api?q=<script>alert(1)</script>')",
+          example: 'fetch(\'/api?q=<script>alert(1)</script>\')',
         },
       };
 
@@ -200,7 +200,7 @@ describe('Educational PR Creation', () => {
           title: 'Cross-Site Scripting (XSS)',
           description: 'XSS allows attackers to inject malicious scripts into web pages viewed by other users.',
           prevention: 'Sanitize and escape all user input before rendering in HTML context.',
-          example: "fetch('/api?q=<script>alert(1)</script>')",
+          example: 'fetch(\'/api?q=<script>alert(1)</script>\')',
         },
       };
 
@@ -361,7 +361,7 @@ describe('Educational PR Creation', () => {
           title: 'SQL Injection',
           description: 'SQL injection allows attackers to execute arbitrary SQL commands.',
           prevention: 'Use parameterized queries or prepared statements.',
-          example: "SELECT * FROM users WHERE id = '1' OR '1'='1'",
+          example: 'SELECT * FROM users WHERE id = \'1\' OR \'1\'=\'1\'',
         },
       };
 
