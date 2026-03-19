@@ -96,9 +96,9 @@ inputs:
     required: false
     default: 'true'
   claude_max_turns:
-    description: 'RFC-060: Maximum Claude iterations for test generation (1-30)'
+    description: 'DEPRECATED: Turn limit is now controlled server-side (50 turns). This input is parsed but not used in mode=process (the canonical workflow).'
     required: false
-    default: '15'
+    default: '50'
   create_pr:
     description: 'Create Pull Request after successful mitigation (default: true for production)'
     required: false
