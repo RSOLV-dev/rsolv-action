@@ -36,7 +36,7 @@ jobs:
 
       - name: Prepare node_modules directory
         run: |
-          rm -f node_modules
+          rm -rf node_modules
           mkdir -p node_modules
 
       - name: Check if bun.lock needs updating
