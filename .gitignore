@@ -8,6 +8,9 @@ bower_components/
 demo-repos/
 vulnerable-apps/
 
+# Stale submodule path from parent repo
+RSOLV-action/
+
 # Build output
 dist/
 lib/
