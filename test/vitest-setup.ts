@@ -13,13 +13,13 @@ delete process.env.CLAUDE_CODE_PATH;
 // Global setup for Vitest tests
 import { afterEach, vi, beforeAll, afterAll } from 'vitest';
 import { setupMSW } from '../src/test/mocks/server';
-import { setupTestEnvironment } from '../test-fixtures/mock-claude-code-sdk';
 
 // Setup MSW for API mocking
 setupMSW();
 
-// Setup Claude Code SDK mocking to prevent process spawning
-setupTestEnvironment();
+// Prevent accidental Claude Code CLI execution in tests
+process.env.RSOLV_USE_CLI = 'false';
+process.env.FORCE_MOCK_CLAUDE_CODE = 'true';
 
 // DO NOT mock fetch globally - let MSW handle it
 // Only mock fetch in specific tests that need it
@@ -48,7 +48,6 @@ afterEach(() => {
 // Don't mock fs globally - let individual tests mock as needed
 // This prevents issues with modules that legitimately need fs access
 
-// DO NOT mock @anthropic-ai/claude-code globally
-// Individual tests should mock this as needed to prevent conflicts
+// Individual tests should mock their own dependencies as needed
 
 console.log('[Vitest Setup] Test environment configured');

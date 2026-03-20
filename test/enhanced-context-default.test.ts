@@ -23,14 +23,6 @@ vi.mock('../src/ai/adapters/claude-agent-sdk', () => ({
   }))
 }));
 
-// Keep legacy mock for backwards compatibility during transition
-vi.mock('../src/ai/adapters/claude-code-enhanced', () => ({
-  EnhancedClaudeCodeAdapter: vi.fn().mockImplementation(() => ({
-    gatherDeepContext: gatherDeepContextMock,
-    generateSolution: vi.fn().mockRejectedValue(new Error('Mock error'))
-  }))
-}));
-
 // Now import after mocks are set up
 import { processIssues } from '../src/ai/unified-processor';
 import { IssueContext, ActionConfig } from '../src/types';
