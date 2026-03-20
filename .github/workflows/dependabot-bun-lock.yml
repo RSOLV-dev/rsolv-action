@@ -17,7 +17,7 @@ on:
 
 permissions:
   contents: write
-  pull-requests: write
+  actions: write
 
 concurrency:
   group: dependabot-bun-lock-${{ github.event.pull_request.number }}
@@ -73,12 +73,10 @@ jobs:
           git commit -m "chore: regenerate bun.lock for Dependabot update"
           git push origin "HEAD:${GH_HEAD_REF}"
 
-      - name: Re-trigger CI by closing and reopening the PR
+      - name: Trigger CI on the updated branch
         if: steps.check.outputs.needs_update == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GH_HEAD_REF: ${{ github.head_ref }}
         run: |
-          gh pr close "$PR_NUMBER"
-          sleep 2
-          gh pr reopen "$PR_NUMBER"
+          gh workflow run ci.yml --ref "${GH_HEAD_REF}" --field ref="${GH_HEAD_REF}"

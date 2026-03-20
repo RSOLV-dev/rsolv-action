@@ -5,12 +5,19 @@ on:
     branches: ['*']
   pull_request:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Git ref to check out'
+        required: false
 
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || '' }}
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -51,6 +58,8 @@ jobs:
     needs: test
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || '' }}
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
