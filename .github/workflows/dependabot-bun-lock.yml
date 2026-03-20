@@ -8,7 +8,7 @@ name: Update bun.lock for Dependabot PRs
 # Security notes (pull_request_target):
 # - Workflow code comes from main, not the PR branch — can't be tampered
 # - Gated to dependabot[bot] via PR author login (not spoofable via re-runs)
-# - Only checks out the PR branch to run `bun install` — no arbitrary code exec
+# - bun install runs with --ignore-scripts to prevent lifecycle script execution
 # - persist-credentials: false prevents token leakage via artifacts
 
 on:
@@ -42,7 +42,7 @@ jobs:
       - name: Check if bun.lock needs updating
         id: check
         run: |
-          if bun install --frozen-lockfile 2>/dev/null; then
+          if bun install --frozen-lockfile --ignore-scripts 2>/dev/null; then
             echo "needs_update=false" >> "$GITHUB_OUTPUT"
           else
             echo "needs_update=true" >> "$GITHUB_OUTPUT"
@@ -50,7 +50,7 @@ jobs:
 
       - name: Regenerate bun.lock
         if: steps.check.outputs.needs_update == 'true'
-        run: bun install
+        run: bun install --ignore-scripts
 
       - name: Commit and push updated bun.lock
         if: steps.check.outputs.needs_update == 'true'
@@ -61,5 +61,9 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git remote set-url origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
           git add bun.lock
+          if git diff --cached --quiet; then
+            echo "bun.lock unchanged — skipping commit"
+            exit 0
+          fi
           git commit -m "chore: regenerate bun.lock for Dependabot update"
           git push origin "HEAD:${GH_HEAD_REF}"
