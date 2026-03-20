@@ -1,0 +1,65 @@
+name: Update bun.lock for Dependabot PRs
+
+# Dependabot updates package-lock.json (npm) but not bun.lock.
+# Since CI runs `bun install --frozen-lockfile`, Dependabot PRs fail
+# when the dependency change causes bun's resolution to diverge.
+# This workflow regenerates bun.lock and pushes it back to the branch.
+#
+# Security notes (pull_request_target):
+# - Workflow code comes from main, not the PR branch — can't be tampered
+# - Gated to dependabot[bot] via PR author login (not spoofable via re-runs)
+# - Only checks out the PR branch to run `bun install` — no arbitrary code exec
+# - persist-credentials: false prevents token leakage via artifacts
+
+on:
+  pull_request_target:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  update-bun-lock:
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: false
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Prepare node_modules directory
+        run: |
+          rm -f node_modules
+          mkdir -p node_modules
+
+      - name: Check if bun.lock needs updating
+        id: check
+        run: |
+          if bun install --frozen-lockfile 2>/dev/null; then
+            echo "needs_update=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "needs_update=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Regenerate bun.lock
+        if: steps.check.outputs.needs_update == 'true'
+        run: bun install
+
+      - name: Commit and push updated bun.lock
+        if: steps.check.outputs.needs_update == 'true'
+        env:
+          GH_HEAD_REF: ${{ github.head_ref }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
+          git add bun.lock
+          git commit -m "chore: regenerate bun.lock for Dependabot update"
+          git push origin "HEAD:${GH_HEAD_REF}"
