@@ -1,9 +1,9 @@
 // Setup for live API tests - NO MSW mocking
 import { beforeAll, afterAll } from 'vitest';
-import { setupTestEnvironment } from '../test-fixtures/mock-claude-code-sdk';
 
-// Setup Claude Code SDK mocking to prevent process spawning
-setupTestEnvironment();
+// Prevent accidental Claude Code CLI execution in tests
+process.env.RSOLV_USE_CLI = 'false';
+process.env.FORCE_MOCK_CLAUDE_CODE = 'true';
 
 // Set test environment variables
 process.env.NODE_ENV = 'test';
