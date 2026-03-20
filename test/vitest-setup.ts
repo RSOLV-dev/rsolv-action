@@ -11,15 +11,11 @@ delete process.env.CLAUDE_CODE_PATH;
 // which MUST be loaded before this file (see vitest.config.ts setupFiles order)
 
 // Global setup for Vitest tests
-import { afterEach, vi, beforeAll, afterAll } from 'vitest';
+import { afterEach, vi } from 'vitest';
 import { setupMSW } from '../src/test/mocks/server';
 
 // Setup MSW for API mocking
 setupMSW();
-
-// Prevent accidental Claude Code CLI execution in tests
-process.env.RSOLV_USE_CLI = 'false';
-process.env.FORCE_MOCK_CLAUDE_CODE = 'true';
 
 // DO NOT mock fetch globally - let MSW handle it
 // Only mock fetch in specific tests that need it
