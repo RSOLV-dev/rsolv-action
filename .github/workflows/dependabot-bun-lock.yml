@@ -9,7 +9,7 @@ name: Update bun.lock for Dependabot PRs
 # - Workflow code comes from main, not the PR branch — can't be tampered
 # - Gated to dependabot[bot] via PR author login (not spoofable via re-runs)
 # - bun install runs with --ignore-scripts to prevent lifecycle script execution
-# - persist-credentials: false prevents token leakage via artifacts
+# - persist-credentials: false avoids leaving credentials in local git config for later steps
 
 on:
   pull_request_target:
