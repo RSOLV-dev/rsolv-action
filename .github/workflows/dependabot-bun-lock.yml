@@ -18,6 +18,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: dependabot-bun-lock-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   update-bun-lock:
     if: github.event.pull_request.user.login == 'dependabot[bot]'
