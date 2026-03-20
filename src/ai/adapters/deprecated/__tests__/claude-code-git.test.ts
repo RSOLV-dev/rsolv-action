@@ -1,7 +1,6 @@
 import { describe, expect, test, beforeEach, afterEach, vi } from 'vitest';
 import { GitBasedClaudeCodeAdapter } from '../claude-code-git.js';
 import { AIConfig } from '../../../types.js';
-import type { SDKMessage } from '@anthropic-ai/claude-code';
 
 // Use vi.hoisted for mocks that need to be available during module initialization
 const { mockExecSync, mockQueryFunction, mockSpawn } = vi.hoisted(() => {
@@ -37,7 +36,7 @@ const { mockExecSync, mockQueryFunction, mockSpawn } = vi.hoisted(() => {
   "tests": ["Test with malicious inputs"]
 }
 \`\`\``
-    } as SDKMessage;
+    } as { type: string; text: string };
   });
   
   const spawn = vi.fn(() => ({

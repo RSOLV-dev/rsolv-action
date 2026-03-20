@@ -177,14 +177,9 @@ export interface ClaudeAgentSDKAdapterConfig {
 /**
  * Claude Agent SDK Adapter
  *
- * Unified adapter for Claude Agent SDK that replaces 7 legacy adapters:
- * - claude-code.ts
- * - claude-code-enhanced.ts
- * - claude-code-git.ts
- * - claude-code-cli.ts
- * - claude-code-cli-retry.ts
- * - claude-code-cli-dev.ts
- * - claude-code-single-pass.ts
+ * Unified adapter for Claude Agent SDK (RFC-095).
+ * Legacy CLI-based fallback via GitBasedClaudeCodeAdapter is still
+ * available behind the use_legacy_claude_adapter feature flag.
  */
 export class ClaudeAgentSDKAdapter {
   private repoPath: string;
