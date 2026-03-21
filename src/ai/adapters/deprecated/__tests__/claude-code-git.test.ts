@@ -3,7 +3,7 @@ import { GitBasedClaudeCodeAdapter } from '../claude-code-git.js';
 import { AIConfig } from '../../../types.js';
 
 // Use vi.hoisted for mocks that need to be available during module initialization
-const { mockExecSync, mockQueryFunction, mockSpawn } = vi.hoisted(() => {
+const { mockExecSync, mockSpawn } = vi.hoisted(() => {
   const execSync = vi.fn((command: string) => {
     if (command === 'git diff --name-only') {
       return 'src/routes/users.js\nsrc/utils/db.js\n';
@@ -16,29 +16,7 @@ const { mockExecSync, mockQueryFunction, mockSpawn } = vi.hoisted(() => {
     }
     return '';
   });
-  
-  const queryFunction = vi.fn(async function* () {
-    // Simulate Claude Code execution that returns a solution in code blocks
-    yield { 
-      type: 'text', 
-      text: `After fixing the vulnerabilities, here's the summary:
 
-\`\`\`json
-{
-  "title": "Fix SQL injection in user routes",
-  "description": "Replaced string concatenation with parameterized queries",
-  "files": [
-    {
-      "path": "src/routes/users.js",
-      "changes": "Fixed SQL injection vulnerability"
-    }
-  ],
-  "tests": ["Test with malicious inputs"]
-}
-\`\`\``
-    } as { type: string; text: string };
-  });
-  
   const spawn = vi.fn(() => ({
     stdout: { on: vi.fn() },
     stderr: { on: vi.fn() },
@@ -46,10 +24,9 @@ const { mockExecSync, mockQueryFunction, mockSpawn } = vi.hoisted(() => {
       if (event === 'close') setTimeout(() => cb(0), 10);
     })
   }));
-  
+
   return {
     mockExecSync: execSync,
-    mockQueryFunction: queryFunction,
     mockSpawn: spawn
   };
 });
@@ -57,10 +34,6 @@ const { mockExecSync, mockQueryFunction, mockSpawn } = vi.hoisted(() => {
 vi.mock('child_process', () => ({
   execSync: mockExecSync,
   spawn: mockSpawn
-}));
-
-vi.mock('@anthropic-ai/claude-code', () => ({
-  query: mockQueryFunction
 }));
 
 // Mock the parent class methods
