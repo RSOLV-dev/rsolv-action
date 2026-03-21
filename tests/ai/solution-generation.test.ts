@@ -145,7 +145,7 @@ This fixes the SQL injection vulnerability by using parameterized queries.`;
     expect(solution.changes!['src/auth/login.js']).toContain('?'); // Parameterized query
   }, 30000);
 
-  test('should handle real API call with fallback', async () => {
+  test.skipIf(!process.env.RUN_INTEGRATION)('should handle real API call with fallback', async () => {
     // This test uses the real API to ensure the full flow works
     const issueContext: IssueContext = {
       id: '123',
