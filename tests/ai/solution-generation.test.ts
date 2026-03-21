@@ -145,8 +145,9 @@ This fixes the SQL injection vulnerability by using parameterized queries.`;
     expect(solution.changes!['src/auth/login.js']).toContain('?'); // Parameterized query
   }, 30000);
 
-  test.skipIf(!process.env.RUN_INTEGRATION)('should handle real API call with fallback', async () => {
-    // This test uses the real API to ensure the full flow works
+  test('should handle API failure gracefully with fallback', async () => {
+    // Test that generateSolution returns a structured failure when the AI client errors,
+    // rather than throwing an unhandled exception
     const issueContext: IssueContext = {
       id: '123',
       number: 8,
@@ -176,23 +177,23 @@ This fixes the SQL injection vulnerability by using parameterized queries.`;
       canBeFixed: true
     };
 
-    // Run without security analysis to test basic flow
+    // Mock AI client that simulates API failure (auth error, rate limit, etc.)
+    const failingAiClient = {
+      complete: async (_prompt: string) => {
+        throw new Error('API authentication failed: invalid key');
+      }
+    };
+
     const solution = await generateSolution(
       issueContext,
       analysisData,
-      config
+      config,
+      failingAiClient
     );
 
-    // Log the result for debugging
-    console.log('Solution result:', {
-      success: solution.success,
-      message: solution.message,
-      hasChanges: !!solution.changes,
-      changeCount: solution.changes ? Object.keys(solution.changes).length : 0
-    });
-
-    // The test might fail if no API key is available, but should at least not crash
+    // Should return a structured result, not throw
     expect(solution).toHaveProperty('success');
     expect(solution).toHaveProperty('message');
-  }, 60000);
+    expect(solution.success).toBe(false);
+  }, 30000);
 });
