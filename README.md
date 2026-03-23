@@ -14,7 +14,7 @@
 ## Quick Start
 
 ### 1. Get Your API Key
-- [Sign up at rsolv.dev/signup](https://rsolv.dev/signup) - 5 free credits instantly, 5 more when you add billing
+- [Sign up at rsolv.dev/signup](https://rsolv.dev/signup)
 
 ### 2. Add API Key to GitHub Secrets
 In your repository: Settings → Secrets → New repository secret
