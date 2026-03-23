@@ -9,7 +9,7 @@
 - **🔍 Proof, Not Warnings** — We generate a failing test that exploits each vulnerability. Run it yourself—if it fails, it's real. No more investigating scanner maybes.
 - **✅ Fixes That Actually Work** — Our AI writes fixes that make the exploit test pass. Not "this should fix it"—proof the vulnerability is gone.
 - **🛡️ Regression Protection Built In** — That exploit test stays in your codebase forever. The vulnerability can never return silently.
-- **🔧 Your Tools, Your Framework** — Tests run in Jest, pytest, RSpec—whatever you already use. No new tooling to learn.
+- **🔧 Your Tools, Your Framework** — Tests run in your existing framework—RSpec, pytest, Mocha, ExUnit, PHPUnit, JUnit, Minitest. No new tooling to learn.
 
 ## Quick Start
 
@@ -195,7 +195,7 @@ For complete configuration options, see [Documentation](https://rsolv.dev/docs).
 
 ## Security Features
 
-### 170+ Security Patterns
+### 183 Security Patterns
 
 Enterprise-grade vulnerability detection across 7 languages with OWASP Top 10 coverage:
 
@@ -215,7 +215,7 @@ Enterprise-grade vulnerability detection across 7 languages with OWASP Top 10 co
 - String literal analysis (ignores example code)
 - Data flow analysis (validates reachability)
 
-**Layer 2: Executable Proof** — every vulnerability that passes AST validation gets a generated exploit test. If the test doesn't fail, we don't report it.
+**Layer 2: Executable Proof** — every vulnerability that passes AST validation gets a generated exploit test. If the test can't prove the vulnerability, the issue is labeled inconclusive and no fix is attempted.
 
 Supported: JavaScript, TypeScript, Python, Ruby, Java, PHP, Elixir
 
@@ -233,12 +233,12 @@ Supported: JavaScript, TypeScript, Python, Ruby, Java, PHP, Elixir
 
 This limit applies to vulnerability validation (computationally expensive). Other endpoints (pattern fetching, phase data) have generous limits. Weekly scheduled scans and manual runs work within these limits.
 
-**Need higher limits?** Contact us at [support@rsolv.dev](mailto:support@rsolv.dev) for enterprise plans.
+**Need higher limits?** Contact [support@rsolv.dev](mailto:support@rsolv.dev).
 
 ## Support & Documentation
 
 - 📧 Email: [support@rsolv.dev](mailto:support@rsolv.dev)
-- 📖 Docs: [docs.rsolv.dev](https://docs.rsolv.dev)
+- 📖 Docs: [rsolv.dev/docs](https://rsolv.dev/docs)
 - 💬 GitHub Issues: [Report bugs or request features](https://github.com/RSOLV-dev/rsolv-action/issues)
 
 ## Troubleshooting
@@ -267,7 +267,7 @@ For complex vulnerabilities:
 - Consider processing one issue at a time
 - Use `mode: scan` first to assess scope
 
-For more help, see [Documentation](https://docs.rsolv.dev) or [open an issue](https://github.com/RSOLV-dev/rsolv-action/issues).
+For more help, see [Documentation](https://rsolv.dev/docs) or [open an issue](https://github.com/RSOLV-dev/rsolv-action/issues).
 
 ## License
 
