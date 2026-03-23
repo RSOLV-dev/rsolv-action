@@ -162,7 +162,7 @@ jobs:
 
 RSOLV uses a three-phase test-first methodology:
 
-1. **SCAN** - Detects vulnerabilities using 170+ security patterns with AST validation
+1. **SCAN** - Detects vulnerabilities using 183 security patterns with AST validation
 2. **VALIDATE** - Generates executable RED tests that prove vulnerabilities exist
 3. **MITIGATE** - Applies AI-generated fixes that make the tests pass
 
@@ -187,11 +187,11 @@ Every fix is proven with tests that fail before and pass after—no guesswork.
 |-------|-------------|---------|
 | `enable_ast_validation` | Use AST validation to reduce false positives | `true` |
 | `executable_tests` | Generate executable RED tests | `true` |
-| `claude_max_turns` | Max Claude iterations for test generation | `5` |
+| `claude_max_turns` | Deprecated — turn limit controlled server-side | `50` |
 | `enable_educational_pr` | Include security explanations in PRs | `true` |
 | `api_url` | RSOLV API endpoint | `https://api.rsolv.dev` |
 
-For complete configuration options, see [Documentation](https://docs.rsolv.dev).
+For complete configuration options, see [Documentation](https://rsolv.dev/docs).
 
 ## Security Features
 
@@ -221,9 +221,9 @@ Supported: JavaScript, TypeScript, Python, Ruby, Java, PHP, Elixir
 
 ## Pricing
 
-- **Trial**: 5 credits free at signup, 5 more when you add billing
-- **Pay As You Go**: $29 per fix
-- **Pro**: $599/month (60 fixes included, then $15/fix for additional)
+- **Free**: $0/month — 5 validations/month, no credit card required
+- **Pro**: $49/month — 50 validations, 15 fixes/month ($10/additional fix)
+- **Team**: $149/month — 150 validations, 50 fixes/month ($7/additional fix)
 
 [View detailed pricing](https://rsolv.dev/pricing)
 
