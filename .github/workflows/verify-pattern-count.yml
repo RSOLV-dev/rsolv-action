@@ -25,18 +25,18 @@ jobs:
       - name: Count Patterns
         run: |
           # This workflow verifies the minimal-patterns.ts test pattern count.
-          # The actual pattern count (~170) is served via the RSOLV-platform API.
+          # The actual pattern count (183) is served via the RSOLV-platform API.
           # These 26 patterns are for testing/CI purposes only.
 
           # Count test patterns in minimal-patterns.ts
           TOTAL=$(grep -o "^\s*id:" src/security/minimal-patterns.ts | wc -l)
           echo "TOTAL_PATTERNS=$TOTAL" >> $GITHUB_ENV
           echo "Found $TOTAL test patterns in minimal-patterns.ts"
-          echo "Note: Production pattern count (~170) is served via API"
+          echo "Note: Production pattern count (183) is served via API"
           
       - name: Verify README Claims
         run: |
-          # Check if README contains the API pattern count (170+)
+          # Check if README contains the API pattern count (183)
           # Note: This is separate from the 26 test patterns verified above
           README_COUNT=$(grep -oP "\d+(?=\+ Security Patterns)" README.md | head -1)
           if [ -z "$README_COUNT" ]; then
@@ -44,7 +44,7 @@ jobs:
             exit 1
           fi
           if [ "$README_COUNT" -lt 170 ]; then
-            echo "❌ README claims $README_COUNT+ patterns but should claim 170+ (API patterns)"
+            echo "❌ README claims $README_COUNT+ patterns but should claim 183 (API patterns)"
             exit 1
           fi
           echo "✅ README correctly claims $README_COUNT+ patterns (API count)"
@@ -61,13 +61,13 @@ jobs:
 
           ## Pattern Counts
 
-          - **Production Patterns**: ~170 patterns (served via RSOLV-platform API)
+          - **Production Patterns**: 183 patterns (served via RSOLV-platform API)
           - **Test Patterns**: $TOTAL_PATTERNS patterns (in src/security/minimal-patterns.ts)
 
           ## About the Counts
 
           The 26 patterns in minimal-patterns.ts are for testing and CI purposes only.
-          Production deployments require the full ~170 pattern set from the RSOLV-platform API for comprehensive
+          Production deployments require the full 183 pattern set from the RSOLV-platform API for comprehensive
           vulnerability detection across 8 languages. If the backend is unavailable, customers must wait for it
           to come back online.
 
@@ -81,7 +81,7 @@ jobs:
           # Fail if we detect old inflated counts (448 or 80)
           if grep -qE "(448|80)\+" README.md 2>/dev/null; then
             echo "❌ Found inflated pattern count (448+ or 80+) in README.md"
-            echo "Should be 170+ (API patterns)"
+            echo "Should be 183 (API patterns)"
             exit 1
           fi
 
@@ -89,7 +89,7 @@ jobs:
           if [ -d "docs" ]; then
             if grep -rqE "(448|80)\+" docs/ --exclude-dir=archived 2>/dev/null; then
               echo "❌ Found inflated pattern count (448+ or 80+) in docs/"
-              echo "Should be 170+ (API patterns)"
+              echo "Should be 183 (API patterns)"
               exit 1
             fi
           fi
