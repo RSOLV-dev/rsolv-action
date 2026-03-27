@@ -12,6 +12,11 @@ if [ -d "/github/workspace" ]; then
   git config --global --add safe.directory /github/workspace
   echo "Added /github/workspace as safe directory for git"
 
+  # Skip Git LFS — we don't need LFS-tracked files for security analysis,
+  # and repos with LFS configured crash on git checkout if git-lfs
+  # isn't installed in the container
+  export GIT_LFS_SKIP_SMUDGE=1
+
 else
   # Fallback for local testing
   cd /app
