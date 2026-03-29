@@ -324,12 +324,13 @@ export class PhaseExecutor {
 
       let validatedCount = 0;
       let mitigatedCount = 0;
+      const issueResults: Array<{ issueNumber: number; classification: string; prUrl?: string }> = [];
 
       // Loop: process all pending work, re-querying after each pass.
       // Validations create mitigate-ready issues, so we loop until no pending work remains.
       const MAX_PASSES = 5;
       for (let pass = 0; pass < MAX_PASSES; pass++) {
-        const allPending = pass === 0
+        const allPending: Array<{ issue_number: number; cwe_id: string; pending_action: string }> = pass === 0
           ? pendingIssues
           : await runClient.getPendingIssues(pipelineRunId);
         const pending = issueFilter
@@ -350,13 +351,28 @@ export class PhaseExecutor {
         for (const issue of toValidate) {
           logger.info(`[PROCESS] Validating issue #${issue.issue_number} (${issue.cwe_id})`);
           try {
-            await this.executeValidate({
+            const validateResult = await this.executeValidate({
               ...options,
               issueNumber: issue.issue_number,
             });
             validatedCount++;
+
+            // Extract classification for job summary
+            const vData = validateResult.data?.validation as Record<string, Record<string, unknown>> | undefined;
+            const issueKey = `issue_${issue.issue_number}`;
+            const classification = vData?.[issueKey]?.classification as string | undefined;
+            const prUrl = validateResult.data?.pr_url as string | undefined;
+            issueResults.push({
+              issueNumber: issue.issue_number,
+              classification: classification || (validateResult.success ? 'validated' : 'unknown'),
+              prUrl,
+            });
           } catch (err) {
             logger.error(`[PROCESS] Validation failed for issue #${issue.issue_number}`, err);
+            issueResults.push({
+              issueNumber: issue.issue_number,
+              classification: 'infrastructure_failure',
+            });
           }
         }
 
@@ -378,6 +394,12 @@ export class PhaseExecutor {
               if (prUrl && prNumber) {
                 await runClient.reportPR(pipelineRunId, issue.issue_number, prUrl, prNumber);
                 logger.info(`[PROCESS] Reported PR #${prNumber} for issue #${issue.issue_number}`);
+
+                // Update existing issueResult with PR URL
+                const existing = issueResults.find(r => r.issueNumber === issue.issue_number);
+                if (existing) {
+                  existing.prUrl = prUrl;
+                }
               }
             }
             mitigatedCount++;
@@ -398,6 +420,7 @@ export class PhaseExecutor {
           pipeline_run_id: pipelineRunId,
           validated: validatedCount,
           mitigated: mitigatedCount,
+          issueResults,
         },
       };
     } catch (error) {
