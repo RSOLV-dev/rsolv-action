@@ -7,6 +7,8 @@
  * Classification → Label mapping:
  *   validated            → add rsolv:validated, remove rsolv:detected
  *   false_positive       → add rsolv:false-positive, remove rsolv:detected
+ *   false_positive_defense_confirmed → add rsolv:false-positive, remove rsolv:detected
+ *   false_positive_counter_indicated → add rsolv:false-positive, remove rsolv:detected
  *   infrastructure_failure → add rsolv:validation-inconclusive, keep rsolv:detected
  *   inconclusive         → add rsolv:validation-inconclusive, keep rsolv:detected
  *   no_test_framework    → add rsolv:validation-unavailable, keep rsolv:detected
@@ -64,7 +66,9 @@ export async function applyValidationLabels(
       break;
 
     case 'false_positive':
-      logger.info(`[LABELS] Adding 'rsolv:false-positive' to issue #${issueNumber}`);
+    case 'false_positive_defense_confirmed':
+    case 'false_positive_counter_indicated':
+      logger.info(`[LABELS] Adding 'rsolv:false-positive' to issue #${issueNumber} (${classification})`);
       await withRetry(() => addLabels(owner, repo, issueNumber, ['rsolv:false-positive']), `addLabels(rsolv:false-positive, #${issueNumber})`);
       if (currentLabels.includes('rsolv:detected')) {
         logger.info(`[LABELS] Removing 'rsolv:detected' from issue #${issueNumber}`);
