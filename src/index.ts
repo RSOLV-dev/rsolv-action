@@ -4,6 +4,7 @@ import { ActionStatus } from './types/index.js';
 import { getRepositoryDetails } from './github/api.js';
 import { getExecutionMode, getModeDescription } from './utils/mode-selector.js';
 import { PhaseExecutor } from './modes/phase-executor/index.js';
+import { writeScanSummary, writeProcessSummary } from './utils/job-summary.js';
 
 async function run(): Promise<ActionStatus> {
   try {
@@ -100,6 +101,11 @@ async function run(): Promise<ActionStatus> {
             );
           }
 
+          // Job summary for scan results
+          const createdIssues = (scanResult.createdIssues || []) as Array<{ number: number; title?: string; cwe_id?: string; vulnerabilityType?: string }>;
+          const vulnCount = (scanResult.vulnerabilities as unknown[] || []).length;
+          writeScanSummary(repoFullName, createdIssues, vulnCount);
+
           // RFC-133: Write scan report files when scan_output includes 'report'
           if (scanResult.scanReport) {
             const report = scanResult.scanReport as { json: Record<string, unknown>; markdown: string };
@@ -110,6 +116,14 @@ async function run(): Promise<ActionStatus> {
             logger.info('Scan report written to rsolv-scan-report.json and rsolv-scan-report.md');
           }
         }
+      }
+
+      // Job summary for process/validate/mitigate results
+      if (mode === 'process' || mode === 'validate' || mode === 'mitigate') {
+        const issueNum = process.env.RSOLV_ISSUE_NUMBER
+          ? parseInt(process.env.RSOLV_ISSUE_NUMBER)
+          : 0;
+        writeProcessSummary(repoFullName || '', issueNum, result);
       }
 
       return {
