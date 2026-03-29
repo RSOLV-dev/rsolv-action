@@ -62,6 +62,28 @@ describe('applyValidationLabels', () => {
     );
   });
 
+  it('adds rsolv:false-positive and removes rsolv:detected for classification=false_positive_defense_confirmed', async () => {
+    await applyValidationLabels(issueInfo, 'false_positive_defense_confirmed');
+
+    expect(mockAddLabels).toHaveBeenCalledWith(
+      'test-org', 'test-repo', 42, ['rsolv:false-positive']
+    );
+    expect(mockRemoveLabel).toHaveBeenCalledWith(
+      'test-org', 'test-repo', 42, 'rsolv:detected'
+    );
+  });
+
+  it('adds rsolv:false-positive and removes rsolv:detected for classification=false_positive_counter_indicated', async () => {
+    await applyValidationLabels(issueInfo, 'false_positive_counter_indicated');
+
+    expect(mockAddLabels).toHaveBeenCalledWith(
+      'test-org', 'test-repo', 42, ['rsolv:false-positive']
+    );
+    expect(mockRemoveLabel).toHaveBeenCalledWith(
+      'test-org', 'test-repo', 42, 'rsolv:detected'
+    );
+  });
+
   it('adds rsolv:validation-inconclusive for classification=infrastructure_failure', async () => {
     await applyValidationLabels(issueInfo, 'infrastructure_failure');
 
