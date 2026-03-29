@@ -70,8 +70,18 @@ export function writeScanSummary(
   }
 }
 
+interface IssueResult {
+  issueNumber: number;
+  classification: string;
+  prUrl?: string;
+}
+
 /**
  * Write a job summary for a PROCESS (validate+mitigate) phase result.
+ *
+ * When issueResults are available (per-issue classification data from the
+ * process loop), renders a table with per-issue outcomes. Otherwise falls
+ * back to a generic message.
  */
 export function writeProcessSummary(
   repoFullName: string,
@@ -81,57 +91,38 @@ export function writeProcessSummary(
   const summaryFile = process.env.GITHUB_STEP_SUMMARY;
   if (!summaryFile) return;
 
+  const data = (result.data || {}) as Record<string, unknown>;
+  const issueResults = data.issueResults as IssueResult[] | undefined;
+
   const lines: string[] = [
-    `## 🔒 RSOLV Validation — ${repoFullName} #${issueNumber}`,
+    `## 🔒 RSOLV Results — ${repoFullName}`,
     '',
   ];
 
-  if (!result.success) {
-    lines.push(`❌ Validation failed: ${result.error || 'Unknown error'}`);
+  if (!result.success && !issueResults?.length) {
+    lines.push(`❌ Processing failed: ${result.error || 'Unknown error'}`);
+  } else if (issueResults && issueResults.length > 0) {
+    // Per-issue table
+    lines.push('| Issue | Result | Action |');
+    lines.push('|-------|--------|--------|');
+
+    for (const ir of issueResults) {
+      const { emoji, label } = classificationDisplay(ir.classification);
+      const action = ir.prUrl
+        ? `[Fix PR](${ir.prUrl})`
+        : ir.classification.startsWith('false_positive') ? 'No action needed' : '—';
+      lines.push(`| [#${ir.issueNumber}](../../issues/${ir.issueNumber}) | ${emoji} ${label} | ${action} |`);
+    }
   } else {
-    const data = (result.data || {}) as Record<string, unknown>;
+    // Fallback for single-issue mode or missing data
     const classification = extractClassification(data);
     const prUrl = extractPrUrl(data);
+    const { emoji, label } = classificationDisplay(classification || 'unknown');
 
-    switch (classification) {
-      case 'validated':
-        if (prUrl) {
-          lines.push(`✅ **Vulnerability confirmed** — behavioral test proves the vulnerability exists.`);
-          lines.push('');
-          lines.push(`🔧 **Fix PR created:** [${prUrl}](${prUrl})`);
-        } else {
-          lines.push(`✅ **Vulnerability confirmed** — behavioral test proves the vulnerability exists.`);
-          lines.push('');
-          lines.push('Fix generation in progress.');
-        }
-        break;
-
-      case 'false_positive_defense_confirmed':
-        lines.push(`🛡️ **Defense confirmed** — behavioral test PASSED, proving the security defense works.`);
-        lines.push('');
-        lines.push('No action needed. The flagged code is properly defended.');
-        break;
-
-      case 'false_positive_counter_indicated':
-        lines.push(`🛡️ **False positive** — counter-indicator analysis found the vulnerability is not exploitable.`);
-        lines.push('');
-        lines.push('No action needed.');
-        break;
-
-      case 'false_positive':
-        lines.push(`⚪ **Not validated** — could not prove the vulnerability through behavioral testing.`);
-        break;
-
-      case 'infrastructure_failure':
-        lines.push(`⚠️ **Infrastructure issue** — test environment setup failed. This is not a code problem.`);
-        break;
-
-      case 'max_turns_exceeded':
-        lines.push(`⏱️ **Timed out** — validation exceeded the turn limit. The vulnerability may be real but complex to test.`);
-        break;
-
-      default:
-        lines.push(`Validation complete: ${classification || 'unknown'}`);
+    lines.push(`**Issue #${issueNumber}:** ${emoji} ${label}`);
+    if (prUrl) {
+      lines.push('');
+      lines.push(`🔧 **Fix PR:** [${prUrl}](${prUrl})`);
     }
   }
 
@@ -144,6 +135,25 @@ export function writeProcessSummary(
     logger.info(`[JobSummary] Process summary written for #${issueNumber}`);
   } catch (error) {
     logger.warn('[JobSummary] Failed to write process summary', error);
+  }
+}
+
+function classificationDisplay(classification: string): { emoji: string; label: string } {
+  switch (classification) {
+    case 'validated':
+      return { emoji: '✅', label: 'Vulnerability confirmed' };
+    case 'false_positive_defense_confirmed':
+      return { emoji: '🛡️', label: 'Defense confirmed — not exploitable' };
+    case 'false_positive_counter_indicated':
+      return { emoji: '🛡️', label: 'False positive — not exploitable' };
+    case 'false_positive':
+      return { emoji: '⚪', label: 'Not validated' };
+    case 'infrastructure_failure':
+      return { emoji: '⚠️', label: 'Infrastructure issue' };
+    case 'max_turns_exceeded':
+      return { emoji: '⏱️', label: 'Timed out' };
+    default:
+      return { emoji: '❓', label: classification };
   }
 }
 
