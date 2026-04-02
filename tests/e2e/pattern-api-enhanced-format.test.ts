@@ -1,20 +1,18 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { PatternAPIClient } from '../../src/security/pattern-api-client.js';
-import { config } from 'dotenv';
-import { join } from 'path';
 
 /**
  * RFC-032 Phase 2.3: E2E Test for pattern fetching with enhanced format
- * 
+ *
  * This test verifies that the pattern API client can:
  * 1. Request enhanced format patterns
  * 2. Receive JSON with serialized regex objects
  * 3. Successfully reconstruct regex patterns
  * 4. Handle AST and context rules with regex
+ *
+ * Requires RSOLV_API_URL and RSOLV_API_KEY env vars (set by vitest-setup.ts).
+ * Each test guards on health check — gracefully skips if API is unavailable.
  */
-
-// Load environment variables
-config({ path: join(process.cwd(), '.env.test') });
 
 describe('Pattern API Enhanced Format E2E', () => {
   let client: PatternAPIClient;

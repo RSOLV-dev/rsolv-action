@@ -10,6 +10,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { SecurityDetectorV2 } from '../detector-v2.js';
+import { LocalPatternSource } from '../pattern-source.js';
 import { VulnerabilityType } from '../types.js';
 
 describe('E2E Pattern Separation - RailsGoat Scenario', () => {
@@ -17,7 +18,7 @@ describe('E2E Pattern Separation - RailsGoat Scenario', () => {
 
   describe('Scenario 1: JavaScript eval() - jquery.snippet.js', () => {
     it('should detect as CODE_INJECTION (not insecure_deserialization)', async () => {
-      detector = new SecurityDetectorV2();
+      detector = new SecurityDetectorV2(new LocalPatternSource());
 
       // Simulates jquery.snippet.js from RailsGoat
       const jsCode = `
@@ -60,7 +61,7 @@ describe('E2E Pattern Separation - RailsGoat Scenario', () => {
 
   describe('Scenario 2: Prototype Pollution - jsapi.js', () => {
     it('should detect as PROTOTYPE_POLLUTION (not insecure_deserialization)', async () => {
-      detector = new SecurityDetectorV2();
+      detector = new SecurityDetectorV2(new LocalPatternSource());
 
       // Simulates jsapi.js prototype pollution from RailsGoat
       const jsCode = `
@@ -113,7 +114,7 @@ function updateSettings(req) {
 
   describe('Scenario 3: Ruby Marshal.load() - insecure deserialization', () => {
     it('should detect as INSECURE_DESERIALIZATION (not code_injection)', async () => {
-      detector = new SecurityDetectorV2();
+      detector = new SecurityDetectorV2(new LocalPatternSource());
 
       // Simulates Ruby Marshal.load from RailsGoat
       const rubyCode = `
@@ -164,7 +165,7 @@ end
 
   describe('All Three Types Together - Full RailsGoat Scan', () => {
     it('should classify all three vulnerability types correctly in mixed code', async () => {
-      detector = new SecurityDetectorV2();
+      detector = new SecurityDetectorV2(new LocalPatternSource());
 
       // Multiple languages/vulnerability types
       const testCases = [
@@ -250,7 +251,7 @@ end
 
   describe('Edge Cases - Ensure No Misclassification', () => {
     it('should NOT classify Python eval() as insecure_deserialization', async () => {
-      detector = new SecurityDetectorV2();
+      detector = new SecurityDetectorV2(new LocalPatternSource());
 
       const pythonCode = `
 def process_formula(formula):
@@ -272,7 +273,7 @@ def process_formula(formula):
     });
 
     it('should NOT classify __proto__ as code_injection', async () => {
-      detector = new SecurityDetectorV2();
+      detector = new SecurityDetectorV2(new LocalPatternSource());
 
       const jsCode = `
 function merge(obj, data) {
