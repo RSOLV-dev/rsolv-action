@@ -38,16 +38,16 @@ jobs:
         run: |
           # Check if README contains the API pattern count (183)
           # Note: This is separate from the 26 test patterns verified above
-          README_COUNT=$(grep -oP "\d+(?=\+ Security Patterns)" README.md | head -1)
+          README_COUNT=$(grep -oP "\d+(?=\+? Security Patterns)" README.md | head -1)
           if [ -z "$README_COUNT" ]; then
             echo "❌ Could not find pattern count in README.md"
             exit 1
           fi
           if [ "$README_COUNT" -lt 170 ]; then
-            echo "❌ README claims $README_COUNT+ patterns but should claim 183 (API patterns)"
+            echo "❌ README claims $README_COUNT patterns but should claim 183 (API patterns)"
             exit 1
           fi
-          echo "✅ README correctly claims $README_COUNT+ patterns (API count)"
+          echo "✅ README correctly claims $README_COUNT patterns (API count)"
           echo "✅ Test patterns in minimal-patterns.ts: $TOTAL_PATTERNS"
           
       - name: Update Pattern Inventory
