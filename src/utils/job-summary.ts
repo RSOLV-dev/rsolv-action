@@ -50,7 +50,6 @@ export function writeScanSummary(
 
     for (const issue of createdIssues) {
       const cwe = issue.cwe_id || issue.vulnerabilityType || 'Unknown';
-      const title = issue.title || `#${issue.number}`;
       lines.push(`| [#${issue.number}](../../issues/${issue.number}) | ${cwe} |`);
     }
 
@@ -140,20 +139,20 @@ export function writeProcessSummary(
 
 function classificationDisplay(classification: string): { emoji: string; label: string } {
   switch (classification) {
-    case 'validated':
-      return { emoji: '✅', label: 'Vulnerability confirmed' };
-    case 'false_positive_defense_confirmed':
-      return { emoji: '🛡️', label: 'Defense confirmed — not exploitable' };
-    case 'false_positive_counter_indicated':
-      return { emoji: '🛡️', label: 'False positive — not exploitable' };
-    case 'false_positive':
-      return { emoji: '⚪', label: 'Not validated' };
-    case 'infrastructure_failure':
-      return { emoji: '⚠️', label: 'Infrastructure issue' };
-    case 'max_turns_exceeded':
-      return { emoji: '⏱️', label: 'Timed out' };
-    default:
-      return { emoji: '❓', label: classification };
+  case 'validated':
+    return { emoji: '✅', label: 'Vulnerability confirmed' };
+  case 'false_positive_defense_confirmed':
+    return { emoji: '🛡️', label: 'Defense confirmed — not exploitable' };
+  case 'false_positive_counter_indicated':
+    return { emoji: '🛡️', label: 'False positive — not exploitable' };
+  case 'false_positive':
+    return { emoji: '⚪', label: 'Not validated' };
+  case 'infrastructure_failure':
+    return { emoji: '⚠️', label: 'Infrastructure issue' };
+  case 'max_turns_exceeded':
+    return { emoji: '⏱️', label: 'Timed out' };
+  default:
+    return { emoji: '❓', label: classification };
   }
 }
 

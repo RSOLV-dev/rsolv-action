@@ -197,6 +197,18 @@ export function getMinimalPatterns(): SecurityPattern[] {
       description: 'Unsafe YAML loading',
       remediation: 'Use YAML.safe_load instead'
     }),
+
+    createDeserializationPattern({
+      id: 'ruby-marshal',
+      name: 'Marshal Deserialization',
+      language: 'ruby',
+      patterns: [
+        /Marshal\.load\s*\(/gi,
+        /Marshal\.restore\s*\(/gi
+      ],
+      description: 'Unsafe Marshal deserialization of untrusted data',
+      remediation: 'Avoid Marshal.load with untrusted input, use JSON or MessagePack instead'
+    }),
   
     // Java patterns
     {
