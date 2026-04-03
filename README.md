@@ -6,10 +6,10 @@
 
 ## Why RSOLV?
 
-- **🔍 Proof, Not Warnings** — We generate a failing test that exploits each vulnerability. Run it yourself—if it fails, it's real. No more investigating scanner maybes.
-- **✅ Fixes That Actually Work** — Our AI writes fixes that make the exploit test pass. Not "this should fix it"—proof the vulnerability is gone.
-- **🛡️ Regression Protection Built In** — That exploit test stays in your codebase forever. The vulnerability can never return silently.
-- **🔧 Your Tools, Your Framework** — Tests run in your existing framework—RSpec, pytest, Mocha, ExUnit, PHPUnit, JUnit, Minitest. No new tooling to learn.
+- **Proof, Not Warnings** — We generate a failing test that exploits each vulnerability. Run it yourself—if it fails, it's real. No more investigating scanner maybes.
+- **Fixes That Actually Work** — Our AI writes fixes that make the exploit test pass. Not "this should fix it"—proof the vulnerability is gone.
+- **Regression Protection Built In** — That exploit test stays in your codebase forever. The vulnerability can never return silently.
+- **Your Tools, Your Framework** — Tests run in your existing framework—RSpec, pytest, Mocha, ExUnit, PHPUnit, JUnit, Minitest. No new tooling to learn.
 
 ## Quick Start
 
@@ -21,13 +21,7 @@ In your repository: Settings → Secrets → New repository secret
 - Name: `RSOLV_API_KEY`
 - Value: Your API key from step 1
 
-### 3. Choose Your Workflow
-
-**Recommended: Scan + Matrix Process** (Production workflow)
-
-Two-job pipeline with per-issue isolation. The scan job detects vulnerabilities, then
-a matrix strategy processes each issue independently -- one vulnerability per PR,
-no scope leak between fixes.
+### 3. Add the Workflow
 
 Create `.github/workflows/rsolv-security.yml`:
 
@@ -88,125 +82,93 @@ jobs:
 
 **Why this pattern?**
 
-- Each matrix cell gets a fresh `actions/checkout` -- no shared working directory
+- Each matrix cell gets a fresh `actions/checkout` — no shared working directory
 - One vulnerability per PR, no scope leak between fixes
 - `fail-fast: false` ensures one failure does not block other fixes
 - `max-parallel: 1` avoids branch conflicts (increase if your repo can handle concurrent PRs)
-- `pipeline_run_id` connects scan results to each process step
-- `issue_numbers` output drives the GitHub Actions matrix strategy
 
 **Scan Only** (Assessment mode)
 
 Run scan without processing fixes. Good for understanding your security posture first.
 
 ```yaml
-name: RSOLV Security Scan
-
-on:
-  push:
-    branches: [main]
-  schedule:
-    - cron: '0 0 * * 0'
-  workflow_dispatch:
-
-jobs:
-  security:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      issues: write
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: RSOLV Security Scan
-        uses: RSOLV-dev/RSOLV-action@v4
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
-          mode: 'scan'
-```
-
-**Legacy (deprecated): Full Pipeline**
-
-> **Deprecated.** `mode: 'full'` runs all phases in a single job. It logs a deprecation
-> warning at runtime. Use the scan+matrix pattern above instead for per-issue isolation
-> and independent PRs.
-
-```yaml
-name: RSOLV Full Pipeline (deprecated)
-
-on:
-  push:
-    branches: [main]
-
-jobs:
-  security:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      issues: write
-      pull-requests: write
-    steps:
-      - uses: actions/checkout@v4
-      - uses: RSOLV-dev/RSOLV-action@v4
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
-          mode: 'full'  # deprecated -- use scan+matrix instead
+- uses: RSOLV-dev/RSOLV-action@v4
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  with:
+    rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
+    mode: 'scan'
 ```
 
 ## How It Works
 
 RSOLV uses a three-phase test-first methodology:
 
-1. **SCAN** - Detects vulnerabilities using 183 security patterns with AST validation
-2. **VALIDATE** - Generates executable RED tests that prove vulnerabilities exist
-3. **MITIGATE** - Applies AI-generated fixes that make the tests pass
+1. **SCAN** — Detects vulnerabilities using 183 security patterns across 7 languages with AST validation to filter false positives
+2. **VALIDATE** — Generates executable RED tests that prove each vulnerability exists. If the test can't prove it, the finding is labeled inconclusive and no fix is attempted.
+3. **MITIGATE** — AI generates a fix that makes the RED test pass, then opens a PR with the fix, the test, and an educational explanation of the vulnerability.
 
-Every fix is proven with tests that fail before and pass after—no guesswork.
+Every fix is proven with tests that fail before and pass after — no guesswork.
 
-## Configuration Options
+## Configuration
 
-### Core Inputs
+### Inputs
 
 | Input | Description | Required | Default |
 |-------|-------------|----------|---------|
-| `rsolvApiKey` | RSOLV API key (get at rsolv.dev/signup) | Yes | - |
-| `mode` | Operation mode: `scan`, `process`, or `full` (deprecated) | No | `scan` |
-| `pipeline_run_id` | Pipeline run ID from a prior scan step (required for `process` mode) | No | - |
-| `issue_number` | Issue number to process (used with matrix strategy in `process` mode) | No | - |
-| `github-token` | GitHub token (auto-provided by Actions) | No | `${{ github.token }}` |
-| `max_issues` | Maximum issues to process per run | No | `1` |
+| `rsolvApiKey` | RSOLV API key ([get one here](https://rsolv.dev/signup)) | Yes | — |
+| `mode` | `scan` or `process` | No | `scan` |
+| `pipeline_run_id` | Pipeline run ID from scan step (required for `process` mode) | No | — |
+| `issue_number` | Issue number to process (used with matrix strategy) | No | — |
+| `max_issues` | Maximum issues to create per scan | No | `3` |
+| `scan_output` | Where findings go: `issues` (default), `report` (artifact only) | No | `issues` |
+| `enable_ast_validation` | AST validation to reduce false positives | No | `true` |
+| `enable_educational_pr` | Include security explanations in PRs | No | `true` |
+| `api_url` | RSOLV API endpoint (override for staging/enterprise) | No | `https://api.rsolv.dev` |
 
-### Advanced Inputs
+### Outputs
 
-| Input | Description | Default |
-|-------|-------------|---------|
-| `enable_ast_validation` | Use AST validation to reduce false positives | `true` |
-| `executable_tests` | Generate executable RED tests | `true` |
-| `claude_max_turns` | Deprecated — turn limit controlled server-side | `50` |
-| `enable_educational_pr` | Include security explanations in PRs | `true` |
-| `api_url` | RSOLV API endpoint | `https://api.rsolv.dev` |
+| Output | Description |
+|--------|-------------|
+| `pipeline_run_id` | Pipeline run ID for passing from scan to process jobs |
+| `issue_numbers` | JSON array of issue numbers for matrix strategy (e.g. `[230,231,232]`) |
+| `issues_created` | Count of GitHub issues created |
+| `created_issues` | GitHub issues created (JSON array with full metadata) |
+| `scan_results` | Scan results in JSON format |
+| `has_issues` | Whether any issues were found |
 
-For complete configuration options, see [Documentation](https://rsolv.dev/docs).
+### Scan Output Modes
 
-## Security Features
+By default, RSOLV creates GitHub issues for each finding (`scan_output: 'issues'`). This triggers the full validate/mitigate pipeline.
 
-### 183 Security Patterns
+For **audit or discovery scans** where you want findings without creating issues, use report mode:
 
-Enterprise-grade vulnerability detection across 7 languages with OWASP Top 10 coverage:
+```yaml
+- uses: RSOLV-dev/RSOLV-action@v4
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  with:
+    rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
+    mode: 'scan'
+    scan_output: 'report'
+```
 
-- **Injection**: SQL, NoSQL, Command, LDAP, Template, XPath
-- **XSS**: React dangerouslySetInnerHTML, innerHTML, document.write
-- **Authentication**: JWT vulnerabilities, weak sessions, missing auth
-- **Access Control**: Missing authorization, CSRF, unvalidated redirects
-- **Cryptographic Failures**: Weak encryption, hardcoded secrets
-- **Misconfiguration**: CORS, security headers, debug mode
-- **Vulnerable Components**: Outdated dependencies, dangerous functions
-- **SSRF**: Server-side request forgery with DNS rebinding protection
+This uploads a structured JSON + markdown report as a workflow artifact — useful for security audits, compliance reviews, or evaluating RSOLV before enabling automated fixes.
+
+## Security Coverage
+
+### 183 Security Patterns across 7 Languages
+
+OWASP Top 10 coverage for JavaScript, TypeScript, Python, Ruby, Java, PHP, and Elixir:
+
+- **Injection** — SQL, NoSQL, Command, LDAP, Template, XPath
+- **XSS** — DOM manipulation, unsafe HTML assignment, framework-specific patterns
+- **Authentication** — JWT vulnerabilities, weak sessions, missing auth
+- **Access Control** — Missing authorization, CSRF, unvalidated redirects
+- **Cryptographic Failures** — Weak encryption, hardcoded secrets
+- **Misconfiguration** — CORS, security headers, debug mode
+- **Vulnerable Components** — Outdated dependencies, dangerous functions
+- **SSRF** — Server-side request forgery with DNS rebinding protection
 
 ### Two-Layer Validation
 
@@ -217,7 +179,14 @@ Enterprise-grade vulnerability detection across 7 languages with OWASP Top 10 co
 
 **Layer 2: Executable Proof** — every vulnerability that passes AST validation gets a generated exploit test. If the test can't prove the vulnerability, the issue is labeled inconclusive and no fix is attempted.
 
-Supported: JavaScript, TypeScript, Python, Ruby, Java, PHP, Elixir
+## What You Get in a PR
+
+Each fix PR includes:
+- The **fix** itself — minimal, targeted changes
+- A **RED test** that fails without the fix and passes with it
+- **Educational content** — what the vulnerability is, why it matters, and how the fix works
+- **Validation context** — how the vulnerability was confirmed and what was tested
+- **CWE and OWASP references** for compliance tracking
 
 ## Pricing
 
@@ -227,47 +196,11 @@ Supported: JavaScript, TypeScript, Python, Ruby, Java, PHP, Elixir
 
 [View detailed pricing](https://rsolv.dev/pricing)
 
-## Rate Limits
+## Support
 
-**AST Validation API:** 500 requests per hour per API key
-
-This limit applies to vulnerability validation (computationally expensive). Other endpoints (pattern fetching, phase data) have generous limits. Weekly scheduled scans and manual runs work within these limits.
-
-**Need higher limits?** Contact [support@rsolv.dev](mailto:support@rsolv.dev).
-
-## Support & Documentation
-
-- 📧 Email: [support@rsolv.dev](mailto:support@rsolv.dev)
-- 📖 Docs: [rsolv.dev/docs](https://rsolv.dev/docs)
-- 💬 GitHub Issues: [Report bugs or request features](https://github.com/RSOLV-dev/rsolv-action/issues)
-
-## Troubleshooting
-
-### Common Issues
-
-#### Pull Request Creation Failures
-
-If RSOLV fails to create a pull request:
-1. Check that the workflow has `contents: write` and `pull-requests: write` permissions
-2. Verify the GITHUB_TOKEN is properly configured
-3. Check action logs for specific error messages
-
-#### File Paths in Issues
-
-Always use **relative paths** (not absolute) when creating issues:
-- ✅ **Correct**: `app/data/allocations-dao.js`
-- ❌ **Wrong**: `/app/data/allocations-dao.js`
-
-GitHub Actions runs in a containerized environment where absolute paths may fail.
-
-#### Timeout Issues
-
-For complex vulnerabilities:
-- Default timeout is 60 minutes
-- Consider processing one issue at a time
-- Use `mode: scan` first to assess scope
-
-For more help, see [Documentation](https://rsolv.dev/docs) or [open an issue](https://github.com/RSOLV-dev/rsolv-action/issues).
+- Email: [support@rsolv.dev](mailto:support@rsolv.dev)
+- Docs: [rsolv.dev/docs](https://rsolv.dev/docs)
+- GitHub Issues: [Report bugs or request features](https://github.com/RSOLV-dev/RSOLV-action/issues)
 
 ## License
 
@@ -277,4 +210,4 @@ This software is proprietary. See [LICENSE](LICENSE) for terms.
 
 ---
 
-**Built by test-first engineers.** We write the failing test before the fix—in our own code, and now in yours.
+**Built by test-first engineers.** We write the failing test before the fix — in our own code, and now in yours.
