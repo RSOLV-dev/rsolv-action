@@ -1,0 +1,136 @@
+import { defineConfig } from 'vitest/config';
+import { resolve } from 'path';
+
+/**
+ * Unified Vitest Configuration
+ * Consolidates all test configurations with environment-based options
+ */
+
+const isCI = process.env.CI === 'true';
+const isMemoryConstrained = process.env.TEST_MEMORY_SAFE === 'true' || isCI;
+const isLiveAPI = process.env.TEST_LIVE_API === 'true';
+
+export default defineConfig({
+  test: {
+    // Use 'node' environment for all tests (not jsdom/happy-dom)
+    environment: 'node',
+    
+    // Global setup (polyfills must come first!)
+    globals: true,
+    setupFiles: ['./test/vitest-polyfills.ts', './test/vitest-setup.ts'],
+    
+    // Performance settings based on environment
+    // Use forks with single process to avoid worker overhead memory issues
+    pool: 'forks',
+    poolOptions: {
+      forks: {
+        singleFork: true,  // Run all tests in single process to avoid worker memory overhead
+        // Load polyfills BEFORE any other modules using --require
+        execArgv: [
+          '--require', './test/vitest-preload.cjs',
+          ...(isMemoryConstrained ? ['--expose-gc'] : [])
+        ],
+      }
+    },
+    
+    // Timeout settings
+    testTimeout: isLiveAPI ? 60000 : 10000,
+    hookTimeout: 5000,
+    
+    // Coverage configuration
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html'],
+      exclude: [
+        'node_modules/**',
+        'test/**',
+        'tests/**',
+        '**/*.test.ts',
+        '**/*.spec.ts',
+        '**/types.ts',
+        '**/*.d.ts',
+        'vitest.*.ts',
+        'scripts/**',
+        '*.config.ts'
+      ],
+      thresholds: {
+        lines: 70,
+        functions: 70,
+        branches: 60,
+        statements: 70
+      }
+    },
+    
+    // Reporter configuration
+    reporters: process.env.TEST_REPORTER === 'json' 
+      ? ['json'] 
+      : ['default'],
+    outputFile: process.env.TEST_OUTPUT_FILE || undefined,
+    
+    // Exclude patterns
+    exclude: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/build/**',
+      '**/.{idea,git,cache,output,temp}/**',
+      // Skip broken/experimental tests
+      '**/*.broken.ts',
+      '**/*.skip.ts',
+      // Skip e2e tests unless explicitly running them
+      ...(process.env.RUN_E2E !== 'true' ? ['**/e2e/**', '**/*e2e*.test.ts'] : []),
+      // Skip live API tests unless explicitly enabled
+      ...(isLiveAPI ? [] : ['**/*live-api*.test.ts', '**/*staging*.test.ts']),
+      // Skip integration tests unless explicitly enabled (RFC-062)
+      ...(process.env.RUN_INTEGRATION !== 'true' ? [
+        '**/tests/integration/**',
+        '**/__tests__/test-aware-fix-validation/**',
+        '**/__tests__/modes/phase-executor-validation-integration.test.ts',
+        '**/credentials/__tests__/manager.test.ts',
+        '**/external/__tests__/*.test.ts',
+        '**/modes/phase-executor/__tests__/execute-all-phases-integration.test.ts',
+        '**/modes/phase-executor/__tests__/mitigate-validation-flow.test.ts',
+        '**/modes/phase-executor/__tests__/validation-label-update.test.ts',
+        '**/modes/__tests__/integration-all-modes.test.ts',
+        '**/modes/__tests__/validation-only-mode.test.ts',
+        '**/modes/__tests__/backend-api-integration.test.ts'
+      ] : [])
+    ],
+    
+    // Include patterns
+    include: [
+      'src/**/*.test.ts',
+      'test/**/*.test.ts', 
+      'tests/**/*.test.ts'
+    ],
+    
+    // Retry flaky tests (useful for API tests)
+    retry: isLiveAPI ? 2 : 0,
+    
+    // Logging
+    logHeapUsage: isMemoryConstrained,
+    
+    // Isolation settings
+    isolate: true,
+    fileParallelism: !isMemoryConstrained,
+  },
+  
+  // Resolve configuration
+  resolve: {
+    alias: {
+      '@': resolve(__dirname, './src'),
+      '@test': resolve(__dirname, './test')
+    },
+    extensions: ['.ts', '.js', '.json']
+  },
+  
+  // Build optimizations
+  optimizeDeps: {
+    include: ['vitest', '@vitest/ui']
+  },
+  
+  // ESBuild for faster transforms
+  esbuild: {
+    target: 'node20',
+    format: 'esm'
+  }
+});

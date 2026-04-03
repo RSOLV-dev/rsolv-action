@@ -1,0 +1,115 @@
+# Dependencies
+node_modules/
+bun.lockb
+jspm_packages/
+bower_components/
+
+# Demo repositories (nested git repos)
+demo-repos/
+vulnerable-apps/
+
+# Build output
+dist/
+lib/
+build/Release
+.next
+out
+.nuxt
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+claude-output*.log
+claude-*-json*.log
+
+# Coverage directory
+coverage/
+*.lcov
+.nyc_output
+
+# Test artifacts
+.vitest-shards/
+test-report.json
+
+# IDE and editor files
+.idea/
+.vscode/
+.vscode-test
+*.swp
+*.swo
+.tern-port
+
+# Claude Code local settings
+.claude/*.local.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
+.envrc
+
+# Act secrets file (NEVER commit)
+.secrets.act
+
+# Caches
+.cache/
+.parcel-cache/
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+.npm
+.eslintcache
+.stylelintcache
+.docusaurus
+.temp
+.dynamodb/
+web_modules/
+
+# Claude Code temp files
+temp/prompt-*.txt
+temp/solution-*.json
+temp/claude-code-analytics.json
+e2e-tests/test-repos/
+e2e-tests/results/
+
+# Ollama test files
+test-ollama-direct.js
+test-ollama-output*.json
+
+# TypeScript
+*.tsbuildinfo
+
+# Yarn
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
+
+# Emacs temp files
+*~
+\#*\#
+.\#*
+.projectile
+TAGS
+tags.rsolv/
+nodegoat-demo/
+
+# RSOLV runtime data (generated during action execution)
+.rsolv/
+
+# Mise runtime cache (RFC-105, populated by actions/cache@v4)
+.mise-cache/

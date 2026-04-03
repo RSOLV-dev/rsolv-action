@@ -1,0 +1,131 @@
+name: 'RSOLV: Test-First AI Security Fixes'
+description: 'AI security that proves vulnerabilities with executable tests before fixing. Reduces false positives.'
+author: 'RSOLV'
+branding:
+  icon: 'shield'
+  color: 'blue'
+inputs:
+  api_key:
+    description: 'RSOLV API key for authentication (deprecated, use rsolvApiKey)'
+    required: false
+  rsolvApiKey:
+    description: 'RSOLV API key for authentication (get yours at rsolv.dev/signup)'
+    required: true
+  config_path:
+    description: 'Path to RSOLV configuration file'
+    required: false
+    default: '.github/rsolv.yml'
+  issue_label:
+    description: 'Label to identify issues for automation'
+    required: false
+    default: 'rsolv:detected'
+  environment_variables:
+    description: 'JSON string of environment variables to pass to the container'
+    required: false
+  api_url:
+    description: 'RSOLV API URL (defaults to production)'
+    required: false
+    default: 'https://api.rsolv.dev'
+  github-token:
+    description: |
+      GitHub token for PR/issue operations. Automatically provided by GitHub Actions.
+      Only override if you need custom permissions.
+    required: false
+    default: ${{ github.token }}
+  mode:
+    description: |
+      Operation mode - choose based on your workflow:
+      - 'scan': Full repository scan, creates GitHub issues (recommended starting point)
+      - 'validate': Generate RED tests for labeled issues (use in separate job after scan)
+      - 'mitigate': Apply fixes to validated issues (use in separate job after validate)
+      - 'full': Run all three phases in single job (can consume many credits at once)
+      - 'billing': Trigger billing for merged PR (RFC-091) - use on pull_request.closed with merged=true
+
+      For production use, see workflow templates in RSOLV-action repo for multi-job patterns.
+    required: false
+    default: 'scan'
+  scan_mode:
+    description: 'Scan mode operation: fix (default) or scan'
+    required: false
+    default: 'fix'
+  enable_security_analysis:
+    description: 'Enable security vulnerability analysis'
+    required: false
+    default: 'true'
+  max_issues:
+    description: 'Maximum number of issues to process in a single run'
+    required: false
+    default: '1'
+  issue_number:
+    description: 'Specific issue number to process (for workflow_dispatch)'
+    required: false
+    default: ''
+  use_git_based_editing:
+    description: 'Enable git-based in-place editing for true file modifications (ADR-012)'
+    required: false
+    default: 'true'
+  enable_enhanced_context:
+    description: 'Enable enhanced context gathering (uses more tokens but may improve accuracy)'
+    required: false
+    default: 'true'  # Changed to true for better analysis
+  enable_ast_validation:
+    description: 'Enable AST-based validation to reduce false positives (recommended)'
+    required: false
+    default: 'true'
+  use_structured_phases:
+    description: 'Enable structured phased prompting to ensure files are edited before JSON generation'
+    required: false
+    default: 'true'
+  enable_educational_pr:
+    description: 'Enable educational PR descriptions with security explanations'
+    required: false
+    default: 'true'
+  executable_tests:
+    description: 'RFC-060: Enable executable test generation in VALIDATE phase'
+    required: false
+    default: 'true'
+  claude_max_turns:
+    description: 'RFC-060: Maximum Claude iterations for test generation (1-20)'
+    required: false
+    default: '5'
+  create_pr:
+    description: 'Create Pull Request after successful mitigation (default: true for production)'
+    required: false
+    default: 'true'
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+  env:
+    RSOLV_API_KEY: ${{ inputs.rsolvApiKey || inputs.api_key }}
+    RSOLV_API_URL: ${{ inputs.api_url }}
+    RSOLV_CONFIG_PATH: ${{ inputs.config_path }}
+    RSOLV_ISSUE_LABEL: ${{ inputs.issue_label }}
+    RSOLV_ENVIRONMENT_VARIABLES: ${{ inputs.environment_variables }}
+    RSOLV_MODE: ${{ inputs.mode }}
+    RSOLV_SCAN_MODE: ${{ inputs.scan_mode }}
+    RSOLV_ENABLE_SECURITY_ANALYSIS: ${{ inputs.enable_security_analysis }}
+    RSOLV_MAX_ISSUES: ${{ inputs.max_issues }}
+    RSOLV_ISSUE_NUMBER: ${{ inputs.issue_number }}
+    RSOLV_USE_GIT_BASED_EDITING: ${{ inputs.use_git_based_editing }}
+    RSOLV_ENABLE_ENHANCED_CONTEXT: ${{ inputs.enable_enhanced_context }}
+    RSOLV_ENABLE_AST_VALIDATION: ${{ inputs.enable_ast_validation }}
+    RSOLV_USE_STRUCTURED_PHASES: ${{ inputs.use_structured_phases }}
+    RSOLV_EDUCATIONAL_PR: ${{ inputs.enable_educational_pr }}
+    RSOLV_EXECUTABLE_TESTS: ${{ inputs.executable_tests }}
+    RSOLV_CLAUDE_MAX_TURNS: ${{ inputs.claude_max_turns }}
+    RSOLV_CREATE_PR: ${{ inputs.create_pr }}
+outputs:
+  has_issues:
+    description: 'Whether issues were found for processing'
+  security_findings:
+    description: 'Security vulnerabilities found in JSON format'
+  educational_content:
+    description: 'Educational explanation of the issues and fixes'
+  issue_analysis:
+    description: 'Full analysis of the issues in JSON format'
+  scan_results:
+    description: 'Results from vulnerability scan in JSON format'
+  created_issues:
+    description: 'GitHub issues created from scan results (JSON array)'
+  issues_created:
+    description: 'Number of GitHub issues created from scan results'
