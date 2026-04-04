@@ -2,14 +2,14 @@
 
 [![GitHub Marketplace](https://img.shields.io/badge/Marketplace-RSOLV-blue.svg?colorA=24292e&colorB=0366d6&style=flat&longCache=true&logo=github)](https://github.com/marketplace/actions/rsolv-test-first-ai-security-fixes)
 
-> Ship secure code faster. Every vulnerability proven with a failing test. Every fix validated by making it pass.
+> We prove it. The fix is on us. Every vulnerability confirmed with a failing test. Every fix validated by making it pass.
 
 ## Why RSOLV?
 
-- **Proof, Not Warnings** — We generate a failing test that exploits each vulnerability. Run it yourself—if it fails, it's real. No more investigating scanner maybes.
-- **Fixes That Actually Work** — Our AI writes fixes that make the exploit test pass. Not "this should fix it"—proof the vulnerability is gone.
-- **Regression Protection Built In** — That exploit test stays in your codebase forever. The vulnerability can never return silently.
-- **Your Tools, Your Framework** — Tests run in your existing framework—RSpec, pytest, Mocha, ExUnit, PHPUnit, JUnit, Minitest. No new tooling to learn.
+- **No Test, No Fix** — Every finding is backed by a behavioral test that fails. If VALIDATE can't prove it, MITIGATE doesn't touch it.
+- **Fixes That Stick** — Fixes ship as PRs with the test that caught the vulnerability. It stays in your repo as a permanent regression guard.
+- **Close Issues, Not Tabs** — No triage queue to review. No dashboard to check. Proven vulnerabilities get fix PRs. You merge or don't.
+- **Works With What You Have** — GitHub Action, one workflow file. Sits alongside Snyk, Dependabot, or GHAS — adds proof and fixes to the candidates they find.
 
 ## Quick Start
 
@@ -102,13 +102,13 @@ Run scan without processing fixes. Good for understanding your security posture 
 
 ## How It Works
 
-RSOLV uses a three-phase test-first methodology:
+Three phases. SCAN detects. VALIDATE proves it with a failing test. MITIGATE fixes it and makes the test pass.
 
-1. **SCAN** — Detects vulnerabilities using 183 security patterns across 7 languages with AST validation to filter false positives
-2. **VALIDATE** — Generates executable RED tests that prove each vulnerability exists. If the test can't prove it, the finding is labeled inconclusive and no fix is attempted.
-3. **MITIGATE** — AI generates a fix that makes the RED test pass, then opens a PR with the fix, the test, and an educational explanation of the vulnerability.
+1. **SCAN** — 183 security patterns across 7 languages. AST validation filters noise before you see it.
+2. **VALIDATE** — Writes a behavioral test that exercises the actual code path and fails. If the test can't prove the vulnerability, no fix is attempted.
+3. **MITIGATE** — Generates a fix that makes the failing test pass, then opens a PR with the fix, the test, and an educational explanation.
 
-Every fix is proven with tests that fail before and pass after — no guesswork.
+Every step produces an artifact you can inspect. No black boxes.
 
 ## Configuration
 
@@ -190,11 +190,13 @@ Each fix PR includes:
 
 ## Pricing
 
-- **Free**: $0/month — 5 validations/month, no credit card required
+You pay when we prove it. Start free, no card required.
+
+- **Free**: $0/month — 5 validations/month
 - **Pro**: $49/month — 50 validations, 15 fixes/month ($10/additional fix)
 - **Team**: $149/month — 150 validations, 50 fixes/month ($7/additional fix)
 
-[View detailed pricing](https://rsolv.dev/pricing)
+[View full pricing](https://rsolv.dev/pricing)
 
 ## Support
 
@@ -210,4 +212,4 @@ This software is proprietary. See [LICENSE](LICENSE) for terms.
 
 ---
 
-**Built by test-first engineers.** We write the failing test before the fix — in our own code, and now in yours.
+**Your scanner found 200 alerts. Which ones are real?** RSOLV proves vulnerabilities with a failing test before fixing them. Start free at [rsolv.dev/signup](https://rsolv.dev/signup).
