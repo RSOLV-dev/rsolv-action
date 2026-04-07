@@ -6,7 +6,7 @@
 
 ## Why RSOLV?
 
-- **No Test, No Fix** — Every confirmed finding gets a failing test. If VALIDATE can't prove it, MITIGATE doesn't touch it.
+- **No Proof, No PR** — Every confirmed finding gets tests describing secure behavior. If VALIDATE can't prove the vulnerability, MITIGATE doesn't touch it.
 - **Fixes That Stick** — Fixes ship as PRs with the test that caught the vulnerability. It stays in your repo and keeps the bug from coming back.
 - **Close Issues, Not Tabs** — No triage queue to review. No dashboard to check. Proven vulnerabilities get fix PRs. You merge or don't.
 - **Works With What You Have** — GitHub Action, one workflow file. Runs alongside your existing security tools without replacing them.
@@ -102,11 +102,11 @@ Run scan without processing fixes. Good for understanding your security posture 
 
 ## How It Works
 
-SCAN finds it. VALIDATE proves it with a failing test. MITIGATE ships the fix.
+SCAN finds it. VALIDATE proves it with tests. MITIGATE ships the fix.
 
-1. **SCAN** — 183 security patterns across 7 languages. AST checks cut false positives before you see them.
-2. **VALIDATE** — Writes a test against the real code path. If it can't prove the vulnerability, no fix is attempted.
-3. **MITIGATE** — Writes the fix, updates the test, and opens a PR with an educational explanation.
+1. **SCAN** — 180+ security patterns across 7 languages. AST checks cut false positives before you see them.
+2. **VALIDATE** — Writes tests describing secure behavior against the real code path. If they can't prove the vulnerability, no fix is attempted.
+3. **MITIGATE** — Writes the fix, makes the tests pass, and opens a PR with an educational explanation.
 
 You can inspect every step. Nothing hidden.
 
@@ -157,7 +157,7 @@ This uploads a structured JSON + markdown report as a workflow artifact — usef
 
 ## Security Coverage
 
-### 183 Security Patterns across 7 Languages
+### 180+ Security Patterns across 7 Languages
 
 OWASP Top 10 coverage for JavaScript, TypeScript, Python, Ruby, Java, PHP, and Elixir:
 
@@ -183,18 +183,18 @@ OWASP Top 10 coverage for JavaScript, TypeScript, Python, Ruby, Java, PHP, and E
 
 Each fix PR includes:
 - The **fix** itself — minimal, targeted changes
-- A **RED test** that fails without the fix and passes with it
+- **Tests** that proved the vulnerability (failed before the fix, pass with it)
 - **Educational content** — what the vulnerability is, why it matters, and how the fix works
 - **Validation context** — how the vulnerability was confirmed and what was tested
 - **CWE and OWASP references** for compliance tracking
 
 ## Pricing
 
-Start free, no card required.
+Pay for proven results, not noise. Start free, no card required.
 
 - **Free**: $0/month — 5 validations/month
-- **Pro**: $49/month — 50 validations, 15 fixes/month ($10/additional fix)
-- **Team**: $149/month — 150 validations, 50 fixes/month ($7/additional fix)
+- **Pro**: $49/month — 50 validations/month, fixes included ($10/additional validation)
+- **Team**: $149/month — 150 validations/month, fixes included ($7/additional validation)
 
 [View full pricing](https://rsolv.dev/pricing)
 
@@ -212,4 +212,4 @@ This software is proprietary. See [LICENSE](LICENSE) for terms.
 
 ---
 
-**Your scanner found 200 alerts. Which ones are real?** RSOLV proves vulnerabilities with a failing test before fixing them. Start free at [rsolv.dev/signup](https://rsolv.dev/signup).
+**Forget the 200 findings. Focus on the 20 proven PRs.** RSOLV writes tests describing secure behavior, proves your code fails them, and ships the fix. Start free at [rsolv.dev/signup](https://rsolv.dev/signup).
