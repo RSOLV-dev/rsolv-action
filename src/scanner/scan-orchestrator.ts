@@ -4,7 +4,8 @@ import { GitHubAdapter } from '../forge/github-adapter.js';
 import { logger } from '../utils/logger.js';
 import { ensureLabelsExist } from '../github/label-manager.js';
 import type { ScanConfig, ScanResult, ScanReport, VulnerabilityGroup } from './types.js';
-import { prioritizeFindings, fetchSeverityTiers } from './finding-prioritizer.js';
+import type { Vulnerability } from '../security/types.js';
+import { prioritizeFindings, prioritizeFindingInstances, fetchSeverityTiers } from './finding-prioritizer.js';
 import type { SeverityTierMap } from './finding-prioritizer.js';
 
 export class ScanOrchestrator {
@@ -43,27 +44,27 @@ export class ScanOrchestrator {
       // RFC-133: Fetch tiers once — needed for both issue creation and report
       let tiers: SeverityTierMap | undefined;
       let prioritized: VulnerabilityGroup[] | undefined;
+      let prioritizedFindings: Vulnerability[] | undefined;
 
-      if (scanResult.groupedVulnerabilities.length > 0 && (shouldCreateIssues || shouldGenerateReport)) {
+      const hasVulnerabilities = scanResult.vulnerabilities.length > 0;
+
+      if (hasVulnerabilities && (shouldCreateIssues || shouldGenerateReport)) {
         tiers = await this.fetchTiers();
-        prioritized = prioritizeFindings(scanResult.groupedVulnerabilities, tiers);
+        // RFC-142: Prioritize individual findings for per-instance issue creation
+        prioritizedFindings = prioritizeFindingInstances(scanResult.vulnerabilities, tiers);
+        // Keep group-based prioritization for reports
+        if (scanResult.groupedVulnerabilities.length > 0) {
+          prioritized = prioritizeFindings(scanResult.groupedVulnerabilities, tiers);
+        }
       }
 
-      // Create issues if configured and vulnerabilities found
-      if (shouldCreateIssues && prioritized && prioritized.length > 0) {
-        const maxIssues = config.maxIssues;
-        const groupsToProcess = maxIssues ?
-          Math.min(maxIssues, prioritized.length) :
-          prioritized.length;
+      // RFC-142: Create one issue per finding instance (not per CWE group)
+      if (shouldCreateIssues && prioritizedFindings && prioritizedFindings.length > 0) {
+        logger.info(`RFC-142: Creating per-instance issues for ${prioritizedFindings.length} findings` +
+                    (config.maxIssues ? ` (max_issues: ${config.maxIssues})` : ''));
 
-        logger.info(`Creating issues for ${groupsToProcess} vulnerability groups` +
-                    (maxIssues && prioritized.length > maxIssues ?
-                      ` (limited by max_issues: ${maxIssues})` : ''));
-
-        const groupsToCreate = prioritized.slice(0, groupsToProcess);
-
-        const result = await this.issueCreator.createIssuesFromGroups(
-          groupsToCreate,
+        const result = await this.issueCreator.createIssuesFromFindings(
+          prioritizedFindings,
           { ...config, createIssues: true }
         );
 

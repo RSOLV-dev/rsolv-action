@@ -1,5 +1,5 @@
 import type { VulnerabilityGroup } from './types.js';
-import type { Severity } from '../security/types.js';
+import type { Severity, Vulnerability } from '../security/types.js';
 import { SEVERITY_PRIORITY } from '../security/severity.js';
 import { logger } from '../utils/logger.js';
 
@@ -69,4 +69,34 @@ export function prioritizeFindings(groups: VulnerabilityGroup[], tiers: Severity
 
     return getMaxConfidence(b) - getMaxConfidence(a);
   });
+}
+
+/**
+ * RFC-142: Sort individual vulnerability instances by CWE severity tier,
+ * then by confidence (descending) within the same tier.
+ *
+ * Unlike prioritizeFindings (which operates on VulnerabilityGroup),
+ * this operates on flat Vulnerability[] for per-instance issue creation.
+ *
+ * @param findings - Individual vulnerability instances to sort
+ * @param tiers - CWE severity tier map from the platform
+ * @returns New sorted array — does not mutate the input.
+ */
+export function prioritizeFindingInstances(findings: Vulnerability[], tiers: SeverityTierMap): Vulnerability[] {
+  return [...findings].sort((a, b) => {
+    const tierA = SEVERITY_PRIORITY[getEffectiveFindingTier(a, tiers)];
+    const tierB = SEVERITY_PRIORITY[getEffectiveFindingTier(b, tiers)];
+
+    if (tierA !== tierB) return tierA - tierB;
+
+    return b.confidence - a.confidence;
+  });
+}
+
+/**
+ * Get the effective severity tier for a single finding.
+ * Uses CWE tier if available, falls back to pattern-level severity.
+ */
+function getEffectiveFindingTier(finding: Vulnerability, tiers: SeverityTierMap): Severity {
+  return getCweSeverityTier(finding.cweId, tiers) ?? finding.severity;
 }

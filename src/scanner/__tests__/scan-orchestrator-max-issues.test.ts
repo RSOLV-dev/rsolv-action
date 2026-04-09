@@ -146,7 +146,7 @@ describe('ScanOrchestrator - max_issues bug', () => {
   });
 
   describe('GREEN - After the fix', () => {
-    it('should only pass limited groups to createIssuesFromGroups', async () => {
+    it('should only pass limited findings to createIssuesFromFindings (RFC-142)', async () => {
       const config: ScanConfig = {
         repository: {
           owner: 'test',
@@ -159,7 +159,7 @@ describe('ScanOrchestrator - max_issues bug', () => {
         excludePaths: []
       };
 
-      // Create 8 vulnerability groups
+      // Create 8 vulnerability groups (each with 1 finding)
       const groups: VulnerabilityGroup[] = Array.from({ length: 8 }, (_, i) => ({
         type: `vuln-type-${i}`,
         severity: 'high',
@@ -188,8 +188,8 @@ describe('ScanOrchestrator - max_issues bug', () => {
         }
       });
 
-      // Spy on createIssuesFromGroups to verify it's called with limited groups
-      const createIssuesSpy = vi.spyOn(orchestrator['issueCreator'], 'createIssuesFromGroups')
+      // RFC-142: Spy on createIssuesFromFindings (per-instance, not per-group)
+      const createIssuesSpy = vi.spyOn(orchestrator['issueCreator'], 'createIssuesFromFindings')
         .mockResolvedValue({
           issues: [
             { number: 1, title: 'Issue 1', url: 'url1', vulnerabilityType: 'vuln-type-0', fileCount: 1 },
@@ -201,14 +201,11 @@ describe('ScanOrchestrator - max_issues bug', () => {
 
       await orchestrator.performScan(config);
 
-      // After fix: createIssuesFromGroups should only get 2 groups
+      // RFC-142: createIssuesFromFindings receives ALL prioritized findings;
+      // max_issues cap is applied inside createIssuesFromFindings
       expect(createIssuesSpy).toHaveBeenCalledTimes(1);
-      const passedGroups = createIssuesSpy.mock.calls[0][0];
-      expect(passedGroups).toHaveLength(2); // Should only get 2 groups!
-
-      // Verify the first 2 groups were passed (not random ones)
-      expect(passedGroups[0].type).toBe('vuln-type-0');
-      expect(passedGroups[1].type).toBe('vuln-type-1');
+      const passedFindings = createIssuesSpy.mock.calls[0][0];
+      expect(passedFindings).toHaveLength(8); // All findings passed; capping is internal
     });
 
     it('should only create number of issues specified by max_issues', async () => {
@@ -309,7 +306,7 @@ describe('ScanOrchestrator - max_issues bug', () => {
       expect(result.createdIssues).toHaveLength(5);
     });
 
-    it('should prioritize by CWE severity tier before slicing by max_issues', async () => {
+    it('should prioritize findings by CWE severity tier (RFC-142)', async () => {
       const config: ScanConfig = {
         repository: {
           owner: 'test',
@@ -322,7 +319,7 @@ describe('ScanOrchestrator - max_issues bug', () => {
         excludePaths: []
       };
 
-      // Groups in insertion order: low-tier CWE first, critical-tier CWE last
+      // Findings in insertion order: low-tier CWE first, critical-tier CWE last
       const groups: VulnerabilityGroup[] = [
         {
           type: 'hardcoded_secrets',
@@ -387,7 +384,8 @@ describe('ScanOrchestrator - max_issues bug', () => {
         createdIssues: []
       });
 
-      const createIssuesSpy = vi.spyOn(orchestrator['issueCreator'], 'createIssuesFromGroups')
+      // RFC-142: spy on createIssuesFromFindings — receives prioritized individual findings
+      const createIssuesSpy = vi.spyOn(orchestrator['issueCreator'], 'createIssuesFromFindings')
         .mockResolvedValue({
           issues: [
             { number: 1, title: 'SQLi', url: 'url1', vulnerabilityType: 'sql_injection', fileCount: 1 },
@@ -399,14 +397,15 @@ describe('ScanOrchestrator - max_issues bug', () => {
 
       await orchestrator.performScan(config);
 
-      // With max_issues=2, prioritization should pick:
-      // 1. sql_injection (CWE-89 = Critical tier)
-      // 2. weak_cryptography (CWE-327 = Medium tier)
-      // NOT hardcoded_secrets (CWE-798 = Low tier) despite being first in insertion order
-      const passedGroups = createIssuesSpy.mock.calls[0][0];
-      expect(passedGroups).toHaveLength(2);
-      expect(passedGroups[0].type).toBe('sql_injection');
-      expect(passedGroups[1].type).toBe('weak_cryptography');
+      // Findings should be sorted by CWE severity tier:
+      // 1. sql_injection (CWE-89 = Critical)
+      // 2. weak_cryptography (CWE-327 = Medium)
+      // 3. hardcoded_secrets (CWE-798 = Low) — last despite insertion-first
+      const passedFindings = createIssuesSpy.mock.calls[0][0];
+      expect(passedFindings).toHaveLength(3);
+      expect(passedFindings[0].type).toBe('sql_injection');
+      expect(passedFindings[1].type).toBe('weak_cryptography');
+      expect(passedFindings[2].type).toBe('hardcoded_secrets');
     });
 
     it('should handle edge cases correctly', async () => {

@@ -1,5 +1,6 @@
 import { logger } from '../utils/logger.js';
-import type { ForgeAdapter } from '../forge/forge-adapter.js';
+import type { ForgeAdapter, ForgeIssue } from '../forge/forge-adapter.js';
+import type { Vulnerability } from '../security/types.js';
 import type {
   VulnerabilityGroup,
   CreatedIssue,
@@ -259,6 +260,263 @@ export class IssueCreator {
     }
 
     return {issues: createdIssues, skippedValidated, skippedFalsePositive, skippedDismissed};
+  }
+
+  /**
+   * RFC-142: Create one GitHub issue per vulnerability finding instance.
+   * Replaces createIssuesFromGroups for per-instance granularity.
+   *
+   * Phase 1.5: Before creating, checks for existing open issue matching
+   * (cwe_id, file_path) to prevent temporal duplicates across re-scans.
+   */
+  async createIssuesFromFindings(
+    findings: Vulnerability[],
+    config: ScanConfig
+  ): Promise<IssueCreationResult> {
+    const createdIssues: CreatedIssue[] = [];
+    let skippedValidated = 0;
+    let skippedFalsePositive = 0;
+    let skippedDismissed = 0;
+    let skippedDuplicate = 0;
+
+    if (!config.createIssues) {
+      logger.info('Issue creation disabled, skipping');
+      return { issues: createdIssues, skippedValidated, skippedFalsePositive, skippedDismissed };
+    }
+
+    // Filter out vendor findings
+    const appFindings = findings.filter(f => !f.isVendor);
+    const vendorCount = findings.length - appFindings.length;
+
+    if (vendorCount > 0) {
+      logger.info(`Skipping ${vendorCount} vendor findings (require library updates, not code patches)`);
+    }
+
+    // Apply max_issues cap
+    const maxIssues = config.maxIssues;
+    const findingsToProcess = maxIssues ? appFindings.slice(0, maxIssues) : appFindings;
+
+    logger.info(`Processing ${findingsToProcess.length} individual findings` +
+                (maxIssues ? ` (limited by max_issues: ${maxIssues})` : ''));
+
+    if (maxIssues && appFindings.length > maxIssues) {
+      logger.info(`Note: ${appFindings.length - maxIssues} findings will be skipped due to max_issues limit`);
+    }
+
+    // Phase 1.5: Batch-fetch existing open issues with rsolv:detected label for dedup
+    let existingIssues: ForgeIssue[] = [];
+    try {
+      existingIssues = await this.forgeAdapter.listIssues(
+        config.repository.owner, config.repository.name, 'rsolv:detected', 'open'
+      );
+    } catch (error) {
+      logger.warn(`Failed to fetch existing issues for dedup: ${error}`);
+    }
+
+    for (const finding of findingsToProcess) {
+      try {
+        // Phase 1.5: Check for existing issue matching (cwe, file)
+        const existingMatch = this.findMatchingIssue(finding, existingIssues);
+
+        if (existingMatch) {
+          const labelNames = this.extractLabelNames(
+            existingMatch.labels.map(l => typeof l === 'string' ? { name: l } : l)
+          );
+          const skipStatus = this.checkSkipStatus(labelNames);
+
+          if (skipStatus === 'skip:validated') {
+            skippedValidated++;
+            logger.info(`Skipping validated finding: ${finding.cweId} in ${finding.filePath}`);
+            continue;
+          }
+          if (skipStatus === 'skip:false-positive') {
+            skippedFalsePositive++;
+            logger.info(`Skipping false positive finding: ${finding.cweId} in ${finding.filePath}`);
+            continue;
+          }
+          if (skipStatus === 'skip:dismissed') {
+            skippedDismissed++;
+            logger.info(`Skipping dismissed finding: ${finding.cweId} in ${finding.filePath}`);
+            continue;
+          }
+
+          // Existing rsolv:detected issue for same (cwe, file) — skip (temporal dedup)
+          skippedDuplicate++;
+          logger.info(`Skipping duplicate: issue #${existingMatch.number} already tracks ${finding.cweId} in ${finding.filePath}`);
+          continue;
+        }
+
+        // Create new issue for this finding instance
+        const issue = await this.createIssueForFinding(finding, config);
+        createdIssues.push(issue);
+        logger.info(`Created issue #${issue.number}: ${issue.title}`);
+      } catch (error) {
+        logger.error(`Failed to process finding ${finding.cweId} in ${finding.filePath}:`, error);
+      }
+    }
+
+    if (skippedDuplicate > 0) {
+      logger.info(`Skipped ${skippedDuplicate} findings with existing open issues (temporal dedup)`);
+    }
+
+    return { issues: createdIssues, skippedValidated, skippedFalsePositive, skippedDismissed, skippedDuplicate };
+  }
+
+  /**
+   * Phase 1.5: Find an existing open issue that matches (cwe_id, file_path).
+   * Matches by CWE label + file path in title. Line number is intentionally
+   * ignored (lines shift between scans).
+   */
+  private findMatchingIssue(finding: Vulnerability, existingIssues: ForgeIssue[]): ForgeIssue | null {
+    if (!finding.cweId || !finding.filePath) return null;
+
+    for (const issue of existingIssues) {
+      // Check CWE match via label
+      const hasCweLabel = issue.labels.some(l => {
+        const name = typeof l === 'string' ? l : (l as { name?: string }).name || '';
+        return name === `rsolv:cwe-${finding.cweId}`;
+      });
+
+      if (!hasCweLabel) continue;
+
+      // Check file path match in title (format: "[CWE-XX] Name in file/path:line")
+      const filePath = finding.filePath;
+      if (issue.title.includes(` in ${filePath}:`)) {
+        return issue;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * RFC-142: Create a GitHub issue for a single finding instance.
+   */
+  private async createIssueForFinding(
+    finding: Vulnerability,
+    config: ScanConfig
+  ): Promise<CreatedIssue> {
+    const title = this.generateFindingTitle(finding);
+    const body = this.generateFindingBody(finding, config);
+
+    const labels = [
+      'rsolv:detected',
+      `rsolv:vuln-${finding.type}`,
+      'security',
+      finding.severity,
+      'automated-scan',
+    ];
+
+    // Phase 1.5: CWE-specific label for efficient dedup lookup
+    if (finding.cweId) {
+      labels.push(`rsolv:cwe-${finding.cweId}`);
+    }
+
+    if (process.env.RSOLV_DEMO_MODE === 'true' || process.env.RSOLV_AUTO_FIX === 'true') {
+      labels.push('rsolv:automate');
+      labels.push('demo');
+    }
+
+    const forgeIssue = await this.forgeAdapter.createIssue(
+      config.repository.owner, config.repository.name,
+      { title, body, labels }
+    );
+
+    return {
+      number: forgeIssue.number,
+      title: forgeIssue.title,
+      url: forgeIssue.url,
+      vulnerabilityType: finding.type,
+      fileCount: 1,
+      cweId: finding.cweId,
+      filePath: finding.filePath,
+      line: finding.line,
+    };
+  }
+
+  /**
+   * RFC-142: Issue title format: [CWE-79] Cross-Site Scripting (XSS) in src/file.js:42
+   */
+  private generateFindingTitle(finding: Vulnerability): string {
+    const readableType = getCweSpecificName(finding.cweId, finding.type);
+    const location = finding.filePath
+      ? `${finding.filePath}:${finding.line}`
+      : 'unknown location';
+
+    if (finding.cweId) {
+      return `[${finding.cweId}] ${readableType} in ${location}`;
+    }
+    return `${readableType} in ${location}`;
+  }
+
+  /**
+   * RFC-142: Issue body focused on single finding instance.
+   */
+  private generateFindingBody(finding: Vulnerability, config: ScanConfig): string {
+    const sections: string[] = [];
+    const readableType = getCweSpecificName(finding.cweId, finding.type);
+
+    sections.push('## Security Vulnerability Report');
+    sections.push('');
+    sections.push(`**Type**: ${readableType}`);
+    sections.push(`**Severity**: ${finding.severity.toUpperCase()}`);
+    if (finding.filePath) {
+      sections.push(`**File**: \`${finding.filePath}\``);
+    }
+    sections.push(`**Line ${finding.line}**`);
+    sections.push('');
+
+    // Security Classification
+    const classificationLines: string[] = [];
+    if (finding.cweId) {
+      const cweNum = finding.cweId.replace(/^CWE-/, '');
+      classificationLines.push(`- **CWE**: [${finding.cweId}](https://cwe.mitre.org/data/definitions/${cweNum}.html)`);
+    }
+    if (finding.owaspCategory) {
+      classificationLines.push(`- **OWASP**: ${formatOwaspLink(finding.owaspCategory)}`);
+    }
+    if (finding.confidence !== undefined) {
+      classificationLines.push(`- **Confidence**: ${finding.confidence}%`);
+    }
+    if (classificationLines.length > 0) {
+      sections.push('### Security Classification');
+      sections.push(...classificationLines);
+      sections.push('');
+    }
+
+    // Description
+    sections.push('### Description');
+    sections.push(finding.description || this.getVulnerabilityDescription(finding.type));
+    sections.push('');
+
+    // Code snippet
+    if (finding.snippet && finding.filePath) {
+      sections.push('### Vulnerable Code');
+      sections.push('');
+      const lang = this.detectLanguageFromPath(finding.filePath);
+      sections.push('```' + lang);
+      sections.push(`// ${finding.filePath}:${finding.line}`);
+      sections.push(finding.snippet.trim());
+      sections.push('```');
+      sections.push('');
+    }
+
+    // Recommendation
+    sections.push('### Recommendation');
+    sections.push(this.getVulnerabilityRecommendation(finding.type));
+    sections.push('');
+
+    // Footer
+    sections.push('---');
+    sections.push('*This issue was automatically generated by RSOLV security scanner*');
+    sections.push(`*Repository: ${config.repository.owner}/${config.repository.name}*`);
+    sections.push(`*Branch: ${config.repository.defaultBranch}*`);
+    sections.push(`*Scan Date: ${new Date().toISOString()}*`);
+    sections.push('');
+    sections.push('*To dismiss this finding, add one of these labels:*');
+    sections.push('*`rsolv:false-positive` \u00b7 `rsolv:wont-fix` \u00b7 `rsolv:accepted-risk` \u00b7 `rsolv:deferred`*');
+
+    return sections.join('\n');
   }
 
   private async findExistingIssue(

@@ -37,6 +37,7 @@ export class GitHubAdapter implements ForgeAdapter {
       repo,
       labels,
       state,
+      per_page: 100,
     });
 
     return data.map((issue) => ({

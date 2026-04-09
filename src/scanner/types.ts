@@ -68,6 +68,10 @@ export interface CreatedIssue {
   vulnerabilityType: string;
   fileCount: number;
   cweId?: string;
+  /** RFC-142: file path for per-instance issues */
+  filePath?: string;
+  /** RFC-142: line number for per-instance issues */
+  line?: number;
 }
 
 export type IssueLabel = string | { name?: string };
@@ -86,6 +90,8 @@ export interface IssueCreationResult {
   skippedValidated: number;
   skippedFalsePositive: number;
   skippedDismissed?: number;
+  /** RFC-142 Phase 1.5: findings skipped because an open issue already tracks them */
+  skippedDuplicate?: number;
 }
 
 export interface FileToScan {

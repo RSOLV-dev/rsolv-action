@@ -106,7 +106,7 @@ describe('ScanOrchestrator - scan_output (RFC-133 Phase 2)', () => {
         createdIssues: []
       });
 
-      const createIssuesSpy = vi.spyOn(orchestrator['issueCreator'], 'createIssuesFromGroups');
+      const createIssuesSpy = vi.spyOn(orchestrator['issueCreator'], 'createIssuesFromFindings');
 
       const result = await orchestrator.performScan(config);
 
@@ -132,7 +132,7 @@ describe('ScanOrchestrator - scan_output (RFC-133 Phase 2)', () => {
         createdIssues: []
       });
 
-      vi.spyOn(orchestrator['issueCreator'], 'createIssuesFromGroups')
+      vi.spyOn(orchestrator['issueCreator'], 'createIssuesFromFindings')
         .mockResolvedValue({
           issues: [
             { number: 1, title: 'Issue 1', url: 'url1', vulnerabilityType: 'vuln-type-0', fileCount: 1 },
@@ -162,7 +162,7 @@ describe('ScanOrchestrator - scan_output (RFC-133 Phase 2)', () => {
         createdIssues: []
       });
 
-      const createIssuesSpy = vi.spyOn(orchestrator['issueCreator'], 'createIssuesFromGroups');
+      const createIssuesSpy = vi.spyOn(orchestrator['issueCreator'], 'createIssuesFromFindings');
 
       const result = await orchestrator.performScan(config);
 
@@ -189,7 +189,7 @@ describe('ScanOrchestrator - scan_output (RFC-133 Phase 2)', () => {
         createdIssues: []
       });
 
-      vi.spyOn(orchestrator['issueCreator'], 'createIssuesFromGroups')
+      vi.spyOn(orchestrator['issueCreator'], 'createIssuesFromFindings')
         .mockResolvedValue({
           issues: [
             { number: 1, title: 'Issue 1', url: 'url1', vulnerabilityType: 'vuln-type-0', fileCount: 1 },
@@ -250,7 +250,7 @@ describe('ScanOrchestrator - scan_output (RFC-133 Phase 2)', () => {
         createdIssues: []
       });
 
-      vi.spyOn(orchestrator['issueCreator'], 'createIssuesFromGroups')
+      vi.spyOn(orchestrator['issueCreator'], 'createIssuesFromFindings')
         .mockResolvedValue({
           issues: [],
           skippedValidated: 0,
@@ -279,7 +279,7 @@ describe('ScanOrchestrator - scan_output (RFC-133 Phase 2)', () => {
         createdIssues: []
       });
 
-      vi.spyOn(orchestrator['issueCreator'], 'createIssuesFromGroups')
+      vi.spyOn(orchestrator['issueCreator'], 'createIssuesFromFindings')
         .mockResolvedValue({
           issues: [
             { number: 1, title: 'Issue 1', url: 'url1', vulnerabilityType: 'vuln-type-0', fileCount: 1 },
