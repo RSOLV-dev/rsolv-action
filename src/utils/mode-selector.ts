@@ -120,7 +120,7 @@ export function getModeDescription(mode: ExecutionMode): string {
     return 'Scan for vulnerabilities and create issues';
   case 'validate':
   case 'validate-only':
-    return 'Validate vulnerabilities with failing tests';
+    return 'Validate vulnerabilities with behavioral security tests';
   case 'mitigate':
   case 'fix-only':
     return 'Fix validated vulnerabilities';
