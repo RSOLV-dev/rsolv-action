@@ -78,8 +78,9 @@ jobs:
           
       - name: Fail if Inflated
         run: |
-          # Fail if we detect old inflated counts (448 or 80)
-          if grep -qE "(448|80)\+" README.md 2>/dev/null; then
+          # Fail if we detect old inflated counts (448 or standalone 80)
+          # Use word boundary \b to avoid matching "180+" as "80+"
+          if grep -qP "(\b448|\b80)\+" README.md 2>/dev/null; then
             echo "❌ Found inflated pattern count (448+ or 80+) in README.md"
             echo "Should be 183 (API patterns)"
             exit 1
@@ -87,7 +88,7 @@ jobs:
 
           # Also check docs directory if it exists (excluding archived docs)
           if [ -d "docs" ]; then
-            if grep -rqE "(448|80)\+" docs/ --exclude-dir=archived 2>/dev/null; then
+            if grep -rqP "(\b448|\b80)\+" docs/ --exclude-dir=archived 2>/dev/null; then
               echo "❌ Found inflated pattern count (448+ or 80+) in docs/"
               echo "Should be 183 (API patterns)"
               exit 1
