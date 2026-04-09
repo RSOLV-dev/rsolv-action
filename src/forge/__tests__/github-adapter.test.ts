@@ -63,6 +63,7 @@ describe('GitHubAdapter', () => {
         repo: 'repo',
         labels: 'rsolv:detected',
         state: 'open',
+        per_page: 100,
       });
 
       expect(result).toHaveLength(1);
