@@ -193,8 +193,8 @@ Each fix PR includes:
 Pay for proven results, not noise. Start free, no card required.
 
 - **Free**: $0/month — 5 validations/month
-- **Pro**: $49/month — 50 validations/month, fixes included ($10/additional validation)
-- **Team**: $149/month — 150 validations/month, fixes included ($7/additional validation)
+- **Pro**: $59/month — 25 validations/month, fixes included ($10/additional validation)
+- **Team**: $249/month — 100 validations/month, fixes included ($7/additional validation)
 
 [View full pricing](https://rsolv.dev/pricing)
 
