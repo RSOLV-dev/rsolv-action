@@ -67,6 +67,7 @@ const ActionConfigSchema = z.object({
   containerConfig: ContainerConfigSchema,
   securitySettings: SecuritySettingsSchema,
   maxIssues: z.number().min(1).optional(), // Maximum number of issues to process
+  maxValidations: z.number().min(1).optional(), // RFC-146: Maximum validations to process, capped by budget
   useGitBasedEditing: z.boolean().optional(), // Enable git-based in-place editing (ADR-012)
   useStructuredPhases: z.boolean().optional(), // Enable structured phased prompting (ADR-019)
   testGeneration: TestGenerationConfigSchema.optional(),
@@ -270,7 +271,15 @@ function loadConfigFromEnv(): Partial<ActionConfig> {
       envConfig.maxIssues = parsed;
     }
   }
-  
+
+  // RFC-146: Handle maxValidations separately to avoid NaN
+  if (process.env.RSOLV_MAX_VALIDATIONS) {
+    const parsed = parseInt(process.env.RSOLV_MAX_VALIDATIONS, 10);
+    if (!isNaN(parsed)) {
+      envConfig.maxValidations = parsed;
+    }
+  }
+
   // Handle useGitBasedEditing (ADR-012) - default to true
   if (process.env.RSOLV_USE_GIT_BASED_EDITING !== undefined) {
     envConfig.useGitBasedEditing = process.env.RSOLV_USE_GIT_BASED_EDITING === 'true';

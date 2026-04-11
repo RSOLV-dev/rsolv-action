@@ -67,6 +67,9 @@ inputs:
     description: 'Maximum number of issues to process in a single run'
     required: false
     default: '3'
+  max_validations:
+    description: 'Maximum validations to process per run. Capped by your remaining budget.'
+    required: false
   issue_number:
     description: 'Specific issue number to process (for workflow_dispatch)'
     required: false
@@ -121,6 +124,7 @@ runs:
     RSOLV_ENABLE_SECURITY_ANALYSIS: ${{ inputs.enable_security_analysis }}
     RSOLV_SCAN_OUTPUT: ${{ inputs.scan_output }}
     RSOLV_MAX_ISSUES: ${{ inputs.max_issues }}
+    RSOLV_MAX_VALIDATIONS: ${{ inputs.max_validations }}
     RSOLV_ISSUE_NUMBER: ${{ inputs.issue_number }}
     RSOLV_USE_GIT_BASED_EDITING: ${{ inputs.use_git_based_editing }}
     RSOLV_ENABLE_ENHANCED_CONTEXT: ${{ inputs.enable_enhanced_context }}

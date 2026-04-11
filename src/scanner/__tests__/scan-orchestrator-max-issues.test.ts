@@ -1,7 +1,33 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ScanOrchestrator } from '../scan-orchestrator.js';
 import { logger } from '../../utils/logger.js';
-import type { ScanConfig, VulnerabilityGroup } from '../types.js';
+import type { ScanConfig, VulnerabilityGroup, ScanPlanFinding } from '../types.js';
+
+// Mock ScanPlanClient to pass all findings through (RFC-146 Phase 2)
+vi.mock('../scan-plan-client.js', () => ({
+  ScanPlanClient: class {
+    constructor() {}
+    async getPlan(request: { findings: ScanPlanFinding[]; max_issues: number; namespace: string }) {
+      // Default: return a plan that selects all findings (no budget constraint in tests)
+      return {
+        selected: request.findings,
+        deferred: [],
+        budget: {
+          tier: 'pro',
+          validate_limit: 100,
+          validate_used: 0,
+          validate_remaining: 100,
+          overage_cap_cents: 0,
+          overage_remaining_cents: 0,
+          max_validations: 100,
+          effective_cap: 100,
+          period_ends_at: null,
+          currency: 'usd',
+        },
+      };
+    }
+  },
+}));
 
 // Mock dependencies
 vi.mock('../../utils/logger.js', () => ({

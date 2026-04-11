@@ -31,7 +31,11 @@ export class ModeSelector {
     const maxIssues = process.env.RSOLV_MAX_ISSUES
       ? parseInt(process.env.RSOLV_MAX_ISSUES, 10)
       : undefined;
-    
+
+    const maxValidations = process.env.RSOLV_MAX_VALIDATIONS
+      ? parseInt(process.env.RSOLV_MAX_VALIDATIONS, 10)
+      : undefined;
+
     const skipCache = process.env.RSOLV_SKIP_CACHE === 'true';
     
     // Validate configuration
@@ -42,14 +46,16 @@ export class ModeSelector {
       issueId,
       issueIds,
       maxIssues,
+      maxValidations,
       skipCache
     };
-    
+
     logger.info('Mode configuration:', {
       mode: config.mode,
       issueId: config.issueId,
       issueIds: config.issueIds,
       maxIssues: config.maxIssues,
+      maxValidations: config.maxValidations,
       skipCache: config.skipCache
     });
     

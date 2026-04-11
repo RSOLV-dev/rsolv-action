@@ -206,7 +206,8 @@ export class PhaseExecutor {
         issueLabel: this.config.issueLabel || 'rsolv:automate',
         enableASTValidation: process.env.RSOLV_ENABLE_AST_VALIDATION !== 'false',
         rsolvApiKey: this.config.rsolvApiKey,
-        maxIssues: this.config.maxIssues
+        maxIssues: this.config.maxIssues,
+        maxValidations: this.config.maxValidations
       };
 
       if (this.config.scanOutput) {

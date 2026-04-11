@@ -18,6 +18,7 @@ export interface ModeConfig {
   issueId?: number;  // Required for validate/mitigate/fix modes
   issueIds?: number[]; // For batch validation
   maxIssues?: number;  // Limit processing
+  maxValidations?: number; // RFC-146: Maximum validations to process, capped by budget
   skipCache?: boolean; // Bypass false positive cache
 }
 

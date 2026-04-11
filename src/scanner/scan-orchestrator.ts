@@ -4,9 +4,11 @@ import { GitHubAdapter } from '../forge/github-adapter.js';
 import { logger } from '../utils/logger.js';
 import { ensureLabelsExist } from '../github/label-manager.js';
 import type { ScanConfig, ScanResult, ScanReport, VulnerabilityGroup } from './types.js';
+import type { ScanPlanResponse, ScanPlanFinding } from './types.js';
 import type { Vulnerability } from '../security/types.js';
 import { prioritizeFindings, prioritizeFindingInstances, fetchSeverityTiers } from './finding-prioritizer.js';
 import type { SeverityTierMap } from './finding-prioritizer.js';
+import { ScanPlanClient } from './scan-plan-client.js';
 
 export class ScanOrchestrator {
   private scanner: RepositoryScanner;
@@ -58,13 +60,77 @@ export class ScanOrchestrator {
         }
       }
 
-      // RFC-142: Create one issue per finding instance (not per CWE group)
+      // RFC-146 Phase 2: Budget-aware scan planning + issue creation
+      let scanPlan: ScanPlanResponse | null = null;
+
       if (shouldCreateIssues && prioritizedFindings && prioritizedFindings.length > 0) {
-        logger.info(`RFC-142: Creating per-instance issues for ${prioritizedFindings.length} findings` +
-                    (config.maxIssues ? ` (max_issues: ${config.maxIssues})` : ''));
+        // Step 1: Query the platform for budget-aware plan
+        const apiUrl = process.env.RSOLV_API_URL || 'https://api.rsolv.dev';
+        const apiKey = process.env.RSOLV_API_KEY || '';
+
+        if (apiKey) {
+          const planClient = new ScanPlanClient({ apiUrl, apiKey });
+
+          const planFindings: ScanPlanFinding[] = prioritizedFindings.map(f => ({
+            cwe_id: f.cweId || 'CWE-unknown',
+            severity: f.severity,
+            file_path: f.filePath || 'unknown',
+            line: f.line,
+            type: f.type,
+            confidence: String(f.confidence || 'medium'),
+          }));
+
+          try {
+            scanPlan = await planClient.getPlan({
+              findings: planFindings,
+              max_issues: config.maxIssues || 3,
+              max_validations: config.maxValidations ?? undefined,
+              namespace: `${config.repository.owner}/${config.repository.name}`,
+            });
+
+            if (scanPlan) {
+              logger.info(
+                `[ScanPlan] Budget: ${scanPlan.budget.validate_used}/${scanPlan.budget.validate_limit} used, ` +
+                `effective cap: ${scanPlan.budget.effective_cap}, ` +
+                `selected: ${scanPlan.selected.length}, deferred: ${scanPlan.deferred.length}`
+              );
+            }
+          } catch (error) {
+            // Hard failure (401/403/400) — fail the job
+            logger.error(`[ScanPlan] Hard failure: ${error}`);
+            throw error;
+          }
+        }
+
+        // Step 2: Apply plan to select which findings to process
+        let findingsToProcess: Vulnerability[];
+        if (scanPlan) {
+          // Map selected findings back to original Vulnerability objects.
+          // Keys use the same fallbacks as planFindings construction above.
+          const selectedSet = new Set(
+            scanPlan.selected.map(f => `${f.cwe_id}:${f.file_path}:${f.line}`)
+          );
+          findingsToProcess = prioritizedFindings.filter(f =>
+            selectedSet.has(`${f.cweId || 'CWE-unknown'}:${f.filePath || 'unknown'}:${f.line}`)
+          );
+        } else {
+          // Fallback: conservative default (planning endpoint unavailable)
+          const fallbackCap = Math.min(
+            config.maxIssues || 3,
+            config.maxValidations ?? Infinity
+          );
+          findingsToProcess = prioritizedFindings.slice(0, fallbackCap);
+          logger.warn(`[ScanPlan] Using conservative fallback — processing ${findingsToProcess.length} findings`);
+        }
+
+        // Step 3: Create issues from selected findings
+        logger.info(
+          `RFC-142: Creating per-instance issues for ${findingsToProcess.length} findings` +
+          (config.maxIssues ? ` (max_issues: ${config.maxIssues})` : '')
+        );
 
         const result = await this.issueCreator.createIssuesFromFindings(
-          prioritizedFindings,
+          findingsToProcess,
           { ...config, createIssues: true }
         );
 
@@ -80,6 +146,9 @@ export class ScanOrchestrator {
           logger.info(`Skipped ${result.skippedFalsePositive} false positive issues`);
         }
       }
+
+      // Attach plan metadata for job summary (Task 10)
+      (scanResult as unknown as Record<string, unknown>).scanPlan = scanPlan;
 
       // RFC-133: Generate structured report (includes ALL findings, not capped)
       if (shouldGenerateReport && prioritized) {

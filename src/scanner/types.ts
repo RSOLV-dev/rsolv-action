@@ -17,6 +17,7 @@ export interface ScanConfig {
   astValidationBatchSize?: number;
   rsolvApiKey?: string; // Needed for validation API
   maxIssues?: number; // Limit number of issues to create
+  maxValidations?: number; // RFC-146: Maximum validations to process, capped by budget
   scanDirectory?: string;
   excludePaths?: string[];
 }
