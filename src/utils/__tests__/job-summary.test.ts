@@ -164,3 +164,59 @@ describe('writeProcessSummary', () => {
     );
   });
 });
+
+describe('writeScanSummary with budget plan', () => {
+  const summaryFile = '/tmp/test-step-summary';
+
+  beforeEach(() => {
+    process.env.GITHUB_STEP_SUMMARY = summaryFile;
+    vi.mocked(appendFileSync).mockClear();
+  });
+
+  afterEach(() => {
+    delete process.env.GITHUB_STEP_SUMMARY;
+    vi.mocked(appendFileSync).mockClear();
+  });
+
+  it('renders budget info when scanPlan is provided', () => {
+    const plan = {
+      selected: [
+        { cwe_id: 'CWE-89', severity: 'critical', file_path: 'a.ts', line: 1, type: 'sqli', confidence: 'high' },
+      ],
+      deferred: [
+        { cwe_id: 'CWE-79', severity: 'high', file_path: 'b.ts', line: 2, type: 'xss', confidence: 'medium', reason: 'capacity_exceeded' as const },
+      ],
+      budget: {
+        tier: 'pro',
+        validate_limit: 25,
+        validate_used: 24,
+        validate_remaining: 1,
+        overage_cap_cents: 0,
+        overage_remaining_cents: 0,
+        max_validations: 1,
+        effective_cap: 1,
+        period_ends_at: '2026-05-01T00:00:00Z',
+        currency: 'usd',
+      },
+    };
+
+    writeScanSummary('owner/repo', [], 2, plan);
+
+    const written = vi.mocked(appendFileSync).mock.calls[0][1] as string;
+    expect(written).toContain('Budget');
+    expect(written).toContain('Pro plan');
+    expect(written).toContain('Processing');
+    expect(written).toContain('Deferred');
+    expect(written).toContain('CWE-89');
+    expect(written).toContain('CWE-79');
+  });
+
+  it('renders fallback message when scanPlan is null', () => {
+    writeScanSummary('owner/repo', [{ number: 1, cwe_id: 'CWE-89' }], 5, null);
+
+    const written = vi.mocked(appendFileSync).mock.calls[0][1] as string;
+    expect(written).toContain('Budget');
+    expect(written).toContain('unavailable');
+    expect(written).toContain('conservative default');
+  });
+});
