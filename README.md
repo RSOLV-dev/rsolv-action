@@ -86,7 +86,7 @@ jobs:
 - One vulnerability per PR, no scope leak between fixes
 - `fail-fast: false` ensures one failure does not block other fixes
 - `max-parallel: 1` avoids branch conflicts (increase if your repo can handle concurrent PRs)
-- `max_issues: '3'` caps how many findings are validated per scan — control your validation budget without editing the workflow
+- `max_issues: '3'` caps how many findings SCAN creates per run — controls your validation budget since only created issues enter the validate/fix pipeline
 
 **Scan Only** (Assessment mode)
 
