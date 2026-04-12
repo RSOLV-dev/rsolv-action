@@ -86,6 +86,7 @@ jobs:
 - One vulnerability per PR, no scope leak between fixes
 - `fail-fast: false` ensures one failure does not block other fixes
 - `max-parallel: 1` avoids branch conflicts (increase if your repo can handle concurrent PRs)
+- `max_issues: '3'` caps how many findings the SCAN step creates, which also limits how many issues the `process` job receives — adjust the `max_issues` value in the workflow YAML to fit your budget without changing the workflow logic
 
 **Scan Only** (Assessment mode)
 
@@ -170,14 +171,23 @@ OWASP Top 10 coverage for JavaScript, TypeScript, Python, Ruby, Java, PHP, and E
 - **Vulnerable Components** — Outdated dependencies, dangerous functions
 - **SSRF** — Server-side request forgery with DNS rebinding protection
 
-### Two-Layer Validation
+### Three-Layer Noise Reduction
 
 **Layer 1: AST Analysis** filters the noise before you see it:
 - Comment detection (filters out documentation)
 - String literal analysis (ignores example code)
 - Data flow analysis (validates reachability)
 
-**Layer 2: Executable Proof** — every vulnerability that passes AST validation gets a generated exploit test. If the test can't prove the vulnerability, the issue is labeled inconclusive and no fix is attempted.
+**Layer 2: AI Defense Detection** — during validation, the AI identifies
+existing defenses: input sanitization, parameterized queries, framework-level
+protections. Findings with confirmed defenses are labeled false-positive
+and never generate a fix PR.
+
+**Layer 3: Executable Proof** — every remaining finding gets a generated
+test that exercises the actual code path. If the test can't prove the
+vulnerability, no fix is attempted.
+
+The result: only proven, exploitable vulnerabilities make it to your review queue.
 
 ## What You Get in a PR
 
