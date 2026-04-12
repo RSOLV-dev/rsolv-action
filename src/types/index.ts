@@ -15,6 +15,7 @@ export interface ActionConfig {
   securitySettings: SecuritySettings;
   enableSecurityAnalysis?: boolean;
   maxIssues?: number; // Maximum number of issues to process in a single run
+  maxValidations?: number; // RFC-146: Maximum validations to process, capped by budget
   fixValidation?: FixValidationConfig;
   customerTier?: string;
   testGeneration?: TestGenerationConfig;

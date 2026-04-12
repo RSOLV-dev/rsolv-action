@@ -104,7 +104,8 @@ async function run(): Promise<ActionStatus> {
           // Job summary for scan results
           const createdIssues = (scanResult.createdIssues || []) as Array<{ number: number; title?: string; cwe_id?: string; vulnerabilityType?: string }>;
           const vulnCount = (scanResult.vulnerabilities as unknown[] || []).length;
-          writeScanSummary(repoFullName, createdIssues, vulnCount);
+          const scanPlan = (scanResult as Record<string, unknown>).scanPlan as import('./scanner/types.js').ScanPlanResponse | null | undefined;
+          writeScanSummary(repoFullName, createdIssues, vulnCount, scanPlan ?? null);
 
           // RFC-133: Write scan report files when scan_output includes 'report'
           if (scanResult.scanReport) {

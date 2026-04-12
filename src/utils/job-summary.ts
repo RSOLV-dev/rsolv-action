@@ -9,6 +9,7 @@
 
 import { appendFileSync } from 'fs';
 import { logger } from './logger.js';
+import type { ScanPlanResponse } from '../scanner/types.js';
 
 interface ScanIssue {
   number: number;
@@ -26,11 +27,13 @@ interface ProcessResult {
 
 /**
  * Write a job summary for a SCAN phase result.
+ * When a scan plan is available, includes budget info and selected/deferred breakdown.
  */
 export function writeScanSummary(
   repoFullName: string,
   createdIssues: ScanIssue[],
-  vulnerabilityCount: number
+  vulnerabilityCount: number,
+  scanPlan?: ScanPlanResponse | null
 ): void {
   const summaryFile = process.env.GITHUB_STEP_SUMMARY;
   if (!summaryFile) return;
@@ -40,10 +43,53 @@ export function writeScanSummary(
     '',
   ];
 
-  if (createdIssues.length === 0) {
+  if (vulnerabilityCount === 0) {
     lines.push('✅ No vulnerabilities detected.');
+  } else if (scanPlan) {
+    // Budget-aware summary
+    const budget = scanPlan.budget;
+    const tierLabel = capitalize(budget.tier);
+    const selectedCount = scanPlan.selected.length;
+    const deferredCount = scanPlan.deferred.length;
+
+    lines.push(`Found **${vulnerabilityCount}** potential vulnerabilities.`);
+    lines.push('');
+
+    // Budget line
+    const budgetParts: string[] = [`${budget.validate_used}/${budget.validate_limit} included used`];
+    if (budget.overage_cap_cents > 0) {
+      budgetParts.push(`$${budget.overage_cap_cents / 100} overage cap`);
+    }
+    lines.push(`**Budget:** ${budgetParts.join(' + ')} | ${tierLabel} plan`);
+    lines.push(`**Processing:** ${selectedCount} highest-severity findings`);
+    if (deferredCount > 0) {
+      lines.push(`**Deferred:** ${deferredCount} (will be picked up on next scan with available budget)`);
+    }
+
+    lines.push('');
+    lines.push('| # | Severity | CWE | File | Status |');
+    lines.push('|---|----------|-----|------|--------|');
+
+    // Selected findings
+    for (let i = 0; i < scanPlan.selected.length; i++) {
+      const f = scanPlan.selected[i];
+      lines.push(`| ${i + 1} | ${capitalize(f.severity)} | ${f.cwe_id} | \`${f.file_path}:${f.line}\` | ✅ Processing |`);
+    }
+
+    // Deferred findings
+    for (let i = 0; i < scanPlan.deferred.length; i++) {
+      const f = scanPlan.deferred[i];
+      const num = scanPlan.selected.length + i + 1;
+      lines.push(`| ${num} | ${capitalize(f.severity)} | ${f.cwe_id} | \`${f.file_path}:${f.line}\` | ⏳ Deferred |`);
+    }
+  } else if (createdIssues.length === 0) {
+    // No plan, no issues created
+    lines.push(`Found **${vulnerabilityCount}** potential vulnerabilities.`);
+    lines.push('**Budget:** information unavailable — using conservative default');
   } else {
+    // Fallback — no plan but issues were created
     lines.push(`Found **${vulnerabilityCount}** potential vulnerabilities. Created **${createdIssues.length}** issues for validation.`);
+    lines.push('**Budget:** information unavailable — using conservative default');
     lines.push('');
     lines.push('| Issue | Type |');
     lines.push('|-------|------|');
@@ -52,9 +98,6 @@ export function writeScanSummary(
       const cwe = issue.cwe_id || issue.vulnerabilityType || 'Unknown';
       lines.push(`| [#${issue.number}](../../issues/${issue.number}) | ${cwe} |`);
     }
-
-    lines.push('');
-    lines.push('Each issue will now be validated through behavioral testing.');
   }
 
   lines.push('');
@@ -67,6 +110,10 @@ export function writeScanSummary(
   } catch (error) {
     logger.warn('[JobSummary] Failed to write scan summary', error);
   }
+}
+
+function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 interface IssueResult {
