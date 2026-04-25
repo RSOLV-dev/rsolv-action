@@ -1,0 +1,35 @@
+title = "RSOLV-action gitleaks config"
+
+# Extend gitleaks' built-in rule set
+# (https://github.com/gitleaks/gitleaks/blob/master/config/gitleaks.toml).
+# We do NOT redefine rules — we just narrow when they fire via the allowlist
+# below. This keeps us up to date with upstream as new provider rules ship.
+[extend]
+useDefault = true
+
+# Repo-wide allowlist. Keep this list narrow: the goal is to suppress
+# documented false-positive PATTERNS (placeholder strings, generated output),
+# not entire categories of files. If you need to allow a specific real value,
+# prefer a `# gitleaks:allow` inline comment on the line itself.
+[allowlist]
+description = "RSOLV-action global allowlist"
+
+# Files that contain example/placeholder credentials only (never real ones).
+paths = [
+  '''.*\.env\.example$''',
+  # Compiled output of TS sources — original sources are scanned in-place.
+  '''^dist/.*''',
+]
+
+# Common placeholder/dummy strings used in docs and tests.
+regexes = [
+  '''YOUR_[A-Z_]+(_HERE)?''',
+  '''REPLACE_ME''',
+  '''<YOUR_[^>]*>''',
+  '''sk-ant-api03-xxx+''',
+  '''sk-test-[a-z_]+''',
+  '''dummy[-_]?[a-z]+[-_]?key''',
+  '''mock[-_]?[a-z]+[-_]?key''',
+  '''test[-_]?[a-z]+[-_]?key''',
+  '''xxxxxxxxx+''',
+]

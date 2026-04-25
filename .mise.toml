@@ -1,0 +1,35 @@
+# Mise tool config for RSOLV-action.
+#
+# We keep .tool-versions around for asdf compatibility (nodejs, bun); this
+# file adds the bits asdf can't do — namely [hooks] for self-installing
+# git hooks and the gitleaks pinning.
+
+[tools]
+# Mirror .tool-versions
+node = "22.13.0"
+bun = "1.2.15"
+# Secret scanner. Pre-commit hook is in .githooks/ and self-installs via
+# the [hooks].enter block below. CI also enforces server-side via
+# .github/workflows/gitleaks.yml.
+gitleaks = "8.30.1"
+
+[hooks]
+enter = '''
+# Auto-install committed git hooks so contributors get secret-scanning on
+# every commit without a manual setup step. Idempotent — only writes when
+# core.hooksPath is not already pointed at the right place.
+#
+# Scope-gate: only act when the active git repo IS this repo (the one this
+# .mise.toml lives in). Without this check, cd-ing into a sibling repo
+# that lacks its own .mise.toml would re-fire this hook against that
+# repo and mis-set its core.hooksPath to a .githooks path that doesn't
+# exist there.
+toplevel=$(git rev-parse --show-toplevel 2>/dev/null || true)
+if [ -n "$toplevel" ] && [ "$toplevel" = "${MISE_PROJECT_ROOT:-}" ]; then
+  current_hooks_path=$(git config --local --get core.hooksPath 2>/dev/null || true)
+  if [ "$current_hooks_path" != ".githooks" ]; then
+    git config --local core.hooksPath .githooks
+    echo "✓ git core.hooksPath set to .githooks (gitleaks pre-commit enabled)"
+  fi
+fi
+'''
