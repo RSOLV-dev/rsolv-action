@@ -1,0 +1,38 @@
+title = "RSOLV-action gitleaks config"
+
+# Extend gitleaks' built-in rule set
+# (https://github.com/gitleaks/gitleaks/blob/master/config/gitleaks.toml).
+# We do NOT redefine rules — we just narrow when they fire via the allowlist
+# below. This keeps us up to date with upstream as new provider rules ship.
+[extend]
+useDefault = true
+
+# Repo-wide allowlist. Keep this list narrow: the goal is to suppress
+# documented false-positive PATTERNS (placeholder strings, generated output),
+# not entire categories of files. If you need to allow a specific real value,
+# prefer a `# gitleaks:allow` inline comment on the line itself.
+[allowlist]
+description = "RSOLV-action global allowlist"
+
+# Files that contain example/placeholder credentials only (never real ones).
+paths = [
+  '''.*\.env\.example$''',
+  # Compiled output of TS sources — original sources are scanned in-place.
+  '''^dist/.*''',
+]
+
+# Common placeholder/dummy strings used in docs and tests. Patterns are
+# anchored with word boundaries (\b) so they match the placeholder *exactly*
+# rather than as a substring of an unrelated value — a real key that
+# happened to contain "REPLACE_ME" or "xxxxxxxxx" inside its random body
+# would otherwise be silently allowlisted.
+regexes = [
+  '''\bYOUR_[A-Z_]+(_HERE)?\b''',
+  '''\bREPLACE_ME\b''',
+  '''<YOUR_[^>]*>''',
+  '''\bsk-ant-api03-x{20,}\b''',
+  '''\bsk-test-[a-z_]+\b''',
+  '''\bdummy[-_]?[a-z]+[-_]?key\b''',
+  '''\bmock[-_]?[a-z]+[-_]?key\b''',
+  '''\btest[-_]?[a-z]+[-_]?key\b''',
+]

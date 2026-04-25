@@ -1,0 +1,66 @@
+name: gitleaks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# We invoke the gitleaks BINARY directly rather than the gitleaks-action,
+# because gitleaks-action@v2 requires a paid licence for organisation repos.
+# The underlying gitleaks tool is MIT-licensed and free; only the GitHub
+# Action wrapper is paid. Keep GITLEAKS_VERSION in sync with .mise.toml.
+
+env:
+  GITLEAKS_VERSION: "8.30.1"
+
+jobs:
+  scan:
+    name: Secret Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history so the diff range below has both endpoints available.
+          fetch-depth: 0
+
+      - name: Install gitleaks
+        run: |
+          set -euo pipefail
+          # Explicit `-f -` so tar reads the archive from stdin rather than
+          # relying on the compiled-in default device fallback.
+          curl -fsSL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            | sudo tar -xzf - -C /usr/local/bin gitleaks
+          gitleaks version
+
+      # PR mode: scan only the new commits (PR diff against base). Avoids
+      # re-flagging historical leaks that were committed before this hook
+      # existed.
+      - name: Scan PR diff
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          gitleaks detect \
+            --no-banner \
+            --redact \
+            --log-opts="--no-merges $BASE_SHA..$HEAD_SHA"
+
+      # Push-to-main mode: scan only the new commits in this push.
+      - name: Scan push diff
+        if: github.event_name == 'push'
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+          AFTER_SHA: ${{ github.event.after }}
+        run: |
+          # On the very first push to main after this workflow lands,
+          # github.event.before is the all-zeros SHA; degrade to a no-op
+          # rather than scanning the entire history for that one event.
+          if [ "$BEFORE_SHA" = "0000000000000000000000000000000000000000" ]; then
+            echo "Initial push (no prior SHA). Skipping diff scan."
+            exit 0
+          fi
+          gitleaks detect \
+            --no-banner \
+            --redact \
+            --log-opts="--no-merges $BEFORE_SHA..$AFTER_SHA"

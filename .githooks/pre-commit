@@ -1,0 +1,36 @@
+#!/bin/sh
+# RSOLV-action pre-commit hook: scan staged changes for secrets via gitleaks.
+#
+# Auto-installed by mise's [hooks].enter when you cd into the repo with mise
+# active (see .mise.toml). The companion CI workflow at
+# .github/workflows/gitleaks.yml enforces the same scan server-side, so even
+# a commit that bypassed this hook with --no-verify will be caught at PR time.
+#
+# To intentionally skip this hook for a single commit (and own that decision):
+#   git commit --no-verify
+
+set -e
+
+# Each `exec` branch dispatches the actual command directly with positional
+# args — avoids storing a multi-word command in a string and relying on
+# word-splitting (which would break if any path element contained spaces).
+if command -v gitleaks >/dev/null 2>&1; then
+  exec gitleaks protect --staged --no-banner --redact
+fi
+
+if command -v mise >/dev/null 2>&1 && mise exec -- gitleaks version >/dev/null 2>&1; then
+  exec mise exec -- gitleaks protect --staged --no-banner --redact
+fi
+
+cat >&2 <<'EOF'
+pre-commit: gitleaks not installed.
+
+Quick fix (preferred — installs the version pinned in .mise.toml):
+  mise install
+
+Or install gitleaks another way (https://github.com/gitleaks/gitleaks#installing).
+
+To bypass this check for a single commit (own the decision):
+  git commit --no-verify
+EOF
+exit 1
