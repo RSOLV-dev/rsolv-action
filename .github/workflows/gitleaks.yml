@@ -26,8 +26,10 @@ jobs:
       - name: Install gitleaks
         run: |
           set -euo pipefail
+          # Explicit `-f -` so tar reads the archive from stdin rather than
+          # relying on the compiled-in default device fallback.
           curl -fsSL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
-            | sudo tar -xzC /usr/local/bin gitleaks
+            | sudo tar -xzf - -C /usr/local/bin gitleaks
           gitleaks version
 
       # PR mode: scan only the new commits (PR diff against base). Avoids
