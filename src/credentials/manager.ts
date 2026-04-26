@@ -5,20 +5,12 @@ export interface ProviderCredential {
   expires_at: string;
 }
 
-// RFC-095: Feature flags for adapter selection and rollout control
-export interface FeatureFlags {
-  use_legacy_claude_adapter?: boolean;
-  enable_session_forking?: boolean;
-}
-
 export interface CredentialExchangeResponse {
   credentials: Record<string, ProviderCredential>;
   usage: {
     remaining_fixes: number;
     reset_at: string;
   };
-  // RFC-095: Feature flags from platform for instant rollback capability
-  feature_flags?: FeatureFlags;
 }
 
 export interface UsageReport {
@@ -31,8 +23,6 @@ export class RSOLVCredentialManager {
   private apiKey: string | null = null;
   private refreshTimers: Map<string, NodeJS.Timeout> = new Map();
   private rsolvApiUrl: string = process.env.RSOLV_API_URL || 'https://api.rsolv.ai';
-  // RFC-095: Store feature flags from platform
-  private featureFlags: FeatureFlags = {};
 
   async initialize(apiKey: string): Promise<void> {
     this.apiKey = apiKey;
@@ -83,15 +73,6 @@ export class RSOLVCredentialManager {
         this.credentials.set(provider, credential);
       });
 
-      // RFC-095: Store feature flags if available
-      if (data.feature_flags) {
-        this.featureFlags = data.feature_flags;
-        logger.info('[CredentialManager] Feature flags received:', JSON.stringify(this.featureFlags));
-        logger.info(`[CredentialManager] use_legacy_claude_adapter=${this.featureFlags.use_legacy_claude_adapter}`);
-      } else {
-        logger.info('[CredentialManager] No feature_flags in response');
-      }
-
       // Log remaining fixes if available
       if (data.usage?.remaining_fixes !== undefined) {
         logger.info(`Credentials initialized. Remaining fixes: ${data.usage.remaining_fixes}`);
@@ -102,18 +83,6 @@ export class RSOLVCredentialManager {
       logger.error('Failed to initialize credentials', error);
       throw error;
     }
-  }
-
-  // RFC-095: Get feature flags for adapter selection
-  getFeatureFlags(): FeatureFlags {
-    return this.featureFlags;
-  }
-
-  // RFC-095: Check if legacy adapter should be used
-  shouldUseLegacyAdapter(): boolean {
-    const useLegacy = this.featureFlags.use_legacy_claude_adapter === true;
-    logger.info(`[CredentialManager] shouldUseLegacyAdapter() called: featureFlags=${JSON.stringify(this.featureFlags)}, returning=${useLegacy}`);
-    return useLegacy;
   }
 
   async getCredential(provider: string): Promise<string> {
