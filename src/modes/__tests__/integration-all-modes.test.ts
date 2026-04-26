@@ -193,32 +193,6 @@ vi.mock('../../ai/test-generating-security-analyzer.js', () => ({
   }
 }));
 
-// RFC-095: Mock new ClaudeAgentSDKAdapter (replaces GitBasedClaudeCodeAdapter)
-vi.mock('../../ai/adapters/claude-agent-sdk.js', () => ({
-  ClaudeAgentSDKAdapter: class {
-    async generateSolutionWithGit() {
-      return {
-        success: true,
-        message: 'Fix applied successfully',
-        filesModified: ['src/image-processor.js'],
-        commitHash: 'fix123abc',
-        diffStats: { insertions: 3, deletions: 1, filesChanged: 1 }
-      };
-    }
-  },
-  GitSolutionResult: {},
-  createClaudeAgentSDKAdapter: () => ({
-    async generateSolutionWithGit() {
-      return {
-        success: true,
-        message: 'Fix applied successfully',
-        filesModified: ['src/image-processor.js'],
-        commitHash: 'fix123abc',
-        diffStats: { insertions: 3, deletions: 1, filesChanged: 1 }
-      };
-    }
-  })
-}));
 
 // Mock issue analyzer
 vi.mock('../../ai/issue-analyzer.js', () => ({

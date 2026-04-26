@@ -7,34 +7,6 @@ import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { IssueContext, ActionConfig } from '../../types/index.js';
 import type { PhaseExecutor } from '../phase-executor/index.js';
 
-// RFC-095: Mock new ClaudeAgentSDKAdapter (replaces GitBasedClaudeCodeAdapter)
-vi.mock('../../ai/adapters/claude-agent-sdk.js', () => ({
-  ClaudeAgentSDKAdapter: class {
-    async generateSolutionWithGit() {
-      return {
-        success: true,
-        pullRequestUrl: 'https://github.com/test/repo/pull/1',
-        pullRequestNumber: 1,
-        commitHash: 'abc123',
-        filesModified: ['test.js'],
-        diffStats: { filesChanged: 1, insertions: 10, deletions: 5 }
-      };
-    }
-  },
-  GitSolutionResult: {},
-  createClaudeAgentSDKAdapter: () => ({
-    async generateSolutionWithGit() {
-      return {
-        success: true,
-        pullRequestUrl: 'https://github.com/test/repo/pull/1',
-        pullRequestNumber: 1,
-        commitHash: 'abc123',
-        filesModified: ['test.js'],
-        diffStats: { filesChanged: 1, insertions: 10, deletions: 5 }
-      };
-    }
-  })
-}));
 
 vi.mock('../../ai/git-based-test-validator.js', () => ({
   GitBasedTestValidator: class {
