@@ -1,0 +1,24 @@
+# Dependabot configuration for RSOLV-action.
+#
+# Scopes Dependabot strictly to the root `package.json` so the updater
+# does not try to manage `test-fixtures/claude-code/sample-repo/package.json`
+# (and similar fixture manifests) — those are intentionally minimal/legacy
+# and don't ship; security advisories against them are noise.
+#
+# Without this config Dependabot uses GitHub defaults, which auto-discover
+# every `package.json` in the repo. That surfaced today as a failed
+# "Dependabot Updates" run trying to apply a mongoose security patch to
+# the fixture, which the updater container couldn't process.
+
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
