@@ -60,7 +60,7 @@ jobs:
 
       - name: RSOLV Scan - Detect Vulnerabilities
         id: scan
-        uses: RSOLV-dev/rsolv-action@v3  # Tracks latest v3.x release
+        uses: RSOLV-dev/rsolv-action@v4  # Tracks latest v3.x release
         with:
           rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
           mode: 'scan'
@@ -95,7 +95,7 @@ jobs:
 
       - name: RSOLV Validate - AST Analysis
         id: validate
-        uses: RSOLV-dev/rsolv-action@v3
+        uses: RSOLV-dev/rsolv-action@v4
         with:
           rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
           mode: 'validate'
@@ -127,7 +127,7 @@ jobs:
 
       - name: RSOLV Mitigate - Generate Fixes
         id: mitigate
-        uses: RSOLV-dev/rsolv-action@v3
+        uses: RSOLV-dev/rsolv-action@v4
         with:
           rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
           mode: 'mitigate'
