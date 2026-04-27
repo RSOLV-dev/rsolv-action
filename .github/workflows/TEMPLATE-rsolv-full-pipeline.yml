@@ -86,7 +86,7 @@ jobs:
 
       # RFC-105: Cache mise runtimes to avoid recompiling Erlang/Elixir/Ruby on every run
       - name: Cache mise runtimes
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: .mise-cache
           key: mise-${{ runner.os }}-${{ hashFiles('**/.tool-versions', '**/.mise.toml', '**/mix.lock', '**/Gemfile.lock') }}
@@ -187,4 +187,4 @@ jobs:
 # - No issues created: Check RSOLV_API_KEY is set
 # - Validation fails: Normal for some patterns, issues remain tagged
 # - No PRs created: Check ANTHROPIC_API_KEY is set
-# - Slow validate phase: Add actions/cache@v4 for .mise-cache (see RFC-105)
+# - Slow validate phase: Add actions/cache@v5 for .mise-cache (see RFC-105)
