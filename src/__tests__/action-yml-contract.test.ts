@@ -1,12 +1,15 @@
 import { describe, expect, test } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import yaml from 'js-yaml';
 
 // Contract tests for action.yml — the action's public surface.
 // Why: inputs declared without env-block wiring become phantom controls
 // (declared, accepted, never propagated to the container). See
 // memory/feedback_phantom_input_inert.md for the latent-bug pattern.
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 interface ActionManifest {
   inputs?: Record<string, { description?: string; required?: boolean; default?: string }>;

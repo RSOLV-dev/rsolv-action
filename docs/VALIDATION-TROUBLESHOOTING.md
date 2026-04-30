@@ -397,12 +397,16 @@ kubectl logs -n rsolv-production -l app=rsolv-api --tail=100
 - Check if issue is particularly complex (large file, many vulnerabilities)
 
 **Resolution**:
-1. **Increase job-level timeout**:
+1. **Increase job-level timeout** (set on the job, not the step):
 ```yaml
-- uses: RSOLV-dev/rsolv-action@v4
-  with:
-    rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
-  timeout-minutes: 30  # Job-level timeout
+jobs:
+  rsolv:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30  # Job-level timeout
+    steps:
+      - uses: RSOLV-dev/rsolv-action@v4
+        with:
+          rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
 ```
 
 2. **Simplify issue**: Break large issues into smaller chunks
