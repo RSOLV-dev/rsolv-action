@@ -81,19 +81,19 @@ cat .rsolv/validation/issue-<number>.json
 
 **Resolution Strategies**:
 
-1. **Increase retry limit**: Add `claude_max_turns: 10` to workflow config
-2. **Manual test refinement**: Edit tests to properly detect vulnerability
-3. **Check vulnerability legitimacy**: Verify with manual code review
-4. **Framework detection override**: Specify framework explicitly in config
+1. **Manual test refinement**: Edit tests to properly detect vulnerability
+2. **Check vulnerability legitimacy**: Verify with manual code review
+3. **Framework detection override**: Specify framework explicitly in config
+
+> Turn limit is fixed at 50 server-side (RFC-096). It is not configurable from the workflow.
 
 **Example Fix**:
 ```yaml
-- uses: RSOLV-dev/rsolv-action@v2
+- uses: RSOLV-dev/rsolv-action@v4
   with:
-    api_key: ${{ secrets.RSOLV_API_KEY }}
+    rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
     mode: validate
     issue_number: ${{ github.event.issue.number }}
-    claude_max_turns: 10  # Increased from 5
     test_framework: rspec  # Override detection
 ```
 
@@ -397,18 +397,21 @@ kubectl logs -n rsolv-production -l app=rsolv-api --tail=100
 - Check if issue is particularly complex (large file, many vulnerabilities)
 
 **Resolution**:
-1. **Increase timeout** (if workflow allows):
+1. **Increase job-level timeout** (set on the job, not the step):
 ```yaml
-- uses: RSOLV-dev/rsolv-action@v2
-  with:
-    api_key: ${{ secrets.RSOLV_API_KEY }}
-    claude_max_turns: 10  # More iterations = longer timeout needed
-  timeout-minutes: 30  # Job-level timeout
+jobs:
+  rsolv:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30  # Job-level timeout
+    steps:
+      - uses: RSOLV-dev/rsolv-action@v4
+        with:
+          rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
 ```
 
 2. **Simplify issue**: Break large issues into smaller chunks
-3. **Reduce context**: Limit file size sent to Claude Code
-4. **Check Claude Code API status**: May be experiencing rate limits
+3. **Reduce context**: Limit file size sent to backend
+4. **Check platform status**: May be experiencing rate limits or capacity pressure
 
 ### Symptom: Tests Don't Detect Vulnerability
 

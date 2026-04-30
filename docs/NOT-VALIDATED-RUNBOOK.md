@@ -112,9 +112,9 @@ Issue tagged "not-validated"
 ├─ Were tests generated? (Check validation branch)
 │  │
 │  ├─ NO → [TEST GENERATION FAILURE]
-│  │      ├─ Check Claude Code SDK logs
-│  │      ├─ Check retry count (default: 5)
-│  │      └─ Resolution: Retry with higher claude_max_turns
+│  │      ├─ Check platform orchestrator logs (RFC-096)
+│  │      ├─ Check turn count vs server-side cap (50)
+│  │      └─ Resolution: Manual test refinement or platform escalation
 │  │
 │  └─ YES → Continue to next step
 │
@@ -220,29 +220,20 @@ git push
 
 ### Procedure 2: Test Generation Failure Resolution
 
-**When to Use**: No tests were generated (Claude Code SDK failed)
+**When to Use**: No tests were generated (platform orchestrator failed)
 
 **Steps**:
 
-1. **Check Retry Count**:
+1. **Check Turn Count in Platform Logs**:
 ```bash
-# Review workflow logs
-gh run view <RUN_ID> --log | grep "claude_max_turns"
-
-# Typical output: "Using claude_max_turns: 5"
+# Review action workflow logs for backend tool-loop turns
+gh run view <RUN_ID> --log | grep -E 'turn[s]?|tool_use'
 ```
+The platform-side turn cap is fixed at 50 (RFC-096) and not workflow-tunable.
 
-2. **Increase Retry Limit and Re-run**:
+2. **Re-run the Workflow** (transient platform failures usually self-heal):
 ```bash
-# Trigger workflow with higher retry limit
-gh workflow run "RSOLV AutoFix" \
-  -f issue_number=<ISSUE_NUMBER> \
-  -f claude_max_turns=10
-
-# Or edit workflow file
-# .github/workflows/rsolv-autofix.yml:
-# with:
-#   claude_max_turns: 10  # Increased from 5
+gh workflow run "RSOLV AutoFix" -f issue_number=<ISSUE_NUMBER>
 ```
 
 3. **If Still Failing, Manual Test Creation**:
@@ -511,7 +502,7 @@ See debug tarball: [link to upload]
 **Timeframe**: 24-72 hours
 
 **Escalation Criteria**:
-- Test generation fails after retry with `claude_max_turns=10`
+- Test generation fails after a clean re-run of the workflow
 - Test validation failure in complex codebase (requires deep code review)
 - Recurring pattern of failures in specific file/module
 
