@@ -98,10 +98,6 @@ inputs:
     description: 'RFC-060: Enable executable test generation in VALIDATE phase'
     required: false
     default: 'true'
-  claude_max_turns:
-    description: 'DEPRECATED: Turn limit is now controlled server-side (50 turns). This input is parsed but not used in mode=process (the canonical workflow).'
-    required: false
-    default: '50'
   create_pr:
     description: 'Create Pull Request after successful mitigation (default: true for production)'
     required: false
@@ -132,9 +128,9 @@ runs:
     RSOLV_USE_STRUCTURED_PHASES: ${{ inputs.use_structured_phases }}
     RSOLV_EDUCATIONAL_PR: ${{ inputs.enable_educational_pr }}
     RSOLV_EXECUTABLE_TESTS: ${{ inputs.executable_tests }}
-    RSOLV_CLAUDE_MAX_TURNS: ${{ inputs.claude_max_turns }}
     RSOLV_CREATE_PR: ${{ inputs.create_pr }}
     RSOLV_PIPELINE_RUN_ID: ${{ inputs.pipeline_run_id }}
+    GITHUB_TOKEN: ${{ inputs['github-token'] }}
 outputs:
   has_issues:
     description: 'Whether issues were found for processing'
