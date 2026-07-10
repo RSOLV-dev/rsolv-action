@@ -20,10 +20,12 @@ import type { ActionConfig, IssueContext } from '../../../types/index.js';
 
 // Mock TestRunner to prevent ensureRuntime from hanging
 vi.mock('../../../ai/test-runner.js', () => ({
-  TestRunner: vi.fn().mockImplementation(() => ({
-    ensureRuntime: vi.fn().mockResolvedValue(undefined),
-    runTests: vi.fn(),
-  })),
+  TestRunner: vi.fn().mockImplementation(function () {
+    return {
+      ensureRuntime: vi.fn().mockResolvedValue(undefined),
+      runTests: vi.fn(),
+    };
+  }),
 }));
 
 // Mock GitHub API
@@ -36,25 +38,29 @@ vi.mock('../../../github/api.js', () => ({
 
 // Mock scanner
 vi.mock('../../../scanner/index.js', () => ({
-  ScanOrchestrator: vi.fn().mockImplementation(() => ({
-    performScan: vi.fn()
-  }))
+  ScanOrchestrator: vi.fn().mockImplementation(function () {
+    return {
+      performScan: vi.fn()
+    };
+  })
 }));
 
 // Mock the validation client to return a successful backend result
 vi.mock('../../../pipeline/validation-client.js', () => ({
-  ValidationClient: vi.fn().mockImplementation(() => ({
-    runValidation: vi.fn().mockResolvedValue({
-      validated: true,
-      test_path: 'spec/vulnerabilities/weak_password_crypto_spec.rb',
-      test_code: 'RSpec.describe "CWE-916" do ... end',
-      framework: 'rspec',
-      cwe_id: 'CWE-916',
-      classification: 'validated',
-      test_type: 'behavioral',
-      retry_count: 1,
-    }),
-  })),
+  ValidationClient: vi.fn().mockImplementation(function () {
+    return {
+      runValidation: vi.fn().mockResolvedValue({
+        validated: true,
+        test_path: 'spec/vulnerabilities/weak_password_crypto_spec.rb',
+        test_code: 'RSpec.describe "CWE-916" do ... end',
+        framework: 'rspec',
+        cwe_id: 'CWE-916',
+        classification: 'validated',
+        test_type: 'behavioral',
+        retry_count: 1,
+      }),
+    };
+  }),
 }));
 
 // Mock child_process for git operations
@@ -65,16 +71,18 @@ vi.mock('child_process', () => ({
 
 // RFC-124: Mock PipelineRunChannel to prevent real WebSocket connections
 vi.mock('../../../pipeline/pipeline-run-channel.js', () => ({
-  PipelineRunChannel: vi.fn().mockImplementation(() => ({
-    connect: vi.fn().mockResolvedValue(undefined),
-    createRun: vi.fn().mockResolvedValue({ runId: 'mock-run-id' }),
-    transitionStatus: vi.fn().mockResolvedValue(undefined),
-    registerIssues: vi.fn().mockResolvedValue(undefined),
-    complete: vi.fn().mockResolvedValue(undefined),
-    fail: vi.fn().mockResolvedValue(undefined),
-    disconnect: vi.fn(),
-    isConnected: vi.fn().mockReturnValue(true),
-  })),
+  PipelineRunChannel: vi.fn().mockImplementation(function () {
+    return {
+      connect: vi.fn().mockResolvedValue(undefined),
+      createRun: vi.fn().mockResolvedValue({ runId: 'mock-run-id' }),
+      transitionStatus: vi.fn().mockResolvedValue(undefined),
+      registerIssues: vi.fn().mockResolvedValue(undefined),
+      complete: vi.fn().mockResolvedValue(undefined),
+      fail: vi.fn().mockResolvedValue(undefined),
+      disconnect: vi.fn(),
+      isConnected: vi.fn().mockReturnValue(true),
+    };
+  }),
 }));
 
 describe('executeAllPhases validated filter → MITIGATE handoff', () => {

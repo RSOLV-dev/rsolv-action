@@ -41,7 +41,9 @@ describe('github-client', () => {
     };
 
     // Make Octokit constructor return our mock
-    (Octokit as any).mockImplementation(() => mockOctokit);
+    (Octokit as any).mockImplementation(function () {
+      return mockOctokit;
+    });
 
     // Mock git operations to simulate successful git commands
     vi.mocked(gitOps.getCurrentBranch).mockReturnValue('main');
