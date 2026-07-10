@@ -99,16 +99,18 @@ vi.mock('child_process', () => ({
 
 // RFC-124: Mock PipelineRunChannel to prevent real WebSocket connections
 vi.mock('../../pipeline/pipeline-run-channel.js', () => ({
-  PipelineRunChannel: vi.fn().mockImplementation(() => ({
-    connect: vi.fn().mockResolvedValue(undefined),
-    createRun: vi.fn().mockResolvedValue({ runId: 'mock-run-id' }),
-    transitionStatus: vi.fn().mockResolvedValue(undefined),
-    registerIssues: vi.fn().mockResolvedValue(undefined),
-    complete: vi.fn().mockResolvedValue(undefined),
-    fail: vi.fn().mockResolvedValue(undefined),
-    disconnect: vi.fn(),
-    isConnected: vi.fn().mockReturnValue(true),
-  })),
+  PipelineRunChannel: vi.fn().mockImplementation(function () {
+    return {
+      connect: vi.fn().mockResolvedValue(undefined),
+      createRun: vi.fn().mockResolvedValue({ runId: 'mock-run-id' }),
+      transitionStatus: vi.fn().mockResolvedValue(undefined),
+      registerIssues: vi.fn().mockResolvedValue(undefined),
+      complete: vi.fn().mockResolvedValue(undefined),
+      fail: vi.fn().mockResolvedValue(undefined),
+      disconnect: vi.fn(),
+      isConnected: vi.fn().mockReturnValue(true),
+    };
+  }),
 }));
 
 // Mock the unified processor for mitigation

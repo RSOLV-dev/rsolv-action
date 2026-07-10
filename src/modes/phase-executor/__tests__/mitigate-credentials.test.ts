@@ -10,31 +10,35 @@ import { ActionConfig } from '../../../types/index.js';
 
 // Mock TestRunner to prevent ensureRuntime from hanging
 vi.mock('../../../ai/test-runner.js', () => ({
-  TestRunner: vi.fn().mockImplementation(() => ({
-    ensureRuntime: vi.fn().mockResolvedValue(undefined),
-    runTests: vi.fn(),
-  })),
+  TestRunner: vi.fn().mockImplementation(function () {
+    return {
+      ensureRuntime: vi.fn().mockResolvedValue(undefined),
+      runTests: vi.fn(),
+    };
+  }),
 }));
 
 // Mock MitigationClient to capture config
 const mockRunMitigation = vi.fn();
 vi.mock('../../../pipeline/mitigation-client.js', () => ({
-  MitigationClient: vi.fn().mockImplementation((config: { apiKey: string; baseUrl: string }) => ({
-    runMitigation: mockRunMitigation.mockImplementation(() => {
-      // If no API key, simulate auth failure
-      if (!config.apiKey) {
+  MitigationClient: vi.fn().mockImplementation(function (config: { apiKey: string; baseUrl: string }) {
+    return {
+      runMitigation: mockRunMitigation.mockImplementation(() => {
+        // If no API key, simulate auth failure
+        if (!config.apiKey) {
+          return Promise.resolve({
+            success: false,
+            error: 'Failed to start mitigation session: RSOLV_API_KEY is required',
+          });
+        }
         return Promise.resolve({
-          success: false,
-          error: 'Failed to start mitigation session: RSOLV_API_KEY is required',
+          success: true,
+          title: 'fix: test vulnerability',
+          description: 'Fixed test vulnerability',
         });
-      }
-      return Promise.resolve({
-        success: true,
-        title: 'fix: test vulnerability',
-        description: 'Fixed test vulnerability',
-      });
-    }),
-  })),
+      }),
+    };
+  }),
 }));
 
 // Mock PR creation
