@@ -20,9 +20,11 @@ vi.mock('../../../github/api.js', () => ({
 
 // Mock scanner - capture the config passed to performScan
 vi.mock('../../../scanner/index.js', () => ({
-  ScanOrchestrator: vi.fn().mockImplementation(() => ({
-    performScan: vi.fn()
-  }))
+  ScanOrchestrator: vi.fn().mockImplementation(function () {
+    return {
+      performScan: vi.fn()
+    };
+  })
 }));
 
 describe('PhaseExecutor scan phase rsolvApiKey passing', () => {

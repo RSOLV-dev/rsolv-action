@@ -7,6 +7,7 @@
  * TestRunner but was only called from the OLD TestRunner.runTests() path.
  */
 import { describe, test, expect, beforeEach, vi } from 'vitest';
+import * as fs from 'fs';
 import { PhaseExecutor } from '../index.js';
 import type { ActionConfig, IssueContext, ScanPhaseData } from '../../../types/index.js';
 
@@ -16,10 +17,12 @@ const mockEnsureDependencies = vi.fn().mockResolvedValue(undefined);
 
 // Mock TestRunner — the key assertion target
 vi.mock('../../../ai/test-runner.js', () => {
-  const MockTestRunner = vi.fn().mockImplementation(() => ({
-    ensureRuntime: mockEnsureRuntime,
-    ensureDependencies: mockEnsureDependencies,
-  }));
+  const MockTestRunner = vi.fn().mockImplementation(function () {
+    return {
+      ensureRuntime: mockEnsureRuntime,
+      ensureDependencies: mockEnsureDependencies,
+    };
+  });
   return {
     TestRunner: MockTestRunner,
     // TestFramework type is used for casting only — no runtime value needed
@@ -60,9 +63,11 @@ const mockRunValidation = vi.fn().mockResolvedValue({
 });
 
 vi.mock('../../../pipeline/validation-client.js', () => ({
-  ValidationClient: vi.fn().mockImplementation(() => ({
-    runValidation: mockRunValidation,
-  })),
+  ValidationClient: vi.fn().mockImplementation(function () {
+    return {
+      runValidation: mockRunValidation,
+    };
+  }),
 }));
 
 const mockRunMitigation = vi.fn().mockResolvedValue({
@@ -72,9 +77,11 @@ const mockRunMitigation = vi.fn().mockResolvedValue({
 });
 
 vi.mock('../../../pipeline/mitigation-client.js', () => ({
-  MitigationClient: vi.fn().mockImplementation(() => ({
-    runMitigation: mockRunMitigation,
-  })),
+  MitigationClient: vi.fn().mockImplementation(function () {
+    return {
+      runMitigation: mockRunMitigation,
+    };
+  }),
 }));
 
 // Mock child_process for git operations
@@ -111,10 +118,12 @@ vi.mock('fs', async () => {
 
 // Mock phase data storage
 vi.mock('../../../api/rsolv-api.js', () => ({
-  RsolvApiClient: vi.fn().mockImplementation(() => ({
-    storePhaseData: vi.fn().mockResolvedValue({ success: true }),
-    getPhaseData: vi.fn().mockResolvedValue(null),
-  })),
+  RsolvApiClient: vi.fn().mockImplementation(function () {
+    return {
+      storePhaseData: vi.fn().mockResolvedValue({ success: true }),
+      getPhaseData: vi.fn().mockResolvedValue(null),
+    };
+  }),
 }));
 
 const baseConfig: ActionConfig = {
@@ -148,6 +157,15 @@ describe('Runtime setup before pipeline sessions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     process.env.RSOLV_API_URL = 'https://api.rsolv.dev';
+    vi.mocked(fs.existsSync).mockImplementation((p: string) => {
+      if (p.endsWith('Gemfile')) return true;
+      if (p.endsWith('package.json')) return false;
+      return false;
+    });
+    vi.mocked(fs.readFileSync).mockImplementation((p: fs.PathOrFileDescriptor) => {
+      if (typeof p === 'string' && p.endsWith('Gemfile')) return 'gem \'rspec-rails\'\ngem \'rails\'';
+      return '';
+    });
   });
 
   test('executeValidateForIssue calls ensureRuntime before starting validation session', async () => {

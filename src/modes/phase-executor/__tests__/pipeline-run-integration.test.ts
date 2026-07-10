@@ -28,7 +28,9 @@ const channelCalls = {
 
 // Mock PipelineRunChannel
 vi.mock('../../../pipeline/pipeline-run-channel.js', () => ({
-  PipelineRunChannel: vi.fn().mockImplementation(() => channelCalls),
+  PipelineRunChannel: vi.fn().mockImplementation(function () {
+    return channelCalls;
+  }),
 }));
 
 // Mock GitHub API
@@ -41,23 +43,27 @@ vi.mock('../../../github/api.js', () => ({
 
 // Mock scanner
 vi.mock('../../../scanner/index.js', () => ({
-  ScanOrchestrator: vi.fn().mockImplementation(() => ({
-    performScan: vi.fn()
-  }))
+  ScanOrchestrator: vi.fn().mockImplementation(function () {
+    return {
+      performScan: vi.fn()
+    };
+  })
 }));
 
 // Mock ValidationClient
 vi.mock('../../../pipeline/validation-client.js', () => ({
-  ValidationClient: vi.fn().mockImplementation(() => ({
-    runValidation: vi.fn().mockResolvedValue({
-      validated: true,
-      test_path: 'spec/vulnerability_spec.rb',
-      test_code: 'it { expect... }',
-      classification: 'validated',
-      framework: 'rspec',
-      cwe_id: 'CWE-79',
-    }),
-  })),
+  ValidationClient: vi.fn().mockImplementation(function () {
+    return {
+      runValidation: vi.fn().mockResolvedValue({
+        validated: true,
+        test_path: 'spec/vulnerability_spec.rb',
+        test_code: 'it { expect... }',
+        classification: 'validated',
+        framework: 'rspec',
+        cwe_id: 'CWE-79',
+      }),
+    };
+  }),
 }));
 
 // Mock child_process
@@ -73,9 +79,11 @@ vi.mock('../utils/label-manager.js', () => ({
 
 // Mock test runner
 vi.mock('../../../ai/test-runner.js', () => ({
-  TestRunner: vi.fn().mockImplementation(() => ({
-    ensureRuntime: vi.fn().mockResolvedValue(undefined),
-  })),
+  TestRunner: vi.fn().mockImplementation(function () {
+    return {
+      ensureRuntime: vi.fn().mockResolvedValue(undefined),
+    };
+  }),
 }));
 
 describe('PhaseExecutor - PipelineRun Channel Integration', () => {

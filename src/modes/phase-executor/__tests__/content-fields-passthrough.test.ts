@@ -10,10 +10,12 @@ import type { ActionConfig, IssueContext, ScanPhaseData } from '../../../types/i
 
 // Mock TestRunner
 vi.mock('../../../ai/test-runner.js', () => ({
-  TestRunner: vi.fn().mockImplementation(() => ({
-    ensureRuntime: vi.fn().mockResolvedValue(undefined),
-    runTests: vi.fn(),
-  })),
+  TestRunner: vi.fn().mockImplementation(function () {
+    return {
+      ensureRuntime: vi.fn().mockResolvedValue(undefined),
+      runTests: vi.fn(),
+    };
+  }),
 }));
 
 // Mock GitHub API
@@ -53,16 +55,18 @@ vi.mock('../../../github/pr-git-educational.js', () => ({
 
 // Mock MitigationClient to return content fields
 vi.mock('../../../pipeline/mitigation-client.js', () => ({
-  MitigationClient: vi.fn().mockImplementation(() => ({
-    runMitigation: vi.fn().mockResolvedValue({
-      success: true,
-      title: 'fix: CWE-79 XSS in template rendering',
-      description: 'Fixed XSS vulnerability by escaping user input',
-      fix_summary: 'Escaped all user-provided template variables using contextual output encoding.',
-      changes_explanation: 'Line-level: Added htmlEscape() calls around 3 template interpolations in views/template.ts.\nConcept-level: Applied contextual output encoding to prevent XSS.\nBusiness-level: User-generated content can no longer execute scripts in other users\' browsers.',
-      risk_assessment: 'Before: Any user input rendered in templates could execute arbitrary JavaScript. After: All dynamic content is escaped, eliminating reflected and stored XSS vectors.',
-    }),
-  })),
+  MitigationClient: vi.fn().mockImplementation(function () {
+    return {
+      runMitigation: vi.fn().mockResolvedValue({
+        success: true,
+        title: 'fix: CWE-79 XSS in template rendering',
+        description: 'Fixed XSS vulnerability by escaping user input',
+        fix_summary: 'Escaped all user-provided template variables using contextual output encoding.',
+        changes_explanation: 'Line-level: Added htmlEscape() calls around 3 template interpolations in views/template.ts.\nConcept-level: Applied contextual output encoding to prevent XSS.\nBusiness-level: User-generated content can no longer execute scripts in other users\' browsers.',
+        risk_assessment: 'Before: Any user input rendered in templates could execute arbitrary JavaScript. After: All dynamic content is escaped, eliminating reflected and stored XSS vectors.',
+      }),
+    };
+  }),
 }));
 
 // Mock child_process
@@ -182,13 +186,15 @@ describe('content fields passthrough to platform', () => {
   test('omits content fields when backend does not return them', async () => {
     // Override mock to return no content fields
     const { MitigationClient } = await import('../../../pipeline/mitigation-client.js');
-    (MitigationClient as unknown as ReturnType<typeof vi.fn>).mockImplementation(() => ({
-      runMitigation: vi.fn().mockResolvedValue({
-        success: true,
-        title: 'fix: basic fix',
-        description: 'Fixed it',
-      }),
-    }));
+    (MitigationClient as unknown as ReturnType<typeof vi.fn>).mockImplementation(function () {
+      return {
+        runMitigation: vi.fn().mockResolvedValue({
+          success: true,
+          title: 'fix: basic fix',
+          description: 'Fixed it',
+        }),
+      };
+    });
 
     const freshExecutor = new PhaseExecutor(mockConfig);
     const storePhaseDataSpy = vi.spyOn(freshExecutor, 'storePhaseData' as never);

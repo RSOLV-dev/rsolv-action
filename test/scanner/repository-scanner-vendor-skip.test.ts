@@ -51,8 +51,12 @@ describe('RepositoryScanner - Vendor File Skipping (Regression Test)', () => {
 
     // Setup mocks
     vi.mocked(getGitHubClient).mockReturnValue(mockGitHub as any);
-    vi.mocked(SafeDetector).mockImplementation(() => mockDetector as any);
-    vi.mocked(VendorDetector).mockImplementation(() => mockVendorDetector as any);
+    vi.mocked(SafeDetector).mockImplementation(function () {
+      return mockDetector as any;
+    });
+    vi.mocked(VendorDetector).mockImplementation(function () {
+      return mockVendorDetector as any;
+    });
 
     scanner = new RepositoryScanner();
   });
