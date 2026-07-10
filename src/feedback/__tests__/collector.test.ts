@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach, vi, Mock, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi, type Mock } from 'vitest';
 import { FeedbackCollector } from '../collector.js';
-import type { FeedbackEvent } from '../types.js';
+import type { FeedbackEvent, FeedbackSentiment } from '../types.js';
 
 describe('FeedbackCollector', () => {
   let collector: FeedbackCollector;

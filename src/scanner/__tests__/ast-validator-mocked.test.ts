@@ -20,7 +20,9 @@ describe('AST Validator with Mocked API', () => {
       validateVulnerabilities: vi.fn()
     };
     
-    (RsolvApiClient as any).mockImplementation(() => mockApiClient);
+    (RsolvApiClient as any).mockImplementation(function () {
+      return mockApiClient;
+    });
     
     validator = new ASTValidator('test-api-key');
   });

@@ -10,10 +10,12 @@ import type { ActionConfig, IssueContext, ScanPhaseData } from '../../../types/i
 
 // Mock TestRunner to prevent ensureRuntime from hanging
 vi.mock('../../../ai/test-runner.js', () => ({
-  TestRunner: vi.fn().mockImplementation(() => ({
-    ensureRuntime: vi.fn().mockResolvedValue(undefined),
-    runTests: vi.fn(),
-  })),
+  TestRunner: vi.fn().mockImplementation(function () {
+    return {
+      ensureRuntime: vi.fn().mockResolvedValue(undefined),
+      runTests: vi.fn(),
+    };
+  }),
 }));
 
 // Mock GitHub API
@@ -53,13 +55,15 @@ vi.mock('../../../github/pr-git-educational.js', () => ({
 
 // Mock MitigationClient
 vi.mock('../../../pipeline/mitigation-client.js', () => ({
-  MitigationClient: vi.fn().mockImplementation(() => ({
-    runMitigation: vi.fn().mockResolvedValue({
-      success: true,
-      title: 'fix: CWE-79 XSS in template rendering',
-      description: 'Fixed XSS vulnerability by escaping user input',
-    }),
-  })),
+  MitigationClient: vi.fn().mockImplementation(function () {
+    return {
+      runMitigation: vi.fn().mockResolvedValue({
+        success: true,
+        title: 'fix: CWE-79 XSS in template rendering',
+        description: 'Fixed XSS vulnerability by escaping user input',
+      }),
+    };
+  }),
 }));
 
 // Mock child_process for git operations
@@ -187,12 +191,14 @@ describe('executeMitigateForIssue phase data storage', () => {
   test('does not store phase data when mitigation fails', async () => {
     // Override the MitigationClient mock to fail
     const { MitigationClient } = await import('../../../pipeline/mitigation-client.js');
-    (MitigationClient as unknown as ReturnType<typeof vi.fn>).mockImplementation(() => ({
-      runMitigation: vi.fn().mockResolvedValue({
-        success: false,
-        error: 'Backend mitigation failed: timeout',
-      }),
-    }));
+    (MitigationClient as unknown as ReturnType<typeof vi.fn>).mockImplementation(function () {
+      return {
+        runMitigation: vi.fn().mockResolvedValue({
+          success: false,
+          error: 'Backend mitigation failed: timeout',
+        }),
+      };
+    });
 
     const freshExecutor = new PhaseExecutor(mockConfig);
     const storePhaseDataSpy = vi.spyOn(freshExecutor, 'storePhaseData' as any);
