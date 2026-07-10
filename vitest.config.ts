@@ -22,16 +22,12 @@ export default defineConfig({
     // Performance settings based on environment
     // Use forks with single process to avoid worker overhead memory issues
     pool: 'forks',
-    poolOptions: {
-      forks: {
-        singleFork: true,  // Run all tests in single process to avoid worker memory overhead
-        // Load polyfills BEFORE any other modules using --require
-        execArgv: [
-          '--require', './test/vitest-preload.cjs',
-          ...(isMemoryConstrained ? ['--expose-gc'] : [])
-        ],
-      }
-    },
+    maxWorkers: isMemoryConstrained ? 1 : undefined,
+    // Load polyfills BEFORE any other modules using --require
+    execArgv: [
+      '--require', './test/vitest-preload.cjs',
+      ...(isMemoryConstrained ? ['--expose-gc'] : [])
+    ],
     
     // Timeout settings
     testTimeout: isLiveAPI ? 60000 : 10000,
@@ -127,10 +123,4 @@ export default defineConfig({
   optimizeDeps: {
     include: ['vitest', '@vitest/ui']
   },
-  
-  // ESBuild for faster transforms
-  esbuild: {
-    target: 'node20',
-    format: 'esm'
-  }
 });
