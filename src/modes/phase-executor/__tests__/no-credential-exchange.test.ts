@@ -15,10 +15,12 @@ import type { ActionConfig, IssueContext } from '../../../types/index.js';
 
 // Mock TestRunner to prevent ensureRuntime from hanging
 vi.mock('../../../ai/test-runner.js', () => ({
-  TestRunner: vi.fn().mockImplementation(() => ({
-    ensureRuntime: vi.fn().mockResolvedValue(undefined),
-    runTests: vi.fn(),
-  })),
+  TestRunner: vi.fn().mockImplementation(function () {
+    return {
+      ensureRuntime: vi.fn().mockResolvedValue(undefined),
+      runTests: vi.fn(),
+    };
+  }),
 }));
 
 // Mock dependencies
@@ -27,18 +29,20 @@ vi.mock('../../../ai/analyzer.js', () => ({
 }));
 
 vi.mock('../../../pipeline/validation-client.js', () => ({
-  ValidationClient: vi.fn().mockImplementation(() => ({
-    runValidation: vi.fn().mockResolvedValue({
-      validated: true,
-      test_path: 'test/security_test.js',
-      test_code: 'describe("test", () => {})',
-      framework: 'mocha',
-      cwe_id: 'CWE-79',
-      classification: 'validated',
-      test_type: 'behavioral',
-      retry_count: 3,
-    }),
-  })),
+  ValidationClient: vi.fn().mockImplementation(function () {
+    return {
+      runValidation: vi.fn().mockResolvedValue({
+        validated: true,
+        test_path: 'test/security_test.js',
+        test_code: 'describe("test", () => {})',
+        framework: 'mocha',
+        cwe_id: 'CWE-79',
+        classification: 'validated',
+        test_type: 'behavioral',
+        retry_count: 3,
+      }),
+    };
+  }),
 }));
 
 vi.mock('../../../github/api.js', () => ({

@@ -1,7 +1,7 @@
 /**
  * Tests for the AI client factory
  */
-import { test, expect, vi, describe, beforeEach, vi } from 'vitest';
+import { test, expect, vi, describe, beforeEach } from 'vitest';
 import { getAiClient } from '../client.js';
 import { MODELS } from '../../config/models.js';
 

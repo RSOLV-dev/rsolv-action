@@ -73,19 +73,25 @@ describe('RepositoryScanner with AST Validation', () => {
       }
     } as any);
 
-    vi.mocked(SafeDetector).mockImplementation(() => ({
-      detect: vi.fn().mockResolvedValue([]),
-      cleanup: vi.fn()
-    } as any));
+    vi.mocked(SafeDetector).mockImplementation(function () {
+      return {
+        detect: vi.fn().mockResolvedValue([]),
+        cleanup: vi.fn()
+      } as any;
+    });
 
-    vi.mocked(VendorDetector).mockImplementation(() => ({
-      isVendorFile: vi.fn().mockResolvedValue(false)
-    } as any));
+    vi.mocked(VendorDetector).mockImplementation(function () {
+      return {
+        isVendorFile: vi.fn().mockResolvedValue(false)
+      } as any;
+    });
 
     mockValidator = vi.fn().mockImplementation((vulns) => Promise.resolve(vulns));
-    vi.mocked(ASTValidatorMock).mockImplementation(() => ({
-      validateVulnerabilities: mockValidator
-    } as any));
+    vi.mocked(ASTValidatorMock).mockImplementation(function () {
+      return {
+        validateVulnerabilities: mockValidator
+      } as any;
+    });
 
     scanner = new RepositoryScanner();
   });

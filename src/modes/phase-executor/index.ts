@@ -20,6 +20,8 @@ import type {
 } from '../../types/vulnerability.js';
 import { logger } from '../../utils/logger.js';
 import { execSync } from 'child_process';
+import { existsSync, readFileSync } from 'fs';
+import { join } from 'path';
 import { extractValidateRedTest } from '../../ai/validate-test-reuse.js';
 import { MitigationClient, type MitigationContext } from '../../pipeline/mitigation-client.js';
 import { ValidationClient, type ValidationContext } from '../../pipeline/validation-client.js';
@@ -1312,25 +1314,23 @@ export class PhaseExecutor {
    * Returns a best-guess framework name for the backend orchestrator.
    */
   private detectTestFramework(): string {
-    const fs = require('fs');
-    const path = require('path');
     const cwd = process.cwd();
 
     // Check for framework-specific files/dirs
-    if (fs.existsSync(path.join(cwd, 'spec'))) return 'rspec';
-    if (fs.existsSync(path.join(cwd, 'test', 'test_helper.exs'))) return 'exunit';
-    if (fs.existsSync(path.join(cwd, 'vitest.config.ts')) || fs.existsSync(path.join(cwd, 'vitest.config.js'))) return 'vitest';
-    if (fs.existsSync(path.join(cwd, 'jest.config.ts')) || fs.existsSync(path.join(cwd, 'jest.config.js'))) return 'jest';
-    if (fs.existsSync(path.join(cwd, 'pytest.ini')) || fs.existsSync(path.join(cwd, 'conftest.py'))) return 'pytest';
-    if (fs.existsSync(path.join(cwd, 'phpunit.xml')) || fs.existsSync(path.join(cwd, 'phpunit.xml.dist'))) return 'phpunit';
-    if (fs.existsSync(path.join(cwd, 'pom.xml'))) return 'junit';
-    if (fs.existsSync(path.join(cwd, 'build.gradle')) || fs.existsSync(path.join(cwd, 'build.gradle.kts'))) return 'junit';
+    if (existsSync(join(cwd, 'spec'))) return 'rspec';
+    if (existsSync(join(cwd, 'test', 'test_helper.exs'))) return 'exunit';
+    if (existsSync(join(cwd, 'vitest.config.ts')) || existsSync(join(cwd, 'vitest.config.js'))) return 'vitest';
+    if (existsSync(join(cwd, 'jest.config.ts')) || existsSync(join(cwd, 'jest.config.js'))) return 'jest';
+    if (existsSync(join(cwd, 'pytest.ini')) || existsSync(join(cwd, 'conftest.py'))) return 'pytest';
+    if (existsSync(join(cwd, 'phpunit.xml')) || existsSync(join(cwd, 'phpunit.xml.dist'))) return 'phpunit';
+    if (existsSync(join(cwd, 'pom.xml'))) return 'junit';
+    if (existsSync(join(cwd, 'build.gradle')) || existsSync(join(cwd, 'build.gradle.kts'))) return 'junit';
 
     // Check package.json for test runner
     try {
-      const pkgPath = path.join(cwd, 'package.json');
-      if (fs.existsSync(pkgPath)) {
-        const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+      const pkgPath = join(cwd, 'package.json');
+      if (existsSync(pkgPath)) {
+        const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
         const deps = { ...pkg.dependencies, ...pkg.devDependencies };
         if (deps.vitest) return 'vitest';
         if (deps.jest) return 'jest';
@@ -1342,9 +1342,9 @@ export class PhaseExecutor {
 
     // Check Gemfile for test runner
     try {
-      const gemfilePath = path.join(cwd, 'Gemfile');
-      if (fs.existsSync(gemfilePath)) {
-        const gemfile = fs.readFileSync(gemfilePath, 'utf-8');
+      const gemfilePath = join(cwd, 'Gemfile');
+      if (existsSync(gemfilePath)) {
+        const gemfile = readFileSync(gemfilePath, 'utf-8');
         if (gemfile.includes('rspec')) return 'rspec';
         if (gemfile.includes('minitest')) return 'minitest';
       }
@@ -1354,9 +1354,9 @@ export class PhaseExecutor {
 
     // Check requirements.txt / pyproject.toml for pytest
     try {
-      const reqPath = path.join(cwd, 'requirements.txt');
-      if (fs.existsSync(reqPath)) {
-        const reqs = fs.readFileSync(reqPath, 'utf-8');
+      const reqPath = join(cwd, 'requirements.txt');
+      if (existsSync(reqPath)) {
+        const reqs = readFileSync(reqPath, 'utf-8');
         if (reqs.includes('pytest')) return 'pytest';
       }
     } catch {
