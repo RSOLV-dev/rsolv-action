@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { RsolvApiClient } from '../api-client.js';
 
 // Mock node-fetch

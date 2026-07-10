@@ -104,20 +104,12 @@ interface TestExecutor {
 import { 
   VulnerabilityTestGenerator, 
   TestTemplateEngine, 
-  TestExecutor,
-  type VulnerabilityTestSuite as ImportedVulnerabilityTestSuite,
-  type TestGenerationOptions as ImportedTestGenerationOptions,
-  type TestGenerationResult as ImportedTestGenerationResult
+  TestExecutor
 } from '../test-generator.js';
 
 // Import Phase 5E implementations
 import { TestGeneratingSecurityAnalyzer } from '../test-generating-security-analyzer.js';
 import { GitBasedTestValidator } from '../git-based-test-validator.js';
-
-// Use imported types
-type VulnerabilityTestSuite = ImportedVulnerabilityTestSuite;
-type TestGenerationOptions = ImportedTestGenerationOptions;
-type TestGenerationResult = ImportedTestGenerationResult;
 
 // === TEST DATA ===
 

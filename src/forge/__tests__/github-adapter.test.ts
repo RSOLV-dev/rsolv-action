@@ -25,13 +25,15 @@ const mockRepos = {
 };
 
 vi.mock('@octokit/rest', () => ({
-  Octokit: vi.fn().mockImplementation(() => ({
-    issues: mockIssues,
-    pulls: mockPulls,
-    git: mockGit,
-    repos: mockRepos,
-    request: vi.fn(),
-  })),
+  Octokit: vi.fn().mockImplementation(function () {
+    return {
+      issues: mockIssues,
+      pulls: mockPulls,
+      git: mockGit,
+      repos: mockRepos,
+      request: vi.fn(),
+    };
+  }),
 }));
 
 describe('GitHubAdapter', () => {

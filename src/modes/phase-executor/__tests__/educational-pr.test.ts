@@ -35,10 +35,12 @@ const { mockCreateEducationalPullRequest, mockRunMitigation } = vi.hoisted(() =>
 
 // Mock TestRunner
 vi.mock('../../../ai/test-runner.js', () => ({
-  TestRunner: vi.fn().mockImplementation(() => ({
-    ensureRuntime: vi.fn().mockResolvedValue(undefined),
-    runTests: vi.fn(),
-  })),
+  TestRunner: vi.fn().mockImplementation(function () {
+    return {
+      ensureRuntime: vi.fn().mockResolvedValue(undefined),
+      runTests: vi.fn(),
+    };
+  }),
 }));
 
 // Track what createEducationalPullRequest receives
@@ -64,9 +66,11 @@ vi.mock('../../../github/api.js', () => ({
 
 // Mock MitigationClient — returns educational_content from platform Registry
 vi.mock('../../../pipeline/mitigation-client.js', () => ({
-  MitigationClient: vi.fn().mockImplementation(() => ({
-    runMitigation: mockRunMitigation,
-  })),
+  MitigationClient: vi.fn().mockImplementation(function () {
+    return {
+      runMitigation: mockRunMitigation,
+    };
+  }),
 }));
 
 // Mock child_process for git operations

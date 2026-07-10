@@ -1,4 +1,4 @@
-import { describe, expect, test, vi, beforeEach, vi } from 'vitest';
+import { describe, expect, test, vi, beforeEach } from 'vitest';
 import { analyzeIssue } from '../analyzer.js';
 import { MODELS } from '../../config/models.js';
 import { IssueContext, ActionConfig } from '../../types.js';
