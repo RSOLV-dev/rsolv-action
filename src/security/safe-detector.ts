@@ -205,7 +205,7 @@ export class SafeDetector {
 
       worker.on('error', (error) => {
         logger.error('SafeDetector: Worker error:', error);
-        this.lastError = error;
+        this.lastError = error instanceof Error ? error : new Error(String(error));
         cleanupAndResolve([]);
       });
 
