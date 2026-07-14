@@ -397,7 +397,7 @@ function validateConfig(config: any): ActionConfig {
     return validatedConfig;
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const errorMessages = error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
+      const errorMessages = error.issues.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
       logger.error(`Configuration validation failed: ${errorMessages}`);
       throw new Error(`Invalid configuration: ${errorMessages}`);
     }
