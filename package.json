@@ -60,7 +60,7 @@
     "bun-types": "latest",
     "eslint": "^10.7.0",
     "happy-dom": "^20.10.6",
-    "msw": "^2.13.6",
+    "msw": "^2.15.0",
     "nock": "^14.0.5",
     "typescript": "^6.0.3",
     "vitest": "^4.1.10"
