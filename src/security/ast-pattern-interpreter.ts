@@ -142,7 +142,7 @@ export class ASTPatternInterpreter {
           plugins: ['jsx', 'typescript'],
           errorRecovery: true
         };
-        ast = parse(content, parserOptions);
+        ast = parse(content, parserOptions) as unknown as File;
       } catch (error) {
         // Fall back to regex-only for unparseable files
         return this.regexOnlyFallback(filePath, content, candidatePatterns);
@@ -153,7 +153,7 @@ export class ASTPatternInterpreter {
         for (const pattern of candidatePatterns) {
           if (pattern.astRules) {
             console.log(`[AST] Applying AST rules for pattern ${pattern.id}`);
-            const patternFindings = this.applyASTPattern(ast, pattern, filePath, content);
+            const patternFindings = this.applyASTPattern(ast!, pattern, filePath, content);
             console.log(`[AST] Found ${patternFindings.length} issues with AST rules`);
             findings.push(...patternFindings);
           } else {
