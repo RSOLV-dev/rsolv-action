@@ -59,7 +59,7 @@
     "@vitest/ui": "^4.1.10",
     "bun-types": "latest",
     "eslint": "^10.7.0",
-    "happy-dom": "^20.10.6",
+    "happy-dom": "^20.11.0",
     "msw": "^2.15.0",
     "nock": "^14.0.16",
     "typescript": "^6.0.3",
