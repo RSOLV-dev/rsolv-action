@@ -44,7 +44,7 @@
     "glob": "^13.0.6",
     "js-yaml": "^5.2.1",
     "safe-regex2": "^5.1.1",
-    "uuid": "^14.0.0",
+    "uuid": "^14.0.1",
     "zod": "^4.4.3"
   },
   "devDependencies": {
