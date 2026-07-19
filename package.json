@@ -34,7 +34,7 @@
     "test:integration": "vitest run src/modes/__tests__/test-integration-client.test.ts src/modes/__tests__/validation-mode-test-integration.test.ts"
   },
   "dependencies": {
-    "@anthropic-ai/claude-agent-sdk": "^0.3.206",
+    "@anthropic-ai/claude-agent-sdk": "^0.3.215",
     "@anthropic-ai/claude-code": "^2.1.163",
     "@babel/parser": "^8.0.4",
     "@babel/traverse": "^7.29.0",
