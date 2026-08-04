@@ -23,7 +23,13 @@ jobs:
           mkdir -p node_modules
 
       - name: Install dependencies
-        run: bun install --frozen-lockfile || bun install --ignore-scripts
+        # Strict: no `|| bun install` fallback. That fallback existed to absorb
+        # Dependabot PRs where the npm ecosystem updated package-lock.json but
+        # not bun.lock -- it turned a lockfile violation into a green build, so
+        # CI silently tested a freshly-resolved tree instead of the pinned one.
+        # Dependabot now targets the bun ecosystem and package-lock.json is gone,
+        # so a stale lockfile is a real problem and should fail loudly.
+        run: bun install --frozen-lockfile
 
       - name: Run tests
         run: bun run test:ci
@@ -63,7 +69,13 @@ jobs:
           mkdir -p node_modules
 
       - name: Install dependencies
-        run: bun install --frozen-lockfile || bun install --ignore-scripts
+        # Strict: no `|| bun install` fallback. That fallback existed to absorb
+        # Dependabot PRs where the npm ecosystem updated package-lock.json but
+        # not bun.lock -- it turned a lockfile violation into a green build, so
+        # CI silently tested a freshly-resolved tree instead of the pinned one.
+        # Dependabot now targets the bun ecosystem and package-lock.json is gone,
+        # so a stale lockfile is a real problem and should fail loudly.
+        run: bun install --frozen-lockfile
 
       - name: Build Docker image
         run: docker build -t rsolv/action:latest .
