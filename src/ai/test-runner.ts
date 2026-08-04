@@ -367,13 +367,15 @@ export class TestRunner {
           const aptError = aptErr as { stderr?: string; message?: string };
           // Both mise and apt-get failed
           throw new Error(
-            `mise install ${runtimeSpec} timed out and apt-get fallback failed: ${aptError.stderr || aptError.message}`
+            `mise install ${runtimeSpec} timed out and apt-get fallback failed: ${aptError.stderr || aptError.message}`,
+            { cause: aptErr }
           );
         }
       }
 
       throw new Error(
-        `mise install ${runtimeSpec} failed: ${execError.stderr || execError.message}`
+        `mise install ${runtimeSpec} failed: ${execError.stderr || execError.message}`,
+        { cause: error }
       );
     }
   }
@@ -684,7 +686,7 @@ export class TestRunner {
           );
         } catch (pgErr) {
           console.warn(`[TestRunner] PostgreSQL start failed: ${(pgErr as Error).message}`);
-          throw new Error('Failed to start PostgreSQL');
+          throw new Error('Failed to start PostgreSQL', { cause: pgErr });
         }
       }
 

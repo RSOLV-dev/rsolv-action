@@ -184,7 +184,7 @@ export class RsolvApiClient {
     } catch (error) {
       clearTimeout(timeoutId);
       if (error instanceof Error && error.name === 'AbortError') {
-        throw new Error(`AST validation timed out after ${VALIDATION_TIMEOUT_MS}ms`);
+        throw new Error(`AST validation timed out after ${VALIDATION_TIMEOUT_MS}ms`, { cause: error });
       }
       throw error;
     }

@@ -39,7 +39,7 @@ export class FeedbackStorage {
       logger.info(`Feedback storage initialized: ${this.storagePath}`);
     } catch (error) {
       logger.error('Failed to initialize feedback storage', error);
-      throw new Error(`Failed to initialize feedback storage: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(`Failed to initialize feedback storage: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
     }
   }
 
@@ -55,7 +55,7 @@ export class FeedbackStorage {
       );
     } catch (error) {
       logger.error('Failed to save feedback data', error);
-      throw new Error(`Failed to save feedback data: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(`Failed to save feedback data: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
     }
   }
 

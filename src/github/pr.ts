@@ -107,7 +107,7 @@ async function createBranch(issue: IssueContext): Promise<string> {
     logger.error(`Error creating branch ${branchName}`, error);
     
     
-    throw new Error(`Failed to create branch: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(`Failed to create branch: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
   }
 }
 
@@ -128,7 +128,7 @@ async function getDefaultBranchSha(owner: string, repo: string, defaultBranch: s
     return data.object.sha;
   } catch (error) {
     logger.error(`Error getting SHA for ${defaultBranch}`, error);
-    throw new Error(`Failed to get SHA for ${defaultBranch}: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(`Failed to get SHA for ${defaultBranch}: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
   }
 }
 
@@ -208,7 +208,7 @@ async function applyChanges(
     logger.error('Error applying changes to branch', error);
     
     
-    throw new Error(`Failed to apply changes: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(`Failed to apply changes: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
   }
 }
 
@@ -382,7 +382,7 @@ async function createGitHubPR(
     logger.error('Error creating GitHub PR', error);
     
         
-    throw new Error(`Failed to create GitHub PR: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(`Failed to create GitHub PR: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
   }
 }
 

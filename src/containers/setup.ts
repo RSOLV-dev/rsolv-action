@@ -42,7 +42,7 @@ export async function setupContainer(
     logger.info('Container setup completed successfully');
   } catch (error) {
     logger.error('Container setup failed', error);
-    throw new Error(`Failed to set up analysis container: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(`Failed to set up analysis container: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
   }
 }
 
@@ -81,7 +81,7 @@ async function checkDockerAvailability(docker: DockerOperations): Promise<void> 
     logger.debug(`Docker version: ${version}`);
   } catch (error) {
     logger.error('Docker is not available', error);
-    throw new Error('Docker is required for container analysis but is not available or running');
+    throw new Error('Docker is required for container analysis but is not available or running', { cause: error });
   }
 }
 
@@ -111,7 +111,7 @@ async function pullContainerImage(
     logger.info(`Container image ${imageName} is ready`);
   } catch (error) {
     logger.error('Failed to pull container image', error);
-    throw new Error(`Failed to pull container image: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(`Failed to pull container image: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
   }
 }
 
@@ -175,6 +175,6 @@ async function configureContainer(
     logger.info('Container configuration completed');
   } catch (error) {
     logger.error('Failed to configure container', error);
-    throw new Error(`Failed to configure container: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(`Failed to configure container: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
   }
 }

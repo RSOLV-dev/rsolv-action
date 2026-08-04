@@ -61,6 +61,6 @@ export async function getRepositoryFiles(
     return fileContents;
   } catch (error) {
     logger.error(`Error fetching repository files for ${issue.repository.fullName}`, error);
-    throw new Error(`Failed to fetch repository files: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(`Failed to fetch repository files: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
   }
 }

@@ -133,7 +133,7 @@ export async function loadConfig(): Promise<ActionConfig> {
     return validatedConfig;
   } catch (error) {
     logger.error('Failed to load configuration', error);
-    throw new Error(`Configuration error: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(`Configuration error: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
   }
 }
 
@@ -399,7 +399,7 @@ function validateConfig(config: any): ActionConfig {
     if (error instanceof z.ZodError) {
       const errorMessages = error.issues.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
       logger.error(`Configuration validation failed: ${errorMessages}`);
-      throw new Error(`Invalid configuration: ${errorMessages}`);
+      throw new Error(`Invalid configuration: ${errorMessages}`, { cause: error });
     }
 
     throw error;

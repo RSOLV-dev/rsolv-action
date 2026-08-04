@@ -117,7 +117,7 @@ class OpenAiClient implements AiClient {
       return response;
     } catch (error) {
       logger.error('AI provider API error', error);
-      throw new Error(sanitizeErrorMessage(`AI provider error: ${error instanceof Error ? error.message : String(error)}`));
+      throw new Error(sanitizeErrorMessage(`AI provider error: ${error instanceof Error ? error.message : String(error)}`), { cause: error });
     }
   }
 
@@ -154,7 +154,7 @@ class OpenAiClient implements AiClient {
           ? await this.credentialManager?.getCredential('openai')
           : this.config.apiKey;
       } catch (error) {
-        throw new Error('Failed to retrieve API key');
+        throw new Error('Failed to retrieve API key', { cause: error });
       }
       
       if (!apiKey) {
@@ -268,7 +268,7 @@ class AnthropicClient implements AiClient {
       return response;
     } catch (error) {
       logger.error('AI provider API error', error);
-      throw new Error(sanitizeErrorMessage(`AI provider error: ${error instanceof Error ? error.message : String(error)}`));
+      throw new Error(sanitizeErrorMessage(`AI provider error: ${error instanceof Error ? error.message : String(error)}`), { cause: error });
     }
   }
 
@@ -338,7 +338,7 @@ class AnthropicClient implements AiClient {
           hasCredentialManager: !!this.credentialManager,
           error: error instanceof Error ? error.message : String(error)
         });
-        throw new Error(`Failed to retrieve API key: ${error instanceof Error ? error.message : String(error)}`);
+        throw new Error(`Failed to retrieve API key: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
       }
       
       if (!apiKey) {
@@ -474,7 +474,7 @@ class MistralClient implements AiClient {
       return response;
     } catch (error) {
       logger.error('AI provider API error', error);
-      throw new Error(sanitizeErrorMessage(`AI provider error: ${error instanceof Error ? error.message : String(error)}`));
+      throw new Error(sanitizeErrorMessage(`AI provider error: ${error instanceof Error ? error.message : String(error)}`), { cause: error });
     }
   }
   
@@ -518,7 +518,7 @@ class OllamaClient implements AiClient {
       return response;
     } catch (error) {
       logger.error('AI provider API error', error);
-      throw new Error(sanitizeErrorMessage(`AI provider error: ${error instanceof Error ? error.message : String(error)}`));
+      throw new Error(sanitizeErrorMessage(`AI provider error: ${error instanceof Error ? error.message : String(error)}`), { cause: error });
     }
   }
   

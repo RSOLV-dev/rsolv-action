@@ -55,7 +55,7 @@ export async function analyzeIssue(
     return analysisData;
   } catch (error) {
     logger.error('Error analyzing issue with AI', error);
-    throw new Error(`AI analysis failed: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(`AI analysis failed: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
   }
 }
 

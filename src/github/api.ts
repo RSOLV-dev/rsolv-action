@@ -53,7 +53,7 @@ export async function getRepositoryDetails(owner: string, repo: string): Promise
     };
   } catch (error) {
     logger.error(`Error getting repository details for ${owner}/${repo}`, error);
-    throw new Error(`Failed to get repository details: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(`Failed to get repository details: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
   }
 }
 
@@ -125,7 +125,7 @@ export async function createIssueComment(
     logger.info(`Comment created on issue #${issueNumber}`);
   } catch (error) {
     logger.error(`Error creating comment on issue #${issueNumber}`, error);
-    throw new Error(`Failed to create issue comment: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(`Failed to create issue comment: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
   }
 }
 
@@ -175,7 +175,7 @@ export async function createOrUpdateFile(
     logger.info(`File ${path} created or updated on branch ${branch}`);
   } catch (error) {
     logger.error(`Error creating or updating file ${path}`, error);
-    throw new Error(`Failed to create or update file: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(`Failed to create or update file: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
   }
 }
 
@@ -211,7 +211,7 @@ export async function createBranch(
     logger.info(`Branch ${branchName} created from ${baseBranch}`);
   } catch (error) {
     logger.error(`Error creating branch ${branchName}`, error);
-    throw new Error(`Failed to create branch: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(`Failed to create branch: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
   }
 }
 
@@ -246,7 +246,7 @@ export async function createPullRequest(
     };
   } catch (error) {
     logger.error('Error creating pull request', error);
-    throw new Error(`Failed to create pull request: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(`Failed to create pull request: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
   }
 }
 // Helper functions for ValidationEnricher
