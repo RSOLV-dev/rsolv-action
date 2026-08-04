@@ -23,7 +23,7 @@ export async function handleExternalWebhook(
     }
   } catch (error) {
     logger.error(`Error handling webhook from ${source}`, error);
-    throw new Error(`Webhook processing failed: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(`Webhook processing failed: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
   }
 }
 

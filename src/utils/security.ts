@@ -31,7 +31,7 @@ export async function securityCheck(config: ActionConfig): Promise<boolean> {
     return true;
   } catch (error) {
     logger.error('Security check failed', error);
-    throw new Error(`Security check failed: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(`Security check failed: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
   }
 }
 
@@ -91,7 +91,7 @@ async function checkRepositoryPermissions(): Promise<void> {
     logger.debug('Repository permissions verified');
   } catch (error) {
     logger.error('Repository permission check failed', error);
-    throw new Error('Failed to verify repository permissions');
+    throw new Error('Failed to verify repository permissions', { cause: error });
   }
 }
 

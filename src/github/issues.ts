@@ -133,7 +133,7 @@ export async function detectIssues(config: ActionConfig): Promise<IssueContext[]
     return issueContexts;
   } catch (error) {
     logger.error('Error detecting issues', error);
-    throw new Error(`Failed to detect issues: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(`Failed to detect issues: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
   }
 }
 
@@ -192,7 +192,7 @@ async function getIssuesWithLabel(
     return issues;
   } catch (error) {
     logger.error(`Error getting issues with label ${label}`, error);
-    throw new Error(`Failed to get issues with label: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(`Failed to get issues with label: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
   }
 }
 
@@ -222,7 +222,7 @@ async function getSpecificIssue(owner: string, repo: string, issueNumber: number
       logger.warn(`Issue #${issueNumber} not found`);
       return null;
     }
-    throw new Error(`Failed to get issue: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(`Failed to get issue: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
   }
 }
 

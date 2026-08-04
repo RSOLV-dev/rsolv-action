@@ -24,6 +24,14 @@ export default [
       'no-constant-condition': 'warn',
       'no-case-declarations': 'warn',
       'no-useless-escape': 'warn',
+      // Downgraded, not disabled, so the 5 current hits stay visible.
+      // New in eslint 10 and it misreads this codebase's deliberate
+      // memory-release pattern: ast-pattern-interpreter.ts pairs
+      // `let ast: File | null = null` with `finally { ast = null }` to drop a
+      // large AST for GC. The rule sees a dead store; the intent is freeing
+      // memory, and ast-pattern-interpreter-memory.test.ts guards it.
+      // Revisit the remaining hits individually rather than blanket-fixing.
+      'no-useless-assignment': 'warn',
       'indent': ['error', 2],
       'linebreak-style': ['error', 'unix'],
       'quotes': ['error', 'single'],

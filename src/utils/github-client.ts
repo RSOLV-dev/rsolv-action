@@ -80,7 +80,7 @@ export async function createPullRequest(options: PullRequestOptions): Promise<Pu
 
       const errorMessage = pushError instanceof Error ? pushError.message : String(pushError);
       console.error(`[PR] Failed to push branch: ${errorMessage}`);
-      throw new Error(`Failed to push commit to remote: ${errorMessage}`);
+      throw new Error(`Failed to push commit to remote: ${errorMessage}`, { cause: pushError });
     }
 
     // Create PR
@@ -112,7 +112,7 @@ export async function createPullRequest(options: PullRequestOptions): Promise<Pu
           pr = { data: existingPrs[0] };
           console.log(`[PR] Using existing PR #${pr.data.number}`);
         } else {
-          throw new Error('Pull request already exists but could not be found');
+          throw new Error('Pull request already exists but could not be found', { cause: prError });
         }
       } else {
         throw prError;
@@ -137,7 +137,7 @@ export async function createPullRequest(options: PullRequestOptions): Promise<Pu
     };
   } catch (error) {
     console.error('[PR] Failed to create pull request:', error);
-    throw new Error(`PR creation failed: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(`PR creation failed: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
   }
 }
 
