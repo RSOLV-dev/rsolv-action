@@ -72,15 +72,14 @@ echo ""
 echo -e "${YELLOW}[3/5] Installing dependencies...${NC}"
 cd "$PROJECT_ROOT"
 
-if [ -f "bun.lockb" ]; then
+# bun.lock (text, bun >= 1.2) -- the old check looked for bun.lockb, the binary
+# format this repo has not used in some time, so it silently fell through to npm.
+if [ -f "bun.lock" ] || [ -f "bun.lockb" ]; then
     echo "  Using bun..."
-    bun install --silent
-elif [ -f "package-lock.json" ]; then
-    echo "  Using npm..."
-    npm install --silent
+    bun install --frozen-lockfile --silent
 else
-    echo "  Using npm (no lockfile)..."
-    npm install --silent
+    echo "  ERROR: no bun lockfile found; this repo installs with bun only." >&2
+    exit 1
 fi
 echo "  ✓ Dependencies installed"
 

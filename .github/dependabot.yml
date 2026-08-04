@@ -12,7 +12,12 @@
 
 version: 2
 updates:
-  - package-ecosystem: "npm"
+  # `bun`, not `npm`: every install site in this repo (4 workflow steps, 3
+  # Dockerfile layers) runs `bun install`, so bun.lock is the only lockfile that
+  # affects what actually gets installed. Under the npm ecosystem Dependabot
+  # updated package-lock.json instead -- a file nothing read -- which meant its
+  # PRs left the real lockfile untouched and CI silently resolved a fresh tree.
+  - package-ecosystem: "bun"
     directory: "/"
     schedule:
       interval: "weekly"
