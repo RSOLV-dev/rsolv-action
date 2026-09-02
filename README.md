@@ -226,3 +226,5 @@ This software is proprietary. See [LICENSE](LICENSE) for terms.
 
 
 <!-- Security scan triggered at 2026-08-31 17:01:31 -->
+
+<!-- Security scan triggered at 2026-09-02 06:57:05 -->
