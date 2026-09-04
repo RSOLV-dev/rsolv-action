@@ -11,11 +11,6 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y curl git && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install Claude Code CLI globally with bun
-RUN bun install -g @anthropic-ai/claude-code && \
-    which claude && \
-    claude --version || echo "Claude CLI installed but version check failed"
-
 # Copy package files
 COPY package.json bun.lock* ./
 
@@ -37,13 +32,13 @@ CMD ["bun", "test"]
 # Production build stage
 FROM base AS builder
 
-# Install Node.js for Claude Code SDK (some tools still need it)
-# Also install libc compatibility libraries for SDK native binaries (fixes Docker spawn issues)
+# Install Node.js: test-runner.ts runs customer jest/vitest/mocha suites via the `node`
+# runtime and shells out to `npm ci` / `npm install` for JS/TS projects. Not optional.
 RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
     apt-get install -y nodejs libc6 libstdc++6 libgcc-s1 && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install production dependencies only (includes @anthropic-ai/claude-code)
+# Install production dependencies only
 RUN bun install --frozen-lockfile --production
 
 # Copy source files
@@ -56,15 +51,11 @@ RUN bun run build
 # Verify build output exists
 RUN ls -la dist/
 
-# Verify Claude Code SDK is installed
-RUN ls -la node_modules/@anthropic-ai/claude-code/cli.js || echo "Claude Code SDK not found"
-
 # Production stage
 FROM base AS production
 
-# Install libc compatibility libraries for SDK native binaries (fixes Docker spawn issues)
-# These are required for the Claude Agent SDK to spawn processes correctly
-# Also install build dependencies for mise to compile runtimes (Ruby, Python, etc.) from source
+# libc compatibility libraries for native binaries, plus build dependencies for mise to
+# compile runtimes (Ruby, Python, etc.) from source and for native gem/package builds
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
       libc6 libstdc++6 libgcc-s1 procps \
@@ -95,7 +86,7 @@ ENV GRADLE_USER_HOME=/tmp/.gradle
 # RFC-103: Default Python installer — respects project lock files, falls back to uv pip install
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh && uv --version
 
-# Copy Node.js and npm toolchain from builder
+# Copy Node.js and npm toolchain from builder (needed to run customer JS/TS test suites)
 # node binary
 COPY --from=builder /usr/bin/node /usr/bin/node
 # npm lib directory (contains npm package with bin/npm-cli.js, bin/npx-cli.js, lib/cli.js)
@@ -111,9 +102,6 @@ RUN node --version && npm --version && npx --version
 # Copy built application and all dependencies
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
-
-# Verify Claude Code SDK is available
-RUN ls -la /app/node_modules/@anthropic-ai/claude-code/cli.js || echo "Claude Code SDK not found in production"
 
 # Copy entrypoint script
 COPY entrypoint.sh /entrypoint.sh
