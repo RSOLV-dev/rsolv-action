@@ -98,8 +98,7 @@ describe('RFC-060 E2E Workflow Integration', () => {
       rsolvApiKey: 'test-api-key',
       maxIssues: 2,
       aiProvider: {
-        name: 'claude-code',
-        useVendedCredentials: true
+        name: 'claude-code'
       },
       fixValidation: {
         enabled: true

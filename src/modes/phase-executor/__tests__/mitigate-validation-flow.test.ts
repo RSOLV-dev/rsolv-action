@@ -110,7 +110,6 @@ describe('PhaseExecutor - Mitigate with Auto-Validation Flow', () => {
       aiProvider: {
         provider: 'claude-code',
         model: 'test-model',
-        useVendedCredentials: false,
         temperature: 0.2,
         maxTokens: 4000,
         contextLimit: 100000,

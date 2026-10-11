@@ -62,8 +62,7 @@ describe('Error Message Sanitization', () => {
       aiProvider: {
         provider: 'anthropic',
         apiKey: 'test-key',
-        model: 'claude-3',
-        useVendedCredentials: false
+        model: 'claude-3'
       },
       dryRun: true
     } as ActionConfig;
@@ -109,8 +108,7 @@ describe('Error Message Sanitization', () => {
     try {
       await getAiClient({
         provider: 'anthropic',
-        apiKey: '',
-        useVendedCredentials: false
+        apiKey: ''
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);

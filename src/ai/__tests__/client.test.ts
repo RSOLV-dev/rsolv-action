@@ -15,34 +15,6 @@ vi.mock('../../utils/logger', () => ({
   }
 }));
 
-// Mock the credential manager
-vi.mock('../../credentials/manager', () => ({
-  RSOLVCredentialManager: class MockCredentialManager {
-    private credentials = new Map<string, string>();
-    
-    async initialize(apiKey: string) {
-      if (!apiKey) {
-        throw new Error('RSOLV API key is required');
-      }
-      this.credentials.set('anthropic', 'vended-anthropic-key');
-      this.credentials.set('openai', 'vended-openai-key');
-      this.credentials.set('claude-code', 'vended-anthropic-key'); // Claude Code uses Anthropic
-    }
-    
-    getCredential(provider: string): string {
-      const credential = this.credentials.get(provider);
-      if (!credential) {
-        throw new Error(`No credential available for provider: ${provider}`);
-      }
-      return credential;
-    }
-    
-    async reportUsage(provider: string, usage: any) {
-      return Promise.resolve();
-    }
-  }
-}));
-
 describe('AI Client Factory', () => {
   beforeEach(() => {
     // Reset environment for each test
@@ -108,46 +80,12 @@ describe('AI Client Factory', () => {
     });
   });
 
-  describe('Vended Credentials', () => {
-    test('should initialize credential manager when using vended credentials', async () => {
-      const client = await getAiClient({
-        provider: 'anthropic',
-        apiKey: '',  // No direct API key
-        useVendedCredentials: true
-      });
-      
-      expect(client).toBeDefined();
-      expect(client.complete).toBeDefined();
-    });
-
-    test('should handle missing RSOLV_API_KEY gracefully', async () => {
-      process.env.RSOLV_API_KEY = '';
-      
-      // Should throw an error when RSOLV_API_KEY is missing
-      await expect(getAiClient({
-        provider: 'anthropic',
-        apiKey: '',
-        useVendedCredentials: true
-      })).rejects.toThrow('RSOLV_API_KEY environment variable not set for vended credentials');
-    });
-
-    test('should not require API key when using vended credentials', async () => {
-      const client = await getAiClient({
-        provider: 'openai',
-        apiKey: '',  // Empty API key
-        useVendedCredentials: true
-      });
-      
-      expect(client).toBeDefined();
-      expect(client.complete).toBeDefined();
-    });
-
-    test('should throw error when no API key and not using vended credentials', async () => {
+  describe('API keys', () => {
+    test('should throw when no provider API key is given', async () => {
       await expect(
         getAiClient({
           provider: 'anthropic',
-          apiKey: '',  // No API key
-          useVendedCredentials: false
+          apiKey: ''
         })
       ).rejects.toThrow('AI provider API key is required');
     });

@@ -15,8 +15,7 @@ const AiProviderConfigSchema = z.object({
   maxTokens: z.number().optional(),
   temperature: z.number().optional(),
   contextLimit: z.number().optional(),
-  timeout: z.number().optional(),
-  useVendedCredentials: z.boolean().optional()
+  timeout: z.number().optional()
 });
 
 const ContainerConfigSchema = z.object({
@@ -121,10 +120,9 @@ export async function loadConfig(): Promise<ActionConfig> {
     // Validate configuration
     const validatedConfig = validateConfig(mergedConfig);
     
-    // Set RSOLV_API_KEY environment variable if using vended credentials
-    if (validatedConfig.aiProvider.useVendedCredentials && validatedConfig.rsolvApiKey) {
+    // Pattern/AST clients read RSOLV_API_KEY from the environment
+    if (validatedConfig.rsolvApiKey) {
       process.env.RSOLV_API_KEY = validatedConfig.rsolvApiKey;
-      logger.info('Set RSOLV_API_KEY environment variable for vended credentials (config loader)');
     }
     
     logger.debug('Configuration loaded successfully');
@@ -156,7 +154,6 @@ function getDefaultConfig(): Partial<ActionConfig> {
       // maxTokens intentionally omitted - resolved by token-utils based on use case
       contextLimit: 100000,
       timeout: 3600000, // 60 minutes for complex analysis, multi-LLM orchestration, and sequential thinking
-      useVendedCredentials: true  // Default to using RSOLV vended credentials
     },
     containerConfig: {
       enabled: true,
@@ -332,11 +329,7 @@ function loadConfigFromEnv(): Partial<ActionConfig> {
       provider: process.env.RSOLV_AI_PROVIDER || 'claude-code',  // Default to claude-code
       providerApiKey: providerApiKey,
       model: process.env.RSOLV_AI_MODEL || DEFAULT_MODEL,  // Default to Sonnet 4.5
-      baseUrl: process.env.RSOLV_AI_BASE_URL,
-      // CRITICAL: Preserve useVendedCredentials flag - default to true per RFC-012
-      useVendedCredentials: process.env.RSOLV_USE_VENDED_CREDENTIALS !== undefined ?
-        process.env.RSOLV_USE_VENDED_CREDENTIALS === 'true' :
-        true  // Default to true - vended credentials are the standard approach
+      baseUrl: process.env.RSOLV_AI_BASE_URL
     };
 
     // Log the model being configured from env

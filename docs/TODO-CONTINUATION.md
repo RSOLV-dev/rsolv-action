@@ -37,15 +37,9 @@ See THREE-PHASE-DEBUGGING-SESSION-2025-08-14.md for full context.
    ```
 5. Add integration test with real API if test key available
 
-### 3. Test Credential Vending for AI Fix Generation
-**Why**: Vended credentials allow GitHub Actions to use AI without storing keys
-**What to do**:
-1. Test with `useVendedCredentials: true` in config
-2. Verify CredentialManagerSingleton is initialized
-3. Test credential refresh logic
-4. Verify AI calls use vended credentials
-5. Test fallback when vending fails
-6. Check timeout handling for credential requests
+### 3. ~~Test Credential Vending for AI Fix Generation~~
+Removed: the action no longer fetches AI provider keys from the platform
+(`/api/v1/credentials/exchange`). AI calls run on the platform (RFC-096).
 
 ### 4. Clean Up Debug Logging
 **Why**: Too much logging impacts performance and readability
@@ -146,7 +140,6 @@ See THREE-PHASE-DEBUGGING-SESSION-2025-08-14.md for full context.
 - [ ] All unit tests pass
 - [ ] Integration tests pass
 - [ ] Manual test with real repository
-- [ ] Test with vended credentials
 - [ ] Test without API key (fallback mode)
 - [ ] Test with malformed issues
 - [ ] Test with large files
@@ -170,4 +163,3 @@ See THREE-PHASE-DEBUGGING-SESSION-2025-08-14.md for full context.
 - Test issues need to reference actual vulnerable code in the repository
 - Consider creating a `test-vulnerabilities/` directory with known vulnerable code
 - The three-phase architecture is solid but needs production hardening
-- Credential vending is critical for customer adoption - prioritize testing

@@ -377,8 +377,7 @@ This is a high severity issue that requires parameterized queries.`
       aiProvider: {
         provider: 'anthropic',
         model: 'claude-sonnet-4-5-20250929',
-        apiKey: 'test-key',
-        useVendedCredentials: false
+        apiKey: 'test-key'
       },
       containerConfig: {
         enabled: false

@@ -94,7 +94,6 @@ describe('PhaseExecutor - Mitigate Phase Credential Handling', () => {
       githubToken: 'github_test_token',
       aiProvider: {
         name: 'claude-code',
-        useVendedCredentials: true,
       },
       repository: { owner: 'test-owner', name: 'test-repo' },
       issueLabel: 'rsolv:detected',

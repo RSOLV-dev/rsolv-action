@@ -92,7 +92,6 @@ describe('PhaseExecutor - No Credential Exchange in Backend Pipeline', () => {
         apiKey: 'test-ai-key',
         model: 'claude-3',
         maxTokens: 4000,
-        useVendedCredentials: false,
       },
     } as ActionConfig;
 

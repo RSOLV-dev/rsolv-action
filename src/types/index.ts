@@ -113,7 +113,6 @@ export interface AiProviderConfig {
   temperature?: number;
   contextLimit?: number;
   timeout?: number;
-  useVendedCredentials?: boolean;
 }
 
 export interface AnalysisData {

@@ -65,18 +65,6 @@ describe.skip('Model Configuration', () => {
       expect(config.aiProvider.model).toBe(DEFAULT_MODEL);
     });
 
-    it('should preserve useVendedCredentials when env vars are set', async () => {
-      // GIVEN: AI provider set via environment
-      process.env.RSOLV_AI_PROVIDER = 'claude-code';
-      delete process.env.RSOLV_USE_VENDED_CREDENTIALS; // Not explicitly set
-
-      // WHEN: Loading configuration
-      const config = await loadConfig();
-
-      // THEN: Should default to true for vended credentials
-      expect(config.aiProvider.useVendedCredentials).toBe(true);
-    });
-
     it('should respect explicit model override', async () => {
       // GIVEN: Explicit model override
       process.env.RSOLV_AI_MODEL = MODELS.CLAUDE_OPUS;
@@ -121,7 +109,6 @@ describe.skip('Model Configuration', () => {
       expect(config.aiProvider.provider).toBe('claude-code');
       expect(config.aiProvider.temperature).toBe(0.7);
       expect(config.aiProvider.model).toBe(DEFAULT_MODEL); // Default preserved
-      expect(config.aiProvider.useVendedCredentials).toBe(true); // Default preserved
     });
   });
 });

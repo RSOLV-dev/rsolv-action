@@ -111,8 +111,7 @@ describe('executeAllPhases validated filter → MITIGATE handoff', () => {
       rsolvApiKey: 'test-api-key',
       maxIssues: 1,
       aiProvider: {
-        name: 'claude-code',
-        useVendedCredentials: true
+        name: 'claude-code'
       },
       fixValidation: {
         enabled: false

@@ -362,9 +362,8 @@ interface SolutionResult {
    - Analyzes dependencies
    - Generates comprehensive fixes
 
-4. **Credential Vending**: `src/credentials/manager.ts`
-   - Exchanges RSOLV API key for provider credentials
-   - Manages rate limits and quotas
+4. **AI calls**: run on the RSOLV platform (RFC-096). The action never
+   receives AI provider keys; it executes tool requests over the PipelineRun channel.
 
 ## Security Analysis Flow
 
@@ -446,9 +445,9 @@ graph TB
     end
 
     subgraph "External Services"
-        RSOLV_API["RSOLV Platform API<br/>api.rsolv.dev<br/>(pattern fetch, phase data,<br/>credential vending, AST analysis)"]
+        RSOLV_API["RSOLV Platform API<br/>api.rsolv.dev<br/>(pattern fetch, phase data,<br/>AI orchestration, AST analysis)"]
         GITHUB_API["GitHub API<br/>(issues, PRs, branches)"]
-        AI_PROVIDER["AI Provider<br/>(Claude via vended credentials)"]
+        AI_PROVIDER["AI Provider<br/>(called by the platform only)"]
     end
 
     CHECKOUT --> |"Mounts /home/runner/work/repo<br/>as /github/workspace"| REPO_CODE
@@ -462,11 +461,9 @@ graph TB
     BUNDLE --> VALIDATE
     SCAN --> RSOLV_API
     VALIDATE --> RSOLV_API
-    VALIDATE --> AI_PROVIDER
-    MITIGATE --> AI_PROVIDER
     MITIGATE --> GITHUB_API
     SCAN --> GITHUB_API
-    RSOLV_API --> |"Vended AI credentials"| AI_PROVIDER
+    RSOLV_API --> |"Backend-orchestrated AI (RFC-096)"| AI_PROVIDER
 ```
 
 ### Key Architectural Constraints

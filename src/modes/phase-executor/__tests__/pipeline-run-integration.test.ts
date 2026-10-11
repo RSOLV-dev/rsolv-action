@@ -129,8 +129,7 @@ describe('PhaseExecutor - PipelineRun Channel Integration', () => {
       rsolvApiKey: 'test-api-key',
       maxIssues: 2,
       aiProvider: {
-        name: 'claude-code',
-        useVendedCredentials: true
+        name: 'claude-code'
       },
       fixValidation: { enabled: false }
     } as ActionConfig;

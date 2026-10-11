@@ -70,7 +70,6 @@ export interface AIConfig {
   modelName?: string;
   temperature?: number;
   maxTokens?: number;
-  useVendedCredentials?: boolean;
   useClaudeCode?: boolean;
   useStructuredPhases?: boolean;
 }
