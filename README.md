@@ -223,10 +223,3 @@ This software is proprietary. See [LICENSE](LICENSE) for terms.
 ---
 
 **Forget the 200 findings. Focus on the 20 proven PRs.** RSOLV writes tests describing secure behavior, proves your code fails them, and ships the fix. Start free at [rsolv.dev/signup](https://rsolv.dev/signup).
-
-
-<!-- Security scan triggered at 2026-08-31 17:01:31 -->
-
-<!-- Security scan triggered at 2026-09-02 06:57:05 -->
-
-<!-- Security scan triggered at 2026-10-07 11:37:49 -->
