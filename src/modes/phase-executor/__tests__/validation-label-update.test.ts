@@ -57,8 +57,7 @@ describe('PhaseExecutor - Validation Label Updates', () => {
       aiProvider: {
         apiKey: 'test-ai-key',
         model: 'claude-3',
-        maxTokens: 4000,
-        useVendedCredentials: false
+        maxTokens: 4000
       }
     } as ActionConfig;
 

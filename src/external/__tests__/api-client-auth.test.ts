@@ -100,8 +100,7 @@ describe('ApiClient Authentication - ADR-027 Compliance', () => {
       const endpoints = [
         '/api/v1/fix-attempts',
         '/api/v1/vulnerabilities/validate',
-        '/api/v1/phases',
-        '/api/v1/credentials/exchange'
+        '/api/v1/phases'
       ];
 
       client = new ApiClient(mockApiKey, mockBaseUrl);

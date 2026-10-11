@@ -64,33 +64,6 @@ describe('Live LLM Adapter Tests', () => {
       expect(response).toContain('?'); // Should have parameterized query placeholder
     }, 30000);
 
-    test('should handle Anthropic with credential vending', async ({ skip }) => {
-      if (SKIP_LIVE || !process.env.TEST_ANTHROPIC) {
-        skip('Skipping - requires LIVE_LLM_TESTS=true and TEST_ANTHROPIC=true');
-        return;
-      }
-
-      if (!process.env.RSOLV_API_KEY) {
-        skip('Skipping - requires RSOLV_API_KEY for credential vending');
-        return;
-      }
-
-      const config: AiProviderConfig = {
-        provider: 'anthropic',
-        model: 'claude-sonnet-4-5-20250929',
-        useVendedCredentials: true,
-        temperature: 0.2,
-        maxTokens: 1000
-      };
-
-      // This should use credential vending
-      const client = await getAiClient(config);
-      
-      const response = await client.complete('What is 2+2? Reply with just the number.');
-      
-      console.log('Vended credential response:', response);
-      expect(response).toContain('4');
-    }, 20000);
   });
 
   describe('OpenAI Live Tests', () => {

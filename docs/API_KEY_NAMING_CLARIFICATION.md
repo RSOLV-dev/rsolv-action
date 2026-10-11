@@ -53,7 +53,6 @@ export interface AiProviderConfig {
   providerApiKey?: string;      // ✅ AI provider key (Anthropic/OpenAI)
   // Remove: apiKey                ❌ RENAME TO providerApiKey
   model: string;
-  useVendedCredentials?: boolean; // If true, use RSOLV vended credentials
   // ...
 }
 ```
@@ -89,15 +88,10 @@ headers: { 'x-api-key': config.rsolvApiKey }
 
 #### AI Provider Authentication
 ```typescript
-// When using customer's own AI key
-if (!config.aiProvider.useVendedCredentials) {
-  apiKey = config.aiProvider.providerApiKey;
-}
-
-// When using RSOLV vended credentials
-if (config.aiProvider.useVendedCredentials) {
-  apiKey = await getVendedCredential(config.rsolvApiKey);
-}
+// Only an explicitly configured AI key is ever used. The platform does not
+// vend AI provider keys to the action; VALIDATE/MITIGATE AI calls run on the
+// platform (RFC-096).
+apiKey = config.aiProvider.providerApiKey;
 ```
 
 ## Migration Steps
@@ -160,8 +154,6 @@ rsolvApiKey: "rsolv_key_abc123"  # ✅ Clear: RSOLV authentication
 aiProvider:
   provider: anthropic
   providerApiKey: "sk-ant-xyz789"  # ✅ Clear: Anthropic API key
-  # Or use vended credentials:
-  useVendedCredentials: true  # Uses RSOLV vended Anthropic key
 ```
 
 ## Backwards Compatibility

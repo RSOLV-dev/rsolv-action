@@ -196,8 +196,7 @@ describe.skip('AITestGenerator - maxTokens fix', () => {
         apiKey: 'test-key',
         model: 'claude-sonnet-4-5-20250929',
         temperature: 0.5,
-        maxTokens: 4000,
-        useVendedCredentials: true
+        maxTokens: 4000
       };
 
       generator = new AITestGenerator(config);
@@ -211,7 +210,6 @@ describe.skip('AITestGenerator - maxTokens fix', () => {
           apiKey: 'test-key',
           model: 'claude-sonnet-4-5-20250929',
           temperature: 0.5,
-          useVendedCredentials: true,
           maxTokens: 10000  // Only maxTokens should be changed
         })
       );

@@ -1941,8 +1941,7 @@ export class PhaseExecutor {
           apiKey: this.config.aiProvider.apiKey,
           model: this.config.aiProvider.model,
           temperature: 0.2,
-          maxTokens: this.config.aiProvider.maxTokens,
-          useVendedCredentials: this.config.aiProvider.useVendedCredentials
+          maxTokens: this.config.aiProvider.maxTokens
         });
 
       // Get codebase files

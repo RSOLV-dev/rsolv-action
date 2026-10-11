@@ -98,7 +98,6 @@ describe('executeMitigateForIssue phase data storage', () => {
       maxIssues: 1,
       aiProvider: {
         name: 'claude-code',
-        useVendedCredentials: true,
       },
       fixValidation: { enabled: false },
     } as ActionConfig;
