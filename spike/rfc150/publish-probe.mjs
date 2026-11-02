@@ -15,6 +15,12 @@ async function api(method, path, body) {
   return { status: res.status, json: await res.json().catch(() => null) };
 }
 
+// Throws on any non-2xx response from a call whose result the rest of the probe depends on.
+function must(step, res) {
+  if (res.status >= 300) throw new Error(`${step}: HTTP ${res.status} ${res.json?.message ?? ''}`);
+  return res;
+}
+
 const text = (s) => Buffer.from(s, 'utf8');
 const RED = [{ path: 'test/red_test.txt', op: 'add', bytes: text('red\n') }];
 const FIX = [
@@ -31,12 +37,12 @@ const nameOf = (path) => path.slice(path.lastIndexOf('/') + 1);
 async function treeEntries(rootTreeSha, dir) {
   let sha = rootTreeSha;
   for (const part of dir ? dir.split('/') : []) {
-    const { json } = await api('GET', `/git/trees/${sha}`);
+    const { json } = must(`GET tree ${sha}`, await api('GET', `/git/trees/${sha}`));
     const entry = json.tree.find((e) => e.path === part && e.type === 'tree');
     if (!entry) return [];
     sha = entry.sha;
   }
-  return (await api('GET', `/git/trees/${sha}`)).json.tree;
+  return must(`GET tree ${sha}`, await api('GET', `/git/trees/${sha}`)).json.tree;
 }
 
 async function baseFacts(baseTree, changes) {
@@ -59,13 +65,13 @@ async function commit(parentSha, parentTree, changes, facts, message, mismatches
     }
     const mode = c.op === 'modify' ? facts[c.path].mode : '100644';
     const expected = blobSha(c.bytes);
-    const { json } = await api('POST', '/git/blobs', { content: c.bytes.toString('base64'), encoding: 'base64' });
-    if (json?.sha !== expected) mismatches.push({ path: c.path, expected, got: json?.sha ?? null });
+    const blobRes = must(`POST blob ${c.path}`, await api('POST', '/git/blobs', { content: c.bytes.toString('base64'), encoding: 'base64' }));
+    if (blobRes.json?.sha !== expected) mismatches.push({ path: c.path, expected, got: blobRes.json?.sha ?? null });
     tree.push({ path: c.path, mode, type: 'blob', sha: expected });
     signed.push({ path: c.path, op: c.op, mode, new_blob_sha: expected });
   }
-  const t = await api('POST', '/git/trees', { base_tree: parentTree, tree });
-  const k = await api('POST', '/git/commits', { message, tree: t.json.sha, parents: [parentSha] });
+  const t = must('POST tree', await api('POST', '/git/trees', { base_tree: parentTree, tree }));
+  const k = must('POST commit', await api('POST', '/git/commits', { message, tree: t.json.sha, parents: [parentSha] }));
   const problems = [];
   for (const [dir, want] of expectations(signed)) {
     problems.push(...diffDir(want, await treeEntries(t.json.sha, dir)).map((p) => ({ dir, ...p })));
@@ -74,27 +80,50 @@ async function commit(parentSha, parentTree, changes, facts, message, mismatches
 }
 
 const mismatches = [];
-const baseTree = (await api('GET', `/git/commits/${GITHUB_SHA}`)).json.tree.sha;
-const facts = await baseFacts(baseTree, [...RED, ...FIX]);
-const red = await commit(GITHUB_SHA, baseTree, RED, facts, `test: RED for spike issue ${ISSUE}`, mismatches);
-const fix = await commit(red.sha, red.tree, FIX, facts, `fix: spike issue ${ISSUE}`, mismatches);
-const branch = `rsolv/spike-${GITHUB_RUN_ID}-${ISSUE}-a${GITHUB_RUN_ATTEMPT}`;
-const ref = await api('POST', '/git/refs', { ref: `refs/heads/${branch}`, sha: fix.sha });
-const pr = await api('POST', '/pulls', {
-  title: `RFC-150 spike: issue ${ISSUE}`,
-  head: branch,
-  base: 'main',
-  body: 'Opened by the spike publish job with GITHUB_TOKEN. Throwaway; close freely.',
-});
+let facts = null;
+let red = null;
+let fix = null;
+let branch = null;
+let ref = null;
+let pr = null;
 
-writeFileSync(process.argv[2], JSON.stringify({
-  base_facts: facts,
-  blob_sha_mismatches: mismatches,
-  red_problems: red.problems,
-  fix_problems: fix.problems,
-  branch,
-  ref_status: ref.status,
-  pr_status: pr.status,
-  pr_number: pr.json?.number ?? null,
-  pr_error: pr.status === 201 ? null : (pr.json?.message ?? null),
-}, null, 2));
+try {
+  const baseTree = must('GET base commit', await api('GET', `/git/commits/${GITHUB_SHA}`)).json.tree.sha;
+  facts = await baseFacts(baseTree, [...RED, ...FIX]);
+  red = await commit(GITHUB_SHA, baseTree, RED, facts, `test: RED for spike issue ${ISSUE}`, mismatches);
+  fix = await commit(red.sha, red.tree, FIX, facts, `fix: spike issue ${ISSUE}`, mismatches);
+  branch = `rsolv/spike-${GITHUB_RUN_ID}-${ISSUE}-a${GITHUB_RUN_ATTEMPT}`;
+  ref = await api('POST', '/git/refs', { ref: `refs/heads/${branch}`, sha: fix.sha });
+  pr = await api('POST', '/pulls', {
+    title: `RFC-150 spike: issue ${ISSUE}`,
+    head: branch,
+    base: 'main',
+    body: 'Opened by the spike publish job with GITHUB_TOKEN. Throwaway; close freely.',
+  });
+
+  writeFileSync(process.argv[2], JSON.stringify({
+    base_facts: facts,
+    blob_sha_mismatches: mismatches,
+    red_problems: red.problems,
+    fix_problems: fix.problems,
+    branch,
+    ref_status: ref.status,
+    pr_status: pr.status,
+    pr_number: pr.json?.number ?? null,
+    pr_error: pr.status === 201 ? null : (pr.json?.message ?? null),
+  }, null, 2));
+} catch (err) {
+  writeFileSync(process.argv[2], JSON.stringify({
+    base_facts: facts,
+    blob_sha_mismatches: mismatches,
+    red_problems: red?.problems ?? null,
+    fix_problems: fix?.problems ?? null,
+    branch,
+    ref_status: ref?.status ?? null,
+    pr_status: pr?.status ?? null,
+    pr_number: pr?.json?.number ?? null,
+    pr_error: pr && pr.status !== 201 ? (pr.json?.message ?? null) : null,
+    error: err.message,
+  }, null, 2));
+  process.exit(1);
+}
