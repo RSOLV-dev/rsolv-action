@@ -1,0 +1,4 @@
+github.com
+api.github.com
+codeload.github.com
+.githubusercontent.com

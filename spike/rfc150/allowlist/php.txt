@@ -1,0 +1,2 @@
+repo.packagist.org
+packagist.org
