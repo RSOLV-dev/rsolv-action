@@ -1,0 +1,45 @@
+name: spike-rfc150-verify
+on:
+  workflow_call:
+    inputs:
+      issue: { type: string, required: true }
+permissions: {}
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    permissions: { contents: read, id-token: write }
+    env:
+      ROLE: verify
+      ISSUE: ${{ inputs.issue }}
+    steps:
+      - id: claims
+        name: Read OIDC claims (token masked, never written)
+        run: |
+          set -euo pipefail
+          resp=$(curl -fsS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://api.rsolv.dev")
+          token=$(jq -r .value <<<"$resp")
+          echo "::add-mask::$token"
+          payload=$(cut -d. -f2 <<<"$token" | tr '_-' '/+')
+          while (( ${#payload} % 4 )); do payload+="="; done
+          base64 -d <<<"$payload" | jq '{iss, aud, sub, repository, repository_id, repository_owner, repository_owner_id, repository_visibility, run_id, run_attempt, event_name, ref, sha, workflow_ref, workflow_sha, job_workflow_ref, job_workflow_sha, runner_environment, check_run_id}' > "$RUNNER_TEMP/claims.json"
+          echo "job_workflow_sha=$(jq -r .job_workflow_sha "$RUNNER_TEMP/claims.json")" >> "$GITHUB_OUTPUT"
+      - name: Probe ref write with GITHUB_TOKEN
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          curl -s -o /dev/null -w '%{http_code}' -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+            "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/git/refs" \
+            -d "{\"ref\":\"refs/heads/spike-perm-probe-$GITHUB_RUN_ID-$ROLE-$ISSUE\",\"sha\":\"$GITHUB_SHA\"}" > "$RUNNER_TEMP/ref_write_status"
+      - name: Assemble evidence
+        if: ${{ !cancelled() }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/evidence"
+          jq -n --arg role "$ROLE" --arg issue "$ISSUE" --slurpfile claims "$RUNNER_TEMP/claims.json" \
+            --rawfile status "$RUNNER_TEMP/ref_write_status" \
+            '{role: $role, issue: $issue, claims: $claims[0], ref_write_status: $status}' > "$RUNNER_TEMP/evidence/evidence.json"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ !cancelled() }}
+        with:
+          name: evidence-verify-${{ inputs.issue }}-a${{ github.run_attempt }}
+          path: ${{ runner.temp }}/evidence/evidence.json

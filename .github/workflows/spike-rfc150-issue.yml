@@ -1,0 +1,21 @@
+name: spike-rfc150-issue
+on:
+  workflow_call:
+    inputs:
+      issue: { type: string, required: true }
+permissions: {}
+jobs:
+  work:
+    uses: ./.github/workflows/spike-rfc150-work.yml
+    with: { issue: "${{ inputs.issue }}" }
+    permissions: { contents: read, id-token: write }
+  verify:
+    needs: work
+    uses: ./.github/workflows/spike-rfc150-verify.yml
+    with: { issue: "${{ inputs.issue }}" }
+    permissions: { contents: read, id-token: write }
+  publish:
+    needs: verify
+    uses: ./.github/workflows/spike-rfc150-publish.yml
+    with: { issue: "${{ inputs.issue }}" }
+    permissions: { contents: write, pull-requests: write, id-token: write }
