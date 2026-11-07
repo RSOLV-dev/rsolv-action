@@ -223,6 +223,8 @@ Copy [`.github/workflows/TEMPLATE-rsolv-v5.yml`](.github/workflows/TEMPLATE-rsol
 
 Each job downloads the [`rsolv-host`](https://github.com/RSOLV-dev/rsolv-host) client, checks it against a SHA-256 pinned in the workflow before every run, and starts it with a minimal environment. The pins are written only after the release's build provenance verifies (`scripts/pin-host.sh`).
 
+Releasing, pinning and allowlisting them follows [docs/V5-RELEASE.md](docs/V5-RELEASE.md).
+
 The workflows talk to `https://api.rsolv.ai.` by default; `https://api.rsolv.dev.` is the same service under its other permanent name (`api_url` input).
 
 `rsolv-work.yml` sets two outputs: `has_patch` (`true` or `false`) and `outcome`:

@@ -14,7 +14,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -62,7 +62,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -116,9 +116,11 @@ jobs:
           .github/workflows/rsolv-scan.yml .github/workflows/rsolv-work.yml .github/workflows/rsolv-issue.yml
           .github/workflows/rsolv-publish.yml .github/workflows/sandbox-image.yml .github/workflows/TEMPLATE-rsolv-v5.yml
       - name: shellcheck (workflow scripts)
-        run: shellcheck scripts/pin-host.sh scripts/check-workflow-pins.sh scripts/test-v5-workflows.sh
+        run: >-
+          shellcheck scripts/pin-host.sh scripts/pin-sandbox.sh scripts/check-first-parent.sh
+          scripts/verify-sandbox-oci.sh scripts/check-workflow-pins.sh scripts/test-v5-workflows.sh
       - name: Workflow tooling and host launch tests
         run: scripts/test-v5-workflows.sh
-      # Task 11 (the first host release) drops --allow-unreleased.
+      # Task 11 (the first host release) drops --allow-unreleased; the first v5 release adds --strict.
       - name: Host pins agree
         run: scripts/check-workflow-pins.sh --allow-unreleased

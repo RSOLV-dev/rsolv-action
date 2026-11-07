@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
-# Tests the v5 workflow tooling with no network: check-workflow-pins.sh, pin-host.sh against a
-# fake gh, and the host step of each role workflow against a fake curl and a stub host binary.
-#   test-v5-workflows.sh        (needs bash, yq and sha256sum; prints TAP-style lines, exits 1 on any failure)
+# Tests the v5 workflow tooling with no network: check-workflow-pins.sh, pin-host.sh and
+# pin-sandbox.sh against a fake gh, check-first-parent.sh against a local repository,
+# verify-sandbox-oci.sh against hand-built archives, and the host step of each role workflow
+# against a fake curl and a stub host binary.
+#   test-v5-workflows.sh        (needs bash, git, jq, yq and sha256sum; prints TAP-style lines, exits 1 on any failure)
 set -euo pipefail
 repo=$(cd "$(dirname "$0")/.." && pwd)
 t=$(mktemp -d)
@@ -18,7 +20,7 @@ fresh_copy() {
   rm -rf "$t/r"
   mkdir -p "$t/r/.github" "$t/r/scripts"
   cp -r "$repo/.github/workflows" "$t/r/.github/"
-  cp "$repo/scripts/check-workflow-pins.sh" "$repo/scripts/pin-host.sh" "$t/r/scripts/"
+  cp "$repo/scripts/"{check-workflow-pins,pin-host,pin-sandbox,check-first-parent,verify-sandbox-oci}.sh "$t/r/scripts/"
 }
 workflows_sum() { cat "$t/r/.github/workflows/"*.yml | sha256sum; }
 
@@ -26,6 +28,7 @@ workflows_sum() { cat "$t/r/.github/workflows/"*.yml | sha256sum; }
 fresh_copy
 pins=$t/r/scripts/check-workflow-pins.sh
 check "pins: the unreleased placeholder passes with --allow-unreleased" "$pins" --allow-unreleased
+quietly() { "$@" >"$t/o" 2>&1; }
 fails_saying() { ! "$@" >"$t/o" 2>&1 && grep -q -- "$want" "$t/o"; }
 want=all-zero
 check "pins: the unreleased placeholder fails without the flag" fails_saying "$pins"
@@ -36,6 +39,25 @@ fresh_copy
 sed -i 's/--retry 3/--retry 4/' "$t/r/.github/workflows/rsolv-publish.yml"
 want="install-host"
 check "pins: a changed install-host block fails" fails_saying "$pins" --allow-unreleased
+
+# The template's calls: full commit SHAs, one commit; --strict also refuses the placeholder.
+tpl=$t/r/.github/workflows/TEMPLATE-rsolv-v5.yml
+real=$(printf 'a%.0s' {1..40})
+fresh_copy
+want="all-zero commit placeholder"
+check "pins: --strict refuses the template's all-zero placeholder" fails_saying "$pins" --allow-unreleased --strict
+sed -i "s/@0\{40\}/@$real/" "$tpl"
+check "pins: --strict accepts a template pinned to a real commit" "$pins" --allow-unreleased --strict
+sed -i "0,/@$real/s/@$real/@$(printf 'b%.0s' {1..40})/" "$tpl"
+want="different commits"
+check "pins: template calls at two commits fail" fails_saying "$pins" --allow-unreleased
+fresh_copy
+sed -i "0,/@0\{40\}/s/@0\{40\}/@v5/" "$tpl"
+want="full commit SHA"
+check "pins: a template call by tag fails, even without --strict" fails_saying "$pins" --allow-unreleased
+fresh_copy
+want=usage
+check "pins: an unknown flag is refused" fails_saying "$pins" --allow-unreleasd
 
 # --- pin-host.sh, against a fake gh ---------------------------------------------------------
 mkdir -p "$t/bin" "$t/fake/assets"
@@ -50,8 +72,8 @@ case "$1 $2" in
     while [ $# -gt 0 ]; do [ "$1" = --dir ] && dir=$2; shift; done
     cp "$f/assets/"* "$dir/" ;;
   "release verify") exit "$(cat "$f/release_rc")" ;;
-  "attestation verify") exit "$(cat "$f/attest_rc")" ;;
-  "api "*/commits/*) echo 1111111111111111111111111111111111111111 ;;
+  "attestation verify") rc=$(cat "$f/attest_rc"); [ "$rc" = 0 ] || echo "fake gh: verification failed" >&2; exit "$rc" ;;
+  "api "*/commits/*) cat "$f/commit" 2>/dev/null || echo 1111111111111111111111111111111111111111 ;;
   "api "*/compare/*) cat "$f/compare" ;;
   *) echo "fake gh: unexpected $*" >&2; exit 64 ;;
 esac
@@ -239,6 +261,113 @@ for code in 1 2 4; do
   run_step rsolv-work.yml work "$stub_sum" "$code 0"
   check "work: exit $code is not retried" bash -c "[ $rc -eq $code ] && [ $(calls) -eq 2 ]"
 done
+
+# --- check-first-parent.sh, against a local "main" with a merged branch ------------------------
+origin=$t/origin
+git init -q -b main "$origin"
+gitc() { git -C "$origin" -c user.name=t -c user.email=t@t -c commit.gpgsign=false "$@"; }
+gitc commit -q --allow-empty -m base
+base=$(gitc rev-parse HEAD)
+gitc checkout -q -b side
+gitc commit -q --allow-empty -m side
+side=$(gitc rev-parse HEAD)
+gitc checkout -q main
+gitc merge -q --no-ff -m merge side
+merge=$(gitc rev-parse HEAD)
+gitc checkout -q -b elsewhere
+gitc commit -q --allow-empty -m unmerged
+unmerged=$(gitc rev-parse HEAD)
+gitc checkout -q main
+first_parent() { RSOLV_ACTION_REMOTE=$origin "$t/r/scripts/check-first-parent.sh" "$@"; }
+fresh_copy
+check "first-parent: main's merge commit passes" quietly first_parent "$merge"
+check "first-parent: main's earlier commit passes" quietly first_parent "$base"
+want="not a first-parent commit"
+check "first-parent: a commit from inside a merged branch fails" fails_saying first_parent "$side"
+check "first-parent: a commit on another branch fails" fails_saying first_parent "$unmerged"
+check "first-parent: an unknown commit fails" fails_saying first_parent "$(printf 'c%.0s' {1..40})"
+first_parent abc >/dev/null 2>&1 && rc=0 || rc=$?
+check "first-parent: a malformed SHA exits 2" test "$rc" -eq 2
+
+# --- verify-sandbox-oci.sh, against hand-built OCI archives -------------------------------------
+oci() { # dir arch [manifest bytes]; writes $1.tar, prints the manifest digest
+  local d=$1 arch=$2 body=${3:-'{"schemaVersion":2,"config":{"digest":"sha256:00"}}'} hex
+  rm -rf "$d" && mkdir -p "$d/blobs/sha256"
+  hex=$(printf '%s' "$body" | sha256sum | cut -d' ' -f1)
+  printf '%s' "$body" >"$d/blobs/sha256/$hex"
+  jq -n --arg d "sha256:$hex" --arg a "$arch" \
+    '{schemaVersion: 2, manifests: [{mediaType: "application/vnd.oci.image.manifest.v1+json", digest: $d, size: 1, platform: {os: "linux", architecture: $a}}]}' \
+    >"$d/index.json"
+  tar -cf "$d.tar" -C "$d" index.json blobs
+  echo "sha256:$hex"
+}
+voci=$t/r/scripts/verify-sandbox-oci.sh
+good=$(oci "$t/oci" amd64)
+check "oci: a one-manifest archive prints its digest" test "$("$voci" "$t/oci.tar" amd64)" = "$good"
+check "oci: the expected digest matches" quietly "$voci" "$t/oci.tar" amd64 "$good"
+want="expected sha256"
+check "oci: another expected digest fails" fails_saying "$voci" "$t/oci.tar" amd64 "sha256:$(printf 'd%.0s' {1..64})"
+want="linux/arm64"
+check "oci: the wrong architecture fails" fails_saying "$voci" "$t/oci.tar" arm64
+printf 'x' >>"$t/oci/blobs/sha256/${good#sha256:}"
+tar -cf "$t/oci.tar" -C "$t/oci" index.json blobs
+want="doesn't hash"
+check "oci: a manifest blob that doesn't hash to its digest fails" fails_saying "$voci" "$t/oci.tar" amd64
+oci "$t/oci" amd64 >/dev/null
+jq '.manifests += .manifests' "$t/oci/index.json" >"$t/i" && mv "$t/i" "$t/oci/index.json"
+tar -cf "$t/oci.tar" -C "$t/oci" index.json blobs
+want="exactly one"
+check "oci: two manifests fail" fails_saying "$voci" "$t/oci.tar" amd64
+
+# --- pin-sandbox.sh, against a fake gh and a fake rsolv-host checkout ------------------------------
+idx="sha256:$(printf 'e%.0s' {1..64})"
+fake_host() {
+  rm -rf "$t/host" && mkdir -p "$t/host/rsolv_host/config"
+  # shellcheck disable=SC2016 # Elixir, not shell
+  printf '%s\n' 'config :rsolv_host,' '  proxy_image: "squid",' \
+    '  sandbox_image: "ghcr.io/rsolv-dev/rsolv-sandbox@sha256:" <> String.duplicate("0", 64)' '' 'import_config "x"' \
+    >"$t/host/rsolv_host/config/config.exs"
+}
+pin_sandbox() { PATH="$t/bin:$PATH" FAKE_GH="$t/fake" RSOLV_ACTION_REMOTE="$origin" "$t/r/scripts/pin-sandbox.sh" "$@"; }
+sandbox_refused() { # name, expected message, then pin-sandbox args
+  local name=$1 before
+  want=$2
+  shift 2
+  fresh_copy
+  fake_host
+  before=$(sha256sum <"$t/host/rsolv_host/config/config.exs")
+  check "pin-sandbox: $name is refused" fails_saying pin_sandbox "$@"
+  check "pin-sandbox: $name changes nothing" test "$before" = "$(sha256sum <"$t/host/rsolv_host/config/config.exs")"
+}
+fake_gh 2.102.0 yes 0 0 ahead
+echo "$merge" >"$t/fake/commit"
+sandbox_refused "a malformed version" usage 0.1 "$idx" "$t/host"
+sandbox_refused "a malformed digest" usage 0.1.0 "sha256:abc" "$t/host"
+sandbox_refused "the all-zero digest" all-zero 0.1.0 "sha256:$zero" "$t/host"
+sandbox_refused "a checkout without config.exs" "no single sandbox_image" 0.1.0 "$idx" "$t/nowhere"
+fake_gh 2.101.9 yes 0 0 ahead
+echo "$merge" >"$t/fake/commit"
+sandbox_refused "a gh older than 2.102.0" "older than 2.102.0" 0.1.0 "$idx" "$t/host"
+fake_gh 2.102.0 yes 0 0 ahead
+echo "$side" >"$t/fake/commit"
+sandbox_refused "a tag on a commit from inside a merged branch" "not a first-parent commit" 0.1.0 "$idx" "$t/host"
+fake_gh 2.102.0 yes 1 0 ahead
+echo "$merge" >"$t/fake/commit"
+sandbox_refused "a failed attestation" "verification failed" 0.1.0 "$idx" "$t/host"
+
+fake_gh 2.102.0 yes 0 0 ahead
+echo "$merge" >"$t/fake/commit"
+fresh_copy
+fake_host
+check "pin-sandbox: a verified release is pinned" quietly pin_sandbox 0.1.0 "$idx" "$t/host"
+check "pin-sandbox: the digest is written to sandbox_image, and nothing else changes" \
+  test "$(grep -c . "$t/host/rsolv_host/config/config.exs") $(grep -cxF "  sandbox_image: \"ghcr.io/rsolv-dev/rsolv-sandbox@$idx\"" "$t/host/rsolv_host/config/config.exs")" = "4 1"
+check "pin-sandbox: the tag commit is resolved through refs/tags/" \
+  grep -q 'gh api repos/RSOLV-dev/RSOLV-action/commits/refs/tags/sandbox-v0.1.0 --jq .sha' "$t/fake/log"
+want="gh attestation verify oci://ghcr.io/rsolv-dev/rsolv-sandbox@$idx --repo RSOLV-dev/RSOLV-action"
+want="$want --signer-workflow RSOLV-dev/RSOLV-action/.github/workflows/sandbox-image.yml"
+want="$want --source-ref refs/tags/sandbox-v0.1.0 --source-digest $merge --deny-self-hosted-runners"
+check "pin-sandbox: the index digest is verified with the exact provenance flags" grep -qxF -- "$want" "$t/fake/log"
 
 [ "$fails" -eq 0 ] || { echo "$fails test(s) failed"; exit 1; }
 echo "all passed"
