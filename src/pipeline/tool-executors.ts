@@ -7,7 +7,8 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { exec, execSync } from 'child_process';
+import { exec, execFile } from 'child_process';
+import { promisify } from 'util';
 import { globSync } from 'glob';
 import type {
   ReadFileInput,
@@ -23,7 +24,12 @@ import type {
   GrepMatch,
   BashInput,
   BashResult,
+  ToolName,
 } from './types.js';
+
+
+export const MAX_BASH_TIMEOUT_MS = 900_000;
+export const MAX_STREAM_BYTES = 262_144;
 
 /**
  * Reads a file and returns its contents.
@@ -95,18 +101,15 @@ export async function executeGrep(input: GrepInput): Promise<GrepResult> {
     const searchPath = input.path || process.cwd();
     const matches: GrepMatch[] = [];
 
-    // Use grep command for efficiency
+    // argv, never a shell: the pattern comes from the model (RFC-150 gap 4)
     try {
-      const output = execSync(
-        `grep -rn "${input.pattern.replace(/"/g, '\\"')}" ${searchPath}`,
-        {
-          encoding: 'utf-8',
-          timeout: 10_000,
-          maxBuffer: 5 * 1024 * 1024,
-        }
-      );
+      const { stdout } = await promisify(execFile)('grep', ['-rn', '-e', input.pattern, '--', searchPath], {
+        encoding: 'utf-8',
+        timeout: 10_000,
+        maxBuffer: 5 * 1024 * 1024,
+      });
 
-      for (const line of output.split('\n').filter(Boolean)) {
+      for (const line of stdout.split('\n').filter(Boolean)) {
         const match = line.match(/^(.+?):(\d+):(.*)$/);
         if (match) {
           matches.push({
@@ -118,8 +121,8 @@ export async function executeGrep(input: GrepInput): Promise<GrepResult> {
       }
     } catch (grepErr) {
       // grep returns exit code 1 when no matches found — that's OK
-      const execError = grepErr as { status?: number };
-      if (execError.status !== 1) {
+      const execError = grepErr as { code?: number | string };
+      if (execError.code !== 1) {
         throw grepErr;
       }
     }
@@ -144,7 +147,7 @@ export async function executeGrep(input: GrepInput): Promise<GrepResult> {
 export async function executeBash(input: BashInput): Promise<BashResult> {
   // Default 600s (10 min) — must accommodate slow ecosystem setup
   // (bundle install, mix deps.get, composer install) before test execution.
-  const timeoutMs = input.timeout_ms ?? 600_000;
+  const timeoutMs = Math.min(input.timeout_ms ?? 600_000, MAX_BASH_TIMEOUT_MS);
 
   // Build PATH with mise shims
   const miseDataDir = process.env.MISE_DATA_DIR || `${process.env.HOME || '/root'}/.local/share/mise`;
@@ -172,8 +175,8 @@ export async function executeBash(input: BashInput): Promise<BashResult> {
         // Check if killed by timeout
         if (execError.killed || execError.signal === 'SIGTERM') {
           resolve({
-            stdout: stdout || '',
-            stderr: stderr || '',
+            stdout: truncate(stdout),
+            stderr: truncate(stderr),
             exit_code: 124,
             error: `timeout: command exceeded ${timeoutMs}ms`,
           });
@@ -181,18 +184,41 @@ export async function executeBash(input: BashInput): Promise<BashResult> {
         }
 
         resolve({
-          stdout: stdout || '',
-          stderr: stderr || '',
+          stdout: truncate(stdout),
+          stderr: truncate(stderr),
           exit_code: typeof execError.code === 'number' ? execError.code : 1,
         });
         return;
       }
 
       resolve({
-        stdout: stdout || '',
-        stderr: stderr || '',
+        stdout: truncate(stdout),
+        stderr: truncate(stderr),
         exit_code: 0,
       });
     });
   });
 }
+
+function truncate(output: string | undefined): string {
+  const bytes = Buffer.from(output || '', 'utf-8');
+  if (bytes.length <= MAX_STREAM_BYTES) return output || '';
+  return `${bytes.subarray(0, MAX_STREAM_BYTES).toString('utf-8')}…[truncated ${bytes.length - MAX_STREAM_BYTES} bytes]`;
+}
+
+type ToolExecutor = (input: Record<string, unknown>) => Promise<Record<string, unknown>>;
+
+async function wrapExecutor<T>(fn: () => Promise<T>): Promise<Record<string, unknown>> {
+  const result = await fn();
+  return result as unknown as Record<string, unknown>;
+}
+
+/** The relay's tools, shared by the v4 pipeline clients and `rsolv-sandbox tool`. */
+export const TOOL_DISPATCH: Record<ToolName, ToolExecutor> = {
+  read_file: (input) => wrapExecutor(() => executeReadFile(input as unknown as ReadFileInput)),
+  write_file: (input) => wrapExecutor(() => executeWriteFile(input as unknown as WriteFileInput)),
+  edit_file: (input) => wrapExecutor(() => executeEditFile(input as unknown as EditFileInput)),
+  glob: (input) => wrapExecutor(() => executeGlob(input as unknown as GlobInput)),
+  grep: (input) => wrapExecutor(() => executeGrep(input as unknown as GrepInput)),
+  bash: (input) => wrapExecutor(() => executeBash(input as unknown as BashInput)),
+};
