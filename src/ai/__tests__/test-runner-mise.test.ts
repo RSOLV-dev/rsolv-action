@@ -10,7 +10,7 @@ type MiseAnswer = { error?: Error; stdout?: string };
 const state = vi.hoisted(() => ({
   execCommands: [] as string[],
   execFileCalls: [] as Array<{ file: string; args: string[]; cwd?: string }>,
-  mise: (_cwd: string | undefined): { error?: Error; stdout?: string } => ({ stdout: '[]' }),
+  mise: (_cwd: string | undefined, _args: string[]): { error?: Error; stdout?: string } => ({ stdout: '[]' }),
 }));
 
 vi.mock('child_process', () => ({
@@ -25,7 +25,7 @@ vi.mock('child_process', () => ({
     callback: (e: Error | null, r?: { stdout: string; stderr: string }) => void
   ) => {
     state.execFileCalls.push({ file, args, cwd: options?.cwd });
-    const answer: MiseAnswer = file === 'mise' ? state.mise(options?.cwd) : { stdout: '' };
+    const answer: MiseAnswer = file === 'mise' ? state.mise(options?.cwd, args) : { stdout: '' };
     if (answer.error) callback(answer.error);
     else callback(null, { stdout: answer.stdout ?? '', stderr: '' });
   },
@@ -120,5 +120,19 @@ describe('TestRunner runtime versions from mise config', () => {
     await runner.ensureRuntime('jest', dir);
 
     expect(state.execCommands.some((c) => c.includes('mise install'))).toBe(false);
+  });
+
+  it('installs the Erlang version the repository declares before its Elixir', async () => {
+    const dir = path.join(FIXTURES, 'elixir-erlang');
+    const versions: Record<string, string> = { elixir: '1.15.7', erlang: '26.1' };
+    state.mise = (_cwd, args) => ({ stdout: miseLs(versions[args[3]], path.join(dir, '.tool-versions')) });
+
+    await runner.ensureRuntime('exunit', dir);
+
+    const erlang = state.execCommands.findIndex((c) => c.includes('mise install erlang@26.1'));
+    const elixir = state.execCommands.findIndex((c) => c.includes('mise install elixir@1.15.7'));
+    expect(erlang).toBeGreaterThanOrEqual(0);
+    expect(erlang).toBeLessThan(elixir);
+    expect(state.execCommands.some((c) => c.includes('erlang@latest'))).toBe(false);
   });
 });

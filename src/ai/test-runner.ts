@@ -116,15 +116,19 @@ export class TestRunner {
     // Handle Elixir's dependency on Erlang - must install Erlang first
     if (runtime === 'elixir') {
       console.log('[TestRunner] Elixir requires Erlang - installing Erlang first');
-      try {
-        await execAsync('which erl', { encoding: 'utf8' });
+      // mise refuses an Elixir whose declared Erlang isn't the one installed
+      const erlangVersion = await this.detectRuntimeVersion('erlang', workingDir);
+      const erlAvailable = !erlangVersion &&
+        (await execAsync('which erl', { encoding: 'utf8' }).then(() => true, () => false));
+      if (erlAvailable) {
         console.log('[TestRunner] Erlang already available');
-      } catch {
+      } else {
         // Install Erlang via mise
-        console.log('[TestRunner] Installing Erlang via mise');
+        const erlangSpec = `erlang@${erlangVersion ?? 'latest'}`;
+        console.log(`[TestRunner] Installing ${erlangSpec} via mise`);
         try {
           await execAsync(
-            'mise install erlang@latest && mise use --global erlang@latest',
+            `mise install ${erlangSpec} && mise use --global ${erlangSpec}`,
             { cwd: workingDir, timeout: this.RUNTIME_INSTALL_TIMEOUT, encoding: 'utf8' }
           );
           console.log('[TestRunner] Erlang installed successfully');
@@ -578,14 +582,18 @@ export class TestRunner {
       // Maven not found, install it
     }
 
-    console.log('[TestRunner] Installing Maven via apt-get');
+    // apt-get needs root; the v5 sandbox isn't
+    const installMaven = this.isRoot()
+      ? 'apt-get update && apt-get install -y maven'
+      : 'mise install maven && mise use --global maven';
+    console.log(`[TestRunner] Installing Maven: ${installMaven}`);
     try {
       await execAsync(
-        'apt-get update && apt-get install -y maven',
+        installMaven,
         { cwd: workingDir, timeout: 120000, encoding: 'utf8' }
       );
       await execAsync('which mvn', { encoding: 'utf8' });
-      console.log('[TestRunner] Maven installed via apt-get');
+      console.log('[TestRunner] Maven installed');
     } catch (err) {
       const error = err as { stderr?: string; message?: string };
       console.log(`[TestRunner] Maven install failed: ${error.stderr || error.message}`);
@@ -775,13 +783,25 @@ export class TestRunner {
    */
   private async startUserPostgres(dbName: string): Promise<void> {
     try {
-      await execAsync('pg_isready -h localhost', { encoding: 'utf8', timeout: 5000 });
+      await execAsync('pg_ctl -D /tmp/rsolv-pg status', { encoding: 'utf8', timeout: 5000 });
       console.log('[TestRunner] PostgreSQL already running');
     } catch {
-      await execAsync('initdb -D /tmp/rsolv-pg -A trust -U postgres', { encoding: 'utf8', timeout: 60000 });
+      // initdb and postgres refuse a user with no passwd entry, which the
+      // sandbox's arbitrary UID usually is; nss_wrapper supplies one.
+      const env = {
+        ...process.env,
+        LD_PRELOAD: 'libnss_wrapper.so',
+        NSS_WRAPPER_PASSWD: '/tmp/rsolv-passwd',
+        NSS_WRAPPER_GROUP: '/etc/group',
+      };
+      await execAsync(
+        'printf \'postgres:x:%s:%s::/tmp:/bin/sh\\n\' "$(id -u)" "$(id -g)" > /tmp/rsolv-passwd',
+        { encoding: 'utf8', timeout: 5000 }
+      );
+      await execAsync('initdb -D /tmp/rsolv-pg -A trust -U postgres', { encoding: 'utf8', timeout: 60000, env });
       await execAsync(
         'pg_ctl -D /tmp/rsolv-pg -l /tmp/rsolv-pg.log -o "-k /tmp -c listen_addresses=localhost" -w start',
-        { encoding: 'utf8', timeout: 60000 }
+        { encoding: 'utf8', timeout: 60000, env }
       );
       console.log('[TestRunner] PostgreSQL started as the sandbox user');
     }
