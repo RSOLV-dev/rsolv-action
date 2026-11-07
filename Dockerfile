@@ -120,6 +120,10 @@ RUN apt-get update && \
       libcurl4-openssl-dev libpng-dev libjpeg-dev libfreetype6-dev \
       libwebp-dev libgmp-dev libsodium-dev libreadline-dev libbz2-dev && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
+# Composer, one composer.phar pinned by SHA-256, so the sandbox needs no egress
+# to getcomposer.org; it runs on whichever PHP mise builds.
+COPY scripts/install-composer.sh /tmp/install-composer.sh
+RUN sh /tmp/install-composer.sh /usr/local/bin/composer && rm /tmp/install-composer.sh
 COPY --from=builder /app/dist/sandbox /opt/rsolv
 ENV HOME=/opt/home \
     PATH="/opt/home/.local/share/mise/shims:${PATH}" \
