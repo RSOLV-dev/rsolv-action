@@ -15,6 +15,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import {
+  TOOL_DISPATCH,
   executeReadFile,
   executeWriteFile,
   executeEditFile,
@@ -145,6 +146,28 @@ describe('ToolExecutors', () => {
       expect(result.matches.length).toBeGreaterThan(0);
       expect(result.matches[0].line).toContain('password');
     });
+
+    it('passes the pattern to grep as one argument, never through a shell', async () => {
+      const canary = path.join(tmpDir, 'pwned');
+      const pattern = `"; $(touch ${canary}) #`;
+      fs.writeFileSync(path.join(tmpDir, 'a.js'), `x = '${pattern}';\nclean line\n`);
+
+      const result = await executeGrep({ pattern, path: tmpDir });
+
+      expect(fs.existsSync(canary)).toBe(false);
+      expect(result.error).toBeUndefined();
+      expect(result.matches).toHaveLength(1);
+      expect(result.matches[0].line).toContain(pattern);
+    });
+
+    it('treats a pattern starting with a dash as a pattern, not an option', async () => {
+      fs.writeFileSync(path.join(tmpDir, 'a.js'), 'value --version here\n');
+
+      const result = await executeGrep({ pattern: '--version', path: tmpDir });
+
+      expect(result.error).toBeUndefined();
+      expect(result.matches).toHaveLength(1);
+    });
   });
 
   describe('executeBash', () => {
@@ -229,6 +252,21 @@ describe('ToolExecutors', () => {
       expect(result.stderr).toContain('err');
     });
 
+    it('truncates each stream over 262,144 bytes and says by how much', async () => {
+      const result = await executeBash({
+        command: 'head -c 300000 /dev/zero | tr "\\0" a; head -c 262145 /dev/zero | tr "\\0" b >&2',
+      });
+
+      expect(result.stdout).toBe('a'.repeat(262_144) + `…[truncated ${300_000 - 262_144} bytes]`);
+      expect(result.stderr).toBe('b'.repeat(262_144) + '…[truncated 1 bytes]');
+    });
+
+    it('leaves output at the limit untouched', async () => {
+      const result = await executeBash({ command: 'head -c 262144 /dev/zero | tr "\\0" a' });
+
+      expect(result.stdout).toBe('a'.repeat(262_144));
+    });
+
     it('captures stderr on non-zero exit', async () => {
       const result = await executeBash({
         command: 'echo "error msg" >&2 && exit 1',
@@ -236,6 +274,14 @@ describe('ToolExecutors', () => {
 
       expect(result.exit_code).toBe(1);
       expect(result.stderr).toContain('error msg');
+    });
+  });
+
+  describe('TOOL_DISPATCH', () => {
+    it('dispatches exactly the six relay tools', () => {
+      expect(Object.keys(TOOL_DISPATCH).sort()).toEqual(
+        ['bash', 'edit_file', 'glob', 'grep', 'read_file', 'write_file']
+      );
     });
   });
 });

@@ -183,7 +183,7 @@ export class PatternAPIClient {
   /**
    * Convert API pattern format to RSOLV-action SecurityPattern format
    */
-  private convertToSecurityPattern(apiPattern: PatternData): SecurityPattern {
+  convertToSecurityPattern(apiPattern: PatternData): SecurityPattern {
     // RFC-032: First reconstruct any serialized regex objects in the pattern
     const reconstructedPattern = this.reconstructPattern(apiPattern);
     
