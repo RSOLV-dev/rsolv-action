@@ -784,22 +784,9 @@ describe('TestRunner', () => {
     });
   });
 
-  describe('Maven without root (RFC-150, the v5 sandbox)', () => {
+  describe('Maven as root (the v4 action; the v5 sandbox is in test-runner-sandbox-runtimes)', () => {
     afterEach(() => {
       vi.restoreAllMocks();
-    });
-
-    test('installs Maven with mise, since apt-get needs root', async () => {
-      vi.spyOn(process, 'getuid').mockReturnValue(1001);
-      mockExecAsync.mockImplementation((cmd: string) =>
-        cmd === 'which mvn' ? Promise.reject(new Error('not found')) : Promise.resolve({ stdout: '', stderr: '' })
-      );
-
-      await runner['ensureMaven']('/work');
-
-      const calls = mockExecAsync.mock.calls.map((c: unknown[]) => String(c[0]));
-      expect(calls).toContain('mise install maven && mise use --global maven');
-      expect(calls.some((c) => c.includes('apt-get'))).toBe(false);
     });
 
     test('keeps apt-get as root', async () => {

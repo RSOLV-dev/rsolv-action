@@ -23,9 +23,11 @@ const COMMANDS: Record<string, Command> = {
     return 0;
   },
   bootstrap: async (reader, emit) => {
-    await reader.next();
+    const input = await reader.next();
+    const exactRuntimeVersions =
+      typeof input === 'object' && input !== null && (input as Record<string, unknown>).exact_runtime_versions === true;
     const { runBootstrap } = await import('./bootstrap.js');
-    emit({ ...(await runBootstrap({ cwd: process.cwd() })) });
+    emit({ ...(await runBootstrap({ cwd: process.cwd(), exactRuntimeVersions })) });
     return 0;
   },
   scan: async (reader, _emit, out) => {

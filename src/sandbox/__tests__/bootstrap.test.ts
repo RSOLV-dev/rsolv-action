@@ -5,6 +5,8 @@ import * as path from 'path';
 
 const runner = vi.hoisted(() => ({
   calls: [] as string[],
+  exact: [] as boolean[],
+  reports: [] as unknown[],
   ensureRuntime: async (framework: string, cwd: string): Promise<void> => {
     runner.calls.push(`runtime:${framework}:${cwd}`);
   },
@@ -15,7 +17,10 @@ const runner = vi.hoisted(() => ({
 
 vi.mock('../../ai/test-runner.js', () => ({
   TestRunner: class {
+    runtimeReports = runner.reports;
+    exactRuntimeVersions = false;
     ensureRuntime(framework: string, cwd: string) {
+      runner.exact.push(this.exactRuntimeVersions);
       return runner.ensureRuntime(framework, cwd);
     }
     ensureDependencies(framework: string, cwd: string) {
@@ -33,6 +38,8 @@ describe('runBootstrap', () => {
   beforeEach(() => {
     cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'rsolv-bootstrap-'));
     runner.calls.length = 0;
+    runner.exact.length = 0;
+    runner.reports.length = 0;
   });
 
   afterEach(() => {
@@ -46,7 +53,7 @@ describe('runBootstrap', () => {
 
     const result = await runBootstrap({ cwd });
 
-    expect(result).toEqual({ ok: true, ecosystems: ['javascript'], log_tail: expect.any(String) });
+    expect(result).toEqual({ ok: true, ecosystems: ['javascript'], log_tail: expect.any(String), runtimes: [] });
     expect(runner.calls).toEqual([`runtime:jest:${cwd}`, `deps:jest:${cwd}`]);
   });
 
@@ -76,8 +83,42 @@ describe('runBootstrap', () => {
     expect(runner.calls).toEqual([]);
   });
 
+  it('returns the runtime installs\' reports, for the host to annotate', async () => {
+    fs.writeFileSync(path.join(cwd, 'requirements.txt'), 'pytest\n');
+    const report = { runtime: 'python', requested: '3.11.9', actual: '3.11.11', status: 'fallback' };
+    runner.ensureRuntime = async () => {
+      runner.reports.push(report);
+    };
+
+    const result = await runBootstrap({ cwd });
+
+    expect(result.runtimes).toEqual([report]);
+  });
+
+  it('keeps the report of a runtime that failed to install', async () => {
+    fs.writeFileSync(path.join(cwd, 'requirements.txt'), 'pytest\n');
+    const report = { runtime: 'python', requested: '3.11.9', status: 'failed', reason: 'verification_failed' };
+    runner.ensureRuntime = async () => {
+      runner.reports.push(report);
+      throw new Error('python 3.11.9 was not installed: verification_failed');
+    };
+
+    const result = await runBootstrap({ cwd });
+
+    expect(result.runtimes).toEqual([report]);
+  });
+
+  it('asks the runner for exact runtime versions when required', async () => {
+    fs.writeFileSync(path.join(cwd, 'requirements.txt'), 'pytest\n');
+
+    await runBootstrap({ cwd, exactRuntimeVersions: true });
+    await runBootstrap({ cwd });
+
+    expect(runner.exact).toEqual([true, false]);
+  });
+
   it('runs nothing in a directory with no test framework', async () => {
-    await expect(runBootstrap({ cwd })).resolves.toEqual({ ok: true, ecosystems: [], log_tail: '' });
+    await expect(runBootstrap({ cwd })).resolves.toEqual({ ok: true, ecosystems: [], log_tail: '', runtimes: [] });
     expect(runner.calls).toEqual([]);
   });
 

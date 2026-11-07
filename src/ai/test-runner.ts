@@ -6,6 +6,15 @@ import { exec, execFile } from 'child_process';
 import { promisify } from 'util';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import * as os from 'os';
+import {
+  installMaven,
+  installPhp,
+  installPython,
+  clock as sandboxClock,
+  run as runInSandbox,
+  type RuntimeReport,
+} from '../sandbox/runtime-install.js';
 
 const execAsync = promisify(exec);
 
@@ -76,6 +85,13 @@ export class TestRunner {
   // Public so validation-mode.ts can read it (it has its own runTest() method with separate command building)
   public bundleInstallFailed = false;
   private readonly DEP_INSTALL_TIMEOUT = 180000; // 3 minutes for dependency install
+  // Inside the host's 15-minute bootstrap budget (RFC-150 3d)
+  private readonly PHP_BUILD_TIMEOUT_S = 720;
+
+  /** v5 sandbox runtime installs, for the host to annotate (RFC-150 3d). */
+  public readonly runtimeReports: RuntimeReport[] = [];
+  /** Fail rather than fall back to another patch of a version with no attestations. */
+  public exactRuntimeVersions = false;
 
   /** Get the mise data directory, respecting MISE_DATA_DIR env var (RFC-105) */
   private getMiseDataDir(): string {
@@ -265,6 +281,11 @@ export class TestRunner {
     } else {
       // No platform version — try local file detection
       version = declaredVersion;
+    }
+
+    if (!this.isRoot() && (runtime === 'python' || runtime === 'php')) {
+      await this.installSandboxRuntime(runtime, version);
+      return;
     }
 
     // If we still don't have a version, try mise native resolution before @latest
@@ -583,13 +604,18 @@ export class TestRunner {
     }
 
     // apt-get needs root; the v5 sandbox isn't
-    const installMaven = this.isRoot()
-      ? 'apt-get update && apt-get install -y maven'
-      : 'mise install maven && mise use --global maven';
-    console.log(`[TestRunner] Installing Maven: ${installMaven}`);
+    if (!this.isRoot()) {
+      const report = await installMaven({ run: runInSandbox, clock: sandboxClock });
+      this.runtimeReports.push(report);
+      console.log(`[TestRunner] Maven ${report.requested}: ${report.status}${report.reason ? ` (${report.reason})` : ''}`);
+      return;
+    }
+
+    const installMavenCommand = 'apt-get update && apt-get install -y maven';
+    console.log(`[TestRunner] Installing Maven: ${installMavenCommand}`);
     try {
       await execAsync(
-        installMaven,
+        installMavenCommand,
         { cwd: workingDir, timeout: 120000, encoding: 'utf8' }
       );
       await execAsync('which mvn', { encoding: 'utf8' });
@@ -690,6 +716,32 @@ export class TestRunner {
     process.env.DATABASE_URL = `postgresql://postgres:postgres@localhost/${dbName}`;
     process.env.MIX_ENV = 'test';
     console.log(`[TestRunner] DATABASE_URL set to postgresql://postgres:postgres@localhost/${dbName}`);
+  }
+
+  /**
+   * The v5 sandbox's Python (attestation-checked, same-minor fallback only for
+   * a version with none) or PHP (a bounded source build). A failure throws;
+   * nothing is substituted.
+   */
+  private async installSandboxRuntime(runtime: 'python' | 'php', version: string | undefined): Promise<void> {
+    const deps = { run: runInSandbox, clock: sandboxClock };
+    const report =
+      runtime === 'python'
+        ? await installPython(version ?? 'latest', { ...deps, exact: this.exactRuntimeVersions })
+        : await installPhp(version, {
+          ...deps,
+          jobs: Math.max(1, Math.min(4, os.availableParallelism())),
+          timeoutS: this.PHP_BUILD_TIMEOUT_S,
+        });
+    this.runtimeReports.push(report);
+    if (report.status === 'failed') {
+      throw new Error(`${runtime} ${report.requested} was not installed: ${report.reason}`);
+    }
+
+    // The requested version: for a fallback, it's linked to the one installed.
+    await runInSandbox('mise', ['use', '--global', `${runtime}@${report.requested}`]);
+    const shims = this.getMiseShimsPath();
+    if (!(process.env.PATH || '').includes(shims)) process.env.PATH = `${shims}:${process.env.PATH || ''}`;
   }
 
   private isRoot(): boolean {

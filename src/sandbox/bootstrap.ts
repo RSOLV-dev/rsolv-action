@@ -1,5 +1,6 @@
 import { detectTestFramework } from '../modes/phase-executor/detect-test-framework.js';
 import { TestRunner, type TestFramework } from '../ai/test-runner.js';
+import type { RuntimeReport } from './runtime-install.js';
 
 const LOG_TAIL_BYTES = 8192;
 
@@ -22,20 +23,31 @@ export interface BootstrapResult {
   ok: boolean;
   ecosystems: string[];
   log_tail: string;
+  /** Python, PHP and Maven installs, which the host annotates. */
+  runtimes: RuntimeReport[];
 }
 
 /**
  * `rsolv-sandbox bootstrap` (RFC-150 §8): the runtime and dependency setup the
  * v4 action does before VALIDATE, run inside the sandbox. Failures are logged
- * and bootstrap carries on, as v4 does ("continuing anyway").
+ * and bootstrap carries on, as v4 does ("continuing anyway"). With
+ * `exactRuntimeVersions`, a Python version with no attestations fails rather
+ * than falling back to another patch.
  */
-export async function runBootstrap({ cwd }: { cwd: string }): Promise<BootstrapResult> {
+export async function runBootstrap({
+  cwd,
+  exactRuntimeVersions = false,
+}: {
+  cwd: string;
+  exactRuntimeVersions?: boolean;
+}): Promise<BootstrapResult> {
   const framework = detectTestFramework(cwd) as TestFramework | 'unknown';
-  if (framework === 'unknown') return { ok: true, ecosystems: [], log_tail: '' };
+  if (framework === 'unknown') return { ok: true, ecosystems: [], log_tail: '', runtimes: [] };
 
+  const runner = new TestRunner();
+  runner.exactRuntimeVersions = exactRuntimeVersions;
   const log = captureConsole();
   try {
-    const runner = new TestRunner();
     try {
       await runner.ensureRuntime(framework, cwd);
       try {
@@ -49,7 +61,7 @@ export async function runBootstrap({ cwd }: { cwd: string }): Promise<BootstrapR
   } finally {
     log.restore();
   }
-  return { ok: true, ecosystems: [ECOSYSTEMS[framework]], log_tail: log.tail() };
+  return { ok: true, ecosystems: [ECOSYSTEMS[framework]], log_tail: log.tail(), runtimes: runner.runtimeReports };
 }
 
 function message(err: unknown): string {

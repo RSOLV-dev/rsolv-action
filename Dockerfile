@@ -109,6 +109,17 @@ RUN node --version && npm --version && npx --version
 # under HOME. MISE_TRUSTED_CONFIG_PATHS lets a repository's mise config apply,
 # inside the sandbox only.
 FROM toolchain AS sandbox
+# PHP: mise's vfox-php plugin compiles the version a repository asks for, as
+# the sandbox user, behind the egress proxy (RFC-150 3d, owner decision
+# 2026-11-07). These are exactly the plugin's documented Debian build
+# dependencies (github.com/jdx/vfox-php README).
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+      build-essential autoconf bison re2c pkg-config \
+      libxml2-dev libssl-dev libicu-dev libzip-dev libonig-dev \
+      libcurl4-openssl-dev libpng-dev libjpeg-dev libfreetype6-dev \
+      libwebp-dev libgmp-dev libsodium-dev libreadline-dev libbz2-dev && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /app/dist/sandbox /opt/rsolv
 ENV HOME=/opt/home \
     PATH="/opt/home/.local/share/mise/shims:${PATH}" \

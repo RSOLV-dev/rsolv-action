@@ -10,9 +10,9 @@ vi.mock('../tool.js', () => ({
 }));
 
 vi.mock('../bootstrap.js', () => ({
-  runBootstrap: async ({ cwd }: { cwd: string }) => {
+  runBootstrap: async ({ cwd, exactRuntimeVersions }: { cwd: string; exactRuntimeVersions: boolean }) => {
     console.log('installing things');
-    return { ok: true, ecosystems: [], log_tail: cwd };
+    return { ok: true, ecosystems: [], log_tail: cwd, exact: exactRuntimeVersions };
   },
 }));
 
@@ -84,7 +84,22 @@ describe('rsolv-sandbox main', () => {
     const { code, stdout } = await run(['bootstrap'], '0\n');
 
     expect(code).toBe(0);
-    expect(stdout.split('\n')).toEqual([JSON.stringify({ ok: true, ecosystems: [], log_tail: process.cwd() }), '']);
+    expect(stdout.split('\n')).toEqual([
+      JSON.stringify({ ok: true, ecosystems: [], log_tail: process.cwd(), exact: false }),
+      '',
+    ]);
+  });
+
+  it('bootstrap passes on a requirement for exact runtime versions', async () => {
+    const { stdout } = await run(['bootstrap'], frame({ exact_runtime_versions: true }));
+
+    expect(JSON.parse(stdout)).toMatchObject({ exact: true });
+  });
+
+  it('bootstrap requires exactly true, not anything truthy', async () => {
+    const { stdout } = await run(['bootstrap'], frame({ exact_runtime_versions: 'yes' }));
+
+    expect(JSON.parse(stdout)).toMatchObject({ exact: false });
   });
 
   it.each([[[]], [['nope']], [['maintenance']], [['toString']]])('exits 2 for %j', async (argv) => {
