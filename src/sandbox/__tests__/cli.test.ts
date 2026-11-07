@@ -9,6 +9,13 @@ vi.mock('../tool.js', () => ({
   },
 }));
 
+vi.mock('../bootstrap.js', () => ({
+  runBootstrap: async ({ cwd }: { cwd: string }) => {
+    console.log('installing things');
+    return { ok: true, ecosystems: [], log_tail: cwd };
+  },
+}));
+
 import { main } from '../cli.js';
 
 function collect(stream: PassThrough): () => string {
@@ -71,6 +78,13 @@ describe('rsolv-sandbox main', () => {
 
     expect(code).toBe(1);
     expect(JSON.parse(stdout)).toEqual({ error: 'invalid base_sha' });
+  });
+
+  it('bootstrap reads the empty frame and writes one JSON line for the working directory', async () => {
+    const { code, stdout } = await run(['bootstrap'], '0\n');
+
+    expect(code).toBe(0);
+    expect(stdout.split('\n')).toEqual([JSON.stringify({ ok: true, ecosystems: [], log_tail: process.cwd() }), '']);
   });
 
   it.each([[[]], [['nope']], [['maintenance']], [['toString']]])('exits 2 for %j', async (argv) => {

@@ -9,18 +9,26 @@
 import * as fs from 'fs';
 import { pathToFileURL } from 'url';
 import { FrameReader } from './frame.js';
-import { runTool } from './tool.js';
-import { runPatch } from './patch.js';
 
 type Emit = (result: Record<string, unknown>) => void;
 type Command = (reader: FrameReader, emit: Emit) => Promise<number>;
 
+// Each command loads its modules only once output is redirected (see main),
+// so nothing they print at import time reaches stdout.
 const COMMANDS: Record<string, Command> = {
   tool: async (reader, emit) => {
+    const { runTool } = await import('./tool.js');
     emit(await runTool(await reader.next()));
     return 0;
   },
+  bootstrap: async (reader, emit) => {
+    await reader.next();
+    const { runBootstrap } = await import('./bootstrap.js');
+    emit({ ...(await runBootstrap({ cwd: process.cwd() })) });
+    return 0;
+  },
   patch: async (reader, emit) => {
+    const { runPatch } = await import('./patch.js');
     const result = await runPatch(await reader.next());
     emit(result);
     return 'patch' in result ? 0 : 1;
