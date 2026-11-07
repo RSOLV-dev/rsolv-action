@@ -5,7 +5,7 @@
 #   verify-sandbox-oci.sh <archive.tar> <amd64|arm64> [sha256:<hex>]
 set -euo pipefail
 archive=${1:-} arch=${2:-} want=${3:-}
-[ -f "$archive" ] && [[ $arch =~ ^(amd64|arm64)$ ]] && [[ -z $want || $want =~ ^sha256:[0-9a-f]{64}$ ]] ||
+[[ -f $archive && $arch =~ ^(amd64|arm64)$ && ( -z $want || $want =~ ^sha256:[0-9a-f]{64}$ ) ]] ||
   { echo "usage: verify-sandbox-oci.sh <archive.tar> <amd64|arm64> [sha256:<hex>]" >&2; exit 2; }
 fail() { echo "::error::$archive: $*" >&2; exit 1; }
 index=$(tar -xOf "$archive" index.json) || fail "no index.json"
