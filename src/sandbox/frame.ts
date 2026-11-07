@@ -58,7 +58,9 @@ function parse(body: Buffer): unknown {
   }
 }
 
-export function writeFrame(stream: NodeJS.WritableStream, value: unknown): void {
+export type Writer = Pick<NodeJS.WritableStream, 'write'>;
+
+export function writeFrame(stream: Writer, value: unknown): void {
   const body = Buffer.from(JSON.stringify(value), 'utf8');
   stream.write(Buffer.concat([Buffer.from(`${body.length}\n`), body]));
 }

@@ -4,14 +4,23 @@ import { logger } from '../utils/logger.js';
 import type { FileToScan, ScanConfig, ScanResult, VulnerabilityGroup } from './types.js';
 import type { Vulnerability } from '../security/types.js';
 import { createPatternSource } from '../security/pattern-source.js';
-import { ASTValidator } from './ast-validator.js';
+import { ASTValidator, type ValidationClient } from './ast-validator.js';
+import type { PatternSource } from '../security/pattern-source.js';
 import { VendorDetector } from '../vendor/vendor-detector.js';
 import { SEVERITY_PRIORITY } from '../security/severity.js';
 
+/** Where the scanner reads files from; the default is the GitHub API. */
+export interface FileSource {
+  list(): Promise<FileToScan[]>;
+  read(path: string): Promise<string | null>;
+}
+
 export class RepositoryScanner {
   private detector: SafeDetector;
-  private github: ReturnType<typeof getGitHubClient>;
+  private github: ReturnType<typeof getGitHubClient> | null;
   private vendorDetector: VendorDetector;
+  private files?: FileSource;
+  private validation?: ValidationClient;
 
   /**
    * Directories that contain non-production code (tests, artifacts, build scripts).
@@ -85,10 +94,16 @@ export class RepositoryScanner {
     /^Jakefile\.\w+$/,
   ];
 
-  constructor() {
+  /**
+   * The defaults are v4's: files from the GitHub API, patterns and AST
+   * validation from the platform API with the action's API key.
+   */
+  constructor(deps: { files?: FileSource; patterns?: PatternSource; validation?: ValidationClient } = {}) {
     // Use SafeDetector instead of SecurityDetectorV2 to prevent hangs
-    this.detector = new SafeDetector(createPatternSource());
-    this.github = getGitHubClient();
+    this.detector = new SafeDetector(deps.patterns ?? createPatternSource());
+    this.files = deps.files;
+    this.validation = deps.validation;
+    this.github = deps.files ? null : getGitHubClient();
     this.vendorDetector = new VendorDetector();
   }
 
@@ -96,7 +111,7 @@ export class RepositoryScanner {
     logger.info(`Starting vulnerability scan for ${config.repository.owner}/${config.repository.name}`);
     
     const startTime = Date.now();
-    const files = await this.getRepositoryFiles(config);
+    const files = this.files ? await this.files.list() : await this.getRepositoryFiles(config);
     let vulnerabilities: Vulnerability[] = [];
     
     logger.info(`Found ${files.length} files to scan`);
@@ -154,9 +169,10 @@ export class RepositoryScanner {
     RepositoryScanner.applyConfigConfidenceMultiplier(vulnerabilities);
 
     // Apply AST validation if enabled (default is true)
-    if (config.enableASTValidation !== false && config.rsolvApiKey && typeof config.rsolvApiKey === 'string' && config.rsolvApiKey.length > 0) {
+    const apiKey = typeof config.rsolvApiKey === 'string' ? config.rsolvApiKey : '';
+    if (config.enableASTValidation !== false && (this.validation || apiKey.length > 0)) {
       logger.info('Performing AST validation on detected vulnerabilities (enabled by default)...');
-      const validator = new ASTValidator(config.rsolvApiKey);
+      const validator = this.validation ? new ASTValidator(apiKey, this.validation) : new ASTValidator(apiKey);
       
       // Create file contents map
       const fileContents = new Map<string, string>();
@@ -205,7 +221,7 @@ export class RepositoryScanner {
     
     try {
       // Get repository tree
-      const { data: tree } = await this.github.git.getTree({
+      const { data: tree } = await this.github!.git.getTree({
         owner: config.repository.owner,
         repo: config.repository.name,
         tree_sha: config.repository.defaultBranch,
@@ -216,7 +232,7 @@ export class RepositoryScanner {
       const codeFiles = tree.tree.filter(item => 
         item.type === 'blob' && 
         item.path && 
-        this.isCodeFile(item.path) &&
+        RepositoryScanner.isCodeFile(item.path) &&
         item.size && item.size < 1000000 // Skip files larger than 1MB
       );
       
@@ -233,7 +249,7 @@ export class RepositoryScanner {
         }
         
         try {
-          const { data: blob } = await this.github.git.getBlob({
+          const { data: blob } = await this.github!.git.getBlob({
             owner: config.repository.owner,
             repo: config.repository.name,
             file_sha: file.sha
@@ -241,7 +257,7 @@ export class RepositoryScanner {
           
           // Decode base64 content
           const content = Buffer.from(blob.content, 'base64').toString('utf-8');
-          const language = this.detectLanguage(file.path);
+          const language = RepositoryScanner.detectLanguage(file.path);
           
           if (language) {
             files.push({
@@ -264,7 +280,7 @@ export class RepositoryScanner {
     return files;
   }
 
-  private isCodeFile(path: string): boolean {
+  static isCodeFile(path: string): boolean {
     const codeExtensions = [
       '.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs',
       '.py', '.pyw',
@@ -277,7 +293,7 @@ export class RepositoryScanner {
     return codeExtensions.some(ext => path.endsWith(ext));
   }
 
-  private detectLanguage(path: string): string | null {
+  static detectLanguage(path: string): string | null {
     const extensionMap: Record<string, string> = {
       '.js': 'javascript',
       '.jsx': 'javascript',
@@ -398,9 +414,18 @@ export class RepositoryScanner {
         continue;
       }
 
+      if (this.files) {
+        const content = await this.files.read(manifestPath);
+        if (content !== null) {
+          const kept = content.length <= MAX_FILE_SIZE ? content : RepositoryScanner.truncateManifest(manifestPath, content);
+          if (kept && kept.length <= MAX_FILE_SIZE) manifestFiles[manifestPath] = kept;
+        }
+        continue;
+      }
+
       // Try to fetch from GitHub
       try {
-        const { data } = await this.github.repos.getContent({
+        const { data } = await this.github!.repos.getContent({
           owner: config.repository.owner,
           repo: config.repository.name,
           path: manifestPath,

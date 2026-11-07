@@ -4,20 +4,41 @@ import { GitHubAdapter } from '../forge/github-adapter.js';
 import { logger } from '../utils/logger.js';
 import { ensureLabelsExist } from '../github/label-manager.js';
 import type { ScanConfig, ScanResult, ScanReport, VulnerabilityGroup } from './types.js';
-import type { ScanPlanResponse, ScanPlanFinding } from './types.js';
+import type { ScanPlanResponse, ScanPlanFinding, ScanPlanRequest } from './types.js';
 import type { Vulnerability } from '../security/types.js';
 import { prioritizeFindings, prioritizeFindingInstances, fetchSeverityTiers } from './finding-prioritizer.js';
 import type { SeverityTierMap } from './finding-prioritizer.js';
 import { ScanPlanClient } from './scan-plan-client.js';
+import type { ForgeAdapter } from '../forge/forge-adapter.js';
+import type { PatternSource } from '../security/pattern-source.js';
+import type { FileSource } from './repository-scanner.js';
+import type { ValidationClient } from './ast-validator.js';
+
+/** The platform calls a scan makes. */
+export interface ScanPlatform extends ValidationClient {
+  severityTiers(): Promise<SeverityTierMap>;
+  /** The budget-aware plan, or null to fall back to the conservative default. */
+  plan(request: ScanPlanRequest): Promise<ScanPlanResponse | null>;
+}
+
+export interface ScanDependencies {
+  forge?: ForgeAdapter;
+  platform?: ScanPlatform;
+  patterns?: PatternSource;
+  files?: FileSource;
+}
 
 export class ScanOrchestrator {
   private scanner: RepositoryScanner;
   private issueCreator: IssueCreator;
+  private platform?: ScanPlatform;
 
-  constructor() {
-    this.scanner = new RepositoryScanner();
+  /** Without dependencies, v4's: GitHub with GITHUB_TOKEN, the platform with RSOLV_API_KEY. */
+  constructor(deps: ScanDependencies = {}) {
+    this.platform = deps.platform;
+    this.scanner = new RepositoryScanner({ files: deps.files, patterns: deps.patterns, validation: deps.platform });
     const token = process.env.GITHUB_TOKEN || '';
-    this.issueCreator = new IssueCreator(new GitHubAdapter(token));
+    this.issueCreator = new IssueCreator(deps.forge ?? new GitHubAdapter(token));
   }
 
   async performScan(config: ScanConfig): Promise<ScanResult> {
@@ -68,9 +89,14 @@ export class ScanOrchestrator {
         const apiUrl = process.env.RSOLV_API_URL || 'https://api.rsolv.dev';
         const apiKey = process.env.RSOLV_API_KEY || '';
 
-        if (apiKey) {
-          const planClient = new ScanPlanClient({ apiUrl, apiKey });
+        const platform = this.platform;
+        const getPlan = platform
+          ? (request: ScanPlanRequest) => platform.plan(request)
+          : apiKey
+            ? (request: ScanPlanRequest) => new ScanPlanClient({ apiUrl, apiKey }).getPlan(request)
+            : null;
 
+        if (getPlan) {
           const planFindings: ScanPlanFinding[] = prioritizedFindings.map(f => ({
             cwe_id: f.cweId || 'CWE-unknown',
             severity: f.severity,
@@ -81,7 +107,7 @@ export class ScanOrchestrator {
           }));
 
           try {
-            scanPlan = await planClient.getPlan({
+            scanPlan = await getPlan({
               findings: planFindings,
               max_issues: config.maxIssues || 3,
               max_validations: config.maxValidations ?? undefined,
@@ -206,6 +232,8 @@ export class ScanOrchestrator {
   }
 
   private async fetchTiers(): Promise<SeverityTierMap> {
+    if (this.platform) return this.platform.severityTiers();
+
     const apiBaseUrl = process.env.RSOLV_API_URL || 'https://api.rsolv.dev';
     const apiKey = process.env.RSOLV_API_KEY || '';
 

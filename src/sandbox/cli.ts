@@ -7,11 +7,12 @@
  */
 
 import * as fs from 'fs';
+import { spawnSync } from 'child_process';
 import { pathToFileURL } from 'url';
-import { FrameReader } from './frame.js';
+import { FrameReader, type Writer } from './frame.js';
 
 type Emit = (result: Record<string, unknown>) => void;
-type Command = (reader: FrameReader, emit: Emit) => Promise<number>;
+type Command = (reader: FrameReader, emit: Emit, out: Writer) => Promise<number>;
 
 // Each command loads its modules only once output is redirected (see main),
 // so nothing they print at import time reaches stdout.
@@ -25,6 +26,11 @@ const COMMANDS: Record<string, Command> = {
     await reader.next();
     const { runBootstrap } = await import('./bootstrap.js');
     emit({ ...(await runBootstrap({ cwd: process.cwd() })) });
+    return 0;
+  },
+  scan: async (reader, _emit, out) => {
+    const { runScan } = await import('./scan.js');
+    await runScan(reader, out, process.cwd());
     return 0;
   },
   patch: async (reader, emit) => {
@@ -47,9 +53,10 @@ export async function main(
   const write = stdout.write.bind(stdout) as (line: string) => boolean;
   const restore = redirectOutput(stderr);
   try {
-    return await COMMANDS[command](new FrameReader(stdin), (result) => write(`${JSON.stringify(result)}\n`));
+    return await COMMANDS[command](new FrameReader(stdin), (result) => write(`${JSON.stringify(result)}\n`), { write });
   } catch (err) {
-    write(`${JSON.stringify({ error: err instanceof Error ? err.message : String(err) })}\n`);
+    // scan's stdout is the frame channel: a stray line there would break the host's framing.
+    if (command !== 'scan') write(`${JSON.stringify({ error: err instanceof Error ? err.message : String(err) })}\n`);
     return 1;
   } finally {
     restore();
@@ -80,7 +87,27 @@ function safeStringify(value: unknown): string {
   }
 }
 
+function stderrIsDevNull(): boolean {
+  try {
+    const fd2 = fs.fstatSync(2);
+    return fd2.isCharacterDevice() && fd2.rdev === fs.statSync('/dev/null').rdev;
+  } catch {
+    return false;
+  }
+}
+
 async function run(): Promise<void> {
+  // The host reads scan's stdout and stderr merged as one frame channel, so
+  // scan must never write to fd 2. Rather than trust every library and Node
+  // itself (warnings, uncaught errors) to stay quiet, scan runs with fd 2 on
+  // /dev/null: re-exec once with it there, before anything else runs.
+  if (process.argv[2] === 'scan' && !stderrIsDevNull()) {
+    const child = spawnSync(process.execPath, [...process.execArgv, ...process.argv.slice(1)], {
+      stdio: ['inherit', 'inherit', 'ignore'],
+    });
+    process.exit(child.status ?? 1);
+  }
+
   const stdoutWrite = process.stdout.write.bind(process.stdout);
   const code = await main(process.argv.slice(2), process.stdin, process.stdout);
   // stdin may still be open; exit once stdout has flushed.
