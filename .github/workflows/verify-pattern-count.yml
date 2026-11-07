@@ -30,7 +30,7 @@ jobs:
 
           # Count test patterns in minimal-patterns.ts
           TOTAL=$(grep -o "^\s*id:" src/security/minimal-patterns.ts | wc -l)
-          echo "TOTAL_PATTERNS=$TOTAL" >> $GITHUB_ENV
+          echo "TOTAL_PATTERNS=$TOTAL" >> "$GITHUB_ENV"
           echo "Found $TOTAL test patterns in minimal-patterns.ts"
           echo "Note: Production pattern count (183) is served via API"
           
