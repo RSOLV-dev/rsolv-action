@@ -1,0 +1,32 @@
+# RSOLV v5 per-issue process (RFC-150 §2.2): one matrix entry of the customer template.
+# It has no steps of its own and never exchanges a token; each nested job carries its own
+# job_workflow_ref at this commit. RFC-150 step 4 adds `verify` and step 5 adds `publish`,
+# both gated on needs.work.outputs.has_patch == 'true'.
+name: rsolv-issue
+on:
+  workflow_call:
+    inputs:
+      issue:
+        type: number
+        required: true
+      api_url:
+        type: string
+        required: false
+        default: "https://api.rsolv.ai."
+      exact_runtime_versions:
+        description: "Fail instead of substituting a runtime version (for example Python's newest attested patch)"
+        type: boolean
+        required: false
+        default: false
+permissions: {}
+jobs:
+  work:
+    # ./ is the form RFC-150 step-1 spike Q1 verified: the nested job runs at this commit.
+    uses: ./.github/workflows/rsolv-work.yml # zizmor: ignore[self-repository]
+    permissions:
+      contents: read
+      id-token: write
+    with:
+      issue: ${{ inputs.issue }}
+      api_url: ${{ inputs.api_url }}
+      exact_runtime_versions: ${{ inputs.exact_runtime_versions }}
