@@ -217,7 +217,9 @@ fi
 rcs=$(cat "$RUNNER_TEMP/rcs" 2>/dev/null)
 rc=${rcs%% *}
 echo "${rcs#"$rc"}" | sed 's/^ //' >"$RUNNER_TEMP/rcs"
-[ "${rc:-0}" -eq 0 ] && echo "outcome=mitigated" >>"$GITHUB_OUTPUT"
+# Each role's own success outcome: work's mitigated, verify's verified.
+case $1 in verify) outcome=verified ;; *) outcome=mitigated ;; esac
+[ "${rc:-0}" -eq 0 ] && echo "outcome=$outcome" >>"$GITHUB_OUTPUT"
 exit "${rc:-0}"
 EOF
 stub_sum=$(sha256sum "$t/stub/stub" | cut -d' ' -f1)
@@ -317,7 +319,13 @@ check "verify: runs \`verify --issue\`" test "$(nth_args 2)" = "ARGS verify --is
 check "verify: gets no GITHUB_TOKEN" bash -c "! grep -q ' GITHUB_TOKEN ' <<<' $(env_of 2)'"
 check "verify: gets the run attempt, the repository and the OIDC request variables" \
   bash -c "for v in GITHUB_RUN_ATTEMPT GITHUB_REPOSITORY GITHUB_WORKSPACE RUNNER_TEMP ACTIONS_ID_TOKEN_REQUEST_TOKEN; do grep -q \" \$v \" <<<' $(env_of 2)' || exit 1; done"
-check "verify: the host's outputs reach GITHUB_OUTPUT" grep -qx 'outcome=mitigated' "$rt/out"
+valid_verify_outcome() { # exactly one outcome line, and it is one of verify's
+  [ "$(grep -c '^outcome=' "$1")" -eq 1 ] && grep -qxE 'outcome=(verified|verify_failed|rejected)' "$1"
+}
+check "verify: the host's outputs reach GITHUB_OUTPUT" grep -qx 'outcome=verified' "$rt/out"
+check "verify: the outcome is one of verify's" valid_verify_outcome "$rt/out"
+printf 'outcome=mitigated\n' >"$t/bad-outcome"
+check "verify: work's outcome is not one of verify's" bash -c "$(declare -f valid_verify_outcome); ! valid_verify_outcome '$t/bad-outcome'"
 check "verify: no exact-runtime opt-in by default" bash -c "! grep -q RSOLV_EXACT_RUNTIME_VERSIONS <<<'$(env_of 2)'"
 run_step rsolv-verify.yml verify "$stub_sum" "0" EXACT_RUNTIME_VERSIONS=true
 check "verify: the exact-runtime opt-in reaches the host" grep -q 'RSOLV_EXACT_RUNTIME_VERSIONS' <<<"$(env_of 2)"
