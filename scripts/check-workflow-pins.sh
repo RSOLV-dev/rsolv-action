@@ -15,7 +15,7 @@ for arg in "$@"; do
   esac
 done
 cd "$(dirname "$0")/../.github/workflows"
-files=(rsolv-scan.yml rsolv-work.yml rsolv-publish.yml)
+files=(rsolv-scan.yml rsolv-work.yml rsolv-verify.yml rsolv-publish.yml)
 if [ -z "$allow_unreleased" ] && grep -q '"0\{64\}"' "${files[@]}"; then
   echo "::error::a v5 workflow still pins the all-zero host SHA-256 (no host release is pinned)"
   exit 1
@@ -24,9 +24,9 @@ for key in RSOLV_HOST_VERSION RSOLV_HOST_SHA256_X64 RSOLV_HOST_SHA256_ARM64; do
   n=$(grep -h "^ *$key:" "${files[@]}" | sed 's/^ *//' | sort -u | wc -l)
   [ "$n" -eq 1 ] || { echo "::error::$key differs across the v5 workflows"; exit 1; }
 done
-cat "${files[@]}" | grep -cE '^ *RSOLV_HOST_SHA256_(X64|ARM64): "[0-9a-f]{64}"$' | grep -qx 6 \
+cat "${files[@]}" | grep -cE '^ *RSOLV_HOST_SHA256_(X64|ARM64): "[0-9a-f]{64}"$' | grep -qx 8 \
   || { echo "::error::a host SHA-256 is missing or malformed"; exit 1; }
-cat "${files[@]}" | grep -cE '^ *RSOLV_HOST_VERSION: "[0-9]+\.[0-9]+\.[0-9]+"$' | grep -qx 3 \
+cat "${files[@]}" | grep -cE '^ *RSOLV_HOST_VERSION: "[0-9]+\.[0-9]+\.[0-9]+"$' | grep -qx 4 \
   || { echo "::error::a host version is missing or malformed"; exit 1; }
 n=$(for f in "${files[@]}"; do
   sed -n '/# BEGIN install-host/,/# END install-host/p' "$f" | grep -c . | grep -qv '^0$' || echo missing

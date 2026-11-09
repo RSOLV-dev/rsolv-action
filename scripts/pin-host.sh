@@ -49,6 +49,6 @@ sed -i -E \
   -e "s/^( *RSOLV_HOST_VERSION: ).*/\\1\"$version\"/" \
   -e "s/^( *RSOLV_HOST_SHA256_X64: ).*/\\1\"$x64\"/" \
   -e "s/^( *RSOLV_HOST_SHA256_ARM64: ).*/\\1\"$arm\"/" \
-  rsolv-scan.yml rsolv-work.yml rsolv-publish.yml
+  rsolv-scan.yml rsolv-work.yml rsolv-verify.yml rsolv-publish.yml
 "$here/check-workflow-pins.sh"
 echo "pinned $tag ($commit): x86_64 $x64, aarch64 $arm"

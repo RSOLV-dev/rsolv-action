@@ -126,12 +126,12 @@ fake_gh 2.102.0 yes 0 0 ahead
 fresh_copy
 check "pin-host: a verified release is pinned" pin 0.1.0
 wf=$t/r/.github/workflows
-check "pin-host: the x64 SHA-256 is written to all three role workflows" \
-  test "$(cat "$wf"/rsolv-{scan,work,publish}.yml | grep -c "RSOLV_HOST_SHA256_X64: \"$x64_sum\"")" -eq 3
-check "pin-host: the arm64 SHA-256 is written to all three role workflows" \
-  test "$(cat "$wf"/rsolv-{scan,work,publish}.yml | grep -c "RSOLV_HOST_SHA256_ARM64: \"$arm_sum\"")" -eq 3
+check "pin-host: the x64 SHA-256 is written to all four role workflows" \
+  test "$(cat "$wf"/rsolv-{scan,work,verify,publish}.yml | grep -c "RSOLV_HOST_SHA256_X64: \"$x64_sum\"")" -eq 4
+check "pin-host: the arm64 SHA-256 is written to all four role workflows" \
+  test "$(cat "$wf"/rsolv-{scan,work,verify,publish}.yml | grep -c "RSOLV_HOST_SHA256_ARM64: \"$arm_sum\"")" -eq 4
 check "pin-host: the version is written" \
-  test "$(cat "$wf"/rsolv-{scan,work,publish}.yml | grep -c 'RSOLV_HOST_VERSION: "0.1.0"')" -eq 3
+  test "$(cat "$wf"/rsolv-{scan,work,verify,publish}.yml | grep -c 'RSOLV_HOST_VERSION: "0.1.0"')" -eq 4
 check "pin-host: the pinned workflows pass the strict pin check" "$t/r/scripts/check-workflow-pins.sh"
 check "pin-host: the tag commit is resolved through refs/tags/" \
   grep -q 'gh api repos/RSOLV-dev/rsolv-host/commits/refs/tags/host-v0.1.0 --jq .sha' "$t/fake/log"
@@ -198,7 +198,7 @@ nth_args() { grep '^ARGS' "$rt/calls" | sed -n "${1}p"; }
 env_of() { awk -v n="$1" '/^ARGS/ {i++} i == n && /^ENV / {print $2}' "$rt/calls" | sort | tr '\n' ' '; }
 : >"$t/stub/curl.log"
 
-for spec in rsolv-scan.yml:scan rsolv-work.yml:work rsolv-publish.yml:publish; do
+for spec in rsolv-scan.yml:scan rsolv-work.yml:work rsolv-verify.yml:verify rsolv-publish.yml:publish; do
   wf=${spec%%:*} job=${spec#*:}
   run_step "$wf" "$job" "$zero" ""
   check "$job: an all-zero pin exits 2 before any download" test "$rc" -eq 2
@@ -227,7 +227,7 @@ tamper_step() {
   run_step "$wf" "$job" "$sum" ""
   sed -i '2d' "$t/stub/stub"
 }
-for spec in rsolv-scan.yml:scan rsolv-work.yml:work rsolv-publish.yml:publish; do
+for spec in rsolv-scan.yml:scan rsolv-work.yml:work rsolv-verify.yml:verify rsolv-publish.yml:publish; do
   wf=${spec%%:*} job=${spec#*:}
   tamper_step "$wf" "$job"
   check "$job: a binary changed after \`version\` is refused before the role command" \
@@ -260,6 +260,20 @@ check "work: exit 3 twice retries only once and exits 3" bash -c "[ $rc -eq 3 ] 
 for code in 1 2 4; do
   run_step rsolv-work.yml work "$stub_sum" "$code 0"
   check "work: exit $code is not retried" bash -c "[ $rc -eq $code ] && [ $(calls) -eq 2 ]"
+done
+
+run_step rsolv-verify.yml verify "$stub_sum" "0"
+check "verify: runs \`verify --issue\`" test "$(nth_args 2)" = "ARGS verify --issue 7"
+check "verify: gets no GITHUB_TOKEN" bash -c "! grep -q ' GITHUB_TOKEN ' <<<' $(env_of 2)'"
+check "verify: gets the run attempt, the repository and the OIDC request variables" \
+  bash -c "for v in GITHUB_RUN_ATTEMPT GITHUB_REPOSITORY GITHUB_WORKSPACE RUNNER_TEMP ACTIONS_ID_TOKEN_REQUEST_TOKEN; do grep -q \" \$v \" <<<' $(env_of 2)' || exit 1; done"
+check "verify: the host's outputs reach GITHUB_OUTPUT" grep -qx 'outcome=mitigated' "$rt/out"
+check "verify: no exact-runtime opt-in by default" bash -c "! grep -q RSOLV_EXACT_RUNTIME_VERSIONS <<<'$(env_of 2)'"
+run_step rsolv-verify.yml verify "$stub_sum" "0" EXACT_RUNTIME_VERSIONS=true
+check "verify: the exact-runtime opt-in reaches the host" grep -q 'RSOLV_EXACT_RUNTIME_VERSIONS' <<<"$(env_of 2)"
+for code in 1 2 3 4; do
+  run_step rsolv-verify.yml verify "$stub_sum" "$code 0"
+  check "verify: exit $code is not retried" bash -c "[ $rc -eq $code ] && [ $(calls) -eq 2 ]"
 done
 
 # --- check-first-parent.sh, against a local "main" with a merged branch ------------------------
