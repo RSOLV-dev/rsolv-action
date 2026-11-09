@@ -46,6 +46,10 @@ const HOST_STEP_ENV = new Set([
   'RSOLV_DECISION_KEYS'
 ]);
 
+// GitHub-hosted labels only, as a plain string: a self-hosted runner, a group or an expression
+// would choose the environment the checkout and the host run in.
+const RUNNERS = new Set(['ubuntu-latest']);
+
 const TOP_LEVEL = new Set(['name', 'on', 'permissions', 'jobs']);
 const ROLE_JOB = new Set(['runs-on', 'timeout-minutes', 'permissions', 'outputs', 'env', 'steps']);
 const HOST_STEP = new Set(['id', 'name', 'env', 'run', 'shell']);
@@ -96,6 +100,10 @@ function literalEnv(where: string, env: Yaml | undefined): Mapping | string {
 function roleJob(file: string, spec: RoleSpec, job: Yaml | undefined): string[] {
   if (!isMapping(job)) return [`${file}: job ${spec.job} must be a mapping`];
   const found = extraKeys(job, ROLE_JOB).map((key) => `${file}: job ${spec.job} may not set ${key}`);
+  const runsOn = job['runs-on'];
+  if (typeof runsOn !== 'string' || !RUNNERS.has(runsOn)) {
+    found.push(`${file}: job ${spec.job} runs-on must be one of ${[...RUNNERS].join(', ')}, as a plain string`);
+  }
 
   const env = literalEnv(`${file}: job ${spec.job}`, job.env);
   if (typeof env === 'string') {

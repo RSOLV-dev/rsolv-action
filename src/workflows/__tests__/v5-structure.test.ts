@@ -119,6 +119,21 @@ describe('structureViolations', () => {
     });
   });
 
+  describe('when a role job picks its own runner', () => {
+    test.each([
+      ['literal self-hosted', 'self-hosted'],
+      ['an array of self-hosted labels', '[self-hosted, linux]'],
+      ['an expression', '${{ inputs.runner }}'],
+      ['a group mapping', '{group: x}'],
+      ['an unlisted hosted label', 'windows-latest']
+    ])('%s is refused', (_name, runsOn) => {
+      const source = edited('rsolv-verify.yml', /^ {4}runs-on: ubuntu-latest$/m, `    runs-on: ${runsOn}`);
+      expect(structureViolations('rsolv-verify.yml', source)).toContainEqual(
+        expect.stringContaining('runs-on')
+      );
+    });
+  });
+
   describe('when the YAML hides structure', () => {
     test('an anchor is refused', () => {
       const source = edited('rsolv-verify.yml', /^ {4}env:$/m, '    env: &pins');
