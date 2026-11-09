@@ -16,10 +16,11 @@ for arg in "$@"; do
 done
 cd "$(dirname "$0")/../.github/workflows"
 files=(rsolv-scan.yml rsolv-work.yml rsolv-verify.yml rsolv-publish.yml)
-# ponytail: a line lint, not a YAML parser. It refuses the YAML that could define a pin without
-# naming it on a line of its own (anchors, aliases, merge keys, \x/\u/\U escapes, explicit keys,
-# an expression as a whole env), then requires each pin name to occur only as its one job-level
-# env definition or as a $read inside install-host. Parse the YAML if this ever needs those forms.
+# A cheap first pass, not a YAML parser: it refuses YAML that could define a pin without naming it
+# on a line of its own (anchors, aliases, merge keys, \x/\u/\U escapes, explicit keys, an
+# expression as a whole env), then requires each pin name to occur only as its one job-level env
+# definition or as a $read inside install-host. The structural whitelist that parses the YAML is
+# src/workflows/v5-structure.ts, run by its vitest in CI's test job.
 if grep -nE '(^|[[:space:],:[{-])[&*][A-Za-z0-9_]|<<:|\\[xuU]|^[[:space:]-]*\?([[:space:]]|$)|env:[[:space:]]*\$\{\{' "${files[@]}"; then
   echo "::error::a v5 workflow uses YAML indirection (anchor, alias, merge key, escape, explicit key or expression env)"
   exit 1

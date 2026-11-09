@@ -35,6 +35,11 @@ jobs:
         # so a stale lockfile is a real problem and should fail loudly.
         run: bun install --frozen-lockfile
 
+      # The v5 workflows' structural whitelist (src/workflows/v5-structure.ts), on its own so a
+      # failure fails this job by vitest's exit code.
+      - name: v5 workflow structure
+        run: bun x vitest run src/workflows
+
       - name: Run tests
         run: bun run test:ci
         env:
