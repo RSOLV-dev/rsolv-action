@@ -16,6 +16,38 @@ for arg in "$@"; do
 done
 cd "$(dirname "$0")/../.github/workflows"
 files=(rsolv-scan.yml rsolv-work.yml rsolv-verify.yml rsolv-publish.yml)
+# ponytail: a line lint, not a YAML parser. It refuses the YAML that could define a pin without
+# naming it on a line of its own (anchors, aliases, merge keys, \x/\u/\U escapes, explicit keys,
+# an expression as a whole env), then requires each pin name to occur only as its one job-level
+# env definition or as a $read inside install-host. Parse the YAML if this ever needs those forms.
+if grep -nE '(^|[[:space:],:[{-])[&*][A-Za-z0-9_]|<<:|\\[xuU]|^[[:space:]-]*\?([[:space:]]|$)|env:[[:space:]]*\$\{\{' "${files[@]}"; then
+  echo "::error::a v5 workflow uses YAML indirection (anchor, alias, merge key, escape, explicit key or expression env)"
+  exit 1
+fi
+for f in "${files[@]}"; do
+  awk '
+    /# BEGIN install-host/ { block = 1 }
+    /# END install-host/ { block = 0 }
+    /^    [^ ]/ { key = $0 }
+    {
+      rest = $0
+      while (match(rest, /RSOLV_HOST_(VERSION|SHA256_X64|SHA256_ARM64)/)) {
+        name = substr(rest, RSTART, RLENGTH)
+        before = substr(rest, RSTART - 1, 1)
+        after = substr(rest, RSTART + RLENGTH, 1)
+        rest = substr(rest, RSTART + RLENGTH)
+        if (block && before == "$" && after !~ /[A-Za-z0-9_]/) continue
+        if (!block && key == "    env:" && $0 ~ ("^      " name ": \"[^\"]*\"$")) { defs[name]++; continue }
+        print FILENAME ":" NR ": " name " outside its job-level definition or an install-host read"
+        bad = 1
+      }
+    }
+    END {
+      split("RSOLV_HOST_VERSION RSOLV_HOST_SHA256_X64 RSOLV_HOST_SHA256_ARM64", names, " ")
+      for (i in names) if (defs[names[i]] != 1) { print FILENAME ": " names[i] " is defined " defs[names[i]] + 0 " times, not once"; bad = 1 }
+      exit bad
+    }' "$f" || { echo "::error::$f defines or overrides a host pin outside its one job-level env line"; exit 1; }
+done
 if [ -z "$allow_unreleased" ] && grep -q '"0\{64\}"' "${files[@]}"; then
   echo "::error::a v5 workflow still pins the all-zero host SHA-256 (no host release is pinned)"
   exit 1

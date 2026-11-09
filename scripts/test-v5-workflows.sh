@@ -59,6 +59,37 @@ fresh_copy
 want=usage
 check "pins: an unknown flag is refused" fails_saying "$pins" --allow-unreleasd
 
+# Every pin name is its one job-level definition or a read inside install-host; no YAML
+# indirection (anchors, aliases, merge keys, escapes, explicit keys, expression env) can hide one.
+vw=$t/r/.github/workflows/rsolv-verify.yml
+other=$(printf 'a%.0s' {1..64})
+overridden() { # sed script applied to rsolv-verify.yml, then the check must fail naming $want
+  fresh_copy
+  sed -i "$1" "$vw"
+  fails_saying "$pins" --allow-unreleased
+}
+want="RSOLV_HOST_SHA256_X64"
+# shellcheck disable=SC2016 # the workflow expands it
+check "pins: a flow-style step env override is refused" overridden \
+  "/^          ref: /a\\      - env: {RSOLV_HOST_SHA256_X64: \"$other\"}\\n        run: echo \"RSOLV_HOST_SHA256_X64=\$RSOLV_HOST_SHA256_X64\" >>\"\$GITHUB_ENV\""
+check "pins: a block-style step env override is refused" overridden \
+  "/^          ISSUE: /a\\          RSOLV_HOST_SHA256_X64: \"$other\""
+check "pins: a second job-level definition is refused" overridden \
+  "/^      RSOLV_HOST_SHA256_X64: /a\\      'RSOLV_HOST_SHA256_X64': \"$other\""
+check "pins: an assignment inside install-host is refused" overridden \
+  "/^          set -euo pipefail/a\\          RSOLV_HOST_SHA256_X64=$other"
+want="YAML indirection"
+check "pins: an anchor is refused" overridden 's/^    env:$/    env: \&pins/'
+check "pins: a merge key is refused" overridden "/^          ISSUE: /a\\          <<: {}"
+check "pins: an alias is refused" overridden 's/^          ISSUE: .*/          ISSUE: *issue/'
+check "pins: a \\u escape is refused" overridden 's/^          ISSUE: .*/          "ISS\\u0055E": "7"/'
+check "pins: an explicit key is refused" overridden "/^          ISSUE: /a\\          ? ISSUE2\\n          : x"
+# shellcheck disable=SC2016 # a GitHub expression, not shell
+check "pins: an expression as a whole env is refused" overridden \
+  's/^        env:$/        env: ${{ fromJSON(inputs.env) }}/'
+fresh_copy
+check "pins: the unchanged workflows still pass" "$pins" --allow-unreleased
+
 # --- pin-host.sh, against a fake gh ---------------------------------------------------------
 mkdir -p "$t/bin" "$t/fake/assets"
 cat >"$t/bin/gh" <<'EOF'
