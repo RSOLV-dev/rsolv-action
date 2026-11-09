@@ -90,7 +90,24 @@ check "pins: an expression as a whole env is refused" overridden \
 fresh_copy
 check "pins: the unchanged workflows still pass" "$pins" --allow-unreleased
 
-# --- pin-host.sh, against a fake gh ---------------------------------------------------------
+# A local "main" with a merged branch, for check-first-parent.sh and the pin scripts.
+origin=$t/origin
+git init -q -b main "$origin"
+gitc() { git -C "$origin" -c user.name=t -c user.email=t@t -c commit.gpgsign=false "$@"; }
+gitc commit -q --allow-empty -m base
+base=$(gitc rev-parse HEAD)
+gitc checkout -q -b side
+gitc commit -q --allow-empty -m side
+side=$(gitc rev-parse HEAD)
+gitc checkout -q main
+gitc merge -q --no-ff -m merge side
+merge=$(gitc rev-parse HEAD)
+gitc checkout -q -b elsewhere
+gitc commit -q --allow-empty -m unmerged
+unmerged=$(gitc rev-parse HEAD)
+gitc checkout -q main
+
+# --- pin-host.sh, against a fake gh and the local main--------------------------------------------------------
 mkdir -p "$t/bin" "$t/fake/assets"
 cat >"$t/bin/gh" <<'EOF'
 #!/usr/bin/env bash
@@ -104,8 +121,7 @@ case "$1 $2" in
     cp "$f/assets/"* "$dir/" ;;
   "release verify") exit "$(cat "$f/release_rc")" ;;
   "attestation verify") rc=$(cat "$f/attest_rc"); [ "$rc" = 0 ] || echo "fake gh: verification failed" >&2; exit "$rc" ;;
-  "api "*/commits/*) cat "$f/commit" 2>/dev/null || echo 1111111111111111111111111111111111111111 ;;
-  "api "*/compare/*) cat "$f/compare" ;;
+  "api "*/commits/*) cat "$f/commit" ;;
   *) echo "fake gh: unexpected $*" >&2; exit 64 ;;
 esac
 EOF
@@ -116,15 +132,15 @@ printf 'arm binary\n' >"$t/fake/assets/rsolv-host-linux-aarch64"
 x64_sum=$(awk '$2 == "rsolv-host-linux-x86_64" {print $1}' "$t/fake/assets/SHA256SUMS")
 arm_sum=$(awk '$2 == "rsolv-host-linux-aarch64" {print $1}' "$t/fake/assets/SHA256SUMS")
 
-fake_gh() { # version released attest_rc release_rc compare
+fake_gh() { # version released attest_rc release_rc tag_commit
   echo "$1" >"$t/fake/version"
   if [ "$2" = yes ]; then touch "$t/fake/released"; else rm -f "$t/fake/released"; fi
   echo "$3" >"$t/fake/attest_rc"
   echo "$4" >"$t/fake/release_rc"
-  echo "$5" >"$t/fake/compare"
+  echo "$5" >"$t/fake/commit"
   : >"$t/fake/log"
 }
-pin() { PATH="$t/bin:$PATH" FAKE_GH="$t/fake" "$t/r/scripts/pin-host.sh" "$@" >"$t/pin.out" 2>&1; }
+pin() { PATH="$t/bin:$PATH" FAKE_GH="$t/fake" RSOLV_HOST_REMOTE="$origin" "$t/r/scripts/pin-host.sh" "$@" >"$t/pin.out" 2>&1; }
 refuses_unchanged() { # name, then pin-host args
   local name=$1 before
   shift
@@ -134,26 +150,29 @@ refuses_unchanged() { # name, then pin-host args
   check "pin-host: $name changes no workflow" test "$before" = "$(workflows_sum)"
 }
 export -f pin
-export t
+export t origin
 
-fake_gh 2.102.0 yes 0 0 ahead
+fake_gh 2.102.0 yes 0 0 "$merge"
 refuses_unchanged "a malformed version" 0.1
-fake_gh 2.101.9 yes 0 0 ahead
+fake_gh 2.101.9 yes 0 0 "$merge"
 refuses_unchanged "a gh older than 2.102.0" 0.1.0
-fake_gh 2.102.0 no 0 0 ahead
+fake_gh 2.102.0 no 0 0 "$merge"
 refuses_unchanged "a missing release" 0.0.0
-fake_gh 2.102.0 yes 1 0 ahead
+fake_gh 2.102.0 yes 1 0 "$merge"
 refuses_unchanged "a failed attestation (a PR dry run's, say)" 0.1.0
-fake_gh 2.102.0 yes 0 1 ahead
+fake_gh 2.102.0 yes 0 1 "$merge"
 refuses_unchanged "a failed release verification" 0.1.0
-fake_gh 2.102.0 yes 0 0 diverged
-refuses_unchanged "a tag commit off main" 0.1.0
-fake_gh 2.102.0 yes 0 0 ahead
+fake_gh 2.102.0 yes 0 0 "$side"
+refuses_unchanged "a tag on a commit from inside a merged branch" 0.1.0
+check "pin-host: the merged-branch tag is refused as not first-parent" grep -q "not a first-parent commit of $origin main" "$t/pin.out"
+fake_gh 2.102.0 yes 0 0 "$unmerged"
+refuses_unchanged "a tag on a commit off main" 0.1.0
+fake_gh 2.102.0 yes 0 0 "$merge"
 printf 'tampered\n' >>"$t/fake/assets/rsolv-host-linux-aarch64"
 refuses_unchanged "an asset that doesn't match SHA256SUMS" 0.1.0
 printf 'arm binary\n' >"$t/fake/assets/rsolv-host-linux-aarch64"
 
-fake_gh 2.102.0 yes 0 0 ahead
+fake_gh 2.102.0 yes 0 0 "$merge"
 fresh_copy
 check "pin-host: a verified release is pinned" pin 0.1.0
 wf=$t/r/.github/workflows
@@ -167,7 +186,7 @@ check "pin-host: the pinned workflows pass the strict pin check" "$t/r/scripts/c
 check "pin-host: the tag commit is resolved through refs/tags/" \
   grep -q 'gh api repos/RSOLV-dev/rsolv-host/commits/refs/tags/host-v0.1.0 --jq .sha' "$t/fake/log"
 want="--repo RSOLV-dev/rsolv-host --signer-workflow RSOLV-dev/rsolv-host/.github/workflows/host-release.yml"
-want="$want --source-ref refs/tags/host-v0.1.0 --source-digest 1111111111111111111111111111111111111111 --deny-self-hosted-runners"
+want="$want --source-ref refs/tags/host-v0.1.0 --source-digest $merge --deny-self-hosted-runners"
 check "pin-host: each binary is verified with the exact provenance flags" \
   test "$(grep -c -- "attestation verify .*/rsolv-host-linux-[a-z0-9_]* $want\$" "$t/fake/log")" -eq 2
 
@@ -308,21 +327,6 @@ for code in 1 2 3 4; do
 done
 
 # --- check-first-parent.sh, against a local "main" with a merged branch ------------------------
-origin=$t/origin
-git init -q -b main "$origin"
-gitc() { git -C "$origin" -c user.name=t -c user.email=t@t -c commit.gpgsign=false "$@"; }
-gitc commit -q --allow-empty -m base
-base=$(gitc rev-parse HEAD)
-gitc checkout -q -b side
-gitc commit -q --allow-empty -m side
-side=$(gitc rev-parse HEAD)
-gitc checkout -q main
-gitc merge -q --no-ff -m merge side
-merge=$(gitc rev-parse HEAD)
-gitc checkout -q -b elsewhere
-gitc commit -q --allow-empty -m unmerged
-unmerged=$(gitc rev-parse HEAD)
-gitc checkout -q main
 first_parent() { RSOLV_ACTION_REMOTE=$origin "$t/r/scripts/check-first-parent.sh" "$@"; }
 fresh_copy
 check "first-parent: main's merge commit passes" quietly first_parent "$merge"
@@ -384,23 +388,23 @@ sandbox_refused() { # name, expected message, then pin-sandbox args
   check "pin-sandbox: $name is refused" fails_saying pin_sandbox "$@"
   check "pin-sandbox: $name changes nothing" test "$before" = "$(sha256sum <"$t/host/rsolv_host/config/config.exs")"
 }
-fake_gh 2.102.0 yes 0 0 ahead
+fake_gh 2.102.0 yes 0 0 "$merge"
 echo "$merge" >"$t/fake/commit"
 sandbox_refused "a malformed version" usage 0.1 "$idx" "$t/host"
 sandbox_refused "a malformed digest" usage 0.1.0 "sha256:abc" "$t/host"
 sandbox_refused "the all-zero digest" all-zero 0.1.0 "sha256:$zero" "$t/host"
 sandbox_refused "a checkout without config.exs" "no single sandbox_image" 0.1.0 "$idx" "$t/nowhere"
-fake_gh 2.101.9 yes 0 0 ahead
+fake_gh 2.101.9 yes 0 0 "$merge"
 echo "$merge" >"$t/fake/commit"
 sandbox_refused "a gh older than 2.102.0" "older than 2.102.0" 0.1.0 "$idx" "$t/host"
-fake_gh 2.102.0 yes 0 0 ahead
+fake_gh 2.102.0 yes 0 0 "$merge"
 echo "$side" >"$t/fake/commit"
 sandbox_refused "a tag on a commit from inside a merged branch" "not a first-parent commit" 0.1.0 "$idx" "$t/host"
-fake_gh 2.102.0 yes 1 0 ahead
+fake_gh 2.102.0 yes 1 0 "$merge"
 echo "$merge" >"$t/fake/commit"
 sandbox_refused "a failed attestation" "verification failed" 0.1.0 "$idx" "$t/host"
 
-fake_gh 2.102.0 yes 0 0 ahead
+fake_gh 2.102.0 yes 0 0 "$merge"
 echo "$merge" >"$t/fake/commit"
 fresh_copy
 fake_host

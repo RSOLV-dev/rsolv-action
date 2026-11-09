@@ -3,7 +3,8 @@
 # passed through, not one from inside a merged branch, and not a fork-network ("impostor") commit,
 # which GitHub also serves under RSOLV-dev/rsolv-action. Run it before a workflow commit goes into
 # the platform's RSOLV_RUNNER_WORKFLOW_SHAS (docs/V5-RELEASE.md); pin-sandbox.sh runs it on the tag.
-#   check-first-parent.sh <40-hex commit SHA>   (RSOLV_ACTION_REMOTE overrides the remote, for tests)
+#   check-first-parent.sh <40-hex commit SHA>   (RSOLV_ACTION_REMOTE overrides the remote: for
+#   tests, and pin-host.sh's check of RSOLV-dev/rsolv-host)
 set -euo pipefail
 sha=${1:-}
 [[ $sha =~ ^[0-9a-f]{40}$ ]] || { echo "usage: check-first-parent.sh <40-hex commit SHA>" >&2; exit 2; }
