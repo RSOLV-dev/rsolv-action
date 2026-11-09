@@ -21,11 +21,12 @@ trap 'rm -rf "$dir"' EXIT
 gh release download "$tag" --repo "$repo" --dir "$dir"
 (cd "$dir" && sha256sum -c SHA256SUMS)
 
-# 3. The tag's commit, through refs/tags/ so a branch of the same name can't stand in; on main.
+# 3. The tag's commit, through refs/tags/ so a branch of the same name can't stand in, is a
+#    first-parent commit of main: not one from inside a merged branch (RSOLV_HOST_REMOTE
+#    overrides the remote, for tests).
 commit=$(gh api "repos/$repo/commits/refs/tags/$tag" --jq .sha)
 [[ $commit =~ ^[0-9a-f]{40}$ ]] || { echo "::error::could not resolve $tag to a commit" >&2; exit 1; }
-[[ $(gh api "repos/$repo/compare/$commit...main" --jq .status) =~ ^(ahead|identical)$ ]] \
-  || { echo "::error::$tag ($commit) is not on $repo main" >&2; exit 1; }
+RSOLV_ACTION_REMOTE=${RSOLV_HOST_REMOTE:-https://github.com/$repo.git} "$here/check-first-parent.sh" "$commit"
 
 # 4. Provenance. --source-ref and --source-digest reject a pull request's dry-run attestation,
 #    which the same signer workflow makes from refs/pull/<n>/merge.
@@ -49,6 +50,6 @@ sed -i -E \
   -e "s/^( *RSOLV_HOST_VERSION: ).*/\\1\"$version\"/" \
   -e "s/^( *RSOLV_HOST_SHA256_X64: ).*/\\1\"$x64\"/" \
   -e "s/^( *RSOLV_HOST_SHA256_ARM64: ).*/\\1\"$arm\"/" \
-  rsolv-scan.yml rsolv-work.yml rsolv-publish.yml
+  rsolv-scan.yml rsolv-work.yml rsolv-verify.yml rsolv-publish.yml
 "$here/check-workflow-pins.sh"
 echo "pinned $tag ($commit): x86_64 $x64, aarch64 $arm"

@@ -59,7 +59,55 @@ fresh_copy
 want=usage
 check "pins: an unknown flag is refused" fails_saying "$pins" --allow-unreleasd
 
-# --- pin-host.sh, against a fake gh ---------------------------------------------------------
+# Every pin name is its one job-level definition or a read inside install-host; no YAML
+# indirection (anchors, aliases, merge keys, escapes, explicit keys, expression env) can hide one.
+vw=$t/r/.github/workflows/rsolv-verify.yml
+other=$(printf 'a%.0s' {1..64})
+overridden() { # sed script applied to rsolv-verify.yml, then the check must fail naming $want
+  fresh_copy
+  sed -i "$1" "$vw"
+  fails_saying "$pins" --allow-unreleased
+}
+want="RSOLV_HOST_SHA256_X64"
+# shellcheck disable=SC2016 # the workflow expands it
+check "pins: a flow-style step env override is refused" overridden \
+  "/^          ref: /a\\      - env: {RSOLV_HOST_SHA256_X64: \"$other\"}\\n        run: echo \"RSOLV_HOST_SHA256_X64=\$RSOLV_HOST_SHA256_X64\" >>\"\$GITHUB_ENV\""
+check "pins: a block-style step env override is refused" overridden \
+  "/^          ISSUE: /a\\          RSOLV_HOST_SHA256_X64: \"$other\""
+check "pins: a second job-level definition is refused" overridden \
+  "/^      RSOLV_HOST_SHA256_X64: /a\\      'RSOLV_HOST_SHA256_X64': \"$other\""
+check "pins: an assignment inside install-host is refused" overridden \
+  "/^          set -euo pipefail/a\\          RSOLV_HOST_SHA256_X64=$other"
+want="YAML indirection"
+check "pins: an anchor is refused" overridden 's/^    env:$/    env: \&pins/'
+check "pins: a merge key is refused" overridden "/^          ISSUE: /a\\          <<: {}"
+check "pins: an alias is refused" overridden 's/^          ISSUE: .*/          ISSUE: *issue/'
+check "pins: a \\u escape is refused" overridden 's/^          ISSUE: .*/          "ISS\\u0055E": "7"/'
+check "pins: an explicit key is refused" overridden "/^          ISSUE: /a\\          ? ISSUE2\\n          : x"
+# shellcheck disable=SC2016 # a GitHub expression, not shell
+check "pins: an expression as a whole env is refused" overridden \
+  's/^        env:$/        env: ${{ fromJSON(inputs.env) }}/'
+fresh_copy
+check "pins: the unchanged workflows still pass" "$pins" --allow-unreleased
+
+# A local "main" with a merged branch, for check-first-parent.sh and the pin scripts.
+origin=$t/origin
+git init -q -b main "$origin"
+gitc() { git -C "$origin" -c user.name=t -c user.email=t@t -c commit.gpgsign=false "$@"; }
+gitc commit -q --allow-empty -m base
+base=$(gitc rev-parse HEAD)
+gitc checkout -q -b side
+gitc commit -q --allow-empty -m side
+side=$(gitc rev-parse HEAD)
+gitc checkout -q main
+gitc merge -q --no-ff -m merge side
+merge=$(gitc rev-parse HEAD)
+gitc checkout -q -b elsewhere
+gitc commit -q --allow-empty -m unmerged
+unmerged=$(gitc rev-parse HEAD)
+gitc checkout -q main
+
+# --- pin-host.sh, against a fake gh and the local main--------------------------------------------------------
 mkdir -p "$t/bin" "$t/fake/assets"
 cat >"$t/bin/gh" <<'EOF'
 #!/usr/bin/env bash
@@ -73,8 +121,7 @@ case "$1 $2" in
     cp "$f/assets/"* "$dir/" ;;
   "release verify") exit "$(cat "$f/release_rc")" ;;
   "attestation verify") rc=$(cat "$f/attest_rc"); [ "$rc" = 0 ] || echo "fake gh: verification failed" >&2; exit "$rc" ;;
-  "api "*/commits/*) cat "$f/commit" 2>/dev/null || echo 1111111111111111111111111111111111111111 ;;
-  "api "*/compare/*) cat "$f/compare" ;;
+  "api "*/commits/*) cat "$f/commit" ;;
   *) echo "fake gh: unexpected $*" >&2; exit 64 ;;
 esac
 EOF
@@ -85,15 +132,15 @@ printf 'arm binary\n' >"$t/fake/assets/rsolv-host-linux-aarch64"
 x64_sum=$(awk '$2 == "rsolv-host-linux-x86_64" {print $1}' "$t/fake/assets/SHA256SUMS")
 arm_sum=$(awk '$2 == "rsolv-host-linux-aarch64" {print $1}' "$t/fake/assets/SHA256SUMS")
 
-fake_gh() { # version released attest_rc release_rc compare
+fake_gh() { # version released attest_rc release_rc tag_commit
   echo "$1" >"$t/fake/version"
   if [ "$2" = yes ]; then touch "$t/fake/released"; else rm -f "$t/fake/released"; fi
   echo "$3" >"$t/fake/attest_rc"
   echo "$4" >"$t/fake/release_rc"
-  echo "$5" >"$t/fake/compare"
+  echo "$5" >"$t/fake/commit"
   : >"$t/fake/log"
 }
-pin() { PATH="$t/bin:$PATH" FAKE_GH="$t/fake" "$t/r/scripts/pin-host.sh" "$@" >"$t/pin.out" 2>&1; }
+pin() { PATH="$t/bin:$PATH" FAKE_GH="$t/fake" RSOLV_HOST_REMOTE="$origin" "$t/r/scripts/pin-host.sh" "$@" >"$t/pin.out" 2>&1; }
 refuses_unchanged() { # name, then pin-host args
   local name=$1 before
   shift
@@ -103,40 +150,43 @@ refuses_unchanged() { # name, then pin-host args
   check "pin-host: $name changes no workflow" test "$before" = "$(workflows_sum)"
 }
 export -f pin
-export t
+export t origin
 
-fake_gh 2.102.0 yes 0 0 ahead
+fake_gh 2.102.0 yes 0 0 "$merge"
 refuses_unchanged "a malformed version" 0.1
-fake_gh 2.101.9 yes 0 0 ahead
+fake_gh 2.101.9 yes 0 0 "$merge"
 refuses_unchanged "a gh older than 2.102.0" 0.1.0
-fake_gh 2.102.0 no 0 0 ahead
+fake_gh 2.102.0 no 0 0 "$merge"
 refuses_unchanged "a missing release" 0.0.0
-fake_gh 2.102.0 yes 1 0 ahead
+fake_gh 2.102.0 yes 1 0 "$merge"
 refuses_unchanged "a failed attestation (a PR dry run's, say)" 0.1.0
-fake_gh 2.102.0 yes 0 1 ahead
+fake_gh 2.102.0 yes 0 1 "$merge"
 refuses_unchanged "a failed release verification" 0.1.0
-fake_gh 2.102.0 yes 0 0 diverged
-refuses_unchanged "a tag commit off main" 0.1.0
-fake_gh 2.102.0 yes 0 0 ahead
+fake_gh 2.102.0 yes 0 0 "$side"
+refuses_unchanged "a tag on a commit from inside a merged branch" 0.1.0
+check "pin-host: the merged-branch tag is refused as not first-parent" grep -q "not a first-parent commit of $origin main" "$t/pin.out"
+fake_gh 2.102.0 yes 0 0 "$unmerged"
+refuses_unchanged "a tag on a commit off main" 0.1.0
+fake_gh 2.102.0 yes 0 0 "$merge"
 printf 'tampered\n' >>"$t/fake/assets/rsolv-host-linux-aarch64"
 refuses_unchanged "an asset that doesn't match SHA256SUMS" 0.1.0
 printf 'arm binary\n' >"$t/fake/assets/rsolv-host-linux-aarch64"
 
-fake_gh 2.102.0 yes 0 0 ahead
+fake_gh 2.102.0 yes 0 0 "$merge"
 fresh_copy
 check "pin-host: a verified release is pinned" pin 0.1.0
 wf=$t/r/.github/workflows
-check "pin-host: the x64 SHA-256 is written to all three role workflows" \
-  test "$(cat "$wf"/rsolv-{scan,work,publish}.yml | grep -c "RSOLV_HOST_SHA256_X64: \"$x64_sum\"")" -eq 3
-check "pin-host: the arm64 SHA-256 is written to all three role workflows" \
-  test "$(cat "$wf"/rsolv-{scan,work,publish}.yml | grep -c "RSOLV_HOST_SHA256_ARM64: \"$arm_sum\"")" -eq 3
+check "pin-host: the x64 SHA-256 is written to all four role workflows" \
+  test "$(cat "$wf"/rsolv-{scan,work,verify,publish}.yml | grep -c "RSOLV_HOST_SHA256_X64: \"$x64_sum\"")" -eq 4
+check "pin-host: the arm64 SHA-256 is written to all four role workflows" \
+  test "$(cat "$wf"/rsolv-{scan,work,verify,publish}.yml | grep -c "RSOLV_HOST_SHA256_ARM64: \"$arm_sum\"")" -eq 4
 check "pin-host: the version is written" \
-  test "$(cat "$wf"/rsolv-{scan,work,publish}.yml | grep -c 'RSOLV_HOST_VERSION: "0.1.0"')" -eq 3
+  test "$(cat "$wf"/rsolv-{scan,work,verify,publish}.yml | grep -c 'RSOLV_HOST_VERSION: "0.1.0"')" -eq 4
 check "pin-host: the pinned workflows pass the strict pin check" "$t/r/scripts/check-workflow-pins.sh"
 check "pin-host: the tag commit is resolved through refs/tags/" \
   grep -q 'gh api repos/RSOLV-dev/rsolv-host/commits/refs/tags/host-v0.1.0 --jq .sha' "$t/fake/log"
 want="--repo RSOLV-dev/rsolv-host --signer-workflow RSOLV-dev/rsolv-host/.github/workflows/host-release.yml"
-want="$want --source-ref refs/tags/host-v0.1.0 --source-digest 1111111111111111111111111111111111111111 --deny-self-hosted-runners"
+want="$want --source-ref refs/tags/host-v0.1.0 --source-digest $merge --deny-self-hosted-runners"
 check "pin-host: each binary is verified with the exact provenance flags" \
   test "$(grep -c -- "attestation verify .*/rsolv-host-linux-[a-z0-9_]* $want\$" "$t/fake/log")" -eq 2
 
@@ -167,7 +217,9 @@ fi
 rcs=$(cat "$RUNNER_TEMP/rcs" 2>/dev/null)
 rc=${rcs%% *}
 echo "${rcs#"$rc"}" | sed 's/^ //' >"$RUNNER_TEMP/rcs"
-[ "${rc:-0}" -eq 0 ] && echo "outcome=mitigated" >>"$GITHUB_OUTPUT"
+# Each role's own success outcome: work's mitigated, verify's verified.
+case $1 in verify) outcome=verified ;; *) outcome=mitigated ;; esac
+[ "${rc:-0}" -eq 0 ] && echo "outcome=$outcome" >>"$GITHUB_OUTPUT"
 exit "${rc:-0}"
 EOF
 stub_sum=$(sha256sum "$t/stub/stub" | cut -d' ' -f1)
@@ -198,7 +250,7 @@ nth_args() { grep '^ARGS' "$rt/calls" | sed -n "${1}p"; }
 env_of() { awk -v n="$1" '/^ARGS/ {i++} i == n && /^ENV / {print $2}' "$rt/calls" | sort | tr '\n' ' '; }
 : >"$t/stub/curl.log"
 
-for spec in rsolv-scan.yml:scan rsolv-work.yml:work rsolv-publish.yml:publish; do
+for spec in rsolv-scan.yml:scan rsolv-work.yml:work rsolv-verify.yml:verify rsolv-publish.yml:publish; do
   wf=${spec%%:*} job=${spec#*:}
   run_step "$wf" "$job" "$zero" ""
   check "$job: an all-zero pin exits 2 before any download" test "$rc" -eq 2
@@ -227,7 +279,7 @@ tamper_step() {
   run_step "$wf" "$job" "$sum" ""
   sed -i '2d' "$t/stub/stub"
 }
-for spec in rsolv-scan.yml:scan rsolv-work.yml:work rsolv-publish.yml:publish; do
+for spec in rsolv-scan.yml:scan rsolv-work.yml:work rsolv-verify.yml:verify rsolv-publish.yml:publish; do
   wf=${spec%%:*} job=${spec#*:}
   tamper_step "$wf" "$job"
   check "$job: a binary changed after \`version\` is refused before the role command" \
@@ -262,22 +314,27 @@ for code in 1 2 4; do
   check "work: exit $code is not retried" bash -c "[ $rc -eq $code ] && [ $(calls) -eq 2 ]"
 done
 
+run_step rsolv-verify.yml verify "$stub_sum" "0"
+check "verify: runs \`verify --issue\`" test "$(nth_args 2)" = "ARGS verify --issue 7"
+check "verify: gets no GITHUB_TOKEN" bash -c "! grep -q ' GITHUB_TOKEN ' <<<' $(env_of 2)'"
+check "verify: gets the run attempt, the repository and the OIDC request variables" \
+  bash -c "for v in GITHUB_RUN_ATTEMPT GITHUB_REPOSITORY GITHUB_WORKSPACE RUNNER_TEMP ACTIONS_ID_TOKEN_REQUEST_TOKEN; do grep -q \" \$v \" <<<' $(env_of 2)' || exit 1; done"
+valid_verify_outcome() { # exactly one outcome line, and it is one of verify's
+  [ "$(grep -c '^outcome=' "$1")" -eq 1 ] && grep -qxE 'outcome=(verified|verify_failed|rejected)' "$1"
+}
+check "verify: the host's outputs reach GITHUB_OUTPUT" grep -qx 'outcome=verified' "$rt/out"
+check "verify: the outcome is one of verify's" valid_verify_outcome "$rt/out"
+printf 'outcome=mitigated\n' >"$t/bad-outcome"
+check "verify: work's outcome is not one of verify's" bash -c "$(declare -f valid_verify_outcome); ! valid_verify_outcome '$t/bad-outcome'"
+check "verify: no exact-runtime opt-in by default" bash -c "! grep -q RSOLV_EXACT_RUNTIME_VERSIONS <<<'$(env_of 2)'"
+run_step rsolv-verify.yml verify "$stub_sum" "0" EXACT_RUNTIME_VERSIONS=true
+check "verify: the exact-runtime opt-in reaches the host" grep -q 'RSOLV_EXACT_RUNTIME_VERSIONS' <<<"$(env_of 2)"
+for code in 1 2 3 4; do
+  run_step rsolv-verify.yml verify "$stub_sum" "$code 0"
+  check "verify: exit $code is not retried" bash -c "[ $rc -eq $code ] && [ $(calls) -eq 2 ]"
+done
+
 # --- check-first-parent.sh, against a local "main" with a merged branch ------------------------
-origin=$t/origin
-git init -q -b main "$origin"
-gitc() { git -C "$origin" -c user.name=t -c user.email=t@t -c commit.gpgsign=false "$@"; }
-gitc commit -q --allow-empty -m base
-base=$(gitc rev-parse HEAD)
-gitc checkout -q -b side
-gitc commit -q --allow-empty -m side
-side=$(gitc rev-parse HEAD)
-gitc checkout -q main
-gitc merge -q --no-ff -m merge side
-merge=$(gitc rev-parse HEAD)
-gitc checkout -q -b elsewhere
-gitc commit -q --allow-empty -m unmerged
-unmerged=$(gitc rev-parse HEAD)
-gitc checkout -q main
 first_parent() { RSOLV_ACTION_REMOTE=$origin "$t/r/scripts/check-first-parent.sh" "$@"; }
 fresh_copy
 check "first-parent: main's merge commit passes" quietly first_parent "$merge"
@@ -339,23 +396,23 @@ sandbox_refused() { # name, expected message, then pin-sandbox args
   check "pin-sandbox: $name is refused" fails_saying pin_sandbox "$@"
   check "pin-sandbox: $name changes nothing" test "$before" = "$(sha256sum <"$t/host/rsolv_host/config/config.exs")"
 }
-fake_gh 2.102.0 yes 0 0 ahead
+fake_gh 2.102.0 yes 0 0 "$merge"
 echo "$merge" >"$t/fake/commit"
 sandbox_refused "a malformed version" usage 0.1 "$idx" "$t/host"
 sandbox_refused "a malformed digest" usage 0.1.0 "sha256:abc" "$t/host"
 sandbox_refused "the all-zero digest" all-zero 0.1.0 "sha256:$zero" "$t/host"
 sandbox_refused "a checkout without config.exs" "no single sandbox_image" 0.1.0 "$idx" "$t/nowhere"
-fake_gh 2.101.9 yes 0 0 ahead
+fake_gh 2.101.9 yes 0 0 "$merge"
 echo "$merge" >"$t/fake/commit"
 sandbox_refused "a gh older than 2.102.0" "older than 2.102.0" 0.1.0 "$idx" "$t/host"
-fake_gh 2.102.0 yes 0 0 ahead
+fake_gh 2.102.0 yes 0 0 "$merge"
 echo "$side" >"$t/fake/commit"
 sandbox_refused "a tag on a commit from inside a merged branch" "not a first-parent commit" 0.1.0 "$idx" "$t/host"
-fake_gh 2.102.0 yes 1 0 ahead
+fake_gh 2.102.0 yes 1 0 "$merge"
 echo "$merge" >"$t/fake/commit"
 sandbox_refused "a failed attestation" "verification failed" 0.1.0 "$idx" "$t/host"
 
-fake_gh 2.102.0 yes 0 0 ahead
+fake_gh 2.102.0 yes 0 0 "$merge"
 echo "$merge" >"$t/fake/commit"
 fresh_copy
 fake_host

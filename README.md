@@ -217,8 +217,9 @@ Copy [`.github/workflows/TEMPLATE-rsolv-v5.yml`](.github/workflows/TEMPLATE-rsol
 | Workflow | Role | Token permissions |
 |---|---|---|
 | `rsolv-scan.yml` | Scan, register the run, file issues | `contents: read`, `issues: write`, `id-token: write` |
-| `rsolv-issue.yml` | Per issue: calls `rsolv-work.yml` | what its jobs need |
+| `rsolv-issue.yml` | Per issue: calls `rsolv-work.yml`, then `rsolv-verify.yml` when a fix was uploaded | what its jobs need |
 | `rsolv-work.yml` | VALIDATE and MITIGATE one issue in the sandbox | `contents: read`, `id-token: write` |
+| `rsolv-verify.yml` | RED, then GREEN, for the uploaded fix on a fresh checkout | `contents: read`, `id-token: write` |
 | `rsolv-publish.yml` | The test and fix as a pull request (not wired yet) | `contents: write`, `pull-requests: write`, `issues: write`, `id-token: write` |
 
 Each job downloads the [`rsolv-host`](https://github.com/RSOLV-dev/rsolv-host) client, checks it against a SHA-256 pinned in the workflow before every run, and starts it with a minimal environment. The pins are written only after the release's build provenance verifies (`scripts/pin-host.sh`).
@@ -233,6 +234,11 @@ The workflows talk to `https://api.rsolv.ai.` by default; `https://api.rsolv.dev
 - `false_positive`: VALIDATE found the finding isn't a vulnerability;
 - `not_validated`: VALIDATE couldn't confirm it;
 - `validated`: VALIDATE confirmed it, then the job failed before MITIGATE reported.
+
+`rsolv-verify.yml` sets `outcome`:
+- `verified`: RED failed and GREEN passed as the platform requires;
+- `verify_failed`: the platform judged RED and GREEN and refused the fix;
+- `rejected`: the platform's policy rejected the fix, or it has no runnable RED test.
 
 Every model outcome exits 0. Failures exit with one of:
 

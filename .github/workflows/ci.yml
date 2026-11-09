@@ -35,6 +35,11 @@ jobs:
         # so a stale lockfile is a real problem and should fail loudly.
         run: bun install --frozen-lockfile
 
+      # The v5 workflows' structural whitelist (src/workflows/v5-structure.ts), on its own so a
+      # failure fails this job by vitest's exit code.
+      - name: v5 workflow structure
+        run: bun x vitest run src/workflows
+
       - name: Run tests
         run: bun run test:ci
         env:
@@ -113,8 +118,9 @@ jobs:
           docker run --rm -v "$PWD:/repo" -w /repo
           ghcr.io/zizmorcore/zizmor@sha256:3014cc8f68f663935f69b3c3e0e41f5ce102b268d97db13db0f62208747f860d
           --offline --min-severity low
-          .github/workflows/rsolv-scan.yml .github/workflows/rsolv-work.yml .github/workflows/rsolv-issue.yml
-          .github/workflows/rsolv-publish.yml .github/workflows/sandbox-image.yml .github/workflows/TEMPLATE-rsolv-v5.yml
+          .github/workflows/rsolv-scan.yml .github/workflows/rsolv-work.yml .github/workflows/rsolv-verify.yml
+          .github/workflows/rsolv-issue.yml .github/workflows/rsolv-publish.yml .github/workflows/sandbox-image.yml
+          .github/workflows/TEMPLATE-rsolv-v5.yml
       - name: shellcheck (workflow scripts)
         run: >-
           shellcheck scripts/pin-host.sh scripts/pin-sandbox.sh scripts/check-first-parent.sh
