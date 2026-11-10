@@ -51,5 +51,7 @@ sed -i -E \
   -e "s/^( *RSOLV_HOST_SHA256_X64: ).*/\\1\"$x64\"/" \
   -e "s/^( *RSOLV_HOST_SHA256_ARM64: ).*/\\1\"$arm\"/" \
   rsolv-scan.yml rsolv-work.yml rsolv-verify.yml rsolv-publish.yml
-"$here/check-workflow-pins.sh"
+# The decision key sets are pinned on their own schedule (the key ceremony); CI refuses their
+# placeholders once real keys land.
+"$here/check-workflow-pins.sh" --allow-placeholder-keys
 echo "pinned $tag ($commit): x86_64 $x64, aarch64 $arm"

@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
-import { ROLE_WORKFLOWS, structureViolations } from '../v5-structure';
+import { placeholderKeySet, ROLE_WORKFLOWS, structureViolations } from '../v5-structure';
 
 const workflowDir = resolve(__dirname, '../../../.github/workflows');
 const read = (file: string): string => readFileSync(resolve(workflowDir, file), 'utf8');
@@ -212,7 +212,7 @@ describe('structureViolations', () => {
     test('an extra with: key is refused', () => {
       const source = `${read('rsolv-issue.yml')}      extra: x\n`;
       expect(structureViolations('rsolv-issue.yml', source)).toContainEqual(
-        expect.stringContaining('verify')
+        expect.stringContaining('publish')
       );
     });
 
@@ -227,6 +227,100 @@ describe('structureViolations', () => {
       const source = `${read('rsolv-issue.yml')}  sneaky:\n    runs-on: ubuntu-latest\n    steps:\n      - run: "true"\n`;
       expect(structureViolations('rsolv-issue.yml', source)).toContainEqual(
         expect.stringContaining('jobs must be')
+      );
+    });
+  });
+
+  describe('when publish is gated on anything but a verified verify job', () => {
+    test.each([
+      ['the work job\'s has_patch', 'needs.work.outputs.has_patch == \'true\''],
+      ['the work job\'s outcome', 'needs.work.outputs.outcome == \'verified\''],
+      ['always()', 'always()'],
+      ['a verify outcome other than verified', 'needs.verify.outputs.outcome != \'rejected\'']
+    ])('%s is refused', (_name, condition) => {
+      const source = edited('rsolv-issue.yml', 'if: needs.verify.outputs.outcome == \'verified\'', `if: ${condition}`);
+      expect(structureViolations('rsolv-issue.yml', source)).toContainEqual(expect.stringContaining('publish'));
+    });
+
+    test('a publish job that does not need verify is refused', () => {
+      const source = edited('rsolv-issue.yml', /^( {4})needs: verify$/m, '$1needs: work');
+      expect(structureViolations('rsolv-issue.yml', source)).toContainEqual(expect.stringContaining('publish'));
+    });
+
+    test('a publish job with an extra permission is refused', () => {
+      const source = edited('rsolv-issue.yml', /( {2}publish:[\s\S]*? {6}issues: write\n)/, '$1      actions: write\n');
+      expect(structureViolations('rsolv-issue.yml', source)).toContainEqual(expect.stringContaining('publish'));
+    });
+  });
+
+  describe('when the publish job pins its decision keys', () => {
+    // Arbitrary 32-byte values: the whitelist checks the encoding, not the curve.
+    const key = (fill: number): string => Buffer.alloc(32, fill).toString('base64url');
+    const realSet = (env: string): string =>
+      JSON.stringify([
+        { kid: `${env}-2026-12-01-a`, public_key: key(1), not_after: '2027-03-01' },
+        { kid: `${env}-2026-12-01-b`, public_key: key(2), not_after: '2027-03-01' }
+      ]);
+    const pinned = (name: string, value: string, source = read('rsolv-publish.yml')): string => {
+      const result = source.replace(new RegExp(`^( {10}${name}: ).*$`, 'm'), (_line, key: string) => `${key}${value}`);
+      if (result === source) throw new Error(`fixture edit did not apply: ${name}`);
+      return result;
+    };
+
+    test('real production and staging sets are accepted', () => {
+      const source = pinned('RSOLV_DECISION_KEYS_STAGING', `'${realSet('staging')}'`, pinned('RSOLV_DECISION_KEYS_PRODUCTION', `'${realSet('prod')}'`));
+      expect(structureViolations('rsolv-publish.yml', source)).toEqual([]);
+    });
+
+    test('a mid-rotation set of four keys is accepted', () => {
+      const four = JSON.stringify([
+        ...JSON.parse(realSet('prod')),
+        { kid: 'prod-2026-10-01-a', public_key: key(3), not_after: '2027-01-01' },
+        { kid: 'prod-2026-10-01-b', public_key: key(4), not_after: '2027-01-01' }
+      ]);
+      expect(structureViolations('rsolv-publish.yml', pinned('RSOLV_DECISION_KEYS_PRODUCTION', `'${four}'`))).toEqual([]);
+    });
+
+    const prod = realSet('prod');
+    test.each([
+      ['an expression', '${{ inputs.decision_keys }}'],
+      ['an empty set', '\'[]\''],
+      ['a single key', `'${JSON.stringify([JSON.parse(prod)[0]])}'`],
+      ['an all-zero key under a real kid', `'${prod.replace(key(1), 'A'.repeat(43))}'`],
+      ['a placeholder kid with a real key', `'${prod.replace('prod-2026-12-01-a', 'unpinned-production-a')}'`],
+      ['a non-canonical public key', `'${prod.replace(key(1), `${key(1).slice(0, 42)}B`)}'`],
+      ['a duplicate kid', `'${prod.replace('prod-2026-12-01-b', 'prod-2026-12-01-a')}'`],
+      ['a duplicate public key', `'${prod.replace(key(2), key(1))}'`],
+      ['an extra field', `'${prod.replace('"not_after":"2027-03-01"}', '"not_after":"2027-03-01","use":"x"}')}'`],
+      ['JSON with spaces', `'${prod.replace(/,"/g, ', "')}'`],
+      ['a malformed not_after', `'${prod.replace('2027-03-01', '2027-3-1')}'`],
+      ['a not_after past the end of its month', `'${prod.replace('2027-03-01', '2027-02-30')}'`],
+      ['a not_after in month 13', `'${prod.replace('2027-03-01', '2027-13-01')}'`],
+      ['the staging placeholder', `'${placeholderKeySet('staging')}'`]
+    ])('%s for production is refused', (_name, value) => {
+      expect(structureViolations('rsolv-publish.yml', pinned('RSOLV_DECISION_KEYS_PRODUCTION', value))).toContainEqual(
+        expect.stringContaining('RSOLV_DECISION_KEYS_PRODUCTION')
+      );
+    });
+
+    test('a missing staging set is refused', () => {
+      const source = edited('rsolv-publish.yml', /^ {10}RSOLV_DECISION_KEYS_STAGING: .*\n/m, '');
+      expect(structureViolations('rsolv-publish.yml', source)).toContainEqual(
+        expect.stringContaining('RSOLV_DECISION_KEYS_STAGING')
+      );
+    });
+
+    test('the single RSOLV_DECISION_KEYS variable is refused', () => {
+      const source = edited('rsolv-publish.yml', /^( {10}ISSUE: .*)$/m, '$1\n          RSOLV_DECISION_KEYS: \'[]\'');
+      expect(structureViolations('rsolv-publish.yml', source)).toContainEqual(
+        expect.stringContaining('may not set RSOLV_DECISION_KEYS')
+      );
+    });
+
+    test('a decision key set in another role is refused', () => {
+      const source = edited('rsolv-verify.yml', /^( {10}ISSUE: .*)$/m, `$1\n          RSOLV_DECISION_KEYS_PRODUCTION: '${prod}'`);
+      expect(structureViolations('rsolv-verify.yml', source)).toContainEqual(
+        expect.stringContaining('RSOLV_DECISION_KEYS_PRODUCTION')
       );
     });
   });

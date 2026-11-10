@@ -27,34 +27,34 @@ workflows_sum() { cat "$t/r/.github/workflows/"*.yml | sha256sum; }
 # --- check-workflow-pins.sh ---------------------------------------------------------------
 fresh_copy
 pins=$t/r/scripts/check-workflow-pins.sh
-check "pins: the unreleased placeholder passes with --allow-unreleased" "$pins" --allow-unreleased
+check "pins: the unreleased placeholder passes with --allow-unreleased" "$pins" --allow-unreleased --allow-placeholder-keys
 quietly() { "$@" >"$t/o" 2>&1; }
 fails_saying() { ! "$@" >"$t/o" 2>&1 && grep -q -- "$want" "$t/o"; }
 want=all-zero
 check "pins: the unreleased placeholder fails without the flag" fails_saying "$pins"
 sed -i -E "0,/RSOLV_HOST_SHA256_X64: /s/(RSOLV_HOST_SHA256_X64: )\"0/\1\"1/" "$t/r/.github/workflows/rsolv-work.yml"
 want=RSOLV_HOST_SHA256_X64
-check "pins: one changed hash fails, naming the key" fails_saying "$pins" --allow-unreleased
+check "pins: one changed hash fails, naming the key" fails_saying "$pins" --allow-unreleased --allow-placeholder-keys
 fresh_copy
 sed -i 's/--retry 3/--retry 4/' "$t/r/.github/workflows/rsolv-publish.yml"
 want="install-host"
-check "pins: a changed install-host block fails" fails_saying "$pins" --allow-unreleased
+check "pins: a changed install-host block fails" fails_saying "$pins" --allow-unreleased --allow-placeholder-keys
 
 # The template's calls: full commit SHAs, one commit; --strict also refuses the placeholder.
 tpl=$t/r/.github/workflows/TEMPLATE-rsolv-v5.yml
 real=$(printf 'a%.0s' {1..40})
 fresh_copy
 want="all-zero commit placeholder"
-check "pins: --strict refuses the template's all-zero placeholder" fails_saying "$pins" --allow-unreleased --strict
+check "pins: --strict refuses the template's all-zero placeholder" fails_saying "$pins" --allow-unreleased --allow-placeholder-keys --strict
 sed -i "s/@0\{40\}/@$real/" "$tpl"
-check "pins: --strict accepts a template pinned to a real commit" "$pins" --allow-unreleased --strict
+check "pins: --strict accepts a template pinned to a real commit" "$pins" --allow-unreleased --allow-placeholder-keys --strict
 sed -i "0,/@$real/s/@$real/@$(printf 'b%.0s' {1..40})/" "$tpl"
 want="different commits"
-check "pins: template calls at two commits fail" fails_saying "$pins" --allow-unreleased
+check "pins: template calls at two commits fail" fails_saying "$pins" --allow-unreleased --allow-placeholder-keys
 fresh_copy
 sed -i "0,/@0\{40\}/s/@0\{40\}/@v5/" "$tpl"
 want="full commit SHA"
-check "pins: a template call by tag fails, even without --strict" fails_saying "$pins" --allow-unreleased
+check "pins: a template call by tag fails, even without --strict" fails_saying "$pins" --allow-unreleased --allow-placeholder-keys
 fresh_copy
 want=usage
 check "pins: an unknown flag is refused" fails_saying "$pins" --allow-unreleasd
@@ -66,7 +66,7 @@ other=$(printf 'a%.0s' {1..64})
 overridden() { # sed script applied to rsolv-verify.yml, then the check must fail naming $want
   fresh_copy
   sed -i "$1" "$vw"
-  fails_saying "$pins" --allow-unreleased
+  fails_saying "$pins" --allow-unreleased --allow-placeholder-keys
 }
 want="RSOLV_HOST_SHA256_X64"
 # shellcheck disable=SC2016 # the workflow expands it
@@ -88,7 +88,56 @@ check "pins: an explicit key is refused" overridden "/^          ISSUE: /a\\    
 check "pins: an expression as a whole env is refused" overridden \
   's/^        env:$/        env: ${{ fromJSON(inputs.env) }}/'
 fresh_copy
-check "pins: the unchanged workflows still pass" "$pins" --allow-unreleased
+check "pins: the unchanged workflows still pass" "$pins" --allow-unreleased --allow-placeholder-keys
+
+# The decision key sets in rsolv-publish.yml (RFC-150 §6.4): the placeholders, or real sets of at
+# least two unexpired keys within the 90-day cap, one line each, nowhere else.
+pw=$t/r/.github/workflows/rsolv-publish.yml
+key() { head -c 32 /dev/zero | tr '\0' "$1" | base64 -w0 | tr '+/' '-_' | tr -d '='; }
+day() { date -u -d "$1" +%F; }
+key_set() { # kid-prefix not_after key-fill-a key-fill-b
+  printf '[{"kid":"%s-a","public_key":"%s","not_after":"%s"},{"kid":"%s-b","public_key":"%s","not_after":"%s"}]' \
+    "$1" "$(key "$3")" "$2" "$1" "$(key "$4")" "$2"
+}
+prod_keys=$(key_set prod-x "$(day '+60 days')" 1 2)
+staging_keys=$(key_set staging-x "$(day '+60 days')" 3 4)
+set_keys() { sed -i "s|^\(          RSOLV_DECISION_KEYS_$1: \).*|\1$2|" "$pw"; }
+released() { # a fresh copy with a real host pin and the given production set (staging real too)
+  fresh_copy
+  sed -i "s/\"$zero\"/\"$other\"/" "$t/r/.github/workflows/"rsolv-*.yml
+  set_keys STAGING "'$staging_keys'"
+  set_keys PRODUCTION "$1"
+}
+fresh_copy
+sed -i "s/\"$zero\"/\"$other\"/" "$t/r/.github/workflows/"rsolv-*.yml
+want="placeholder key set"
+check "keys: the placeholder sets fail without --allow-placeholder-keys" fails_saying "$pins"
+check "keys: the placeholder sets pass with --allow-placeholder-keys" "$pins" --allow-placeholder-keys
+released "'$prod_keys'"
+check "keys: real production and staging sets pass with no flag" "$pins"
+want=RSOLV_DECISION_KEYS_PRODUCTION
+refused_keys() { released "$1"; fails_saying "$pins" --allow-placeholder-keys; }
+check "keys: a single key is refused" refused_keys "'${prod_keys%%\},*}}]'"
+check "keys: an expired key is refused" refused_keys "'$(key_set prod-x "$(day yesterday)" 1 2)'"
+check "keys: a not_after past the 90-day cap is refused" refused_keys "'$(key_set prod-x "$(day '+91 days')" 1 2)'"
+check "keys: an all-zero key under a real kid is refused" refused_keys "'$(key_set prod-x "$(day '+60 days')" '\0' 2)'"
+check "keys: a placeholder kid with a real key is refused" refused_keys "'${prod_keys/prod-x-a/unpinned-production-a}'"
+check "keys: a duplicate kid is refused" refused_keys "'${prod_keys/prod-x-b/prod-x-a}'"
+check "keys: JSON with spaces is refused" refused_keys "'${prod_keys//,\"/, \"}'"
+# shellcheck disable=SC2016 # a GitHub expression, not shell
+check "keys: an expression is refused" refused_keys '${{ inputs.decision_keys }}'
+check "keys: the staging placeholder is refused" \
+  refused_keys "'$(sed -n "s/^          RSOLV_DECISION_KEYS_STAGING: '\(.*\)'\$/\1/p" "$repo/.github/workflows/rsolv-publish.yml")'"
+want="share a key"
+check "keys: a key shared by production and staging is refused" refused_keys "'$(key_set prod-x "$(day '+60 days')" 3 2)'"
+want=RSOLV_DECISION_KEYS_STAGING
+released "'$prod_keys'"
+sed -i '/^          RSOLV_DECISION_KEYS_STAGING: /d' "$pw"
+check "keys: a missing staging set is refused" fails_saying "$pins" --allow-placeholder-keys
+want=RSOLV_DECISION_KEYS_PRODUCTION
+released "'$prod_keys'"
+sed -i "/^          ISSUE: /a\\          RSOLV_DECISION_KEYS_PRODUCTION: '$prod_keys'" "$vw"
+check "keys: a key set in another workflow is refused" fails_saying "$pins" --allow-placeholder-keys
 
 # A local "main" with a merged branch, for check-first-parent.sh and the pin scripts.
 origin=$t/origin
@@ -182,7 +231,8 @@ check "pin-host: the arm64 SHA-256 is written to all four role workflows" \
   test "$(cat "$wf"/rsolv-{scan,work,verify,publish}.yml | grep -c "RSOLV_HOST_SHA256_ARM64: \"$arm_sum\"")" -eq 4
 check "pin-host: the version is written" \
   test "$(cat "$wf"/rsolv-{scan,work,verify,publish}.yml | grep -c 'RSOLV_HOST_VERSION: "0.1.0"')" -eq 4
-check "pin-host: the pinned workflows pass the strict pin check" "$t/r/scripts/check-workflow-pins.sh"
+check "pin-host: the pinned workflows pass the pin check without --allow-unreleased" \
+  "$t/r/scripts/check-workflow-pins.sh" --allow-placeholder-keys
 check "pin-host: the tag commit is resolved through refs/tags/" \
   grep -q 'gh api repos/RSOLV-dev/rsolv-host/commits/refs/tags/host-v0.1.0 --jq .sha' "$t/fake/log"
 want="--repo RSOLV-dev/rsolv-host --signer-workflow RSOLV-dev/rsolv-host/.github/workflows/host-release.yml"
@@ -214,6 +264,7 @@ if [ "$1" = version ]; then
   echo "INSTALL $RSOLV_HOST_INSTALL_DIR" >>"$log"
   exit 0
 fi
+echo "KEYS ${RSOLV_DECISION_KEYS-}" >>"$log"
 rcs=$(cat "$RUNNER_TEMP/rcs" 2>/dev/null)
 rc=${rcs%% *}
 echo "${rcs#"$rc"}" | sed 's/^ //' >"$RUNNER_TEMP/rcs"
@@ -242,7 +293,8 @@ run_step() { # workflow job sha rcs [VAR=value ...]; sets $rc, $rt (RUNNER_TEMP)
     GITHUB_GRAPHQL_URL=https://api.github.com/graphql ACTIONS_ID_TOKEN_REQUEST_URL=https://oidc \
     ACTIONS_ID_TOKEN_REQUEST_TOKEN=oidc-secret GITHUB_TOKEN=ghs_secret RSOLV_API_URL=https://api.rsolv.ai. \
     ERL_AFLAGS="-eval halt()" LD_PRELOAD=/evil.so RSOLV_HOST_INSTALL_DIR="$t/caller-tree" \
-    ISSUE=7 MAX_ISSUES=5 RSOLV_DECISION_KEYS="[]" EXACT_RUNTIME_VERSIONS=false "$@" \
+    ISSUE=7 MAX_ISSUES=5 RSOLV_DECISION_KEYS_PRODUCTION="$prod_keys" RSOLV_DECISION_KEYS_STAGING="$staging_keys" \
+    EXACT_RUNTIME_VERSIONS=false "$@" \
     bash -e "$rt/step.sh" >"$rt/stdout" 2>&1 || rc=$?
 }
 calls() { grep -c '^ARGS' "$rt/calls" 2>/dev/null || echo 0; }
@@ -295,6 +347,20 @@ run_step rsolv-publish.yml publish "$stub_sum" ""
 check "publish: runs \`publish --issue\`" test "$(nth_args 2)" = "ARGS publish --issue 7"
 check "publish: gets GITHUB_TOKEN and RSOLV_DECISION_KEYS" \
   bash -c "grep -q ' GITHUB_TOKEN ' <<<' $(env_of 2)' && grep -q ' RSOLV_DECISION_KEYS ' <<<' $(env_of 2)'"
+check "publish: the production URL gets the production keys" grep -qxF "KEYS $prod_keys" "$rt/calls"
+check "publish: no key set variable reaches the host" bash -c "! grep -q '^ENV RSOLV_DECISION_KEYS_' '$rt/calls'"
+run_step rsolv-publish.yml publish "$stub_sum" "" RSOLV_API_URL=https://api.rsolv.dev.
+check "publish: the rsolv.dev URL gets the production keys" grep -qxF "KEYS $prod_keys" "$rt/calls"
+run_step rsolv-publish.yml publish "$stub_sum" "" RSOLV_API_URL=https://api.rsolv-staging.com.
+check "publish: the staging URL gets the staging keys" grep -qxF "KEYS $staging_keys" "$rt/calls"
+run_step rsolv-publish.yml publish "$stub_sum" "" RSOLV_API_URL=https://api.example.com.
+check "publish: any other URL exits 2 before the role runs" bash -c "[ $rc -eq 2 ] && [ $(calls) -eq 1 ]"
+placeholder=$(sed -n "s/^          RSOLV_DECISION_KEYS_PRODUCTION: '\(.*\)'\$/\1/p" "$repo/.github/workflows/rsolv-publish.yml")
+run_step rsolv-publish.yml publish "$stub_sum" "" RSOLV_DECISION_KEYS_PRODUCTION="$placeholder"
+check "publish: the placeholder key set exits 2 before the role runs" bash -c "[ $rc -eq 2 ] && [ $(calls) -eq 1 ]"
+check "publish: the placeholder refusal says why" grep -q 'pins no decision keys' "$rt/stdout"
+run_step rsolv-publish.yml publish "$stub_sum" "" RSOLV_DECISION_KEYS_PRODUCTION="$(key_set prod-x "$(day '+60 days')" '\0' 2)"
+check "publish: a set with an all-zero key exits 2 before the role runs" bash -c "[ $rc -eq 2 ] && [ $(calls) -eq 1 ]"
 
 run_step rsolv-work.yml work "$stub_sum" "0"
 check "work: runs \`work --issue\`" test "$(nth_args 2)" = "ARGS work --issue 7"

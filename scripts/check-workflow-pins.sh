@@ -1,17 +1,19 @@
 #!/usr/bin/env bash
 # Fails unless every v5 role workflow pins the same host version and SHA-256s, their
-# install-host blocks are byte-identical, and the customer template calls them by one full
-# commit SHA.
-#   check-workflow-pins.sh [--allow-unreleased] [--strict]
-#     --allow-unreleased  accepts the all-zero host hashes used before the first host release
-#     --strict            refuses the template's all-zero commit placeholder (from the first v5 release)
+# install-host blocks are byte-identical, rsolv-publish.yml pins a decision key set per
+# environment, and the customer template calls them by one full commit SHA.
+#   check-workflow-pins.sh [--allow-unreleased] [--allow-placeholder-keys] [--strict]
+#     --allow-unreleased        accepts the all-zero host hashes used before the first host release
+#     --allow-placeholder-keys  accepts the placeholder decision key sets used before the key ceremony
+#     --strict                  refuses the template's all-zero commit placeholder (from the first v5 release)
 set -euo pipefail
-allow_unreleased='' strict=''
+allow_unreleased='' allow_placeholder_keys='' strict=''
 for arg in "$@"; do
   case $arg in
     --allow-unreleased) allow_unreleased=1 ;;
+    --allow-placeholder-keys) allow_placeholder_keys=1 ;;
     --strict) strict=1 ;;
-    *) echo "usage: check-workflow-pins.sh [--allow-unreleased] [--strict]" >&2; exit 2 ;;
+    *) echo "usage: check-workflow-pins.sh [--allow-unreleased] [--allow-placeholder-keys] [--strict]" >&2; exit 2 ;;
   esac
 done
 cd "$(dirname "$0")/../.github/workflows"
@@ -66,6 +68,45 @@ n=$(for f in "${files[@]}"; do
   sed -n '/# BEGIN install-host/,/# END install-host/p' "$f" | sha256sum
 done | sort -u | wc -l)
 [ "$n" -eq 1 ] || { echo "::error::the install-host blocks differ across the v5 workflows (or one is missing)"; exit 1; }
+
+# RFC-150 §6.4: rsolv-publish.yml pins one decision key set per environment, each on one line
+# of its host step env and read nowhere but as $NAME: a primary and a standby (mid-rotation, the
+# previous pair too), unexpired and within the 90-day cap, with no key shared between
+# environments. Before the key ceremony each is its placeholder (src/workflows/v5-structure.ts's
+# placeholderKeySet: all-zero keys under unpinned- kids), which the job refuses at runtime and
+# this check accepts only with --allow-placeholder-keys.
+zero_key=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+today=$(date -u +%F) cap=$(date -u -d '+90 days' +%F)
+public_keys=()
+for env in production staging; do
+  name=RSOLV_DECISION_KEYS_${env^^}
+  if grep -nE "$name" "${files[@]}" | grep -vE "^rsolv-publish\.yml:[0-9]+:          $name: '[^']*'\$" \
+    | sed -E "s/\\\$$name([^A-Za-z0-9_]|\$)/\1/g" | grep -E "$name"; then
+    echo "::error::$name may appear only as its one line in rsolv-publish.yml's host step env, or as \$$name"
+    exit 1
+  fi
+  json=$(sed -n "s/^          $name: '\(.*\)'\$/\1/p" rsolv-publish.yml)
+  [ "$(grep -c . <<<"$json")" -eq 1 ] || { echo "::error::rsolv-publish.yml must define $name exactly once"; exit 1; }
+  placeholder=$(printf '[{"kid":"unpinned-%s-a","public_key":"%s","not_after":"1970-01-01"},{"kid":"unpinned-%s-b","public_key":"%s","not_after":"1970-01-01"}]' \
+    "$env" "$zero_key" "$env" "$zero_key")
+  if [ "$json" = "$placeholder" ]; then
+    [ -n "$allow_placeholder_keys" ] || { echo "::error::$name still pins the placeholder key set (no decision keys are pinned)"; exit 1; }
+    continue
+  fi
+  jq -e --arg json "$json" --arg today "$today" --arg cap "$cap" --arg zero "$zero_key" '
+    type == "array" and length >= 2 and tojson == $json
+    and all(.[]; type == "object" and keys_unsorted == ["kid", "public_key", "not_after"]
+      and (.kid | type == "string" and test("^[a-z0-9][a-z0-9-]{0,63}$") and (startswith("unpinned-") | not))
+      and (.public_key | type == "string" and test("^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$") and . != $zero)
+      and (.not_after | type == "string" and test("^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
+        and ((. + "T00:00:00Z" | fromdateiso8601 | todate[:10]) == .) and . > $today and . <= $cap))
+    and ([.[].kid] | unique | length) == length and ([.[].public_key] | unique | length) == length' \
+    <<<"$json" >/dev/null 2>&1 ||
+    { echo "::error::$name in rsolv-publish.yml must pin at least two unexpired decision keys, each with a not_after on or before $cap"; exit 1; }
+  mapfile -t -O "${#public_keys[@]}" public_keys < <(jq -r '.[].public_key' <<<"$json")
+done
+[ "$(printf '%s\n' "${public_keys[@]}" | sort | uniq -d | grep -c .)" -eq 0 ] ||
+  { echo "::error::RSOLV_DECISION_KEYS_PRODUCTION and RSOLV_DECISION_KEYS_STAGING share a key"; exit 1; }
 
 template=TEMPLATE-rsolv-v5.yml
 uses=$(grep -E '^ *uses:' "$template" | sed -E 's/^ *uses: *//; s/ *#.*//')
