@@ -246,8 +246,10 @@ Every model outcome exits 0. Failures exit with one of:
 |---|---|
 | 1 | Bug in the host client |
 | 2 | Configuration, or something you can fix (the annotation says what) |
-| 3 | Transient platform or network failure; `rsolv-work.yml` retries once |
+| 3 | Transient platform or network failure (see below) |
 | 4 | Sandbox or runner infrastructure |
+
+Only `rsolv-work.yml` retries an exit 3, once, with `--resume`, inside the same job. `rsolv-verify.yml` and `rsolv-scan.yml` fail the job on exit 3: a verify retry would repeat RED and GREEN, which doesn't fit its 120-minute job. Re-running the failed workflow is safe, because the platform's endpoints are write-once per run attempt and replay an identical request.
 
 ## Support
 
