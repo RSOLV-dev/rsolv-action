@@ -42,3 +42,17 @@ jobs:
       issue: ${{ inputs.issue }}
       api_url: ${{ inputs.api_url }}
       exact_runtime_versions: ${{ inputs.exact_runtime_versions }}
+  publish:
+    needs: verify
+    # Only a verify job that proved RED→GREEN. The host still writes nothing unless the platform
+    # signed a decision for this issue, so this condition only decides whether the job starts.
+    if: needs.verify.outputs.outcome == 'verified'
+    uses: ./.github/workflows/rsolv-publish.yml # zizmor: ignore[self-repository]
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+    with:
+      issue: ${{ inputs.issue }}
+      api_url: ${{ inputs.api_url }}

@@ -33,8 +33,12 @@ jobs:
       max-parallel: 4
       fail-fast: false
     uses: RSOLV-dev/rsolv-action/.github/workflows/rsolv-issue.yml@0000000000000000000000000000000000000000 # v5.0.0
+    # The most any of its jobs may ask for. work and verify ask for contents: read and id-token
+    # only; publish adds the writes, and runs only after verify proves the fix.
     permissions:
-      contents: read
+      contents: write
+      pull-requests: write
+      issues: write
       id-token: write
     with:
       issue: ${{ matrix.issue }}

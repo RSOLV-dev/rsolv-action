@@ -1,7 +1,9 @@
 # RSOLV v5 publish role (RFC-150 §2.2): write the failing test and the fix as two commits, one
 # branch and one pull request, exactly as a decision signed by the platform allows.
-# RSOLV_DECISION_KEYS is empty until RFC-150 step 5 fills it with the accepted Ed25519 key set
-# and their not_after dates (RFC §6.4); with an empty set the host refuses before any write.
+# The decision keys below are the platform's public Ed25519 keys (RFC-150 §6.4): a primary and a
+# standby per environment, each trusted until its not_after. A decision signed by any other key
+# is refused before any write. Until the key ceremony, each set is the placeholder (all-zero keys
+# under unpinned- kids, expired in 1970), and the job refuses to run.
 # No checkout, cache or artifact: this job reads nothing from the repository (RFC §2.2).
 # The host binary is pinned by SHA-256 below (scripts/pin-host.sh writes the pins after its
 # provenance verifies); all-zero means no release is pinned yet, and the job refuses to run.
@@ -37,7 +39,8 @@ jobs:
           RSOLV_API_URL: ${{ inputs.api_url }}
           ISSUE: ${{ inputs.issue }}
           GITHUB_TOKEN: ${{ github.token }}
-          RSOLV_DECISION_KEYS: "[]"
+          RSOLV_DECISION_KEYS_PRODUCTION: '[{"kid":"unpinned-production-a","public_key":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA","not_after":"1970-01-01"},{"kid":"unpinned-production-b","public_key":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA","not_after":"1970-01-01"}]'
+          RSOLV_DECISION_KEYS_STAGING: '[{"kid":"unpinned-staging-a","public_key":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA","not_after":"1970-01-01"},{"kid":"unpinned-staging-b","public_key":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA","not_after":"1970-01-01"}]'
         run: |
           # BEGIN install-host
           # Download the pinned host, check its SHA-256, and run `version` once, alone, so it
@@ -79,5 +82,15 @@ jobs:
           }
           run_host version
           # END install-host
-          role_env=("${job_env[@]}" GITHUB_TOKEN="$GITHUB_TOKEN" RSOLV_DECISION_KEYS="$RSOLV_DECISION_KEYS")
+          # Each environment has its own keys; the host accepts only these three URLs.
+          case "$RSOLV_API_URL" in
+            https://api.rsolv.ai. | https://api.rsolv.dev.) keys=$RSOLV_DECISION_KEYS_PRODUCTION ;;
+            https://api.rsolv-staging.com.) keys=$RSOLV_DECISION_KEYS_STAGING ;;
+            *) echo "::error title=RSOLV configuration::api_url must be https://api.rsolv.ai., https://api.rsolv.dev. or https://api.rsolv-staging.com."; exit 2 ;;
+          esac
+          if [[ $keys == *'"kid":"unpinned-'* || $keys == *'"public_key":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"'* ]]; then
+            echo "::error title=RSOLV configuration::This rsolv-action commit pins no decision keys yet (placeholder key set). Use a released v5 tag of RSOLV-dev/rsolv-action."
+            exit 2
+          fi
+          role_env=("${job_env[@]}" GITHUB_TOKEN="$GITHUB_TOKEN" RSOLV_DECISION_KEYS="$keys")
           run_host publish --issue "$ISSUE"
