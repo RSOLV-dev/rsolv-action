@@ -69,8 +69,7 @@ describe.skip('Vendor Filtering Across All Phases', () => {
         aiProvider: {
           apiKey: 'test-key',
           model: 'test-model',
-          maxTokens: 1000,
-          useVendedCredentials: false
+          maxTokens: 1000
         },
         issueNumber: 123,
         mode: 'validate',
@@ -162,8 +161,7 @@ describe.skip('Vendor Filtering Across All Phases', () => {
         aiProvider: {
           apiKey: 'test-key',
           model: 'test-model',
-          maxTokens: 1000,
-          useVendedCredentials: false
+          maxTokens: 1000
         },
         issueNumber: 123,
         mode: 'mitigate',

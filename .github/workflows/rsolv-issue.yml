@@ -1,0 +1,58 @@
+# RSOLV v5 per-issue process (RFC-150 §2.2): one matrix entry of the customer template.
+# It has no steps of its own and never exchanges a token; each nested job carries its own
+# job_workflow_ref at this commit. Each later job runs only if the one before it produced
+# something to act on.
+name: rsolv-issue
+on:
+  workflow_call:
+    inputs:
+      issue:
+        type: number
+        required: true
+      api_url:
+        type: string
+        required: false
+        default: "https://api.rsolv.ai."
+      exact_runtime_versions:
+        description: "Fail instead of substituting a runtime version (for example Python's newest attested patch)"
+        type: boolean
+        required: false
+        default: false
+permissions: {}
+jobs:
+  work:
+    # ./ is the form RFC-150 step-1 spike Q1 verified: the nested job runs at this commit.
+    uses: ./.github/workflows/rsolv-work.yml # zizmor: ignore[self-repository]
+    permissions:
+      contents: read
+      id-token: write
+    with:
+      issue: ${{ inputs.issue }}
+      api_url: ${{ inputs.api_url }}
+      exact_runtime_versions: ${{ inputs.exact_runtime_versions }}
+  verify:
+    needs: work
+    # "mitigated" means a patch was uploaded and verification belongs to this job (not inline).
+    if: needs.work.outputs.outcome == 'mitigated'
+    uses: ./.github/workflows/rsolv-verify.yml # zizmor: ignore[self-repository]
+    permissions:
+      contents: read
+      id-token: write
+    with:
+      issue: ${{ inputs.issue }}
+      api_url: ${{ inputs.api_url }}
+      exact_runtime_versions: ${{ inputs.exact_runtime_versions }}
+  publish:
+    needs: verify
+    # Only a verify job that proved RED→GREEN. The host still writes nothing unless the platform
+    # signed a decision for this issue, so this condition only decides whether the job starts.
+    if: needs.verify.outputs.outcome == 'verified'
+    uses: ./.github/workflows/rsolv-publish.yml # zizmor: ignore[self-repository]
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+    with:
+      issue: ${{ inputs.issue }}
+      api_url: ${{ inputs.api_url }}

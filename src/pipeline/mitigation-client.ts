@@ -10,18 +10,10 @@
  */
 
 import { PipelineClient } from './client.js';
-import {
-  executeReadFile,
-  executeWriteFile,
-  executeEditFile,
-  executeGlob,
-  executeGrep,
-  executeBash,
-} from './tool-executors.js';
+import { TOOL_DISPATCH } from './tool-executors.js';
 import type {
   PipelineClientConfig,
   ToolRequest,
-  ToolName,
   SSEEvent,
 } from './types.js';
 
@@ -70,24 +62,6 @@ export interface MitigationResult {
   risk_assessment?: string;
   error?: string;
 }
-
-type ToolExecutor = (input: Record<string, unknown>) => Promise<Record<string, unknown>>;
-
-async function wrapExecutor<T>(fn: () => Promise<T>): Promise<Record<string, unknown>> {
-  const result = await fn();
-  return result as unknown as Record<string, unknown>;
-}
-
-const TOOL_DISPATCH: Record<ToolName, ToolExecutor> = {
-  read_file: (input) => wrapExecutor(() => executeReadFile(input as { path: string })),
-  write_file: (input) => wrapExecutor(() => executeWriteFile(input as { path: string; content: string })),
-  edit_file: (input) =>
-    wrapExecutor(() => executeEditFile(input as { path: string; old_string: string; new_string: string })),
-  glob: (input) => wrapExecutor(() => executeGlob(input as { pattern: string; path?: string })),
-  grep: (input) => wrapExecutor(() => executeGrep(input as { pattern: string; path?: string })),
-  bash: (input) =>
-    wrapExecutor(() => executeBash(input as { command: string; timeout_ms?: number; cwd?: string })),
-};
 
 export class MitigationClient {
   private client: PipelineClient;
