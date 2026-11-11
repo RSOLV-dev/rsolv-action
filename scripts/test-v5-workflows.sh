@@ -483,12 +483,21 @@ echo "$merge" >"$t/fake/commit"
 fresh_copy
 fake_host
 check "pin-sandbox: a verified release is pinned" quietly pin_sandbox 0.1.0 "$idx" "$t/host"
-check "pin-sandbox: the digest is written to sandbox_image, and nothing else changes" \
-  test "$(grep -c . "$t/host/rsolv_host/config/config.exs") $(grep -cxF "  sandbox_image: \"ghcr.io/rsolv-dev/rsolv-sandbox@$idx\"" "$t/host/rsolv_host/config/config.exs")" = "4 1"
+# mix format's own shape: a real digest makes the one-line form too long, so the key and the
+# string sit on two lines.
+pinned_as() { # config, digest: the key alone on its line, the string on the next, nothing else changed
+  [ "$(grep -c . "$1")" = 5 ] && [ "$(grep -cx '  sandbox_image:' "$1")" = 1 ] &&
+    [ "$(grep -A1 -x '  sandbox_image:' "$1" | tail -n 1)" = "    \"ghcr.io/rsolv-dev/rsolv-sandbox@$2\"" ]
+}
+check "pin-sandbox: the digest is written to sandbox_image as mix format lays it out, and nothing else changes" \
+  pinned_as "$t/host/rsolv_host/config/config.exs" "$idx"
+idx2="sha256:$(printf 'f%.0s' {1..64})"
+check "pin-sandbox: a pinned checkout can be re-pinned" quietly pin_sandbox 0.1.0 "$idx2" "$t/host"
+check "pin-sandbox: a re-pin replaces the digest in place" pinned_as "$t/host/rsolv_host/config/config.exs" "$idx2"
 check "pin-sandbox: the tag commit is resolved through refs/tags/" \
-  grep -q 'gh api repos/RSOLV-dev/RSOLV-action/commits/refs/tags/sandbox-v0.1.0 --jq .sha' "$t/fake/log"
-want="gh attestation verify oci://ghcr.io/rsolv-dev/rsolv-sandbox@$idx --repo RSOLV-dev/RSOLV-action"
-want="$want --signer-workflow RSOLV-dev/RSOLV-action/.github/workflows/sandbox-image.yml"
+  grep -q 'gh api repos/RSOLV-dev/rsolv-action/commits/refs/tags/sandbox-v0.1.0 --jq .sha' "$t/fake/log"
+want="gh attestation verify oci://ghcr.io/rsolv-dev/rsolv-sandbox@$idx --repo RSOLV-dev/rsolv-action"
+want="$want --signer-workflow RSOLV-dev/rsolv-action/.github/workflows/sandbox-image.yml"
 want="$want --source-ref refs/tags/sandbox-v0.1.0 --source-digest $merge --deny-self-hosted-runners"
 check "pin-sandbox: the index digest is verified with the exact provenance flags" grep -qxF -- "$want" "$t/fake/log"
 

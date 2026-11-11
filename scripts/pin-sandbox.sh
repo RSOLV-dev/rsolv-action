@@ -10,10 +10,10 @@ version=${1:-} digest=${2:-} host=${3:-}
   { echo "usage: pin-sandbox.sh <version> <sha256:digest> <rsolv-host checkout>" >&2; exit 2; }
 [[ $digest =~ ^sha256:0{64}$ ]] && { echo "::error::the all-zero digest is the placeholder, not a release" >&2; exit 2; }
 config=$host/rsolv_host/config/config.exs
-[ "$(grep -cE '^ *sandbox_image: ' "$config" 2>/dev/null)" = 1 ] ||
+[ "$(grep -cE '^ *sandbox_image:( |$)' "$config" 2>/dev/null)" = 1 ] ||
   { echo "::error::$config has no single sandbox_image line" >&2; exit 2; }
 here=$(cd "$(dirname "$0")" && pwd)
-repo=RSOLV-dev/RSOLV-action
+repo=RSOLV-dev/rsolv-action
 image=ghcr.io/rsolv-dev/rsolv-sandbox
 tag="sandbox-v$version"
 gh() { env -u GITHUB_TOKEN gh "$@"; }
@@ -37,6 +37,10 @@ gh attestation verify "oci://$image@$digest" --repo "$repo" \
   --deny-self-hosted-runners
 
 # 4. Only now write the pin.
-sed -i -E "s|^( *sandbox_image: ).*$|\\1\"$image@$digest\"|" "$config"
-grep -qxF "  sandbox_image: \"$image@$digest\"" "$config" || { echo "::error::the pin wasn't written" >&2; exit 1; }
+#    As mix format lays it out: a real digest makes the one-line form too long, so the key ends
+#    its line and the string follows. Either form (the one-line placeholder, an earlier pin) is
+#    replaced.
+sed -z -i -E "s#\n( *)sandbox_image:[[:space:]]*[^\n]*\n#\n\1sandbox_image:\n\1  \"$image@$digest\"\n#" "$config"
+[ "$(grep -A1 -x '  sandbox_image:' "$config" | tail -n 1)" = "    \"$image@$digest\"" ] ||
+  { echo "::error::the pin wasn't written" >&2; exit 1; }
 echo "pinned $tag ($commit): $image@$digest"
