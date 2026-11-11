@@ -6,7 +6,6 @@
 
 import { describe, it, expect, beforeAll, skipIf, vi } from 'vitest';
 import { RsolvApiClient } from '../../src/external/api-client.js';
-import { RSOLVCredentialManager } from '../../src/credentials/manager.js';
 
 // Skip these tests unless explicitly running integration tests
 const isIntegrationTest = process.env.INTEGRATION_TEST === 'true';
@@ -14,12 +13,10 @@ const hasApiKey = !!process.env.RSOLV_API_KEY;
 
 describe.skipIf(!isIntegrationTest || !hasApiKey)('API Endpoint Integration Tests', () => {
   let apiClient: RsolvApiClient;
-  let credentialManager: RSOLVCredentialManager;
   const apiKey = process.env.RSOLV_API_KEY!;
   
   beforeAll(() => {
     apiClient = new RsolvApiClient(apiKey);
-    credentialManager = new RSOLVCredentialManager();
   });
   
   describe('Pattern API', () => {
@@ -68,25 +65,6 @@ describe.skipIf(!isIntegrationTest || !hasApiKey)('API Endpoint Integration Test
       expect(result).toBeDefined();
       expect(result.validated).toBeDefined();
       expect(Array.isArray(result.validated)).toBe(true);
-    });
-  });
-  
-  describe('Credential Exchange API', () => {
-    it('should exchange credentials with real API', async () => {
-      await credentialManager.initialize(apiKey);
-      
-      // Should have received credentials
-      const anthropicKey = credentialManager.getCredential('anthropic');
-      expect(anthropicKey).toBeDefined();
-      expect(typeof anthropicKey).toBe('string');
-    });
-    
-    it('should handle credential refresh', async () => {
-      await credentialManager.initialize(apiKey);
-      
-      // Force a refresh
-      const refreshed = await credentialManager.refreshCredentials();
-      expect(refreshed).toBeDefined();
     });
   });
   

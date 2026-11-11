@@ -1,0 +1,44 @@
+# RSOLV v5: no secrets to configure. Identity comes from GitHub Actions OIDC.
+# Prerequisites: verify your GitHub owner in the RSOLV dashboard (Sources → Verify with GitHub),
+# and allow "GitHub Actions to create and approve pull requests" (Settings → Actions → General).
+# Pull requests opened by RSOLV trigger your pull_request workflows, but they wait for a
+# maintainer's approval ("action_required") before they run.
+# The reusable workflows talk to https://api.rsolv.ai. by default.
+name: RSOLV
+on:
+  workflow_dispatch:
+    inputs:
+      max_issues:
+        type: number
+        default: 3
+        description: "Issues to process (1-50)"
+  schedule:
+    - cron: "17 6 * * 1"
+permissions: {}
+jobs:
+  scan:
+    uses: RSOLV-dev/rsolv-action/.github/workflows/rsolv-scan.yml@0000000000000000000000000000000000000000 # v5.0.0
+    permissions:
+      contents: read
+      issues: write
+      id-token: write
+    with:
+      max_issues: ${{ inputs.max_issues || 3 }}
+  issue:
+    needs: scan
+    if: needs.scan.outputs.issues != '[]'
+    strategy:
+      matrix:
+        issue: ${{ fromJSON(needs.scan.outputs.issues) }}
+      max-parallel: 4
+      fail-fast: false
+    uses: RSOLV-dev/rsolv-action/.github/workflows/rsolv-issue.yml@0000000000000000000000000000000000000000 # v5.0.0
+    # The most any of its jobs may ask for. work and verify ask for contents: read and id-token
+    # only; publish adds the writes, and runs only after verify proves the fix.
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+    with:
+      issue: ${{ matrix.issue }}
