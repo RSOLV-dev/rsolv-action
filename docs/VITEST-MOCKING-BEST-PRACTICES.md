@@ -82,14 +82,12 @@ For dynamic imports, mock the modules they import rather than the import itself:
 
 ```typescript
 // ✅ GOOD - Mock the module that will be dynamically imported
-vi.mock('../credentials/singleton.js', () => ({
-  CredentialManagerSingleton: {
-    getInstance: vi.fn(async () => mockCredentialManager)
-  }
+vi.mock('../ai/analyzer.js', () => ({
+  analyzeIssue: vi.fn(async () => mockAnalysis)
 }));
 
 // In code:
-const { CredentialManagerSingleton } = await import('../credentials/singleton.js');
+const { analyzeIssue } = await import('../ai/analyzer.js');
 
 // ❌ BAD - Trying to mock the dynamic import directly
 vi.mock('import', () => ({

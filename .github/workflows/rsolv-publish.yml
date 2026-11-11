@@ -1,0 +1,96 @@
+# RSOLV v5 publish role (RFC-150 §2.2): write the failing test and the fix as two commits, one
+# branch and one pull request, exactly as a decision signed by the platform allows.
+# The decision keys below are the platform's public Ed25519 keys (RFC-150 §6.4): a primary and a
+# standby per environment, each trusted until its not_after. A decision signed by any other key
+# is refused before any write. Until the key ceremony, each set is the placeholder (all-zero keys
+# under unpinned- kids, expired in 1970), and the job refuses to run.
+# No checkout, cache or artifact: this job reads nothing from the repository (RFC §2.2).
+# The host binary is pinned by SHA-256 below (scripts/pin-host.sh writes the pins after its
+# provenance verifies); all-zero means no release is pinned yet, and the job refuses to run.
+name: rsolv-publish
+on:
+  workflow_call:
+    inputs:
+      issue:
+        type: number
+        required: true
+      api_url:
+        type: string
+        required: false
+        default: "https://api.rsolv.ai."
+permissions: {}
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+    env:
+      RSOLV_HOST_VERSION: "0.1.0"
+      RSOLV_HOST_SHA256_X64: "0000000000000000000000000000000000000000000000000000000000000000"
+      RSOLV_HOST_SHA256_ARM64: "0000000000000000000000000000000000000000000000000000000000000000"
+    steps:
+      - id: host
+        name: Publish the signed fix
+        env:
+          RSOLV_API_URL: ${{ inputs.api_url }}
+          ISSUE: ${{ inputs.issue }}
+          GITHUB_TOKEN: ${{ github.token }}
+          RSOLV_DECISION_KEYS_PRODUCTION: '[{"kid":"unpinned-production-a","public_key":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA","not_after":"1970-01-01"},{"kid":"unpinned-production-b","public_key":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA","not_after":"1970-01-01"}]'
+          RSOLV_DECISION_KEYS_STAGING: '[{"kid":"unpinned-staging-a","public_key":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA","not_after":"1970-01-01"},{"kid":"unpinned-staging-b","public_key":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA","not_after":"1970-01-01"}]'
+        run: |
+          # BEGIN install-host
+          # Download the pinned host, check its SHA-256, and run `version` once, alone, so it
+          # extracts into a fresh directory of our own before anything else runs (concurrent
+          # first runs race). run_host re-checks the SHA-256 before every run and starts the
+          # host with env -i and an explicit allowlist: no ERL_*, no LD_*, nothing inherited.
+          set -euo pipefail
+          [ "$RUNNER_OS" = Linux ] || { echo "::error title=RSOLV configuration::RSOLV runs on Linux runners only"; exit 2; }
+          case "$RUNNER_ARCH" in
+            X64) asset=rsolv-host-linux-x86_64 sum=$RSOLV_HOST_SHA256_X64 ;;
+            ARM64) asset=rsolv-host-linux-aarch64 sum=$RSOLV_HOST_SHA256_ARM64 ;;
+            *) echo "::error title=RSOLV configuration::unsupported runner architecture $RUNNER_ARCH"; exit 2 ;;
+          esac
+          if [[ $sum =~ ^0{64}$ ]]; then
+            echo "::error title=RSOLV configuration::This rsolv-action commit pins no rsolv-host release yet (all-zero SHA-256). Use a released v5 tag of RSOLV-dev/rsolv-action."
+            exit 2
+          fi
+          [[ $RSOLV_HOST_VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ && $sum =~ ^[0-9a-f]{64}$ ]] \
+            || { echo "::error title=RSOLV host client bug::malformed host pin"; exit 1; }
+          bin="$(mktemp -d "$RUNNER_TEMP/rsolv-host-bin.XXXXXXXXXX")/rsolv-host"
+          install=$(mktemp -d "$RUNNER_TEMP/rsolv-host.XXXXXXXXXX")
+          home=$(mktemp -d "$RUNNER_TEMP/rsolv-host-home.XXXXXXXXXX")
+          curl -fsSL --proto '=https' --proto-redir '=https' --retry 3 -o "$bin" \
+            "https://github.com/RSOLV-dev/rsolv-host/releases/download/host-v$RSOLV_HOST_VERSION/$asset"
+          chmod 0500 "$bin"
+          host_env=(PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin HOME="$home" LANG=C.UTF-8
+            RUNNER_TEMP="$RUNNER_TEMP" RSOLV_HOST_INSTALL_DIR="$install")
+          job_env=(RSOLV_API_URL="$RSOLV_API_URL" GITHUB_OUTPUT="$GITHUB_OUTPUT" GITHUB_STEP_SUMMARY="$GITHUB_STEP_SUMMARY"
+            GITHUB_REPOSITORY="$GITHUB_REPOSITORY" GITHUB_REPOSITORY_ID="$GITHUB_REPOSITORY_ID"
+            GITHUB_RUN_ID="$GITHUB_RUN_ID" GITHUB_RUN_ATTEMPT="$GITHUB_RUN_ATTEMPT" GITHUB_WORKSPACE="$GITHUB_WORKSPACE"
+            GITHUB_API_URL="$GITHUB_API_URL" GITHUB_GRAPHQL_URL="$GITHUB_GRAPHQL_URL"
+            ACTIONS_ID_TOKEN_REQUEST_URL="${ACTIONS_ID_TOKEN_REQUEST_URL-}"
+            ACTIONS_ID_TOKEN_REQUEST_TOKEN="${ACTIONS_ID_TOKEN_REQUEST_TOKEN-}")
+          role_env=()
+          run_host() {
+            echo "$sum  $bin" | sha256sum -c --status - \
+              || { echo "::error title=RSOLV sandbox setup::the rsolv-host binary does not match its pinned SHA-256"; exit 4; }
+            env -i "${host_env[@]}" "${role_env[@]}" "$bin" "$@"
+          }
+          run_host version
+          # END install-host
+          # Each environment has its own keys; the host accepts only these three URLs.
+          case "$RSOLV_API_URL" in
+            https://api.rsolv.ai. | https://api.rsolv.dev.) keys=$RSOLV_DECISION_KEYS_PRODUCTION ;;
+            https://api.rsolv-staging.com.) keys=$RSOLV_DECISION_KEYS_STAGING ;;
+            *) echo "::error title=RSOLV configuration::api_url must be https://api.rsolv.ai., https://api.rsolv.dev. or https://api.rsolv-staging.com."; exit 2 ;;
+          esac
+          if [[ $keys == *'"kid":"unpinned-'* || $keys == *'"public_key":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"'* ]]; then
+            echo "::error title=RSOLV configuration::This rsolv-action commit pins no decision keys yet (placeholder key set). Use a released v5 tag of RSOLV-dev/rsolv-action."
+            exit 2
+          fi
+          role_env=("${job_env[@]}" GITHUB_TOKEN="$GITHUB_TOKEN" RSOLV_DECISION_KEYS="$keys")
+          run_host publish --issue "$ISSUE"

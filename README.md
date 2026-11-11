@@ -208,6 +208,49 @@ Pay for proven results, not noise. Start free, no card required.
 
 [View full pricing](https://rsolv.dev/pricing)
 
+## v5 (no secrets) — preview
+
+v5 replaces the API key with GitHub Actions OIDC: no RSOLV secret is configured anywhere. It isn't released yet. Until a `v5.x.y` tag exists, the reusable workflows pin no host release and refuse to run; keep using v4 above.
+
+Copy [`.github/workflows/TEMPLATE-rsolv-v5.yml`](.github/workflows/TEMPLATE-rsolv-v5.yml) into your repository. It calls the reusable workflows by full commit SHA:
+
+| Workflow | Role | Token permissions |
+|---|---|---|
+| `rsolv-scan.yml` | Scan, register the run, file issues | `contents: read`, `issues: write`, `id-token: write` |
+| `rsolv-issue.yml` | Per issue: calls `rsolv-work.yml`, then `rsolv-verify.yml` when a fix was uploaded | what its jobs need |
+| `rsolv-work.yml` | VALIDATE and MITIGATE one issue in the sandbox | `contents: read`, `id-token: write` |
+| `rsolv-verify.yml` | RED, then GREEN, for the uploaded fix on a fresh checkout | `contents: read`, `id-token: write` |
+| `rsolv-publish.yml` | The test and fix as a pull request (not wired yet) | `contents: write`, `pull-requests: write`, `issues: write`, `id-token: write` |
+
+Each job downloads the [`rsolv-host`](https://github.com/RSOLV-dev/rsolv-host) client, checks it against a SHA-256 pinned in the workflow before every run, and starts it with a minimal environment. The pins are written only after the release's build provenance verifies (`scripts/pin-host.sh`).
+
+Releasing, pinning and allowlisting them follows [docs/V5-RELEASE.md](docs/V5-RELEASE.md).
+
+The workflows talk to `https://api.rsolv.ai.` by default; `https://api.rsolv.dev.` is the same service under its other permanent name (`api_url` input).
+
+`rsolv-work.yml` sets two outputs: `has_patch` (`true` or `false`) and `outcome`:
+- `mitigated`: a fix was produced and uploaded;
+- `mitigation_failed`: the vulnerability was confirmed but no usable fix was produced;
+- `false_positive`: VALIDATE found the finding isn't a vulnerability;
+- `not_validated`: VALIDATE couldn't confirm it;
+- `validated`: VALIDATE confirmed it, then the job failed before MITIGATE reported.
+
+`rsolv-verify.yml` sets `outcome`:
+- `verified`: RED failed and GREEN passed as the platform requires;
+- `verify_failed`: the platform judged RED and GREEN and refused the fix;
+- `rejected`: the platform's policy rejected the fix, or it has no runnable RED test.
+
+Every model outcome exits 0. Failures exit with one of:
+
+| Exit code | Meaning |
+|---|---|
+| 1 | Bug in the host client |
+| 2 | Configuration, or something you can fix (the annotation says what) |
+| 3 | Transient platform or network failure (see below) |
+| 4 | Sandbox or runner infrastructure |
+
+Only `rsolv-work.yml` retries an exit 3, once, with `--resume`, inside the same job. `rsolv-verify.yml` and `rsolv-scan.yml` fail the job on exit 3: a verify retry would repeat RED and GREEN, which doesn't fit its 120-minute job. Re-running the failed workflow is safe, because the platform's endpoints are write-once per run attempt and replay an identical request.
+
 ## Support
 
 - Email: [support@rsolv.dev](mailto:support@rsolv.dev)
@@ -223,8 +266,3 @@ This software is proprietary. See [LICENSE](LICENSE) for terms.
 ---
 
 **Forget the 200 findings. Focus on the 20 proven PRs.** RSOLV writes tests describing secure behavior, proves your code fails them, and ships the fix. Start free at [rsolv.dev/signup](https://rsolv.dev/signup).
-
-
-<!-- Security scan triggered at 2026-08-31 17:01:31 -->
-
-<!-- Security scan triggered at 2026-09-02 06:57:05 -->

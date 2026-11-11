@@ -6,7 +6,7 @@ interface Label {
   description: string;
 }
 
-const REQUIRED_LABELS: Label[] = [
+export const REQUIRED_LABELS: Label[] = [
   {
     name: 'rsolv:detected',
     color: 'FBCA04',
