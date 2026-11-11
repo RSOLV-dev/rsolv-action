@@ -20,26 +20,6 @@ vi.mock('../../utils/logger', () => ({
   }
 }));
 
-// Mock credential manager
-vi.mock('../../credentials/manager', () => ({
-  RSOLVCredentialManager: class MockCredentialManager {
-    private credentials = new Map<string, string>();
-
-    async initialize(apiKey: string) {
-      this.credentials.set('anthropic', 'test-anthropic-key');
-      this.credentials.set('openai', 'test-openai-key');
-    }
-
-    getCredential(provider: string): string {
-      return this.credentials.get(provider) || 'mock-key';
-    }
-
-    async reportUsage(provider: string, usage: any) {
-      return Promise.resolve();
-    }
-  }
-}));
-
 describe('API Parameter Bug Fix - temperature and top_p conflict', () => {
   let fetchSpy: any;
 

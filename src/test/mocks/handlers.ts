@@ -4,7 +4,6 @@
  */
 
 import { http, HttpResponse } from 'msw';
-import { createMockCredentials } from './helpers.js';
 import { createTestIntegrationHandlers } from './test-integration-handlers.js';
 import { createPatternHandler } from './pattern-handlers.js';
 
@@ -86,22 +85,6 @@ export const handlers = [
     });
   }),
 
-  http.post('https://api.rsolv.ai/v1/credentials/vend', () => {
-    return HttpResponse.json({
-      success: true,
-      credentials: {
-        anthropic: {
-          apiKey: 'test-vended-key',
-          expiresAt: new Date(Date.now() + 3600000).toISOString()
-        }
-      }
-    });
-  }),
-
-  http.post('https://api.rsolv.ai/api/v1/credentials/exchange', () => {
-    return HttpResponse.json(createMockCredentials());
-  }),
-
   createPatternHandler('https://api.rsolv.ai'),
 
   // RSOLV.dev API handlers (production default URL)
@@ -109,10 +92,6 @@ export const handlers = [
   createPatternHandler('https://api.rsolv.dev'),
 
   // RSOLV Staging API handlers
-  http.post('https://api.rsolv-staging.com/api/v1/credentials/exchange', () => {
-    return HttpResponse.json(createMockCredentials('staging'));
-  }),
-
   ...createTestIntegrationHandlers('https://api.rsolv-staging.com'),
   createPatternHandler('https://api.rsolv-staging.com'),
 

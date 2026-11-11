@@ -117,7 +117,7 @@ describe('PhaseExecutor Educational PR — SSE integration', () => {
     mockConfig = {
       rsolvApiKey: 'rsolv_test_key_123',
       githubToken: 'github_test_token',
-      aiProvider: { name: 'claude-code', useVendedCredentials: true },
+      aiProvider: { name: 'claude-code' },
       repository: { owner: 'test-owner', name: 'test-repo' },
       issueLabel: 'rsolv:detected',
       maxIssues: 1,

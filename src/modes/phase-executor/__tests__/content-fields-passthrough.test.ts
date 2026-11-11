@@ -101,7 +101,6 @@ describe('content fields passthrough to platform', () => {
       maxIssues: 1,
       aiProvider: {
         name: 'claude-code',
-        useVendedCredentials: true,
       },
       fixValidation: { enabled: false },
     } as ActionConfig;
