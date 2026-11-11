@@ -508,6 +508,12 @@ before=$(sha256sum <"$cfg")
 want="pin wasn't written"
 check "pin-sandbox: a sandbox_image key with no value is refused" fails_saying pin_sandbox 0.1.0 "$idx" "$t/host"
 check "pin-sandbox: a sandbox_image key with no value changes nothing" test "$before" = "$(sha256sum <"$cfg")"
+printf '%s\n' 'config :rsolv_host,' '  sandbox_image: "ghcr.io/rsolv-dev/rsolv-sandbox@sha256:x" junk' 'import_config "x"' >"$cfg"
+before=$(sha256sum <"$cfg")
+check "pin-sandbox: a sandbox_image value with trailing content is refused" fails_saying pin_sandbox 0.1.0 "$idx" "$t/host"
+check "pin-sandbox: a sandbox_image value with trailing content changes nothing" test "$before" = "$(sha256sum <"$cfg")"
+no_temp_left() { ! compgen -G "${TMPDIR:-/tmp}/pin-sandbox.*" >/dev/null; }
+check "pin-sandbox: a refused pin leaves no temporary file" no_temp_left
 check "pin-sandbox: the tag commit is resolved through refs/tags/" \
   grep -q 'gh api repos/RSOLV-dev/rsolv-action/commits/refs/tags/sandbox-v0.1.0 --jq .sha' "$t/fake/log"
 want="gh attestation verify oci://ghcr.io/rsolv-dev/rsolv-sandbox@$idx --repo RSOLV-dev/rsolv-action"

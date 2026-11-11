@@ -41,26 +41,27 @@ gh attestation verify "oci://$image@$digest" --repo "$repo" \
 #    its line and the string follows. It replaces either form: a value on the key's line (the
 #    placeholder), or a quoted string alone on the next line (an earlier pin). Anything else is
 #    refused. The result is checked whole, before it replaces config.exs: everything but the
-#    pin is unchanged.
+#    pin is unchanged, except that a missing final newline is added (as mix format adds it).
 pin="    \"$image@$digest\""
 strip() { # the file without its sandbox_image entry, in either form
   awk 'value { value = 0; if ($0 ~ /^[ \t]+"[^"]*"[ \t]*$/) next }
     /^ *sandbox_image:/ { value = ($0 ~ /^ *sandbox_image:[ \t]*$/); next }
     { print }' "$1"
 }
-out=$(mktemp)
+out=$(mktemp "${TMPDIR:-/tmp}/pin-sandbox.XXXXXX")
+trap 'rm -f "$out"' EXIT
 if ! awk -v pin="$pin" '
   value { value = 0; if ($0 ~ /^[ \t]+"[^"]*"[ \t]*$/) next; bad = 1 }
   /^ *sandbox_image:/ {
     if ($0 ~ /^ *sandbox_image:[ \t]*$/) value = 1
-    else if ($0 !~ /^ *sandbox_image:[ \t]+[^ \t]/) bad = 1
+    else if ($0 !~ /^ *sandbox_image:[ \t]+"[^"]*"([ \t]*<>[ \t]*String\.duplicate\("0", *64\))?[ \t]*$/) bad = 1
     print "  sandbox_image:"; print pin; next
   }
   { print }
   END { exit (bad || value) }' "$config" >"$out" ||
   [ "$(grep -A1 -x '  sandbox_image:' "$out" | tail -n 1)" != "$pin" ] ||
   ! cmp -s <(strip "$config") <(strip "$out"); then
-  rm -f "$out"; echo "::error::the pin wasn't written" >&2; exit 1
+  echo "::error::the pin wasn't written" >&2; exit 1
 fi
-cat "$out" >"$config" && rm -f "$out"
+cat "$out" >"$config" || { echo "::error::could not write $config" >&2; exit 1; }
 echo "pinned $tag ($commit): $image@$digest"
