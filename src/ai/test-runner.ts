@@ -2,10 +2,19 @@
  * TestRunner - Executes framework-specific test commands
  */
 
-import { exec } from 'child_process';
+import { exec, execFile } from 'child_process';
 import { promisify } from 'util';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import * as os from 'os';
+import {
+  installMaven,
+  installPhp,
+  installPython,
+  clock as sandboxClock,
+  run as runInSandbox,
+  type RuntimeReport,
+} from '../sandbox/runtime-install.js';
 
 const execAsync = promisify(exec);
 
@@ -76,6 +85,13 @@ export class TestRunner {
   // Public so validation-mode.ts can read it (it has its own runTest() method with separate command building)
   public bundleInstallFailed = false;
   private readonly DEP_INSTALL_TIMEOUT = 180000; // 3 minutes for dependency install
+  // Inside the host's 15-minute bootstrap budget (RFC-150 3d)
+  private readonly PHP_BUILD_TIMEOUT_S = 720;
+
+  /** v5 sandbox runtime installs, for the host to annotate (RFC-150 3d). */
+  public readonly runtimeReports: RuntimeReport[] = [];
+  /** Fail rather than fall back to another patch of a version with no attestations. */
+  public exactRuntimeVersions = false;
 
   /** Get the mise data directory, respecting MISE_DATA_DIR env var (RFC-105) */
   private getMiseDataDir(): string {
@@ -97,30 +113,38 @@ export class TestRunner {
    */
   async ensureRuntime(framework: TestFramework, workingDir: string): Promise<void> {
     const runtime = FRAMEWORK_RUNTIME_MAP[framework];
+    // A version the repository declares is installed even when another one is present (RFC-150 §8)
+    const declaredVersion = await this.detectRuntimeVersion(runtime, workingDir);
 
-    // Node is always available in our Docker image
-    if (runtime === 'node') return;
+    if (!declaredVersion) {
+      // Node is always available in our Docker image
+      if (runtime === 'node') return;
 
-    // Check if runtime is already available
-    try {
-      await execAsync(`which ${runtime}`, { encoding: 'utf8' });
-      return; // Runtime already present
-    } catch {
-      // Not found, need to install
+      // Check if runtime is already available
+      try {
+        await execAsync(`which ${runtime}`, { encoding: 'utf8' });
+        return; // Runtime already present
+      } catch {
+        // Not found, need to install
+      }
     }
 
     // Handle Elixir's dependency on Erlang - must install Erlang first
     if (runtime === 'elixir') {
       console.log('[TestRunner] Elixir requires Erlang - installing Erlang first');
-      try {
-        await execAsync('which erl', { encoding: 'utf8' });
+      // mise refuses an Elixir whose declared Erlang isn't the one installed
+      const erlangVersion = await this.detectRuntimeVersion('erlang', workingDir);
+      const erlAvailable = !erlangVersion &&
+        (await execAsync('which erl', { encoding: 'utf8' }).then(() => true, () => false));
+      if (erlAvailable) {
         console.log('[TestRunner] Erlang already available');
-      } catch {
+      } else {
         // Install Erlang via mise
-        console.log('[TestRunner] Installing Erlang via mise');
+        const erlangSpec = `erlang@${erlangVersion ?? 'latest'}`;
+        console.log(`[TestRunner] Installing ${erlangSpec} via mise`);
         try {
           await execAsync(
-            'mise install erlang@latest && mise use --global erlang@latest',
+            `mise install ${erlangSpec} && mise use --global ${erlangSpec}`,
             { cwd: workingDir, timeout: this.RUNTIME_INSTALL_TIMEOUT, encoding: 'utf8' }
           );
           console.log('[TestRunner] Erlang installed successfully');
@@ -145,7 +169,7 @@ export class TestRunner {
     // that may not be available in the Docker image.
     // Note: We run as root in the Docker container, so no sudo needed.
     // Exception: If a specific PHP version is required (from composer.json), use mise.
-    if (runtime === 'php') {
+    if (runtime === 'php' && !declaredVersion) {
       const requiredVersion = await this.detectPhpVersionFromComposer(workingDir);
       if (requiredVersion) {
         // Specific version required - skip apt-get, use mise for version matching
@@ -172,7 +196,7 @@ export class TestRunner {
       }
     }
 
-    if (runtime === 'java') {
+    if (runtime === 'java' && !declaredVersion) {
       // Detect required Java version from pom.xml or build.gradle
       const javaVersion = await this.detectJavaVersionFromManifest(workingDir);
 
@@ -256,7 +280,12 @@ export class TestRunner {
       }
     } else {
       // No platform version — try local file detection
-      version = await this.detectRuntimeVersion(runtime, workingDir) || undefined;
+      version = declaredVersion;
+    }
+
+    if (!this.isRoot() && (runtime === 'python' || runtime === 'php')) {
+      await this.installSandboxRuntime(runtime, version);
+      return;
     }
 
     // If we still don't have a version, try mise native resolution before @latest
@@ -384,7 +413,10 @@ export class TestRunner {
    * Detect the runtime version from project version files.
    * Returns the version string or undefined if no version file found.
    */
-  private async detectRuntimeVersion(runtime: string, workingDir: string): Promise<string | undefined> {
+  async detectRuntimeVersion(runtime: string, workingDir: string): Promise<string | undefined> {
+    const miseVersion = await this.detectMiseVersion(runtime, workingDir);
+    if (miseVersion) return miseVersion;
+
     const versionFiles = VERSION_FILES[runtime] || [];
 
     for (const versionFile of versionFiles) {
@@ -412,6 +444,33 @@ export class TestRunner {
     }
 
     return undefined;
+  }
+
+  /**
+   * The version the repository's own mise config (mise.toml, .mise.toml,
+   * .config/mise.toml or .tool-versions) requests, with mise's precedence.
+   * Config outside `workingDir`, such as the image's global config, is ignored.
+   */
+  private async detectMiseVersion(runtime: string, workingDir: string): Promise<string | undefined> {
+    try {
+      const { stdout } = await promisify(execFile)('mise', ['ls', '--current', '--json', runtime], {
+        cwd: workingDir,
+        encoding: 'utf8',
+        timeout: 30000,
+      });
+      const parsed: unknown = JSON.parse(stdout);
+      const entries = (Array.isArray(parsed) ? parsed : (parsed as Record<string, unknown>)?.[runtime]) as
+        | Array<{ requested_version?: unknown; source?: { path?: unknown } }>
+        | undefined;
+      const root = path.resolve(workingDir) + path.sep;
+      const entry = (entries ?? []).find(
+        (e) => typeof e?.source?.path === 'string' && path.resolve(e.source.path).startsWith(root)
+      );
+      return typeof entry?.requested_version === 'string' ? entry.requested_version : undefined;
+    } catch (error) {
+      console.warn(`[TestRunner] mise ls --current failed for ${runtime}, using version files: ${(error as Error).message}`);
+      return undefined;
+    }
   }
 
   /**
@@ -544,14 +603,23 @@ export class TestRunner {
       // Maven not found, install it
     }
 
-    console.log('[TestRunner] Installing Maven via apt-get');
+    // apt-get needs root; the v5 sandbox isn't
+    if (!this.isRoot()) {
+      const report = await installMaven({ run: runInSandbox, clock: sandboxClock });
+      this.runtimeReports.push(report);
+      console.log(`[TestRunner] Maven ${report.requested}: ${report.status}${report.reason ? ` (${report.reason})` : ''}`);
+      return;
+    }
+
+    const installMavenCommand = 'apt-get update && apt-get install -y maven';
+    console.log(`[TestRunner] Installing Maven: ${installMavenCommand}`);
     try {
       await execAsync(
-        'apt-get update && apt-get install -y maven',
+        installMavenCommand,
         { cwd: workingDir, timeout: 120000, encoding: 'utf8' }
       );
       await execAsync('which mvn', { encoding: 'utf8' });
-      console.log('[TestRunner] Maven installed via apt-get');
+      console.log('[TestRunner] Maven installed');
     } catch (err) {
       const error = err as { stderr?: string; message?: string };
       console.log(`[TestRunner] Maven install failed: ${error.stderr || error.message}`);
@@ -638,6 +706,50 @@ export class TestRunner {
     const dbName = `${appName}_test`;
     console.log(`[TestRunner] Provisioning PostgreSQL for ${appName} (database: ${dbName})`);
 
+    if (this.isRoot()) {
+      await this.startRootPostgres(dbName);
+    } else {
+      await this.startUserPostgres(dbName);
+    }
+
+    // Set environment for Ecto
+    process.env.DATABASE_URL = `postgresql://postgres:postgres@localhost/${dbName}`;
+    process.env.MIX_ENV = 'test';
+    console.log(`[TestRunner] DATABASE_URL set to postgresql://postgres:postgres@localhost/${dbName}`);
+  }
+
+  /**
+   * The v5 sandbox's Python (attestation-checked, same-minor fallback only for
+   * a version with none) or PHP (a bounded source build). A failure throws;
+   * nothing is substituted.
+   */
+  private async installSandboxRuntime(runtime: 'python' | 'php', version: string | undefined): Promise<void> {
+    const deps = { run: runInSandbox, clock: sandboxClock };
+    const report =
+      runtime === 'python'
+        ? await installPython(version ?? 'latest', { ...deps, exact: this.exactRuntimeVersions })
+        : await installPhp(version, {
+          ...deps,
+          jobs: Math.max(1, Math.min(4, os.availableParallelism())),
+          timeoutS: this.PHP_BUILD_TIMEOUT_S,
+        });
+    this.runtimeReports.push(report);
+    if (report.status === 'failed') {
+      throw new Error(`${runtime} ${report.requested} was not installed: ${report.reason}`);
+    }
+
+    // The requested version: for a fallback, it's linked to the one installed.
+    await runInSandbox('mise', ['use', '--global', `${runtime}@${report.requested}`]);
+    const shims = this.getMiseShimsPath();
+    if (!(process.env.PATH || '').includes(shims)) process.env.PATH = `${shims}:${process.env.PATH || ''}`;
+  }
+
+  private isRoot(): boolean {
+    return process.getuid?.() === 0;
+  }
+
+  /** The v4 Docker action (root): the image's system cluster. */
+  private async startRootPostgres(dbName: string): Promise<void> {
     // Check if PostgreSQL is already running
     let pgRunning = false;
     try {
@@ -715,11 +827,43 @@ export class TestRunner {
     } catch (dbErr) {
       console.warn(`[TestRunner] Database setup warning: ${(dbErr as Error).message}`);
     }
+  }
 
-    // Set environment for Ecto
-    process.env.DATABASE_URL = `postgresql://postgres:postgres@localhost/${dbName}`;
-    process.env.MIX_ENV = 'test';
-    console.log(`[TestRunner] DATABASE_URL set to postgresql://postgres:postgres@localhost/${dbName}`);
+  /**
+   * The v5 sandbox (any non-root user): a private trust-auth cluster on the
+   * sandbox's tmpfs, listening on localhost only.
+   */
+  private async startUserPostgres(dbName: string): Promise<void> {
+    try {
+      await execAsync('pg_ctl -D /tmp/rsolv-pg status', { encoding: 'utf8', timeout: 5000 });
+      console.log('[TestRunner] PostgreSQL already running');
+    } catch {
+      // initdb and postgres refuse a user with no passwd entry, which the
+      // sandbox's arbitrary UID usually is; nss_wrapper supplies one.
+      const env = {
+        ...process.env,
+        LD_PRELOAD: 'libnss_wrapper.so',
+        NSS_WRAPPER_PASSWD: '/tmp/rsolv-passwd',
+        NSS_WRAPPER_GROUP: '/etc/group',
+      };
+      await execAsync(
+        'printf \'postgres:x:%s:%s::/tmp:/bin/sh\\n\' "$(id -u)" "$(id -g)" > /tmp/rsolv-passwd',
+        { encoding: 'utf8', timeout: 5000 }
+      );
+      await execAsync('initdb -D /tmp/rsolv-pg -A trust -U postgres', { encoding: 'utf8', timeout: 60000, env });
+      await execAsync(
+        'pg_ctl -D /tmp/rsolv-pg -l /tmp/rsolv-pg.log -o "-k /tmp -c listen_addresses=localhost" -w start',
+        { encoding: 'utf8', timeout: 60000, env }
+      );
+      console.log('[TestRunner] PostgreSQL started as the sandbox user');
+    }
+
+    try {
+      await execAsync(`createdb -h localhost -U postgres ${dbName}`, { encoding: 'utf8', timeout: 10000 });
+      console.log(`[TestRunner] Database ${dbName} ready`);
+    } catch (dbErr) {
+      console.warn(`[TestRunner] Database setup warning: ${(dbErr as Error).message}`);
+    }
   }
 
   /**

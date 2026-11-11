@@ -1,6 +1,6 @@
 {
   "name": "rsolv-action",
-  "version": "4.8.0",
+  "version": "4.8.1",
   "description": "GitHub Action for automating issue fixes with AI",
   "main": "src/index.ts",
   "type": "module",
@@ -25,6 +25,7 @@
     "lint": "eslint \"src/**/*.ts\"",
     "typecheck": "tsc --noEmit",
     "build": "bun build src/index.ts --outdir dist --minify --target node && cp src/security/detector-worker.js dist/detector-worker.js",
+    "build:sandbox": "bun build src/sandbox/cli.ts --outdir dist/sandbox --target node --minify && cp src/security/detector-worker.js dist/sandbox/detector-worker.js",
     "publish": "gh release create v0.1.0 --title 'Initial Release' --notes 'First public release of RSOLV GitHub Action'",
     "dev-debug": "bun run dev-debug-environment.ts",
     "test:e2e": "RUN_E2E=true ./run-tests.sh --e2e",

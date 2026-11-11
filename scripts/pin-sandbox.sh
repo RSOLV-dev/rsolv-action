@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# Pins a sandbox image release into an rsolv-host checkout (rsolv_host/config/config.exs), only
+# after its provenance verifies (docs/V5-RELEASE.md, "Pinning the sandbox image"). Writes nothing
+# until every check has passed.
+#   pin-sandbox.sh <version> <sha256:index digest> <rsolv-host checkout>
+#   e.g. pin-sandbox.sh 0.1.0 sha256:4f…e1 ../rsolv-host
+set -euo pipefail
+version=${1:-} digest=${2:-} host=${3:-}
+[[ $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ && $digest =~ ^sha256:[0-9a-f]{64}$ && -n $host ]] ||
+  { echo "usage: pin-sandbox.sh <version> <sha256:digest> <rsolv-host checkout>" >&2; exit 2; }
+[[ $digest =~ ^sha256:0{64}$ ]] && { echo "::error::the all-zero digest is the placeholder, not a release" >&2; exit 2; }
+config=$host/rsolv_host/config/config.exs
+[ "$(grep -cE '^ *sandbox_image: ' "$config" 2>/dev/null)" = 1 ] ||
+  { echo "::error::$config has no single sandbox_image line" >&2; exit 2; }
+here=$(cd "$(dirname "$0")" && pwd)
+repo=RSOLV-dev/RSOLV-action
+image=ghcr.io/rsolv-dev/rsolv-sandbox
+tag="sandbox-v$version"
+gh() { env -u GITHUB_TOKEN gh "$@"; }
+
+# 1. A gh older than 2.102.0 can pass attestations these flags are meant to reject.
+have=$(gh --version | awk 'NR == 1 {print $3}')
+printf '%s\n' 2.102.0 "$have" | sort -V -C || { echo "::error::gh $have is older than 2.102.0" >&2; exit 2; }
+
+# 2. The tag's commit, through refs/tags/ so a branch of the same name can't stand in, is a
+#    first-parent commit of main.
+commit=$(gh api "repos/$repo/commits/refs/tags/$tag" --jq .sha)
+[[ $commit =~ ^[0-9a-f]{40}$ ]] || { echo "::error::could not resolve $tag to a commit" >&2; exit 1; }
+"$here/check-first-parent.sh" "$commit"
+
+# 3. Provenance of the index digest. --source-ref and --source-digest bind it to this tag and
+#    commit; --signer-workflow to sandbox-image.yml, whose publish job alone attests.
+gh attestation verify "oci://$image@$digest" --repo "$repo" \
+  --signer-workflow "$repo/.github/workflows/sandbox-image.yml" \
+  --source-ref "refs/tags/$tag" \
+  --source-digest "$commit" \
+  --deny-self-hosted-runners
+
+# 4. Only now write the pin.
+sed -i -E "s|^( *sandbox_image: ).*$|\\1\"$image@$digest\"|" "$config"
+grep -qxF "  sandbox_image: \"$image@$digest\"" "$config" || { echo "::error::the pin wasn't written" >&2; exit 1; }
+echo "pinned $tag ($commit): $image@$digest"
