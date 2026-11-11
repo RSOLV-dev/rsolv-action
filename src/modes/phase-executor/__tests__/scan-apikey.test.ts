@@ -52,7 +52,6 @@ describe('PhaseExecutor scan phase rsolvApiKey passing', () => {
       aiProvider: {
         provider: 'claude-code',
         model: 'test-model',
-        useVendedCredentials: false,
         temperature: 0.2,
         maxTokens: 4000,
         contextLimit: 100000,

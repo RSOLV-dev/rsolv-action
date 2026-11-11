@@ -3,7 +3,7 @@
  * with timeout handling and structured output capture.
  */
 
-import { describe, test, expect, beforeEach, vi } from 'vitest';
+import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
 
 // Mock exec function using vi.hoisted
 const mockExecAsync = vi.hoisted(() => vi.fn());
@@ -520,6 +520,12 @@ describe('TestRunner', () => {
     beforeEach(() => {
       mockFsAccess.mockRejectedValue(new Error('ENOENT'));
       mockFsReadFile.mockResolvedValue('');
+      // The v4 Docker action runs as root
+      vi.spyOn(process, 'getuid').mockReturnValue(0);
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
     });
 
     test('needsPostgresql returns true when mix.exs contains {:postgrex', async () => {
@@ -706,6 +712,93 @@ describe('TestRunner', () => {
       expect(mixCall).toBeDefined();
       expect(mixCall).toContain('ecto.create');
       expect(mixCall).toContain('ecto.migrate');
+    });
+  });
+
+  describe('PostgreSQL without root (RFC-150 §8, the v5 sandbox)', () => {
+    let pgReadyCalls: number;
+
+    beforeEach(() => {
+      vi.spyOn(process, 'getuid').mockReturnValue(1001);
+      mockFsReadFile.mockImplementation((filePath: string) =>
+        Promise.resolve(filePath.endsWith('mix.exs') ? 'def project do [app: :potion_shop] end' : '')
+      );
+      pgReadyCalls = 0;
+      mockExecAsync.mockImplementation((cmd: string) => {
+        if (typeof cmd === 'string' && cmd.includes('pg_ctl -D /tmp/rsolv-pg status') && ++pgReadyCalls === 1) {
+          return Promise.reject(new Error('no server running'));
+        }
+        return Promise.resolve({ stdout: '', stderr: '' });
+      });
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    test('initialises a private cluster under /tmp, starts it on localhost and creates the test database', async () => {
+      await runner.ensurePostgresql('/work');
+
+      const calls = mockExecAsync.mock.calls.map((c: unknown[]) => c[0]).filter((c): c is string => typeof c === 'string');
+      expect(calls).toContain('initdb -D /tmp/rsolv-pg -A trust -U postgres');
+      expect(calls).toContain('pg_ctl -D /tmp/rsolv-pg -l /tmp/rsolv-pg.log -o "-k /tmp -c listen_addresses=localhost" -w start');
+      expect(calls).toContain('createdb -h localhost -U postgres potion_shop_test');
+      expect(calls.indexOf('initdb -D /tmp/rsolv-pg -A trust -U postgres'))
+        .toBeLessThan(calls.findIndex((c) => c.startsWith('pg_ctl -D /tmp/rsolv-pg -l')));
+    });
+
+    test('runs initdb and the server under nss_wrapper, as the sandbox user may have no passwd entry', async () => {
+      await runner.ensurePostgresql('/work');
+
+      const calls = mockExecAsync.mock.calls as Array<[string, { env?: NodeJS.ProcessEnv }]>;
+      const passwd = calls.findIndex(([c]) => c.includes('> /tmp/rsolv-passwd'));
+      expect(calls[passwd][0]).toContain('postgres:x:%s:%s:');
+      for (const command of ['initdb ', 'pg_ctl -D /tmp/rsolv-pg -l']) {
+        const index = calls.findIndex(([c]) => c.startsWith(command));
+        expect(index).toBeGreaterThan(passwd);
+        expect(calls[index][1].env).toMatchObject({
+          LD_PRELOAD: 'libnss_wrapper.so',
+          NSS_WRAPPER_PASSWD: '/tmp/rsolv-passwd',
+          NSS_WRAPPER_GROUP: '/etc/group',
+        });
+      }
+    });
+
+    test('never touches the system cluster or its configuration', async () => {
+      await runner.ensurePostgresql('/work');
+
+      const calls = mockExecAsync.mock.calls.map((c: unknown[]) => String(c[0]));
+      expect(calls.some((c) => c.includes('/etc/postgresql'))).toBe(false);
+      expect(calls.some((c) => c.includes('pg_ctlcluster'))).toBe(false);
+      expect(calls.some((c) => c.includes('createuser'))).toBe(false);
+    });
+
+    test('skips initdb and start when its server is already running', async () => {
+      mockExecAsync.mockResolvedValue({ stdout: 'pg_ctl: server is running', stderr: '' });
+
+      await runner.ensurePostgresql('/work');
+
+      const calls = mockExecAsync.mock.calls.map((c: unknown[]) => String(c[0]));
+      expect(calls.some((c) => c.startsWith('initdb'))).toBe(false);
+      expect(calls).toContain('createdb -h localhost -U postgres potion_shop_test');
+    });
+  });
+
+  describe('Maven as root (the v4 action; the v5 sandbox is in test-runner-sandbox-runtimes)', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    test('keeps apt-get as root', async () => {
+      vi.spyOn(process, 'getuid').mockReturnValue(0);
+      mockExecAsync.mockImplementation((cmd: string) =>
+        cmd === 'which mvn' ? Promise.reject(new Error('not found')) : Promise.resolve({ stdout: '', stderr: '' })
+      );
+
+      await runner['ensureMaven']('/work');
+
+      const calls = mockExecAsync.mock.calls.map((c: unknown[]) => String(c[0]));
+      expect(calls).toContain('apt-get update && apt-get install -y maven');
     });
   });
 });

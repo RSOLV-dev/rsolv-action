@@ -1,7 +1,5 @@
 import { AiProviderConfig } from '../types/index.js';
 import { logger } from '../utils/logger.js';
-import { RSOLVCredentialManager } from '../credentials/manager.js';
-import { CredentialManagerSingleton } from '../credentials/singleton.js';
 import { sanitizeErrorMessage } from '../utils/error-sanitizer.js';
 import { resolveMaxTokens } from './token-utils.js';
 import { withRetry, RetryableError, isRetryableStatusCode } from '../utils/retry.js';
@@ -42,38 +40,17 @@ export interface CompletionOptions {
  * Factory function to create an appropriate AI client based on provider config
  */
 export async function getAiClient(config: AiProviderConfig): Promise<AiClient> {
-  // Initialize credential manager if using vended credentials
-  let credentialManager: RSOLVCredentialManager | null = null;
-  
-  if (config.useVendedCredentials) {
-    try {
-      const rsolvApiKey = process.env.RSOLV_API_KEY;
-      if (!rsolvApiKey) {
-        throw new Error('RSOLV_API_KEY environment variable not set for vended credentials');
-      }
-      
-      logger.info('Getting credential manager singleton for vended credentials');
-      credentialManager = await CredentialManagerSingleton.getInstance(rsolvApiKey);
-      logger.info('Credential manager singleton retrieved successfully');
-    } catch (error) {
-      logger.error('Failed to get credential manager singleton', error);
-      // Don't fall back - let the error propagate when trying to use the credentials
-      // This preserves the intent to use vended credentials
-      throw error; // Re-throw to prevent creating clients with null credential manager
-    }
-  }
-  
   switch (config.provider.toLowerCase()) {
   case 'openai':
-    return new OpenAiClient(config, credentialManager);
+    return new OpenAiClient(config);
   case 'anthropic':
   case 'claude-code':
     // Claude Code uses Anthropic Claude models under the hood
-    return new AnthropicClient(config, credentialManager);
+    return new AnthropicClient(config);
   case 'mistral':
-    return new MistralClient(config, credentialManager);
+    return new MistralClient(config);
   case 'ollama':
-    return new OllamaClient(config, credentialManager);
+    return new OllamaClient(config);
   default:
     throw new Error(`Unsupported AI provider: ${config.provider}`);
   }
@@ -84,13 +61,11 @@ export async function getAiClient(config: AiProviderConfig): Promise<AiClient> {
  */
 class OpenAiClient implements AiClient {
   private config: AiProviderConfig;
-  private credentialManager?: RSOLVCredentialManager | null;
   
-  constructor(config: AiProviderConfig, credentialManager?: RSOLVCredentialManager | null) {
+  constructor(config: AiProviderConfig) {
     this.config = config;
-    this.credentialManager = credentialManager;
     
-    if (!config.useVendedCredentials && !config.apiKey) {
+    if (!config.apiKey) {
       throw new Error('AI provider API key is required');
     }
   }
@@ -146,19 +121,9 @@ class OpenAiClient implements AiClient {
         presence_penalty: options.presencePenalty ?? 0
       };
       
-      // Get API key (vended or direct)
-      let apiKey: string | undefined;
-      
-      try {
-        apiKey = this.config.useVendedCredentials 
-          ? await this.credentialManager?.getCredential('openai')
-          : this.config.apiKey;
-      } catch (error) {
-        throw new Error('Failed to retrieve API key', { cause: error });
-      }
-      
+      const apiKey = this.config.apiKey;
       if (!apiKey) {
-        throw new Error('Failed to retrieve API key');
+        throw new Error('AI provider API key is required');
       }
       
       // Make the API call
@@ -189,14 +154,6 @@ class OpenAiClient implements AiClient {
       // Extract the completion text
       const result = data.choices[0]?.message?.content || '';
       
-      // Report usage if using vended credentials
-      if (this.config.useVendedCredentials && this.credentialManager) {
-        const tokensUsed = data.usage?.total_tokens || 0;
-        await this.credentialManager.reportUsage('openai', {
-          tokensUsed,
-          requestCount: 1
-        });
-      }
       
       return result;
     } catch (error) {
@@ -233,15 +190,11 @@ The token validator is not properly handling URL-encoded characters. We need to 
  */
 class AnthropicClient implements AiClient {
   private config: AiProviderConfig;
-  private credentialManager?: RSOLVCredentialManager | null;
   
-  constructor(config: AiProviderConfig, credentialManager?: RSOLVCredentialManager | null) {
+  constructor(config: AiProviderConfig) {
     this.config = config;
-    this.credentialManager = credentialManager;
     
-    // Only throw if we're not using vended credentials AND no API key is provided
-    // If using vended credentials, we'll check for the credential manager later when making API calls
-    if (!config.useVendedCredentials && !config.apiKey) {
+    if (!config.apiKey) {
       throw new Error('AI provider API key is required');
     }
   }
@@ -317,32 +270,10 @@ class AnthropicClient implements AiClient {
       logger.info(`[API Request Debug] Model: ${model}, Temperature: ${temperature}, MaxTokens: ${maxTokens}`);
       logger.info(`[API Request Debug] Prompt length: ${prompt.length} characters`);
       logger.debug(`[API Request Debug] Prompt preview (first 500 chars): ${prompt.substring(0, 500)}`);
-      logger.debug(`[API Request Debug] Using vended credentials: ${this.config.useVendedCredentials}`);
       
-      // Get API key (vended or direct)
-      let apiKey: string | undefined;
-      
-      try {
-        if (this.config.useVendedCredentials) {
-          logger.debug(`Attempting to get vended credential - credentialManager exists: ${!!this.credentialManager}`);
-          if (!this.credentialManager) {
-            throw new Error('Credential manager not initialized for vended credentials');
-          }
-          apiKey = await this.credentialManager.getCredential('anthropic');
-        } else {
-          apiKey = this.config.apiKey;
-        }
-      } catch (error) {
-        logger.error('Failed to get API key', { 
-          useVended: this.config.useVendedCredentials,
-          hasCredentialManager: !!this.credentialManager,
-          error: error instanceof Error ? error.message : String(error)
-        });
-        throw new Error(`Failed to retrieve API key: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
-      }
-      
+      const apiKey = this.config.apiKey;
       if (!apiKey) {
-        throw new Error('Failed to retrieve API key - key is empty');
+        throw new Error('AI provider API key is required');
       }
       
       // Make the API call
@@ -410,14 +341,6 @@ class AnthropicClient implements AiClient {
         logger.debug(`[API Response Debug] Response tail: ${result.substring(result.length - 200)}`);
       }
 
-      // Report usage if using vended credentials
-      if (this.config.useVendedCredentials && this.credentialManager) {
-        const tokensUsed = data.usage?.total_tokens || 0;
-        await this.credentialManager.reportUsage('anthropic', {
-          tokensUsed,
-          requestCount: 1
-        });
-      }
 
       return result;
     } catch (error) {
@@ -453,13 +376,11 @@ This is a medium complexity issue that will require implementing proper stream p
  */
 class MistralClient implements AiClient {
   private config: AiProviderConfig;
-  private credentialManager?: RSOLVCredentialManager | null;
   
-  constructor(config: AiProviderConfig, credentialManager?: RSOLVCredentialManager | null) {
+  constructor(config: AiProviderConfig) {
     this.config = config;
-    this.credentialManager = credentialManager;
     
-    if (!config.useVendedCredentials && !config.apiKey) {
+    if (!config.apiKey) {
       throw new Error('AI provider API key is required');
     }
   }
@@ -501,11 +422,9 @@ This is a simple fix that involves adding a new section for Windows installation
  */
 class OllamaClient implements AiClient {
   private config: AiProviderConfig;
-  private credentialManager?: RSOLVCredentialManager | null;
   
-  constructor(config: AiProviderConfig, credentialManager?: RSOLVCredentialManager | null) {
+  constructor(config: AiProviderConfig) {
     this.config = config;
-    this.credentialManager = credentialManager;
   }
   
   async complete(prompt: string, options: CompletionOptions = {}): Promise<string> {

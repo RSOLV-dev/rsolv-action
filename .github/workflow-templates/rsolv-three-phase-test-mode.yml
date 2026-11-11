@@ -77,9 +77,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
           # Enable test mode - creates PRs even when validation fails
           RSOLV_TESTING_MODE: 'true'
-          # Use Claude Code with vended credentials
-          AI_PROVIDER: 'claude-code'
-          USE_VENDED_CREDENTIALS: 'true'
         with:
           rsolvApiKey: ${{ secrets.RSOLV_API_KEY }}
           mode: 'process'

@@ -1,0 +1,6 @@
+# The v4 customer template's shellcheck findings predate the workflow-lint gate; RFC-150 step 6
+# deletes the template with the rest of v4.
+paths:
+  .github/workflows/TEMPLATE-rsolv-full-pipeline.yml:
+    ignore:
+      - 'shellcheck reported issue'
