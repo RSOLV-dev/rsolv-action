@@ -38,9 +38,29 @@ gh attestation verify "oci://$image@$digest" --repo "$repo" \
 
 # 4. Only now write the pin.
 #    As mix format lays it out: a real digest makes the one-line form too long, so the key ends
-#    its line and the string follows. Either form (the one-line placeholder, an earlier pin) is
-#    replaced.
-sed -z -i -E "s#\n( *)sandbox_image:[[:space:]]*[^\n]*\n#\n\1sandbox_image:\n\1  \"$image@$digest\"\n#" "$config"
-[ "$(grep -A1 -x '  sandbox_image:' "$config" | tail -n 1)" = "    \"$image@$digest\"" ] ||
-  { echo "::error::the pin wasn't written" >&2; exit 1; }
+#    its line and the string follows. It replaces either form: a value on the key's line (the
+#    placeholder), or a quoted string alone on the next line (an earlier pin). Anything else is
+#    refused. The result is checked whole, before it replaces config.exs: everything but the
+#    pin is unchanged.
+pin="    \"$image@$digest\""
+strip() { # the file without its sandbox_image entry, in either form
+  awk 'value { value = 0; if ($0 ~ /^[ \t]+"[^"]*"[ \t]*$/) next }
+    /^ *sandbox_image:/ { value = ($0 ~ /^ *sandbox_image:[ \t]*$/); next }
+    { print }' "$1"
+}
+out=$(mktemp)
+if ! awk -v pin="$pin" '
+  value { value = 0; if ($0 ~ /^[ \t]+"[^"]*"[ \t]*$/) next; bad = 1 }
+  /^ *sandbox_image:/ {
+    if ($0 ~ /^ *sandbox_image:[ \t]*$/) value = 1
+    else if ($0 !~ /^ *sandbox_image:[ \t]+[^ \t]/) bad = 1
+    print "  sandbox_image:"; print pin; next
+  }
+  { print }
+  END { exit (bad || value) }' "$config" >"$out" ||
+  [ "$(grep -A1 -x '  sandbox_image:' "$out" | tail -n 1)" != "$pin" ] ||
+  ! cmp -s <(strip "$config") <(strip "$out"); then
+  rm -f "$out"; echo "::error::the pin wasn't written" >&2; exit 1
+fi
+cat "$out" >"$config" && rm -f "$out"
 echo "pinned $tag ($commit): $image@$digest"
