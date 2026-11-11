@@ -41,8 +41,7 @@ describe('AI Client Direct API Integration', () => {
     const config: AiProviderConfig = {
       provider: 'anthropic',
       apiKey: 'direct_ant_key_123',
-      model: 'claude-sonnet-4-5-20250929',
-      useVendedCredentials: false
+      model: 'claude-sonnet-4-5-20250929'
     };
 
     const client = await getAiClient(config);
@@ -78,8 +77,7 @@ describe('AI Client Direct API Integration', () => {
     const config: AiProviderConfig = {
       provider: 'openai',
       apiKey: 'direct_oai_key',
-      model: 'gpt-4',
-      useVendedCredentials: false
+      model: 'gpt-4'
     };
 
     const client = await getAiClient(config);
@@ -109,8 +107,7 @@ describe('AI Client Direct API Integration', () => {
     const config: AiProviderConfig = {
       provider: 'anthropic',
       apiKey: 'invalid_key',
-      model: 'claude-sonnet-4-5-20250929',
-      useVendedCredentials: false
+      model: 'claude-sonnet-4-5-20250929'
     };
 
     const client = await getAiClient(config);
@@ -126,8 +123,7 @@ describe('AI Client Direct API Integration', () => {
   test('should throw error for missing API key', async () => {
     const config: AiProviderConfig = {
       provider: 'anthropic',
-      model: 'claude-sonnet-4-5-20250929',
-      useVendedCredentials: false
+      model: 'claude-sonnet-4-5-20250929'
     };
 
     try {

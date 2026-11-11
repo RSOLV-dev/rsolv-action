@@ -106,8 +106,7 @@ describe('executeAllPhases vulnerabilities handoff to MITIGATE', () => {
       rsolvApiKey: 'test-api-key',
       maxIssues: 1,
       aiProvider: {
-        name: 'claude-code',
-        useVendedCredentials: true
+        name: 'claude-code'
       },
       fixValidation: {
         enabled: false

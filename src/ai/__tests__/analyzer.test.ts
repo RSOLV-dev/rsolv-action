@@ -53,8 +53,7 @@ describe('Issue Analyzer', () => {
         apiKey: 'test-api-key',
         model: MODELS.CLAUDE_OPUS,
         temperature: 0.2,
-        maxTokens: 2000,
-        useVendedCredentials: false
+        maxTokens: 2000
       },
       skipTests: false,
       enableSecurity: false,
