@@ -6,11 +6,15 @@ on:
   pull_request:
     branches: [main]
 
+permissions: {}
+
 jobs:
   test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -30,6 +34,11 @@ jobs:
         # Dependabot now targets the bun ecosystem and package-lock.json is gone,
         # so a stale lockfile is a real problem and should fail loudly.
         run: bun install --frozen-lockfile
+
+      # The v5 workflows' structural whitelist (src/workflows/v5-structure.ts), on its own so a
+      # failure fails this job by vitest's exit code.
+      - name: v5 workflow structure
+        run: bun x vitest run src/workflows
 
       - name: Run tests
         run: bun run test:ci
@@ -55,8 +64,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     needs: test
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -80,4 +91,43 @@ jobs:
       - name: Build Docker image
         run: docker build -t rsolv/action:latest .
 
-      # In a real CI setup, we would push the Docker image to a registry here
+      # The v5 sandbox target, with the same non-root checks sandbox-image.yml runs per
+      # architecture before it publishes (RFC-150 3d).
+      - name: Build and smoke-test the sandbox image
+        run: |
+          set -euo pipefail
+          docker build --target sandbox -t rsolv-sandbox:ci .
+          test "$(docker run --rm --user 1001:118 -e HOME=/opt/home rsolv-sandbox:ci id -u)" = 1001
+          test "$(docker run --rm --user 1001:118 -e HOME=/opt/home rsolv-sandbox:ci sh -c 'env | grep -cE "^(GITHUB_|ACTIONS_|RSOLV_)" || true')" = 0
+          printf '0\n' | docker run -i --rm --user 1001:118 -e HOME=/opt/home -v "$PWD/test-fixtures:/work:ro" rsolv-sandbox:ci \
+            rsolv-sandbox bootstrap | tail -n1 | jq -e .ok
+
+  workflow-lint:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: actionlint (every workflow)
+        run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667
+      # zizmor covers the v5 files only; the v4 workflows' findings go when RFC-150 step 6 deletes them.
+      - name: zizmor (v5 workflows and template)
+        run: >-
+          docker run --rm -v "$PWD:/repo" -w /repo
+          ghcr.io/zizmorcore/zizmor@sha256:3014cc8f68f663935f69b3c3e0e41f5ce102b268d97db13db0f62208747f860d
+          --offline --min-severity low
+          .github/workflows/rsolv-scan.yml .github/workflows/rsolv-work.yml .github/workflows/rsolv-verify.yml
+          .github/workflows/rsolv-issue.yml .github/workflows/rsolv-publish.yml .github/workflows/sandbox-image.yml
+          .github/workflows/TEMPLATE-rsolv-v5.yml
+      - name: shellcheck (workflow scripts)
+        run: >-
+          shellcheck scripts/pin-host.sh scripts/pin-sandbox.sh scripts/check-first-parent.sh
+          scripts/verify-sandbox-oci.sh scripts/check-workflow-pins.sh scripts/test-v5-workflows.sh
+      - name: Workflow tooling and host launch tests
+        run: scripts/test-v5-workflows.sh
+      # Task 11 (the first host release) drops --allow-unreleased; the key ceremony's workflow PR
+      # drops --allow-placeholder-keys; the first v5 release adds --strict.
+      - name: Host pins and decision keys agree
+        run: scripts/check-workflow-pins.sh --allow-unreleased --allow-placeholder-keys

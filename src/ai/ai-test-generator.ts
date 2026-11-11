@@ -72,8 +72,7 @@ export class AITestGenerator {
         apiKey: this.aiConfig.apiKey || '',
         model: this.aiConfig.model || 'claude-3-sonnet',
         temperature: this.aiConfig.temperature,
-        maxTokens: this.aiConfig.maxTokens, // Will be resolved by token-utils during completion
-        useVendedCredentials: this.aiConfig.useVendedCredentials
+        maxTokens: this.aiConfig.maxTokens // Will be resolved by token-utils during completion
       };
 
       this.aiClient = await getAiClient(providerConfig);

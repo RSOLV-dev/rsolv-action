@@ -22,7 +22,7 @@ export interface ValidationResult {
   reason?: string;
 }
 
-interface ValidationResponse {
+export interface ValidationResponse {
   validated: Array<{
     id: string;
     isValid: boolean;
@@ -46,6 +46,25 @@ interface ValidationResponse {
   };
 }
 
+/** The body of POST /api/v1/vulnerabilities/validate, as prepareValidationRequest builds it. */
+export interface ValidationRequest {
+  vulnerabilities: Array<{
+    id: string;
+    type: string;
+    patternId: string;
+    file: string;
+    line: number;
+    code: string;
+    severity: string;
+  }>;
+  files: Record<string, { content: string }>;
+}
+
+/** What validates findings: the platform API (v4), or the host's frames (the v5 sandbox). */
+export interface ValidationClient {
+  validateVulnerabilities(request: ValidationRequest): Promise<ValidationResponse>;
+}
+
 /**
  * ASTValidator service for server-side vulnerability validation
  * 
@@ -63,14 +82,15 @@ interface ValidationResponse {
  * ```
  */
 export class ASTValidator {
-  private apiClient: RsolvApiClient;
+  private apiClient: ValidationClient;
   private cache: Map<string, ValidationResult> = new Map();
   
-  constructor(apiKey: string) {
-    this.apiClient = new RsolvApiClient({
+  constructor(apiKey: string, client?: ValidationClient) {
+    // RsolvApiClient's declared request type predates the request this class sends
+    this.apiClient = client ?? (new RsolvApiClient({
       apiKey,
       baseUrl: process.env.RSOLV_API_URL || 'https://api.rsolv.dev'
-    });
+    }) as unknown as ValidationClient);
   }
   
   /**
@@ -177,7 +197,7 @@ export class ASTValidator {
   private prepareValidationRequest(
     vulnerabilities: Vulnerability[],
     fileContents: Map<string, string>
-  ) {
+  ): ValidationRequest {
     // Convert vulnerabilities to API format
     const vulnsForApi = vulnerabilities.map(v => ({
       id: `${v.type}-${v.line}-${v.column || 0}`, // Generate ID from available fields
@@ -201,7 +221,7 @@ export class ASTValidator {
     };
   }
   
-  private async callValidationAPI(request: any): Promise<ValidationResponse> {
+  private async callValidationAPI(request: ValidationRequest): Promise<ValidationResponse> {
     const response = await this.apiClient.validateVulnerabilities(request);
     if (process.env.DEBUG_AST_VALIDATION) {
       console.log('AST Validation Request:', JSON.stringify(request, null, 2));
