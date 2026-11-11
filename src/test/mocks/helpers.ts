@@ -133,32 +133,3 @@ export function createMockGenerateResponse(body: Record<string, any>) {
     }
   };
 }
-
-/**
- * Create mock credentials response
- */
-export function createMockCredentials(prefix = '') {
-  const suffix = prefix ? `_${prefix}_` : '_';
-
-  return {
-    success: true,
-    credentials: {
-      anthropic: {
-        api_key: `temp_ant${suffix}` + Math.random().toString(36).substr(2, 9),
-        expires_at: new Date(Date.now() + 3600000).toISOString()
-      },
-      openai: {
-        api_key: `temp_oai${suffix}` + Math.random().toString(36).substr(2, 9),
-        expires_at: new Date(Date.now() + 3600000).toISOString()
-      },
-      openrouter: {
-        api_key: `temp_or${suffix}` + Math.random().toString(36).substr(2, 9),
-        expires_at: new Date(Date.now() + 3600000).toISOString()
-      }
-    },
-    usage: {
-      remaining_fixes: 999999,
-      reset_at: new Date(Date.now() + 86400000).toISOString()
-    }
-  };
-}

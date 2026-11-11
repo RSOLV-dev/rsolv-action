@@ -1,0 +1,188 @@
+# Builds and publishes the v5 sandbox image, ghcr.io/rsolv-dev/rsolv-sandbox (RFC-150 §1.1,
+# ADR-077 §5). See docs/V5-RELEASE.md.
+#   build:   the Dockerfile's `sandbox` target, natively per architecture (no QEMU), read-only:
+#            exported as an archive, loaded and smoke-tested from that archive, uploaded as an
+#            artifact. Nothing is pushed. Each digest is recorded as a job output.
+#   verify:  the artifacts still hold the digests build recorded (every run, so a pull request
+#            proves the handoff publish depends on).
+#   publish: sandbox-v* tags only, behind the `release` environment: the tag's commit is a
+#            first-parent commit of main, the artifacts are re-verified and pushed unchanged, the
+#            multi-architecture index is created and its digest attested (push-to-registry).
+# rsolv-host pins that index digest only through scripts/pin-sandbox.sh.
+name: sandbox-image
+on:
+  push:
+    tags: ["sandbox-v*"]
+  pull_request:
+    branches: [main]
+permissions: {}
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+defaults:
+  run: { shell: bash }
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { arch: amd64, runner: ubuntu-24.04 }
+          - { arch: arm64, runner: ubuntu-24.04-arm }
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    # Each leg sets only its own architecture's output, so the two survive the matrix.
+    outputs:
+      digest-amd64: ${{ steps.archive.outputs.digest-amd64 }}
+      digest-arm64: ${{ steps.archive.outputs.digest-arm64 }}
+    env:
+      ARCH: ${{ matrix.arch }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      # The docker exporter with OCI media types writes an archive that is both `docker load`able
+      # and an OCI layout, so the image smoke-tested here is, byte for byte, the one publish pushes.
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          target: sandbox
+          platforms: linux/${{ matrix.arch }}
+          no-cache: true
+          provenance: false
+          sbom: false
+          push: false
+          labels: org.opencontainers.image.source=https://github.com/RSOLV-dev/RSOLV-action
+          outputs: type=docker,dest=${{ runner.temp }}/sandbox-${{ matrix.arch }}.tar,name=rsolv-sandbox:smoke,oci-mediatypes=true
+      - id: archive
+        name: Record the archive's image digest
+        run: |
+          set -euo pipefail
+          digest=$(scripts/verify-sandbox-oci.sh "$RUNNER_TEMP/sandbox-$ARCH.tar" "$ARCH")
+          echo "digest-$ARCH=$digest" >>"$GITHUB_OUTPUT"
+          echo "linux/$ARCH: \`$digest\`" >>"$GITHUB_STEP_SUMMARY"
+      - name: Load the archive and smoke-test it, non-root, on this architecture
+        env:
+          DIGEST: ${{ steps.archive.outputs[format('digest-{0}', matrix.arch)] }}
+        run: |
+          set -euo pipefail
+          tar="$RUNNER_TEMP/sandbox-$ARCH.tar"
+          docker load -i "$tar"
+          img=rsolv-sandbox:smoke
+          # The loaded image is the archive's: its ID is the config digest (classic store) or
+          # the manifest digest (containerd store).
+          config=$(tar -xOf "$tar" "blobs/sha256/${DIGEST#sha256:}" | jq -r .config.digest)
+          id=$(docker image inspect --format '{{.Id}}' "$img")
+          [ "$id" = "$config" ] || [ "$id" = "$DIGEST" ] || { echo "::error::loaded $id, archive has $DIGEST"; exit 1; }
+          test "$(docker run --rm --user 1001:118 -e HOME=/opt/home "$img" id -u)" = 1001
+          test "$(docker run --rm --user 1001:118 -e HOME=/opt/home "$img" sh -c 'env | grep -cE "^(GITHUB_|ACTIONS_|RSOLV_)" || true')" = 0
+          printf '0\n' | docker run -i --rm --user 1001:118 -e HOME=/opt/home -v "$PWD/test-fixtures:/work:ro" "$img" \
+            rsolv-sandbox bootstrap | tail -n1 | jq -e .ok
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sandbox-${{ matrix.arch }}
+          path: ${{ runner.temp }}/sandbox-${{ matrix.arch }}.tar
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1
+
+  verify:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: sandbox-*
+          merge-multiple: true
+          path: ${{ runner.temp }}/oci
+      - name: The artifacts hold the digests the build recorded
+        env:
+          DIGEST_AMD64: ${{ needs.build.outputs.digest-amd64 }}
+          DIGEST_ARM64: ${{ needs.build.outputs.digest-arm64 }}
+        run: |
+          set -euo pipefail
+          scripts/verify-sandbox-oci.sh "$RUNNER_TEMP/oci/sandbox-amd64.tar" amd64 "$DIGEST_AMD64"
+          scripts/verify-sandbox-oci.sh "$RUNNER_TEMP/oci/sandbox-arm64.tar" arm64 "$DIGEST_ARM64"
+
+  publish:
+    needs: [build, verify]
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/sandbox-v')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: release
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    env:
+      IMAGE: ghcr.io/rsolv-dev/rsolv-sandbox
+      DIGEST_AMD64: ${{ needs.build.outputs.digest-amd64 }}
+      DIGEST_ARM64: ${{ needs.build.outputs.digest-arm64 }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: The tag is a release tag and its commit is a first-parent commit of main
+        run: |
+          set -euo pipefail
+          [[ $GITHUB_REF_NAME =~ ^sandbox-v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::$GITHUB_REF_NAME is not sandbox-vX.Y.Z"; exit 1; }
+          # Not grep -q: it exits at the match and, under pipefail, git's SIGPIPE fails the check.
+          git rev-list --first-parent origin/main | grep -xF "$GITHUB_SHA" >/dev/null ||
+            { echo "::error::$GITHUB_SHA is not a first-parent commit of main"; exit 1; }
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: sandbox-*
+          merge-multiple: true
+          path: ${{ runner.temp }}/oci
+      - name: Re-verify the tested archives
+        run: |
+          set -euo pipefail
+          scripts/verify-sandbox-oci.sh "$RUNNER_TEMP/oci/sandbox-amd64.tar" amd64 "$DIGEST_AMD64"
+          scripts/verify-sandbox-oci.sh "$RUNNER_TEMP/oci/sandbox-arm64.tar" arm64 "$DIGEST_ARM64"
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: index
+        name: Push the archives unchanged, then the multi-architecture index
+        run: |
+          set -euo pipefail
+          for arch in amd64 arm64; do
+            var="DIGEST_${arch^^}"
+            want=${!var}
+            # --preserve-digests fails rather than rewrite the manifest.
+            skopeo copy --preserve-digests "oci-archive:$RUNNER_TEMP/oci/sandbox-$arch.tar" "docker://$IMAGE:$GITHUB_REF_NAME-$arch"
+            got="sha256:$(skopeo inspect --raw "docker://$IMAGE@$want" | sha256sum | cut -d' ' -f1)"
+            [ "$got" = "$want" ] || { echo "::error::registry has $got for $arch, expected $want"; exit 1; }
+          done
+          docker buildx imagetools create -t "$IMAGE:$GITHUB_REF_NAME" "$IMAGE@$DIGEST_AMD64" "$IMAGE@$DIGEST_ARM64"
+          raw=$(skopeo inspect --raw "docker://$IMAGE:$GITHUB_REF_NAME")
+          index="sha256:$(printf '%s' "$raw" | sha256sum | cut -d' ' -f1)"
+          jq -e --arg a "$DIGEST_AMD64" --arg b "$DIGEST_ARM64" \
+            '[.manifests[].digest] | sort == ([$a, $b] | sort)' <<<"$raw" >/dev/null ||
+            { echo "::error::the index doesn't list exactly the two tested manifests"; exit 1; }
+          echo "digest=$index" >>"$GITHUB_OUTPUT"
+          {
+            echo "Index for \`$GITHUB_REF_NAME\` ($GITHUB_SHA): \`$IMAGE@$index\`"
+            echo
+            echo "Pin it in rsolv-host only with \`scripts/pin-sandbox.sh ${GITHUB_REF_NAME#sandbox-v} $index <rsolv-host checkout>\`."
+          } >>"$GITHUB_STEP_SUMMARY"
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ghcr.io/rsolv-dev/rsolv-sandbox
+          subject-digest: ${{ steps.index.outputs.digest }}
+          push-to-registry: true
+          create-storage-record: false

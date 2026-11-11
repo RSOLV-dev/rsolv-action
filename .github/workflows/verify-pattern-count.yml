@@ -15,7 +15,7 @@ jobs:
   verify-counts:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -30,7 +30,7 @@ jobs:
 
           # Count test patterns in minimal-patterns.ts
           TOTAL=$(grep -o "^\s*id:" src/security/minimal-patterns.ts | wc -l)
-          echo "TOTAL_PATTERNS=$TOTAL" >> $GITHUB_ENV
+          echo "TOTAL_PATTERNS=$TOTAL" >> "$GITHUB_ENV"
           echo "Found $TOTAL test patterns in minimal-patterns.ts"
           echo "Note: Production pattern count (183) is served via API"
           
