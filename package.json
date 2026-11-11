@@ -56,7 +56,7 @@
     "@typescript-eslint/parser": "^8.70.0",
     "@vitest/ui": "^4.1.10",
     "bun-types": "^1.4.2",
-    "eslint": "^10.8.0",
+    "eslint": "^10.10.0",
     "happy-dom": "^20.14.5",
     "msw": "^2.15.0",
     "nock": "^14.0.16",
