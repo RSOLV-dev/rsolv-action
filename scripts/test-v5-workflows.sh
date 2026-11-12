@@ -108,8 +108,14 @@ released() { # a fresh copy with a real host pin and the given production set (s
   set_keys STAGING "'$staging_keys'"
   set_keys PRODUCTION "$1"
 }
+placeholder_set() { # the pre-ceremony set, as check-workflow-pins.sh spells it
+  local z=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  printf '[{"kid":"unpinned-%s-a","public_key":"%s","not_after":"1970-01-01"},{"kid":"unpinned-%s-b","public_key":"%s","not_after":"1970-01-01"}]' "$1" "$z" "$1" "$z"
+}
 fresh_copy
 sed -i "s/\"$zero\"/\"$other\"/" "$t/r/.github/workflows/"rsolv-*.yml
+set_keys STAGING "'$(placeholder_set staging)'"
+set_keys PRODUCTION "'$(placeholder_set production)'"
 want="placeholder key set"
 check "keys: the placeholder sets fail without --allow-placeholder-keys" fails_saying "$pins"
 check "keys: the placeholder sets pass with --allow-placeholder-keys" "$pins" --allow-placeholder-keys
@@ -127,7 +133,7 @@ check "keys: JSON with spaces is refused" refused_keys "'${prod_keys//,\"/, \"}'
 # shellcheck disable=SC2016 # a GitHub expression, not shell
 check "keys: an expression is refused" refused_keys '${{ inputs.decision_keys }}'
 check "keys: the staging placeholder is refused" \
-  refused_keys "'$(sed -n "s/^          RSOLV_DECISION_KEYS_STAGING: '\(.*\)'\$/\1/p" "$repo/.github/workflows/rsolv-publish.yml")'"
+  refused_keys "'$(placeholder_set staging)'"
 want="share a key"
 check "keys: a key shared by production and staging is refused" refused_keys "'$(key_set prod-x "$(day '+60 days')" 3 2)'"
 want=RSOLV_DECISION_KEYS_STAGING
@@ -355,7 +361,7 @@ run_step rsolv-publish.yml publish "$stub_sum" "" RSOLV_API_URL=https://api.rsol
 check "publish: the staging URL gets the staging keys" grep -qxF "KEYS $staging_keys" "$rt/calls"
 run_step rsolv-publish.yml publish "$stub_sum" "" RSOLV_API_URL=https://api.example.com.
 check "publish: any other URL exits 2 before the role runs" bash -c "[ $rc -eq 2 ] && [ $(calls) -eq 1 ]"
-placeholder=$(sed -n "s/^          RSOLV_DECISION_KEYS_PRODUCTION: '\(.*\)'\$/\1/p" "$repo/.github/workflows/rsolv-publish.yml")
+placeholder=$(placeholder_set production)
 run_step rsolv-publish.yml publish "$stub_sum" "" RSOLV_DECISION_KEYS_PRODUCTION="$placeholder"
 check "publish: the placeholder key set exits 2 before the role runs" bash -c "[ $rc -eq 2 ] && [ $(calls) -eq 1 ]"
 check "publish: the placeholder refusal says why" grep -q 'pins no decision keys' "$rt/stdout"
