@@ -54,13 +54,14 @@
     "@types/node": "^26.6.1",
     "@typescript-eslint/eslint-plugin": "^8.65.0",
     "@typescript-eslint/parser": "^8.70.0",
-    "@vitest/ui": "^4.1.10",
+    "@vitest/ui": "^5.1.0",
     "bun-types": "^1.4.2",
     "eslint": "^10.10.0",
     "happy-dom": "^20.14.5",
     "msw": "^2.15.0",
     "nock": "^14.0.16",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.10"
+    "vite": "^6.4.6",
+    "vitest": "^5.1.0"
   }
 }
