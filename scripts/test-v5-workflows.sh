@@ -24,8 +24,13 @@ fresh_copy() {
 }
 workflows_sum() { cat "$t/r/.github/workflows/"*.yml | sha256sum; }
 
+unpin_host() { # the pre-release state: every host pin all-zero, as check-workflow-pins.sh spells it
+  sed -i -E "s/(RSOLV_HOST_SHA256_(X64|ARM64): )\"[0-9a-f]{64}\"/\1\"$zero\"/" "$t/r/.github/workflows/"rsolv-*.yml
+}
+
 # --- check-workflow-pins.sh ---------------------------------------------------------------
 fresh_copy
+unpin_host
 pins=$t/r/scripts/check-workflow-pins.sh
 check "pins: the unreleased placeholder passes with --allow-unreleased" "$pins" --allow-unreleased --allow-placeholder-keys
 quietly() { "$@" >"$t/o" 2>&1; }
