@@ -2,8 +2,8 @@
 # branch and one pull request, exactly as a decision signed by the platform allows.
 # The decision keys below are the platform's public Ed25519 keys (RFC-150 §6.4): a primary and a
 # standby per environment, each trusted until its not_after. A decision signed by any other key
-# is refused before any write. Until the key ceremony, each set is the placeholder (all-zero keys
-# under unpinned- kids, expired in 1970), and the job refuses to run.
+# is refused before any write. Pinned from the 2026-11-11 ceremony; rotate by day 60
+# (rsolv-platform docs/runbooks/DECISION-SIGNING-KEYS-RUNBOOK.md).
 # No checkout, cache or artifact: this job reads nothing from the repository (RFC §2.2).
 # The host binary is pinned by SHA-256 below (scripts/pin-host.sh writes the pins after its
 # provenance verifies); all-zero means no release is pinned yet, and the job refuses to run.
@@ -39,8 +39,8 @@ jobs:
           RSOLV_API_URL: ${{ inputs.api_url }}
           ISSUE: ${{ inputs.issue }}
           GITHUB_TOKEN: ${{ github.token }}
-          RSOLV_DECISION_KEYS_PRODUCTION: '[{"kid":"unpinned-production-a","public_key":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA","not_after":"1970-01-01"},{"kid":"unpinned-production-b","public_key":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA","not_after":"1970-01-01"}]'
-          RSOLV_DECISION_KEYS_STAGING: '[{"kid":"unpinned-staging-a","public_key":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA","not_after":"1970-01-01"},{"kid":"unpinned-staging-b","public_key":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA","not_after":"1970-01-01"}]'
+          RSOLV_DECISION_KEYS_PRODUCTION: '[{"kid":"prod-2026-11-11-a","public_key":"69gd_XqTO-Gn1y6x7XZbhtBP37anT9CuT4uB-5rQ4Rg","not_after":"2027-02-08"},{"kid":"prod-2026-11-11-b","public_key":"K9WhcK8e_MZNmccYk5rTbO6-2jUN7dIzI26lg5RIX3w","not_after":"2027-02-08"}]'
+          RSOLV_DECISION_KEYS_STAGING: '[{"kid":"staging-2026-11-11-a","public_key":"_kE04eys8YcBodEOSE3gBMVsntOiDKxQVSA8azAv_X0","not_after":"2027-02-08"},{"kid":"staging-2026-11-11-b","public_key":"hYunpVazgyMrD6ftjPuqyN9wYxwgeil9z1NSWYhf-q4","not_after":"2027-02-08"}]'
         run: |
           # BEGIN install-host
           # Download the pinned host, check its SHA-256, and run `version` once, alone, so it

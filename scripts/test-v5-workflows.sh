@@ -108,8 +108,14 @@ released() { # a fresh copy with a real host pin and the given production set (s
   set_keys STAGING "'$staging_keys'"
   set_keys PRODUCTION "$1"
 }
+placeholder_set() { # the pre-ceremony set, as check-workflow-pins.sh spells it
+  local z=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  printf '[{"kid":"unpinned-%s-a","public_key":"%s","not_after":"1970-01-01"},{"kid":"unpinned-%s-b","public_key":"%s","not_after":"1970-01-01"}]' "$1" "$z" "$1" "$z"
+}
 fresh_copy
 sed -i "s/\"$zero\"/\"$other\"/" "$t/r/.github/workflows/"rsolv-*.yml
+set_keys STAGING "'$(placeholder_set staging)'"
+set_keys PRODUCTION "'$(placeholder_set production)'"
 want="placeholder key set"
 check "keys: the placeholder sets fail without --allow-placeholder-keys" fails_saying "$pins"
 check "keys: the placeholder sets pass with --allow-placeholder-keys" "$pins" --allow-placeholder-keys
@@ -127,7 +133,7 @@ check "keys: JSON with spaces is refused" refused_keys "'${prod_keys//,\"/, \"}'
 # shellcheck disable=SC2016 # a GitHub expression, not shell
 check "keys: an expression is refused" refused_keys '${{ inputs.decision_keys }}'
 check "keys: the staging placeholder is refused" \
-  refused_keys "'$(sed -n "s/^          RSOLV_DECISION_KEYS_STAGING: '\(.*\)'\$/\1/p" "$repo/.github/workflows/rsolv-publish.yml")'"
+  refused_keys "'$(placeholder_set staging)'"
 want="share a key"
 check "keys: a key shared by production and staging is refused" refused_keys "'$(key_set prod-x "$(day '+60 days')" 3 2)'"
 want=RSOLV_DECISION_KEYS_STAGING
@@ -355,7 +361,7 @@ run_step rsolv-publish.yml publish "$stub_sum" "" RSOLV_API_URL=https://api.rsol
 check "publish: the staging URL gets the staging keys" grep -qxF "KEYS $staging_keys" "$rt/calls"
 run_step rsolv-publish.yml publish "$stub_sum" "" RSOLV_API_URL=https://api.example.com.
 check "publish: any other URL exits 2 before the role runs" bash -c "[ $rc -eq 2 ] && [ $(calls) -eq 1 ]"
-placeholder=$(sed -n "s/^          RSOLV_DECISION_KEYS_PRODUCTION: '\(.*\)'\$/\1/p" "$repo/.github/workflows/rsolv-publish.yml")
+placeholder=$(placeholder_set production)
 run_step rsolv-publish.yml publish "$stub_sum" "" RSOLV_DECISION_KEYS_PRODUCTION="$placeholder"
 check "publish: the placeholder key set exits 2 before the role runs" bash -c "[ $rc -eq 2 ] && [ $(calls) -eq 1 ]"
 check "publish: the placeholder refusal says why" grep -q 'pins no decision keys' "$rt/stdout"
@@ -483,12 +489,41 @@ echo "$merge" >"$t/fake/commit"
 fresh_copy
 fake_host
 check "pin-sandbox: a verified release is pinned" quietly pin_sandbox 0.1.0 "$idx" "$t/host"
-check "pin-sandbox: the digest is written to sandbox_image, and nothing else changes" \
-  test "$(grep -c . "$t/host/rsolv_host/config/config.exs") $(grep -cxF "  sandbox_image: \"ghcr.io/rsolv-dev/rsolv-sandbox@$idx\"" "$t/host/rsolv_host/config/config.exs")" = "4 1"
+# mix format's own shape: a real digest makes the one-line form too long, so the key and the
+# string sit on two lines.
+pinned_as() { # config, digest: the key alone on its line, the string on the next, nothing else changed
+  [ "$(grep -c . "$1")" = 5 ] && [ "$(grep -cx '  sandbox_image:' "$1")" = 1 ] &&
+    [ "$(grep -A1 -x '  sandbox_image:' "$1" | tail -n 1)" = "    \"ghcr.io/rsolv-dev/rsolv-sandbox@$2\"" ]
+}
+check "pin-sandbox: the digest is written to sandbox_image as mix format lays it out, and nothing else changes" \
+  pinned_as "$t/host/rsolv_host/config/config.exs" "$idx"
+idx2="sha256:$(printf 'f%.0s' {1..64})"
+check "pin-sandbox: a pinned checkout can be re-pinned" quietly pin_sandbox 0.1.0 "$idx2" "$t/host"
+check "pin-sandbox: a re-pin replaces the digest in place" pinned_as "$t/host/rsolv_host/config/config.exs" "$idx2"
+cfg=$t/host/rsolv_host/config/config.exs
+printf '%s' "$(cat "$cfg")" >"$cfg.tmp" && mv "$cfg.tmp" "$cfg"
+check "pin-sandbox: a config without a final newline is pinned" quietly pin_sandbox 0.1.0 "$idx" "$t/host"
+check "pin-sandbox: ... and laid out as mix format does" pinned_as "$t/host/rsolv_host/config/config.exs" "$idx"
+printf '%s\n%s' 'config :rsolv_host,' '  sandbox_image: "ghcr.io/rsolv-dev/rsolv-sandbox@sha256:" <> String.duplicate("0", 64)' >"$cfg"
+check "pin-sandbox: a sandbox_image last line without a final newline is pinned" quietly pin_sandbox 0.1.0 "$idx" "$t/host"
+check "pin-sandbox: ... with the string on the next line" \
+  test "$(tail -n 1 "$cfg")" = "    \"ghcr.io/rsolv-dev/rsolv-sandbox@$idx\""
+printf '%s\n' 'config :rsolv_host,' '  sandbox_image:' '' '  proxy_image: "squid"' 'import_config "x"' \
+  >"$t/host/rsolv_host/config/config.exs"
+before=$(sha256sum <"$cfg")
+want="pin wasn't written"
+check "pin-sandbox: a sandbox_image key with no value is refused" fails_saying pin_sandbox 0.1.0 "$idx" "$t/host"
+check "pin-sandbox: a sandbox_image key with no value changes nothing" test "$before" = "$(sha256sum <"$cfg")"
+printf '%s\n' 'config :rsolv_host,' '  sandbox_image: "ghcr.io/rsolv-dev/rsolv-sandbox@sha256:x" junk' 'import_config "x"' >"$cfg"
+before=$(sha256sum <"$cfg")
+check "pin-sandbox: a sandbox_image value with trailing content is refused" fails_saying pin_sandbox 0.1.0 "$idx" "$t/host"
+check "pin-sandbox: a sandbox_image value with trailing content changes nothing" test "$before" = "$(sha256sum <"$cfg")"
+no_temp_left() { ! compgen -G "${TMPDIR:-/tmp}/pin-sandbox.*" >/dev/null; }
+check "pin-sandbox: a refused pin leaves no temporary file" no_temp_left
 check "pin-sandbox: the tag commit is resolved through refs/tags/" \
-  grep -q 'gh api repos/RSOLV-dev/RSOLV-action/commits/refs/tags/sandbox-v0.1.0 --jq .sha' "$t/fake/log"
-want="gh attestation verify oci://ghcr.io/rsolv-dev/rsolv-sandbox@$idx --repo RSOLV-dev/RSOLV-action"
-want="$want --signer-workflow RSOLV-dev/RSOLV-action/.github/workflows/sandbox-image.yml"
+  grep -q 'gh api repos/RSOLV-dev/rsolv-action/commits/refs/tags/sandbox-v0.1.0 --jq .sha' "$t/fake/log"
+want="gh attestation verify oci://ghcr.io/rsolv-dev/rsolv-sandbox@$idx --repo RSOLV-dev/rsolv-action"
+want="$want --signer-workflow RSOLV-dev/rsolv-action/.github/workflows/sandbox-image.yml"
 want="$want --source-ref refs/tags/sandbox-v0.1.0 --source-digest $merge --deny-self-hosted-runners"
 check "pin-sandbox: the index digest is verified with the exact provenance flags" grep -qxF -- "$want" "$t/fake/log"
 

@@ -10,10 +10,10 @@ version=${1:-} digest=${2:-} host=${3:-}
   { echo "usage: pin-sandbox.sh <version> <sha256:digest> <rsolv-host checkout>" >&2; exit 2; }
 [[ $digest =~ ^sha256:0{64}$ ]] && { echo "::error::the all-zero digest is the placeholder, not a release" >&2; exit 2; }
 config=$host/rsolv_host/config/config.exs
-[ "$(grep -cE '^ *sandbox_image: ' "$config" 2>/dev/null)" = 1 ] ||
+[ "$(grep -cE '^ *sandbox_image:( |$)' "$config" 2>/dev/null)" = 1 ] ||
   { echo "::error::$config has no single sandbox_image line" >&2; exit 2; }
 here=$(cd "$(dirname "$0")" && pwd)
-repo=RSOLV-dev/RSOLV-action
+repo=RSOLV-dev/rsolv-action
 image=ghcr.io/rsolv-dev/rsolv-sandbox
 tag="sandbox-v$version"
 gh() { env -u GITHUB_TOKEN gh "$@"; }
@@ -37,6 +37,31 @@ gh attestation verify "oci://$image@$digest" --repo "$repo" \
   --deny-self-hosted-runners
 
 # 4. Only now write the pin.
-sed -i -E "s|^( *sandbox_image: ).*$|\\1\"$image@$digest\"|" "$config"
-grep -qxF "  sandbox_image: \"$image@$digest\"" "$config" || { echo "::error::the pin wasn't written" >&2; exit 1; }
+#    As mix format lays it out: a real digest makes the one-line form too long, so the key ends
+#    its line and the string follows. It replaces either form: a value on the key's line (the
+#    placeholder), or a quoted string alone on the next line (an earlier pin). Anything else is
+#    refused. The result is checked whole, before it replaces config.exs: everything but the
+#    pin is unchanged, except that a missing final newline is added (as mix format adds it).
+pin="    \"$image@$digest\""
+strip() { # the file without its sandbox_image entry, in either form
+  awk 'value { value = 0; if ($0 ~ /^[ \t]+"[^"]*"[ \t]*$/) next }
+    /^ *sandbox_image:/ { value = ($0 ~ /^ *sandbox_image:[ \t]*$/); next }
+    { print }' "$1"
+}
+out=$(mktemp "${TMPDIR:-/tmp}/pin-sandbox.XXXXXX")
+trap 'rm -f "$out"' EXIT
+if ! awk -v pin="$pin" '
+  value { value = 0; if ($0 ~ /^[ \t]+"[^"]*"[ \t]*$/) next; bad = 1 }
+  /^ *sandbox_image:/ {
+    if ($0 ~ /^ *sandbox_image:[ \t]*$/) value = 1
+    else if ($0 !~ /^ *sandbox_image:[ \t]+"[^"]*"([ \t]*<>[ \t]*String\.duplicate\("0", *64\))?[ \t]*$/) bad = 1
+    print "  sandbox_image:"; print pin; next
+  }
+  { print }
+  END { exit (bad || value) }' "$config" >"$out" ||
+  [ "$(grep -A1 -x '  sandbox_image:' "$out" | tail -n 1)" != "$pin" ] ||
+  ! cmp -s <(strip "$config") <(strip "$out"); then
+  echo "::error::the pin wasn't written" >&2; exit 1
+fi
+cat "$out" >"$config" || { echo "::error::could not write $config" >&2; exit 1; }
 echo "pinned $tag ($commit): $image@$digest"

@@ -127,7 +127,6 @@ jobs:
           scripts/verify-sandbox-oci.sh scripts/check-workflow-pins.sh scripts/test-v5-workflows.sh
       - name: Workflow tooling and host launch tests
         run: scripts/test-v5-workflows.sh
-      # Task 11 (the first host release) drops --allow-unreleased; the key ceremony's workflow PR
-      # drops --allow-placeholder-keys; the first v5 release adds --strict.
+      # Task 11 (the first host release) drops --allow-unreleased; the first v5 release adds --strict.
       - name: Host pins and decision keys agree
-        run: scripts/check-workflow-pins.sh --allow-unreleased --allow-placeholder-keys
+        run: scripts/check-workflow-pins.sh --allow-unreleased
