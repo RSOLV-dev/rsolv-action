@@ -23,7 +23,7 @@ jobs:
       issues: write
       id-token: write
     with:
-      max_issues: ${{ inputs.max_issues || 3 }}
+      max_issues: ${{ fromJSON(inputs.max_issues || '3') }}
   issue:
     needs: scan
     if: needs.scan.outputs.issues != '[]'

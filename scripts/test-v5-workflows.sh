@@ -532,5 +532,11 @@ want="$want --signer-workflow RSOLV-dev/rsolv-action/.github/workflows/sandbox-i
 want="$want --source-ref refs/tags/sandbox-v0.1.0 --source-digest $merge --deny-self-hosted-runners"
 check "pin-sandbox: the index digest is verified with the exact provenance flags" grep -qxF -- "$want" "$t/fake/log"
 
+# --- the customer template's dispatch input ------------------------------------------------
+# A dispatched (API, CLI) number input reaches `inputs` as a string, and rsolv-scan.yml's number
+# input rejects it ("evaluate reusable workflow inputs: Unexpected value '1'"; first staging E2E).
+check "template: max_issues reaches rsolv-scan.yml as a number on every path" \
+  grep -qxF "      max_issues: \${{ fromJSON(inputs.max_issues || '3') }}" "$repo/.github/workflows/TEMPLATE-rsolv-v5.yml"
+
 [ "$fails" -eq 0 ] || { echo "$fails test(s) failed"; exit 1; }
 echo "all passed"
