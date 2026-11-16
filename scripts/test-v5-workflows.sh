@@ -535,8 +535,11 @@ check "pin-sandbox: the index digest is verified with the exact provenance flags
 # --- the customer template's dispatch input ------------------------------------------------
 # A dispatched (API, CLI) number input reaches `inputs` as a string, and rsolv-scan.yml's number
 # input rejects it ("evaluate reusable workflow inputs: Unexpected value '1'"; first staging E2E).
-check "template: max_issues reaches rsolv-scan.yml as a number on every path" \
-  grep -qxF "      max_issues: \${{ fromJSON(inputs.max_issues || '3') }}" "$repo/.github/workflows/TEMPLATE-rsolv-v5.yml"
+# format() first, so a UI 0 (a falsy number) stays 0 for rsolv-scan's range check instead of
+# becoming the default. GitHub's evaluator can't run here: this pins the line; the staging E2E
+# exercises it.
+check "template: max_issues is passed through format() and fromJSON()" \
+  grep -qxF "      max_issues: \${{ fromJSON(format('{0}', inputs.max_issues) || '3') }}" "$repo/.github/workflows/TEMPLATE-rsolv-v5.yml"
 
 [ "$fails" -eq 0 ] || { echo "$fails test(s) failed"; exit 1; }
 echo "all passed"
