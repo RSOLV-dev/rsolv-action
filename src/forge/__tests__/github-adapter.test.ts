@@ -66,12 +66,37 @@ describe('GitHubAdapter', () => {
         labels: 'rsolv:detected',
         state: 'open',
         per_page: 100,
+        page: 1,
       });
 
       expect(result).toHaveLength(1);
       expect(result[0].number).toBe(1);
       expect(result[0].title).toBe('SQL Injection');
       expect(result[0].labels).toContain('rsolv:detected');
+    });
+  });
+
+  describe('listIssues with more than one page of open issues', () => {
+    it('returns every open issue, not just the first 100', async () => {
+      const page = (from: number, count: number) => ({
+        data: Array.from({ length: count }, (_, i) => ({
+          number: from + i,
+          title: `Issue ${from + i}`,
+          html_url: `https://github.com/org/repo/issues/${from + i}`,
+          labels: [{ name: 'rsolv:detected' }],
+          state: 'open',
+        })),
+      });
+      mockIssues.listForRepo
+        .mockResolvedValueOnce(page(1, 100))
+        .mockResolvedValueOnce(page(101, 50));
+
+      const result = await adapter.listIssues('org', 'repo', 'rsolv:detected', 'open');
+
+      expect(result).toHaveLength(150);
+      expect(result[149].number).toBe(150);
+      expect(mockIssues.listForRepo).toHaveBeenCalledTimes(2);
+      expect(mockIssues.listForRepo).toHaveBeenLastCalledWith(expect.objectContaining({ page: 2 }));
     });
   });
 

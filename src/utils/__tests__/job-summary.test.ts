@@ -100,46 +100,44 @@ describe('writeProcessSummary', () => {
     );
   });
 
-  it('writes defense confirmed FP result', () => {
-    writeProcessSummary('arubis/test-repo', 42, {
-      success: true,
-      phase: 'process',
-      data: { classification: 'false_positive_defense_confirmed' },
-    });
+  describe('when VALIDATE did not prove the finding', () => {
+    const unproven = [
+      'false_positive',
+      'false_positive_defense_confirmed',
+      'false_positive_counter_indicated',
+      'inconclusive',
+      'test_passed_unexpectedly',
+    ];
+    const written = (): string =>
+      vi.mocked(appendFileSync).mock.calls.map(call => String(call[1])).join('');
 
-    expect(appendFileSync).toHaveBeenCalledWith(
-      summaryFile,
-      expect.stringContaining('Defense confirmed')
-    );
-  });
-
-  it('writes counter-indicated FP result', () => {
-    writeProcessSummary('arubis/test-repo', 42, {
-      success: true,
-      phase: 'process',
-      data: { classification: 'false_positive_counter_indicated' },
-    });
-
-    expect(appendFileSync).toHaveBeenCalledWith(
-      summaryFile,
-      expect.stringContaining('False positive')
-    );
-  });
-
-  it.each(['false_positive', 'false_positive_counter_indicated', 'inconclusive'])(
-    'does not tell the user an unproven %s result needs no action',
-    (classification) => {
+    it.each(unproven)('shows %s as Unconfirmed in the per-issue table', (classification) => {
       writeProcessSummary('arubis/test-repo', 42, {
         success: true,
         phase: 'process',
         data: { issueResults: [{ issueNumber: 42, classification }] },
       });
 
-      const written = vi.mocked(appendFileSync).mock.calls.map(call => String(call[1])).join('');
-      expect(written).not.toContain('No action needed');
-      expect(written).toContain('Unconfirmed');
-    }
-  );
+      expect(written()).toContain('Unconfirmed — RSOLV could not prove this finding; it stays open for review.');
+    });
+
+    it.each(unproven)('never asserts %s is safe or needs no action', (classification) => {
+      writeProcessSummary('arubis/test-repo', 42, {
+        success: true,
+        phase: 'process',
+        data: { issueResults: [{ issueNumber: 42, classification }] },
+      });
+      writeProcessSummary('arubis/test-repo', 42, {
+        success: true,
+        phase: 'process',
+        data: { classification },
+      });
+
+      const text = written();
+      expect(text).not.toMatch(/not exploitable|defense confirmed|false positive|no action needed|revalidat/i);
+      expect(text).toContain('Unconfirmed');
+    });
+  });
 
   it('writes failure result', () => {
     writeProcessSummary('arubis/test-repo', 42, {

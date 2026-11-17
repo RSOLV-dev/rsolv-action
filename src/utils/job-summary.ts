@@ -156,7 +156,7 @@ export function writeProcessSummary(
       const { emoji, label } = classificationDisplay(ir.classification);
       const action = ir.prUrl
         ? `[Fix PR](${ir.prUrl})`
-        : ir.classification === 'validated' ? '—' : 'Unconfirmed — revalidated on next scan';
+        : ir.classification === 'validated' ? '—' : 'Unconfirmed — RSOLV could not prove this finding; it stays open for review.';
       lines.push(`| [#${ir.issueNumber}](../../issues/${ir.issueNumber}) | ${emoji} ${label} | ${action} |`);
     }
   } else {
@@ -188,12 +188,12 @@ function classificationDisplay(classification: string): { emoji: string; label: 
   switch (classification) {
   case 'validated':
     return { emoji: '✅', label: 'Vulnerability confirmed' };
-  case 'false_positive_defense_confirmed':
-    return { emoji: '🛡️', label: 'Defense confirmed — not exploitable' };
-  case 'false_positive_counter_indicated':
-    return { emoji: '🛡️', label: 'False positive — not exploitable' };
   case 'false_positive':
-    return { emoji: '⚪', label: 'Not validated' };
+  case 'false_positive_defense_confirmed':
+  case 'false_positive_counter_indicated':
+  case 'inconclusive':
+  case 'test_passed_unexpectedly':
+    return { emoji: '⚪', label: 'Unconfirmed' };
   case 'infrastructure_failure':
     return { emoji: '⚠️', label: 'Infrastructure issue' };
   case 'max_turns_exceeded':

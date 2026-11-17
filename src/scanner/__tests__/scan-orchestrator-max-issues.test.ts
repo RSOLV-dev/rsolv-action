@@ -1,7 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ScanOrchestrator } from '../scan-orchestrator.js';
 import { logger } from '../../utils/logger.js';
-import type { ScanConfig, VulnerabilityGroup, ScanPlanFinding } from '../types.js';
+import type { ScanConfig, VulnerabilityGroup, ScanPlanFinding, ScanPlanRequest, ScanPlanResponse } from '../types.js';
+import type { ScanPlatform } from '../scan-orchestrator.js';
+import type { ForgeAdapter, ForgeIssue } from '../../forge/forge-adapter.js';
+import type { Vulnerability } from '../../security/types.js';
+import { VulnerabilityType } from '../../security/types.js';
 
 // Mock ScanPlanClient to pass all findings through (RFC-146 Phase 2)
 vi.mock('../scan-plan-client.js', () => ({
@@ -481,5 +485,76 @@ describe('ScanOrchestrator - max_issues bug', () => {
       // Should create all 3 issues when limit is higher
       expect(result.createdIssues).toHaveLength(3);
     });
+  });
+});
+
+describe('ScanOrchestrator - findings that already have open issues', () => {
+  const finding = (file: string): Vulnerability => ({
+    type: VulnerabilityType.XSS,
+    severity: 'high',
+    line: 1,
+    message: 'XSS',
+    description: 'XSS',
+    confidence: 90,
+    cweId: 'CWE-79',
+    filePath: file,
+    snippet: 'innerHTML = x',
+  });
+  const openIssueFor = (n: number, file: string): ForgeIssue => ({
+    number: n,
+    title: `[CWE-79] Cross-Site Scripting (XSS) in ${file}:1`,
+    url: `https://github.com/test/repo/issues/${n}`,
+    labels: ['rsolv:detected', 'rsolv:unconfirmed', 'rsolv:cwe-CWE-79'],
+    state: 'open',
+  });
+  const config: ScanConfig = {
+    repository: { owner: 'test', name: 'repo', defaultBranch: 'main' },
+    createIssues: true,
+    maxIssues: 2,
+  };
+
+  function orchestratorWith(plan: ScanPlatform['plan']) {
+    const forge = {
+      listIssues: vi.fn().mockResolvedValue([openIssueFor(1, 'a.ejs'), openIssueFor(2, 'b.ejs')]),
+      createIssue: vi.fn().mockImplementation((_o: string, _r: string, p: { title: string; labels: string[] }) =>
+        Promise.resolve({ number: 3, title: p.title, url: 'https://github.com/test/repo/issues/3', labels: p.labels, state: 'open' })),
+    };
+    const platform: ScanPlatform = {
+      severityTiers: vi.fn().mockResolvedValue({ 'CWE-79': 'high' }),
+      plan,
+      validateVulnerabilities: vi.fn(),
+    };
+    const orchestrator = new ScanOrchestrator({ forge: forge as unknown as ForgeAdapter, platform });
+    const findings = ['a.ejs', 'b.ejs', 'c.ejs'].map(finding);
+    orchestrator['scanner'].scan = vi.fn().mockResolvedValue({
+      vulnerabilities: findings,
+      groupedVulnerabilities: [],
+      stats: { totalFiles: 3, scannedFiles: 3, vulnerabilities: 3 },
+    });
+    return { orchestrator, forge };
+  }
+
+  it('files the new finding when the budget plan selects up to max_issues', async () => {
+    const plan = vi.fn().mockImplementation((request: ScanPlanRequest) => Promise.resolve({
+      selected: request.findings.slice(0, request.max_issues),
+      deferred: [],
+      budget: {} as ScanPlanResponse['budget'],
+    }));
+    const { orchestrator, forge } = orchestratorWith(plan);
+
+    await orchestrator.performScan(config);
+
+    expect(plan.mock.calls[0][0].findings.map((f: ScanPlanFinding) => f.file_path)).toEqual(['c.ejs']);
+    expect(forge.createIssue).toHaveBeenCalledTimes(1);
+    expect(forge.createIssue.mock.calls[0][2].title).toContain(' in c.ejs:');
+  });
+
+  it('files the new finding on the conservative fallback cap', async () => {
+    const { orchestrator, forge } = orchestratorWith(vi.fn().mockResolvedValue(null));
+
+    await orchestrator.performScan(config);
+
+    expect(forge.createIssue).toHaveBeenCalledTimes(1);
+    expect(forge.createIssue.mock.calls[0][2].title).toContain(' in c.ejs:');
   });
 });

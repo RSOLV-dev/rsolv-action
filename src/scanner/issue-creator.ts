@@ -149,6 +149,16 @@ function getVulnerabilityTypeName(type: string): string {
   return VULNERABILITY_TYPE_NAMES[type] || type.replace(/[_-]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 }
 
+const TRACKED_ISSUE_LABELS = [
+  'rsolv:detected',
+  'rsolv:unconfirmed',
+  'rsolv:validated',
+  'rsolv:false-positive',
+  'rsolv:wont-fix',
+  'rsolv:accepted-risk',
+  'rsolv:deferred',
+];
+
 export class IssueCreator {
   private forgeAdapter: ForgeAdapter;
 
@@ -271,7 +281,8 @@ export class IssueCreator {
    */
   async createIssuesFromFindings(
     findings: Vulnerability[],
-    config: ScanConfig
+    config: ScanConfig,
+    trackedIssues?: ForgeIssue[]
   ): Promise<IssueCreationResult> {
     const createdIssues: CreatedIssue[] = [];
     let skippedValidated = 0;
@@ -292,30 +303,15 @@ export class IssueCreator {
       logger.info(`Skipping ${vendorCount} vendor findings (require library updates, not code patches)`);
     }
 
-    // Apply max_issues cap
+    const existingIssues = trackedIssues ?? await this.listTrackedIssues(config);
+
+    // Dedup first, then cap: max_issues limits NEW issues, so findings that
+    // already have an open issue never use up a slot.
     const maxIssues = config.maxIssues;
-    const findingsToProcess = maxIssues ? appFindings.slice(0, maxIssues) : appFindings;
+    let attempted = 0;
 
-    logger.info(`Processing ${findingsToProcess.length} individual findings` +
-                (maxIssues ? ` (limited by max_issues: ${maxIssues})` : ''));
-
-    if (maxIssues && appFindings.length > maxIssues) {
-      logger.info(`Note: ${appFindings.length - maxIssues} findings will be skipped due to max_issues limit`);
-    }
-
-    // Phase 1.5: Batch-fetch existing open issues with rsolv:detected label for dedup
-    let existingIssues: ForgeIssue[] = [];
-    try {
-      existingIssues = await this.forgeAdapter.listIssues(
-        config.repository.owner, config.repository.name, 'rsolv:detected', 'open'
-      );
-    } catch (error) {
-      logger.warn(`Failed to fetch existing issues for dedup: ${error}`);
-    }
-
-    for (const finding of findingsToProcess) {
+    for (const finding of appFindings) {
       try {
-        // Phase 1.5: Check for existing issue matching (cwe, file)
         const existingMatch = this.findMatchingIssue(finding, existingIssues);
 
         if (existingMatch) {
@@ -340,11 +336,17 @@ export class IssueCreator {
             continue;
           }
 
-          // Existing rsolv:detected issue for same (cwe, file) — skip (temporal dedup)
+          // Existing open issue for same (cwe, file) — skip (temporal dedup)
           skippedDuplicate++;
           logger.info(`Skipping duplicate: issue #${existingMatch.number} already tracks ${finding.cweId} in ${finding.filePath}`);
           continue;
         }
+
+        if (maxIssues && attempted >= maxIssues) {
+          logger.info(`Reached max_issues (${maxIssues}); not filing ${finding.cweId} in ${finding.filePath}`);
+          continue;
+        }
+        attempted++;
 
         // Create new issue for this finding instance
         const issue = await this.createIssueForFinding(finding, config);
@@ -363,11 +365,32 @@ export class IssueCreator {
   }
 
   /**
+   * Every open issue carrying any RSOLV finding-status label. A single
+   * rsolv:detected query misses issues that v4.8.1 and earlier relabelled
+   * (rsolv:detected swapped for rsolv:false-positive or rsolv:validated), and
+   * issues a person dismissed after removing rsolv:detected.
+   */
+  async listTrackedIssues(config: ScanConfig): Promise<ForgeIssue[]> {
+    const { owner, name } = config.repository;
+    const byNumber = new Map<number, ForgeIssue>();
+    try {
+      for (const label of TRACKED_ISSUE_LABELS) {
+        for (const issue of await this.forgeAdapter.listIssues(owner, name, label, 'open')) {
+          byNumber.set(issue.number, issue);
+        }
+      }
+    } catch (error) {
+      logger.warn(`Failed to fetch existing issues for dedup: ${error}`);
+    }
+    return [...byNumber.values()];
+  }
+
+  /**
    * Phase 1.5: Find an existing open issue that matches (cwe_id, file_path).
    * Matches by CWE label + file path in title. Line number is intentionally
    * ignored (lines shift between scans).
    */
-  private findMatchingIssue(finding: Vulnerability, existingIssues: ForgeIssue[]): ForgeIssue | null {
+  findMatchingIssue(finding: Vulnerability, existingIssues: ForgeIssue[]): ForgeIssue | null {
     if (!finding.cweId || !finding.filePath) return null;
 
     for (const issue of existingIssues) {

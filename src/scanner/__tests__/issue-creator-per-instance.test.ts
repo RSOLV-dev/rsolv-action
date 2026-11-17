@@ -339,20 +339,75 @@ describe('IssueCreator - Per-Instance Issue Creation (RFC-142)', () => {
       });
     });
 
-    describe('when the open issue already carries rsolv:false-positive', () => {
-      it('is still honoured as a false-positive skip (owner reviews these separately)', async () => {
-        mockForge.listIssues.mockResolvedValue([{
+    describe('when a legacy issue lost rsolv:detected', () => {
+      // v4.8.1 and earlier swapped rsolv:detected for rsolv:false-positive or
+      // rsolv:validated, so a rsolv:detected query never returns these issues.
+      const listOnlyUnder = (label: string, issue: ForgeIssue) =>
+        mockForge.listIssues.mockImplementation(
+          (_owner: string, _repo: string, labels: string) => Promise.resolve(labels === label ? [issue] : [])
+        );
+
+      it('still honours rsolv:false-positive as a skip and files no duplicate', async () => {
+        listOnlyUnder('rsolv:false-positive', {
           number: 42,
           title: '[CWE-79] Cross-Site Scripting (XSS) in src/templates/admin.ejs:42',
           url: 'https://github.com/test/repo/issues/42',
-          labels: ['rsolv:detected', 'rsolv:false-positive', 'rsolv:cwe-CWE-79'],
+          labels: ['rsolv:false-positive', 'rsolv:cwe-CWE-79'],
           state: 'open'
-        }]);
+        });
 
         const result = await issueCreator.createIssuesFromFindings([makeFinding()], baseConfig);
 
         expect(mockForge.createIssue).not.toHaveBeenCalled();
         expect(result.skippedFalsePositive).toBe(1);
+      });
+
+      it('still honours rsolv:validated as a skip and files no duplicate', async () => {
+        listOnlyUnder('rsolv:validated', {
+          number: 43,
+          title: '[CWE-79] Cross-Site Scripting (XSS) in src/templates/admin.ejs:42',
+          url: 'https://github.com/test/repo/issues/43',
+          labels: ['rsolv:validated', 'rsolv:cwe-CWE-79'],
+          state: 'open'
+        });
+
+        const result = await issueCreator.createIssuesFromFindings([makeFinding()], baseConfig);
+
+        expect(mockForge.createIssue).not.toHaveBeenCalled();
+        expect(result.skippedValidated).toBe(1);
+      });
+    });
+
+    describe('when max_issues is set and some findings already have open issues', () => {
+      it('spends the cap on new findings, not on already-tracked ones', async () => {
+        const tracked = (n: number, file: string): ForgeIssue => ({
+          number: n,
+          title: `[CWE-79] Cross-Site Scripting (XSS) in ${file}:1`,
+          url: `https://github.com/test/repo/issues/${n}`,
+          labels: ['rsolv:detected', 'rsolv:cwe-CWE-79'],
+          state: 'open'
+        });
+        mockForge.listIssues.mockResolvedValue([tracked(1, 'a.ejs'), tracked(2, 'b.ejs')]);
+
+        const findings = [
+          makeFinding({ filePath: 'a.ejs' }),
+          makeFinding({ filePath: 'b.ejs' }),
+          makeFinding({ filePath: 'c.ejs' }),
+        ];
+
+        const result = await issueCreator.createIssuesFromFindings(findings, { ...baseConfig, maxIssues: 2 });
+
+        expect(mockForge.createIssue).toHaveBeenCalledTimes(1);
+        expect(mockForge.createIssue.mock.calls[0][2].title).toContain(' in c.ejs:');
+        expect(result.skippedDuplicate).toBe(2);
+      });
+
+      it('still caps the number of new issues', async () => {
+        const findings = ['a.ejs', 'b.ejs', 'c.ejs'].map(filePath => makeFinding({ filePath }));
+
+        await issueCreator.createIssuesFromFindings(findings, { ...baseConfig, maxIssues: 2 });
+
+        expect(mockForge.createIssue).toHaveBeenCalledTimes(2);
       });
     });
 
