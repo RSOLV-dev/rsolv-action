@@ -360,6 +360,7 @@ export class PhaseExecutor {
 
         // Process validations
         for (const issue of toValidate) {
+          if (attemptedValidations.has(issue.issue_number)) continue;
           attemptedValidations.add(issue.issue_number);
           logger.info(`[PROCESS] Validating issue #${issue.issue_number} (${issue.cwe_id})`);
           try {

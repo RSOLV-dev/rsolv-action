@@ -149,6 +149,14 @@ function getVulnerabilityTypeName(type: string): string {
   return VULNERABILITY_TYPE_NAMES[type] || type.replace(/[_-]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 }
 
+// Only an issue explicitly awaiting a verdict stands in for a drifted finding.
+function isOpenFinding(labels: string[]): boolean {
+  const awaiting = labels.includes('rsolv:detected') || labels.includes('rsolv:unconfirmed');
+  const decided = ['rsolv:validated', 'rsolv:false-positive', 'rsolv:wont-fix', 'rsolv:accepted-risk', 'rsolv:deferred']
+    .some(label => labels.includes(label));
+  return awaiting && !decided;
+}
+
 function lineDistance(issue: ForgeIssue, finding: Vulnerability): number {
   const distance = Math.abs(Number(issue.title.split(':').pop()) - finding.line);
   return Number.isFinite(distance) ? distance : Number.MAX_SAFE_INTEGER;
@@ -405,7 +413,8 @@ export class IssueCreator {
     const matches = new Map<Vulnerability, ForgeIssue>();
     const claimed = new Set<ForgeIssue>();
     for (const finding of findings) {
-      const exact = candidates(finding).find(issue => issue.title.endsWith(` in ${finding.filePath}:${finding.line}`));
+      const exact = candidates(finding).find(issue =>
+        !claimed.has(issue) && issue.title.endsWith(` in ${finding.filePath}:${finding.line}`));
       if (exact) {
         matches.set(finding, exact);
         claimed.add(exact);
@@ -415,7 +424,7 @@ export class IssueCreator {
     const drift = findings
       .filter(finding => !matches.has(finding))
       .flatMap(finding => candidates(finding)
-        .filter(issue => this.checkSkipStatus(labelsOf(issue)) === null)
+        .filter(issue => isOpenFinding(labelsOf(issue)))
         .map(issue => ({ finding, issue, distance: lineDistance(issue, finding) })))
       .sort((x, y) => x.distance - y.distance);
     for (const { finding, issue } of drift) {

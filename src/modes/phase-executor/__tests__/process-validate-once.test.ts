@@ -56,6 +56,26 @@ describe('PhaseExecutor.executeProcess', () => {
     });
   });
 
+  describe('when the pending list repeats an issue number', () => {
+    it('validates that issue once', async () => {
+      getPendingIssues.mockResolvedValue([pendingValidate(7), pendingValidate(7)]);
+      const { executor, executeValidate } = executorWith();
+
+      await executor.executeProcess({ pipelineRunId: 'run-1' });
+
+      expect(executeValidate).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not spend a maxValidations slot on the repeat', async () => {
+      getPendingIssues.mockResolvedValue([pendingValidate(7), pendingValidate(7), pendingValidate(8)]);
+      const { executor, executeValidate } = executorWith({ maxValidations: 2 });
+
+      await executor.executeProcess({ pipelineRunId: 'run-1' });
+
+      expect(executeValidate.mock.calls.map(([options]) => options.issueNumber)).toEqual([7, 8]);
+    });
+  });
+
   describe('when maxValidations is set', () => {
     it('stops validating once the run has used that many', async () => {
       getPendingIssues.mockResolvedValue([pendingValidate(1), pendingValidate(2), pendingValidate(3)]);

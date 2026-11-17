@@ -508,6 +508,56 @@ describe('IssueCreator - Per-Instance Issue Creation (RFC-142)', () => {
         expect(mockForge.createIssue.mock.calls[0][2].title).toContain('admin.ejs:40');
       });
 
+      it.each([
+        ['has no status label', [] as string[]],
+        ['is mitigated', ['rsolv:mitigated']],
+      ])('does not let an open issue that %s absorb a drifted finding', async (_kind, status) => {
+        mockForge.listIssues.mockResolvedValue([{
+          ...unconfirmedAt(1, 10),
+          labels: [...status, 'rsolv:cwe-CWE-79'],
+        }]);
+
+        await issueCreator.createIssuesFromFindings([makeFinding({ line: 90 })], baseConfig);
+
+        expect(mockForge.createIssue).toHaveBeenCalledTimes(1);
+      });
+
+      it.each([
+        ['rsolv:detected'],
+        ['rsolv:unconfirmed'],
+      ])('lets an open issue carrying only %s absorb a drifted finding', async (status) => {
+        mockForge.listIssues.mockResolvedValue([{ ...unconfirmedAt(1, 10), labels: [status, 'rsolv:cwe-CWE-79'] }]);
+
+        const result = await issueCreator.createIssuesFromFindings([makeFinding({ line: 12 })], baseConfig);
+
+        expect(mockForge.createIssue).not.toHaveBeenCalled();
+        expect(result.skippedDuplicate).toBe(1);
+      });
+
+      it('lets one issue claim only one of two findings at the same coordinates', async () => {
+        mockForge.listIssues.mockResolvedValue([unconfirmedAt(1, 10)]);
+
+        const result = await issueCreator.createIssuesFromFindings(
+          [makeFinding({ line: 10 }), makeFinding({ line: 10 })],
+          baseConfig
+        );
+
+        expect(result.skippedDuplicate).toBe(1);
+        expect(mockForge.createIssue).toHaveBeenCalledTimes(1);
+      });
+
+      it('matches two findings at the same coordinates to two issues there', async () => {
+        mockForge.listIssues.mockResolvedValue([unconfirmedAt(1, 10), unconfirmedAt(2, 10)]);
+
+        const result = await issueCreator.createIssuesFromFindings(
+          [makeFinding({ line: 10 }), makeFinding({ line: 10 })],
+          baseConfig
+        );
+
+        expect(result.skippedDuplicate).toBe(2);
+        expect(mockForge.createIssue).not.toHaveBeenCalled();
+      });
+
       it('dedups two shifted findings against two issues', async () => {
         mockForge.listIssues.mockResolvedValue([unconfirmedAt(1, 10), unconfirmedAt(2, 50)]);
 
