@@ -43,6 +43,7 @@ describe('applyValidationLabels', () => {
   it('adds rsolv:validated and removes rsolv:detected for classification=validated', async () => {
     await applyValidationLabels(issueInfo, 'validated');
 
+    expect(mockAddLabels).toHaveBeenCalledTimes(1);
     expect(mockAddLabels).toHaveBeenCalledWith(
       'test-org', 'test-repo', 42, ['rsolv:validated']
     );
@@ -51,44 +52,48 @@ describe('applyValidationLabels', () => {
     );
   });
 
-  it('adds rsolv:false-positive and removes rsolv:detected for classification=false_positive', async () => {
-    await applyValidationLabels(issueInfo, 'false_positive');
+  describe('when VALIDATE did not prove the finding', () => {
+    // Anything other than `validated` is unproven. It must stay discoverable:
+    // later scans skip `rsolv:false-positive`, so applying it hides the finding.
+    const unproven = [
+      'false_positive',
+      'false_positive_defense_confirmed',
+      'false_positive_counter_indicated',
+      'inconclusive',
+      'infrastructure_failure',
+      'no_test_framework',
+      'max_turns_exceeded',
+      'test_passed_unexpectedly',
+      'static_test',
+      'some_future_classification',
+    ];
 
-    expect(mockAddLabels).toHaveBeenCalledWith(
-      'test-org', 'test-repo', 42, ['rsolv:false-positive']
-    );
-    expect(mockRemoveLabel).toHaveBeenCalledWith(
-      'test-org', 'test-repo', 42, 'rsolv:detected'
-    );
-  });
+    it.each(unproven)('adds rsolv:unconfirmed for classification=%s', async (classification) => {
+      await applyValidationLabels(issueInfo, classification);
 
-  it('adds rsolv:false-positive and removes rsolv:detected for classification=false_positive_defense_confirmed', async () => {
-    await applyValidationLabels(issueInfo, 'false_positive_defense_confirmed');
+      const added = mockAddLabels.mock.calls.flatMap(call => call[3]);
+      expect(added).toContain('rsolv:unconfirmed');
+    });
 
-    expect(mockAddLabels).toHaveBeenCalledWith(
-      'test-org', 'test-repo', 42, ['rsolv:false-positive']
-    );
-    expect(mockRemoveLabel).toHaveBeenCalledWith(
-      'test-org', 'test-repo', 42, 'rsolv:detected'
-    );
-  });
+    it.each(unproven)('never adds rsolv:false-positive for classification=%s', async (classification) => {
+      await applyValidationLabels(issueInfo, classification);
 
-  it('adds rsolv:false-positive and removes rsolv:detected for classification=false_positive_counter_indicated', async () => {
-    await applyValidationLabels(issueInfo, 'false_positive_counter_indicated');
+      const added = mockAddLabels.mock.calls.flatMap(call => call[3]);
+      expect(added).not.toContain('rsolv:false-positive');
+    });
 
-    expect(mockAddLabels).toHaveBeenCalledWith(
-      'test-org', 'test-repo', 42, ['rsolv:false-positive']
-    );
-    expect(mockRemoveLabel).toHaveBeenCalledWith(
-      'test-org', 'test-repo', 42, 'rsolv:detected'
-    );
+    it.each(unproven)('keeps rsolv:detected for classification=%s', async (classification) => {
+      await applyValidationLabels(issueInfo, classification);
+
+      expect(mockRemoveLabel).not.toHaveBeenCalled();
+    });
   });
 
   it('adds rsolv:validation-inconclusive for classification=infrastructure_failure', async () => {
     await applyValidationLabels(issueInfo, 'infrastructure_failure');
 
     expect(mockAddLabels).toHaveBeenCalledWith(
-      'test-org', 'test-repo', 42, ['rsolv:validation-inconclusive']
+      'test-org', 'test-repo', 42, ['rsolv:unconfirmed', 'rsolv:validation-inconclusive']
     );
     // Keep rsolv:detected — vulnerability may be real
     expect(mockRemoveLabel).not.toHaveBeenCalled();
@@ -98,7 +103,7 @@ describe('applyValidationLabels', () => {
     await applyValidationLabels(issueInfo, 'inconclusive');
 
     expect(mockAddLabels).toHaveBeenCalledWith(
-      'test-org', 'test-repo', 42, ['rsolv:validation-inconclusive']
+      'test-org', 'test-repo', 42, ['rsolv:unconfirmed', 'rsolv:validation-inconclusive']
     );
     expect(mockRemoveLabel).not.toHaveBeenCalled();
   });
@@ -107,7 +112,7 @@ describe('applyValidationLabels', () => {
     await applyValidationLabels(issueInfo, 'no_test_framework');
 
     expect(mockAddLabels).toHaveBeenCalledWith(
-      'test-org', 'test-repo', 42, ['rsolv:validation-unavailable']
+      'test-org', 'test-repo', 42, ['rsolv:unconfirmed', 'rsolv:validation-unavailable']
     );
     // Keep rsolv:detected — vulnerability may be real
     expect(mockRemoveLabel).not.toHaveBeenCalled();
@@ -117,7 +122,7 @@ describe('applyValidationLabels', () => {
     await applyValidationLabels(issueInfo, 'max_turns_exceeded');
 
     expect(mockAddLabels).toHaveBeenCalledWith(
-      'test-org', 'test-repo', 42, ['rsolv:validation-inconclusive']
+      'test-org', 'test-repo', 42, ['rsolv:unconfirmed', 'rsolv:validation-inconclusive']
     );
     // Keep rsolv:detected — vulnerability likely real
     expect(mockRemoveLabel).not.toHaveBeenCalled();
@@ -146,7 +151,7 @@ describe('applyValidationLabels', () => {
     await applyValidationLabels(issueInfo, 'test_passed_unexpectedly');
 
     expect(mockAddLabels).toHaveBeenCalledWith(
-      'test-org', 'test-repo', 42, ['rsolv:validation-inconclusive']
+      'test-org', 'test-repo', 42, ['rsolv:unconfirmed', 'rsolv:validation-inconclusive']
     );
     // Keep rsolv:detected — test passed unexpectedly, needs investigation
     expect(mockRemoveLabel).not.toHaveBeenCalled();
@@ -156,16 +161,9 @@ describe('applyValidationLabels', () => {
     await applyValidationLabels(issueInfo, 'static_test');
 
     expect(mockAddLabels).toHaveBeenCalledWith(
-      'test-org', 'test-repo', 42, ['rsolv:validation-inconclusive']
+      'test-org', 'test-repo', 42, ['rsolv:unconfirmed', 'rsolv:validation-inconclusive']
     );
     // Keep rsolv:detected — static test, behavioral test needed
-    expect(mockRemoveLabel).not.toHaveBeenCalled();
-  });
-
-  it('handles unknown classification gracefully (no-op)', async () => {
-    await applyValidationLabels(issueInfo, 'unknown_value');
-
-    expect(mockAddLabels).not.toHaveBeenCalled();
     expect(mockRemoveLabel).not.toHaveBeenCalled();
   });
 

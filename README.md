@@ -180,8 +180,10 @@ OWASP Top 10 coverage for JavaScript, TypeScript, Python, Ruby, Java, PHP, and E
 
 **Layer 2: AI Defense Detection** — during validation, the AI identifies
 existing defenses: input sanitization, parameterized queries, framework-level
-protections. Findings with confirmed defenses are labeled false-positive
-and never generate a fix PR.
+protections. Findings with confirmed defenses never generate a fix PR.
+They are labeled `rsolv:unconfirmed` and stay open, so a later scan
+revalidates them; only a human dismisses a finding (`rsolv:false-positive`,
+`rsolv:wont-fix`, `rsolv:accepted-risk`, `rsolv:deferred`).
 
 **Layer 3: Executable Proof** — every remaining finding gets a generated
 test that exercises the actual code path. If the test can't prove the

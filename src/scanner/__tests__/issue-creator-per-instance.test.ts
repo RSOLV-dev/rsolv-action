@@ -321,6 +321,41 @@ describe('IssueCreator - Per-Instance Issue Creation (RFC-142)', () => {
       expect(result.issues).toHaveLength(1);
     });
 
+    describe('when the open issue for the same (cwe, file) is rsolv:unconfirmed', () => {
+      it('does not file a duplicate and does not count it as skipped-false-positive', async () => {
+        mockForge.listIssues.mockResolvedValue([{
+          number: 42,
+          title: '[CWE-79] Cross-Site Scripting (XSS) in src/templates/admin.ejs:42',
+          url: 'https://github.com/test/repo/issues/42',
+          labels: ['rsolv:detected', 'rsolv:unconfirmed', 'rsolv:cwe-CWE-79'],
+          state: 'open'
+        }]);
+
+        const result = await issueCreator.createIssuesFromFindings([makeFinding()], baseConfig);
+
+        expect(mockForge.createIssue).not.toHaveBeenCalled();
+        expect(result.skippedDuplicate).toBe(1);
+        expect(result.skippedFalsePositive).toBe(0);
+      });
+    });
+
+    describe('when the open issue already carries rsolv:false-positive', () => {
+      it('is still honoured as a false-positive skip (owner reviews these separately)', async () => {
+        mockForge.listIssues.mockResolvedValue([{
+          number: 42,
+          title: '[CWE-79] Cross-Site Scripting (XSS) in src/templates/admin.ejs:42',
+          url: 'https://github.com/test/repo/issues/42',
+          labels: ['rsolv:detected', 'rsolv:false-positive', 'rsolv:cwe-CWE-79'],
+          state: 'open'
+        }]);
+
+        const result = await issueCreator.createIssuesFromFindings([makeFinding()], baseConfig);
+
+        expect(mockForge.createIssue).not.toHaveBeenCalled();
+        expect(result.skippedFalsePositive).toBe(1);
+      });
+    });
+
     it('respects validated/false-positive/dismissed labels', async () => {
       mockForge.listIssues.mockResolvedValue([{
         number: 42,

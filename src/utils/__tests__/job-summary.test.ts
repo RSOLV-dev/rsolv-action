@@ -126,6 +126,21 @@ describe('writeProcessSummary', () => {
     );
   });
 
+  it.each(['false_positive', 'false_positive_counter_indicated', 'inconclusive'])(
+    'does not tell the user an unproven %s result needs no action',
+    (classification) => {
+      writeProcessSummary('arubis/test-repo', 42, {
+        success: true,
+        phase: 'process',
+        data: { issueResults: [{ issueNumber: 42, classification }] },
+      });
+
+      const written = vi.mocked(appendFileSync).mock.calls.map(call => String(call[1])).join('');
+      expect(written).not.toContain('No action needed');
+      expect(written).toContain('Unconfirmed');
+    }
+  );
+
   it('writes failure result', () => {
     writeProcessSummary('arubis/test-repo', 42, {
       success: false,

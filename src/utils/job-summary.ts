@@ -156,7 +156,7 @@ export function writeProcessSummary(
       const { emoji, label } = classificationDisplay(ir.classification);
       const action = ir.prUrl
         ? `[Fix PR](${ir.prUrl})`
-        : ir.classification.startsWith('false_positive') ? 'No action needed' : '—';
+        : ir.classification === 'validated' ? '—' : 'Unconfirmed — revalidated on next scan';
       lines.push(`| [#${ir.issueNumber}](../../issues/${ir.issueNumber}) | ${emoji} ${label} | ${action} |`);
     }
   } else {
