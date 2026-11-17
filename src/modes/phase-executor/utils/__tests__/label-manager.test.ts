@@ -124,6 +124,20 @@ describe('applyValidationLabels', () => {
     expect(mockRemoveLabel).not.toHaveBeenCalled();
   });
 
+  it('removes stale rsolv:unconfirmed and detail labels when a previously unproven issue is validated', async () => {
+    const earlierUnconfirmed = {
+      ...issueInfo,
+      currentLabels: ['rsolv:detected', 'rsolv:unconfirmed', 'rsolv:validation-inconclusive', 'rsolv:validation-unavailable'],
+    };
+
+    await applyValidationLabels(earlierUnconfirmed, 'validated');
+
+    const removed = mockRemoveLabel.mock.calls.map(call => call[3]);
+    expect(removed).toEqual(expect.arrayContaining([
+      'rsolv:detected', 'rsolv:unconfirmed', 'rsolv:validation-inconclusive', 'rsolv:validation-unavailable',
+    ]));
+  });
+
   it('does not remove rsolv:detected when it is not in currentLabels', async () => {
     const issueWithoutDetected = { ...issueInfo, currentLabels: [] };
     await applyValidationLabels(issueWithoutDetected, 'validated');

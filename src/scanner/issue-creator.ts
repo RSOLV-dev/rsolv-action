@@ -152,7 +152,7 @@ function getVulnerabilityTypeName(type: string): string {
 // Only an issue explicitly awaiting a verdict stands in for a drifted finding.
 function isOpenFinding(labels: string[]): boolean {
   const awaiting = labels.includes('rsolv:detected') || labels.includes('rsolv:unconfirmed');
-  const decided = ['rsolv:validated', 'rsolv:false-positive', 'rsolv:wont-fix', 'rsolv:accepted-risk', 'rsolv:deferred']
+  const decided = ['rsolv:validated', 'rsolv:mitigated', 'rsolv:false-positive', 'rsolv:wont-fix', 'rsolv:accepted-risk', 'rsolv:deferred']
     .some(label => labels.includes(label));
   return awaiting && !decided;
 }

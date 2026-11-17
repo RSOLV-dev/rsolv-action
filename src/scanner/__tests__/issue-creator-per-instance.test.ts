@@ -511,6 +511,8 @@ describe('IssueCreator - Per-Instance Issue Creation (RFC-142)', () => {
       it.each([
         ['has no status label', [] as string[]],
         ['is mitigated', ['rsolv:mitigated']],
+        ['is mitigated but still carries rsolv:unconfirmed', ['rsolv:mitigated', 'rsolv:unconfirmed']],
+        ['is mitigated but still carries rsolv:detected', ['rsolv:mitigated', 'rsolv:detected']],
       ])('does not let an open issue that %s absorb a drifted finding', async (_kind, status) => {
         mockForge.listIssues.mockResolvedValue([{
           ...unconfirmedAt(1, 10),

@@ -5,7 +5,7 @@
  * that works with backend classification strings.
  *
  * Classification → Label mapping:
- *   validated   → add rsolv:validated, remove rsolv:detected
+ *   validated   → add rsolv:validated, remove rsolv:detected and any earlier unconfirmed/detail labels
  *   anything else (false_positive*, inconclusive, infrastructure_failure, …)
  *               → add rsolv:unconfirmed, then a detail label where one exists; keep rsolv:detected
  *
@@ -40,6 +40,14 @@ const DETAIL_LABELS: ReadonlyMap<string, string> = new Map([
   ['no_test_framework', 'rsolv:validation-unavailable'],
 ]);
 
+// A proven finding drops the labels of an earlier unproven verdict.
+const SUPERSEDED_BY_VALIDATED = [
+  'rsolv:detected',
+  'rsolv:unconfirmed',
+  'rsolv:validation-inconclusive',
+  'rsolv:validation-unavailable',
+];
+
 export interface LabelIssueInfo {
   owner: string;
   repo: string;
@@ -64,9 +72,9 @@ export async function applyValidationLabels(
     if (classification === 'validated') {
       logger.info(`[LABELS] Adding 'rsolv:validated' to issue #${issueNumber}`);
       await withRetry(() => addLabels(owner, repo, issueNumber, ['rsolv:validated']), `addLabels(rsolv:validated, #${issueNumber})`);
-      if (currentLabels.includes('rsolv:detected')) {
-        logger.info(`[LABELS] Removing 'rsolv:detected' from issue #${issueNumber}`);
-        await withRetry(() => removeLabel(owner, repo, issueNumber, 'rsolv:detected'), `removeLabel(rsolv:detected, #${issueNumber})`);
+      for (const stale of SUPERSEDED_BY_VALIDATED.filter(label => currentLabels.includes(label))) {
+        logger.info(`[LABELS] Removing '${stale}' from issue #${issueNumber}`);
+        await withRetry(() => removeLabel(owner, repo, issueNumber, stale), `removeLabel(${stale}, #${issueNumber})`);
       }
       return;
     }
