@@ -373,43 +373,39 @@ export class IssueCreator {
   async listTrackedIssues(config: ScanConfig): Promise<ForgeIssue[]> {
     const { owner, name } = config.repository;
     const byNumber = new Map<number, ForgeIssue>();
-    try {
-      for (const label of TRACKED_ISSUE_LABELS) {
+    for (const label of TRACKED_ISSUE_LABELS) {
+      try {
         for (const issue of await this.forgeAdapter.listIssues(owner, name, label, 'open')) {
           byNumber.set(issue.number, issue);
         }
+      } catch (error) {
+        logger.warn(`Failed to fetch existing ${label} issues for dedup: ${error}`);
       }
-    } catch (error) {
-      logger.warn(`Failed to fetch existing issues for dedup: ${error}`);
     }
     return [...byNumber.values()];
   }
 
   /**
-   * Phase 1.5: Find an existing open issue that matches (cwe_id, file_path).
-   * Matches by CWE label + file path in title. Line number is intentionally
-   * ignored (lines shift between scans).
+   * Phase 1.5: Find the existing open issue for this finding instance.
+   * An issue matches on its CWE label plus the `file:line` in its title.
+   * An open, undecided issue (rsolv:detected / rsolv:unconfirmed) also matches
+   * the same CWE elsewhere in the file, since lines shift between scans. A
+   * validated or dismissed issue only ever stands for its own instance.
    */
   findMatchingIssue(finding: Vulnerability, existingIssues: ForgeIssue[]): ForgeIssue | null {
     if (!finding.cweId || !finding.filePath) return null;
 
-    for (const issue of existingIssues) {
-      // Check CWE match via label
-      const hasCweLabel = issue.labels.some(l => {
-        const name = typeof l === 'string' ? l : (l as { name?: string }).name || '';
-        return name === `rsolv:cwe-${finding.cweId}`;
-      });
+    const labelsOf = (issue: ForgeIssue): string[] =>
+      issue.labels.map(l => typeof l === 'string' ? l : (l as { name?: string }).name || '');
+    const sameCwe = existingIssues.filter(issue => labelsOf(issue).includes(`rsolv:cwe-${finding.cweId}`));
 
-      if (!hasCweLabel) continue;
+    // Title format: "[CWE-XX] Name in file/path:line"
+    const sameInstance = sameCwe.find(issue => issue.title.endsWith(` in ${finding.filePath}:${finding.line}`));
+    if (sameInstance) return sameInstance;
 
-      // Check file path match in title (format: "[CWE-XX] Name in file/path:line")
-      const filePath = finding.filePath;
-      if (issue.title.includes(` in ${filePath}:`)) {
-        return issue;
-      }
-    }
-
-    return null;
+    return sameCwe.find(issue =>
+      issue.title.includes(` in ${finding.filePath}:`) && this.checkSkipStatus(labelsOf(issue)) === null
+    ) ?? null;
   }
 
   /**

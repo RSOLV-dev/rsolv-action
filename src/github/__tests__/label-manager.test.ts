@@ -10,7 +10,7 @@ vi.mock('../../utils/logger.js', () => ({
   }
 }));
 
-import { ensureLabelsExist } from '../label-manager.js';
+import { ensureLabelsExist, REQUIRED_LABELS } from '../label-manager.js';
 
 // Track created labels globally
 let createdLabels: string[] = [];
@@ -110,5 +110,15 @@ describe('Label Manager', () => {
     // Should not recreate labels that exist with different case
     expect(localCreatedLabels).not.toContain('rsolv:detected');
     expect(localCreatedLabels).not.toContain('security');
+  });
+});
+
+describe('REQUIRED_LABELS', () => {
+  it('includes rsolv:unconfirmed with a neutral colour and a description', () => {
+    const unconfirmed = REQUIRED_LABELS.find(l => l.name === 'rsolv:unconfirmed');
+
+    expect(unconfirmed).toBeDefined();
+    expect(unconfirmed?.color).toMatch(/^[0-9A-Fa-f]{6}$/);
+    expect(unconfirmed?.description).toMatch(/could not prove/i);
   });
 });

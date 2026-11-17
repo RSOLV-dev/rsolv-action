@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { fakeHost, type HostTable } from './fake-host.js';
-import { HostChannel, HostError, FramePatternSource, FrameScanPlatform, FrameForgeAdapter } from '../frame-clients.js';
+import { HostChannel, HostError, FramePatternSource, FrameScanPlatform, FrameForgeAdapter, hostAllowsLabel } from '../frame-clients.js';
 import { IssueCreator } from '../../scanner/issue-creator.js';
 import { VulnerabilityType, type Vulnerability } from '../../security/types.js';
 import type { ScanConfig } from '../../scanner/types.js';
@@ -139,6 +139,43 @@ describe('FrameForgeAdapter', () => {
       await expect(forge[method]()).rejects.toThrow('not available in the sandbox scan');
     }
   );
+
+  describe('against the host label allowlist (host-v0.1.0 refuses a whole call on any other label)', () => {
+    // Answers like ScanRelay: any label outside the allowlist refuses the call.
+    const strictHost = (issues: Record<string, unknown[]>) => channelFor({
+      list_issues: (args) => {
+        const labels = (args as { labels: string[] }).labels;
+        return labels.every(hostAllows) ? { ok: labels.flatMap((l) => issues[l] ?? []) } : { error: 'label not allowed' };
+      },
+      create_issue: () => ({ ok: { number: 77, html_url: 'https://github.com/acme/app/issues/77' } }),
+    });
+
+    it('agrees with the host allowlist', () => {
+      const samples = [
+        'rsolv:detected', 'rsolv:cwe-CWE-79', 'rsolv:cwe-79', 'rsolv:vuln-xss', 'security', 'automated-scan', 'low',
+        'rsolv:unconfirmed', 'rsolv:validated', 'rsolv:false-positive', 'rsolv:wont-fix', 'rsolv:validate', 'rsolv:automate', 'bug',
+      ];
+      samples.forEach((label) => expect([label, hostAllowsLabel(label)]).toEqual([label, hostAllows(label)]));
+    });
+
+    it('lists only allowlisted labels and still dedups an open rsolv:detected issue', async () => {
+      const { host, channel } = strictHost({
+        'rsolv:detected': [{ number: 50, title: '[CWE-79] XSS in app/old.js:3', state: 'open', html_url: 'u', labels: ['rsolv:detected', 'rsolv:cwe-CWE-79'] }],
+      });
+      const xss = { type: VulnerabilityType.XSS, severity: 'high', cweId: 'CWE-79', filePath: 'app/old.js', line: 3, message: 'm', description: 'd', confidence: 80 } as Vulnerability;
+
+      const result = await new IssueCreator(new FrameForgeAdapter(channel)).createIssuesFromFindings(
+        [xss],
+        { repository: { owner: 'acme', name: 'app', defaultBranch: 'HEAD' }, createIssues: true }
+      );
+
+      const listed = host.received.filter((f) => f.call === 'list_issues').flatMap((f) => f.args.labels as string[]);
+      expect(listed).toContain('rsolv:detected');
+      expect(listed.filter((label) => !hostAllows(label))).toEqual([]);
+      expect(result.issues).toHaveLength(0);
+      expect(result.skippedDuplicate).toBe(1);
+    });
+  });
 
   describe('with IssueCreator (label contract, 3c Task 24)', () => {
     const finding = (type: VulnerabilityType, severity: Vulnerability['severity'], cweId: string, filePath: string): Vulnerability => ({

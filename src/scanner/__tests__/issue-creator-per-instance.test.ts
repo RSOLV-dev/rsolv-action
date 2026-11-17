@@ -378,6 +378,81 @@ describe('IssueCreator - Per-Instance Issue Creation (RFC-142)', () => {
       });
     });
 
+    describe('when a decided issue tracks a different instance of the same CWE in the same file', () => {
+      const issueAt = (line: number, labels: string[]): ForgeIssue => ({
+        number: 42,
+        title: `[CWE-79] Cross-Site Scripting (XSS) in src/templates/admin.ejs:${line}`,
+        url: 'https://github.com/test/repo/issues/42',
+        labels: [...labels, 'rsolv:cwe-CWE-79'],
+        state: 'open'
+      });
+
+      it.each([
+        ['validated', ['rsolv:validated']],
+        ['dismissed', ['rsolv:detected', 'rsolv:wont-fix']],
+        ['false-positive', ['rsolv:false-positive']],
+      ])('files the other instance when the %s issue is on a different line', async (_kind, labels) => {
+        mockForge.listIssues.mockResolvedValue([issueAt(42, labels)]);
+
+        const result = await issueCreator.createIssuesFromFindings([makeFinding({ line: 90 })], baseConfig);
+
+        expect(mockForge.createIssue).toHaveBeenCalledTimes(1);
+        expect(result.issues).toHaveLength(1);
+      });
+
+      it('still skips the same instance of a validated issue', async () => {
+        mockForge.listIssues.mockResolvedValue([issueAt(42, ['rsolv:validated'])]);
+
+        const result = await issueCreator.createIssuesFromFindings([makeFinding({ line: 42 })], baseConfig);
+
+        expect(mockForge.createIssue).not.toHaveBeenCalled();
+        expect(result.skippedValidated).toBe(1);
+      });
+
+      it('does not treat an issue for a different CWE at the same location as a match', async () => {
+        mockForge.listIssues.mockResolvedValue([{
+          number: 41,
+          title: '[CWE-89] SQL Injection in src/templates/admin.ejs:42',
+          url: 'https://github.com/test/repo/issues/41',
+          labels: ['rsolv:detected', 'rsolv:cwe-CWE-89'],
+          state: 'open'
+        }]);
+
+        await issueCreator.createIssuesFromFindings([makeFinding({ line: 42 })], baseConfig);
+
+        expect(mockForge.createIssue).toHaveBeenCalledTimes(1);
+      });
+
+      it('still dedups line drift against an open unconfirmed issue', async () => {
+        mockForge.listIssues.mockResolvedValue([issueAt(42, ['rsolv:detected', 'rsolv:unconfirmed'])]);
+
+        const result = await issueCreator.createIssuesFromFindings([makeFinding({ line: 45 })], baseConfig);
+
+        expect(mockForge.createIssue).not.toHaveBeenCalled();
+        expect(result.skippedDuplicate).toBe(1);
+      });
+    });
+
+    describe('when the forge refuses one label query', () => {
+      it('still uses the answers for the other labels', async () => {
+        mockForge.listIssues.mockImplementation((_o: string, _r: string, label: string) => {
+          if (label === 'rsolv:unconfirmed') return Promise.reject(new Error('label not allowed'));
+          return Promise.resolve(label === 'rsolv:false-positive' ? [{
+            number: 42,
+            title: '[CWE-79] Cross-Site Scripting (XSS) in src/templates/admin.ejs:42',
+            url: 'https://github.com/test/repo/issues/42',
+            labels: ['rsolv:false-positive', 'rsolv:cwe-CWE-79'],
+            state: 'open'
+          }] : []);
+        });
+
+        const result = await issueCreator.createIssuesFromFindings([makeFinding()], baseConfig);
+
+        expect(mockForge.createIssue).not.toHaveBeenCalled();
+        expect(result.skippedFalsePositive).toBe(1);
+      });
+    });
+
     describe('when max_issues is set and some findings already have open issues', () => {
       it('spends the cap on new findings, not on already-tracked ones', async () => {
         const tracked = (n: number, file: string): ForgeIssue => ({
