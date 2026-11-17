@@ -122,3 +122,9 @@ describe('REQUIRED_LABELS', () => {
     expect(unconfirmed?.description).toMatch(/could not prove/i);
   });
 });
+
+describe('REQUIRED_LABELS detail labels', () => {
+  it.each(['rsolv:validation-inconclusive', 'rsolv:validation-unavailable'])('includes %s', (name) => {
+    expect(REQUIRED_LABELS.map(l => l.name)).toContain(name);
+  });
+});

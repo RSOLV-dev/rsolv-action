@@ -549,6 +549,22 @@ describe('ScanOrchestrator - findings that already have open issues', () => {
     expect(forge.createIssue.mock.calls[0][2].title).toContain(' in c.ejs:');
   });
 
+  it('plans a second instance in a file whose only open issue is claimed by the exact instance', async () => {
+    const plan = vi.fn().mockImplementation((request: ScanPlanRequest) => Promise.resolve({
+      selected: request.findings, deferred: [], budget: {} as ScanPlanResponse['budget'],
+    }));
+    const { orchestrator } = orchestratorWith(plan);
+    orchestrator['scanner'].scan = vi.fn().mockResolvedValue({
+      vulnerabilities: [finding('a.ejs'), { ...finding('a.ejs'), line: 90 }],
+      groupedVulnerabilities: [],
+      stats: { totalFiles: 1, scannedFiles: 1, vulnerabilities: 2 },
+    });
+
+    await orchestrator.performScan(config);
+
+    expect(plan.mock.calls[0][0].findings.map((f: ScanPlanFinding) => `${f.file_path}:${f.line}`)).toEqual(['a.ejs:90']);
+  });
+
   it('files the new finding on the conservative fallback cap', async () => {
     const { orchestrator, forge } = orchestratorWith(vi.fn().mockResolvedValue(null));
 

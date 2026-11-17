@@ -92,9 +92,8 @@ describe('applyValidationLabels', () => {
   it('adds rsolv:validation-inconclusive for classification=infrastructure_failure', async () => {
     await applyValidationLabels(issueInfo, 'infrastructure_failure');
 
-    expect(mockAddLabels).toHaveBeenCalledWith(
-      'test-org', 'test-repo', 42, ['rsolv:unconfirmed', 'rsolv:validation-inconclusive']
-    );
+    expect(mockAddLabels).toHaveBeenNthCalledWith(1, 'test-org', 'test-repo', 42, ['rsolv:unconfirmed']);
+    expect(mockAddLabels).toHaveBeenNthCalledWith(2, 'test-org', 'test-repo', 42, ['rsolv:validation-inconclusive']);
     // Keep rsolv:detected — vulnerability may be real
     expect(mockRemoveLabel).not.toHaveBeenCalled();
   });
@@ -102,18 +101,16 @@ describe('applyValidationLabels', () => {
   it('adds rsolv:validation-inconclusive for classification=inconclusive', async () => {
     await applyValidationLabels(issueInfo, 'inconclusive');
 
-    expect(mockAddLabels).toHaveBeenCalledWith(
-      'test-org', 'test-repo', 42, ['rsolv:unconfirmed', 'rsolv:validation-inconclusive']
-    );
+    expect(mockAddLabels).toHaveBeenNthCalledWith(1, 'test-org', 'test-repo', 42, ['rsolv:unconfirmed']);
+    expect(mockAddLabels).toHaveBeenNthCalledWith(2, 'test-org', 'test-repo', 42, ['rsolv:validation-inconclusive']);
     expect(mockRemoveLabel).not.toHaveBeenCalled();
   });
 
   it('adds rsolv:validation-unavailable for classification=no_test_framework', async () => {
     await applyValidationLabels(issueInfo, 'no_test_framework');
 
-    expect(mockAddLabels).toHaveBeenCalledWith(
-      'test-org', 'test-repo', 42, ['rsolv:unconfirmed', 'rsolv:validation-unavailable']
-    );
+    expect(mockAddLabels).toHaveBeenNthCalledWith(1, 'test-org', 'test-repo', 42, ['rsolv:unconfirmed']);
+    expect(mockAddLabels).toHaveBeenNthCalledWith(2, 'test-org', 'test-repo', 42, ['rsolv:validation-unavailable']);
     // Keep rsolv:detected — vulnerability may be real
     expect(mockRemoveLabel).not.toHaveBeenCalled();
   });
@@ -121,9 +118,8 @@ describe('applyValidationLabels', () => {
   it('adds rsolv:validation-inconclusive for classification=max_turns_exceeded', async () => {
     await applyValidationLabels(issueInfo, 'max_turns_exceeded');
 
-    expect(mockAddLabels).toHaveBeenCalledWith(
-      'test-org', 'test-repo', 42, ['rsolv:unconfirmed', 'rsolv:validation-inconclusive']
-    );
+    expect(mockAddLabels).toHaveBeenNthCalledWith(1, 'test-org', 'test-repo', 42, ['rsolv:unconfirmed']);
+    expect(mockAddLabels).toHaveBeenNthCalledWith(2, 'test-org', 'test-repo', 42, ['rsolv:validation-inconclusive']);
     // Keep rsolv:detected — vulnerability likely real
     expect(mockRemoveLabel).not.toHaveBeenCalled();
   });
@@ -150,9 +146,8 @@ describe('applyValidationLabels', () => {
   it('maps test_passed_unexpectedly to rsolv:validation-inconclusive', async () => {
     await applyValidationLabels(issueInfo, 'test_passed_unexpectedly');
 
-    expect(mockAddLabels).toHaveBeenCalledWith(
-      'test-org', 'test-repo', 42, ['rsolv:unconfirmed', 'rsolv:validation-inconclusive']
-    );
+    expect(mockAddLabels).toHaveBeenNthCalledWith(1, 'test-org', 'test-repo', 42, ['rsolv:unconfirmed']);
+    expect(mockAddLabels).toHaveBeenNthCalledWith(2, 'test-org', 'test-repo', 42, ['rsolv:validation-inconclusive']);
     // Keep rsolv:detected — test passed unexpectedly, needs investigation
     expect(mockRemoveLabel).not.toHaveBeenCalled();
   });
@@ -160,9 +155,8 @@ describe('applyValidationLabels', () => {
   it('maps static_test to rsolv:validation-inconclusive', async () => {
     await applyValidationLabels(issueInfo, 'static_test');
 
-    expect(mockAddLabels).toHaveBeenCalledWith(
-      'test-org', 'test-repo', 42, ['rsolv:unconfirmed', 'rsolv:validation-inconclusive']
-    );
+    expect(mockAddLabels).toHaveBeenNthCalledWith(1, 'test-org', 'test-repo', 42, ['rsolv:unconfirmed']);
+    expect(mockAddLabels).toHaveBeenNthCalledWith(2, 'test-org', 'test-repo', 42, ['rsolv:validation-inconclusive']);
     // Keep rsolv:detected — static test, behavioral test needed
     expect(mockRemoveLabel).not.toHaveBeenCalled();
   });
@@ -172,6 +166,32 @@ describe('applyValidationLabels', () => {
 
     expect(mockAddLabels).not.toHaveBeenCalled();
     expect(mockRemoveLabel).not.toHaveBeenCalled();
+  });
+
+  describe('when GitHub rejects the detail label', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+      mockAddLabels.mockReset();
+    });
+
+    it('still applies rsolv:unconfirmed and keeps rsolv:detected', async () => {
+      const applied: string[] = [];
+      mockAddLabels.mockImplementation(async (_o, _r, _n, labels) => {
+        if (labels.includes('rsolv:validation-inconclusive')) throw new Error('label rejected');
+        applied.push(...labels);
+      });
+
+      const promise = applyValidationLabels(issueInfo, 'inconclusive');
+      await vi.advanceTimersByTimeAsync(3000);
+      await promise;
+
+      expect(applied).toContain('rsolv:unconfirmed');
+      expect(mockRemoveLabel).not.toHaveBeenCalled();
+    });
   });
 
   describe('retry behavior', () => {
@@ -204,7 +224,7 @@ describe('applyValidationLabels', () => {
         .mockRejectedValueOnce(new Error('network timeout'))
         .mockResolvedValueOnce(undefined);
 
-      const promise = applyValidationLabels(issueInfo, 'infrastructure_failure');
+      const promise = applyValidationLabels(issueInfo, 'false_positive');
       await vi.advanceTimersByTimeAsync(1000);
       await promise;
 

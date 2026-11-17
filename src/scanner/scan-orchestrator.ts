@@ -87,9 +87,10 @@ export class ScanOrchestrator {
       if (shouldCreateIssues && prioritizedFindings && prioritizedFindings.length > 0) {
         // Step 0: findings that already have an open issue are deduped by the
         // issue creator, so they must not take plan or max_issues slots.
-        const trackedIssues = await this.issueCreator.listTrackedIssues(config);
         const allFindings = prioritizedFindings;
-        const isTracked = (f: Vulnerability) => this.issueCreator.findMatchingIssue(f, trackedIssues) !== null;
+        const trackedIssues = await this.issueCreator.listTrackedIssues(config, allFindings);
+        const matches = this.issueCreator.matchFindingsToIssues(allFindings, trackedIssues);
+        const isTracked = (f: Vulnerability) => matches.has(f);
         const candidates = allFindings.filter(f => !isTracked(f));
 
         // Step 1: Query the platform for budget-aware plan

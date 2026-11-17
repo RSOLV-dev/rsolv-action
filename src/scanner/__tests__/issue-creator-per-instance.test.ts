@@ -342,9 +342,10 @@ describe('IssueCreator - Per-Instance Issue Creation (RFC-142)', () => {
     describe('when a legacy issue lost rsolv:detected', () => {
       // v4.8.1 and earlier swapped rsolv:detected for rsolv:false-positive or
       // rsolv:validated, so a rsolv:detected query never returns these issues.
-      const listOnlyUnder = (label: string, issue: ForgeIssue) =>
+      // Like GitHub: a label query returns the open issues carrying that label.
+      const listOnlyUnder = (_label: string, issue: ForgeIssue) =>
         mockForge.listIssues.mockImplementation(
-          (_owner: string, _repo: string, labels: string) => Promise.resolve(labels === label ? [issue] : [])
+          (_owner: string, _repo: string, labels: string) => Promise.resolve(issue.labels.includes(labels) ? [issue] : [])
         );
 
       it('still honours rsolv:false-positive as a skip and files no duplicate', async () => {
@@ -435,21 +436,100 @@ describe('IssueCreator - Per-Instance Issue Creation (RFC-142)', () => {
 
     describe('when the forge refuses one label query', () => {
       it('still uses the answers for the other labels', async () => {
-        mockForge.listIssues.mockImplementation((_o: string, _r: string, label: string) => {
-          if (label === 'rsolv:unconfirmed') return Promise.reject(new Error('label not allowed'));
-          return Promise.resolve(label === 'rsolv:false-positive' ? [{
-            number: 42,
-            title: '[CWE-79] Cross-Site Scripting (XSS) in src/templates/admin.ejs:42',
-            url: 'https://github.com/test/repo/issues/42',
-            labels: ['rsolv:false-positive', 'rsolv:cwe-CWE-79'],
-            state: 'open'
-          }] : []);
-        });
+        const legacyFalsePositive: ForgeIssue = {
+          number: 42,
+          title: '[CWE-79] Cross-Site Scripting (XSS) in src/templates/admin.ejs:42',
+          url: 'https://github.com/test/repo/issues/42',
+          labels: ['rsolv:false-positive', 'rsolv:cwe-CWE-79'],
+          state: 'open'
+        };
+        mockForge.listIssues.mockImplementation((_o: string, _r: string, label: string) =>
+          label === 'rsolv:cwe-CWE-89'
+            ? Promise.reject(new Error('label not allowed'))
+            : Promise.resolve(legacyFalsePositive.labels.includes(label) ? [legacyFalsePositive] : []));
 
-        const result = await issueCreator.createIssuesFromFindings([makeFinding()], baseConfig);
+        const result = await issueCreator.createIssuesFromFindings(
+          [makeFinding({ cweId: 'CWE-89', filePath: 'src/db.js' }), makeFinding()],
+          baseConfig
+        );
+
+        expect(result.skippedFalsePositive).toBe(1);
+        expect(mockForge.createIssue).toHaveBeenCalledTimes(1);
+        expect(mockForge.createIssue.mock.calls[0][2].title).toContain('src/db.js');
+      });
+    });
+
+    describe('when one open issue could stand for several findings', () => {
+      const unconfirmedAt = (number: number, line: number): ForgeIssue => ({
+        number,
+        title: `[CWE-79] Cross-Site Scripting (XSS) in src/templates/admin.ejs:${line}`,
+        url: `https://github.com/test/repo/issues/${number}`,
+        labels: ['rsolv:detected', 'rsolv:unconfirmed', 'rsolv:cwe-CWE-79'],
+        state: 'open'
+      });
+
+      it('lets the exact instance claim the issue and files the other finding', async () => {
+        mockForge.listIssues.mockResolvedValue([unconfirmedAt(1, 10)]);
+
+        const result = await issueCreator.createIssuesFromFindings(
+          [makeFinding({ line: 90 }), makeFinding({ line: 10 })],
+          baseConfig
+        );
+
+        expect(mockForge.createIssue).toHaveBeenCalledTimes(1);
+        expect(mockForge.createIssue.mock.calls[0][2].title).toContain('admin.ejs:90');
+        expect(result.skippedDuplicate).toBe(1);
+      });
+
+      it('still dedups a single drifted finding', async () => {
+        mockForge.listIssues.mockResolvedValue([unconfirmedAt(1, 10)]);
+
+        const result = await issueCreator.createIssuesFromFindings([makeFinding({ line: 12 })], baseConfig);
 
         expect(mockForge.createIssue).not.toHaveBeenCalled();
-        expect(result.skippedFalsePositive).toBe(1);
+        expect(result.skippedDuplicate).toBe(1);
+      });
+
+      it('lets each issue absorb at most one drifted finding', async () => {
+        mockForge.listIssues.mockResolvedValue([unconfirmedAt(1, 10)]);
+
+        await issueCreator.createIssuesFromFindings([makeFinding({ line: 12 }), makeFinding({ line: 14 })], baseConfig);
+
+        expect(mockForge.createIssue).toHaveBeenCalledTimes(1);
+        expect(mockForge.createIssue.mock.calls[0][2].title).toContain('admin.ejs:14');
+      });
+
+      it('gives a drifted issue to the nearest finding', async () => {
+        mockForge.listIssues.mockResolvedValue([unconfirmedAt(1, 10)]);
+
+        await issueCreator.createIssuesFromFindings([makeFinding({ line: 40 }), makeFinding({ line: 12 })], baseConfig);
+
+        expect(mockForge.createIssue).toHaveBeenCalledTimes(1);
+        expect(mockForge.createIssue.mock.calls[0][2].title).toContain('admin.ejs:40');
+      });
+
+      it('dedups two shifted findings against two issues', async () => {
+        mockForge.listIssues.mockResolvedValue([unconfirmedAt(1, 10), unconfirmedAt(2, 50)]);
+
+        const result = await issueCreator.createIssuesFromFindings(
+          [makeFinding({ line: 53 }), makeFinding({ line: 12 })],
+          baseConfig
+        );
+
+        expect(mockForge.createIssue).not.toHaveBeenCalled();
+        expect(result.skippedDuplicate).toBe(2);
+      });
+    });
+
+    describe('when listing open issues', () => {
+      it('queries each finding CWE label, which every matchable issue carries', async () => {
+        await issueCreator.createIssuesFromFindings(
+          [makeFinding(), makeFinding({ cweId: 'CWE-89', filePath: 'src/db.js' }), makeFinding({ line: 7 })],
+          baseConfig
+        );
+
+        const labels = mockForge.listIssues.mock.calls.map(call => call[2]);
+        expect(labels).toEqual(expect.arrayContaining(['rsolv:cwe-CWE-79', 'rsolv:cwe-CWE-89']));
       });
     });
 

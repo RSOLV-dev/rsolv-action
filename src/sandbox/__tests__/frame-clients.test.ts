@@ -160,7 +160,7 @@ describe('FrameForgeAdapter', () => {
 
     it('lists only allowlisted labels and still dedups an open rsolv:detected issue', async () => {
       const { host, channel } = strictHost({
-        'rsolv:detected': [{ number: 50, title: '[CWE-79] XSS in app/old.js:3', state: 'open', html_url: 'u', labels: ['rsolv:detected', 'rsolv:cwe-CWE-79'] }],
+        'rsolv:cwe-CWE-79': [{ number: 50, title: '[CWE-79] XSS in app/old.js:3', state: 'open', html_url: 'u', labels: ['rsolv:detected', 'rsolv:cwe-CWE-79'] }],
       });
       const xss = { type: VulnerabilityType.XSS, severity: 'high', cweId: 'CWE-79', filePath: 'app/old.js', line: 3, message: 'm', description: 'd', confidence: 80 } as Vulnerability;
 
@@ -170,10 +170,33 @@ describe('FrameForgeAdapter', () => {
       );
 
       const listed = host.received.filter((f) => f.call === 'list_issues').flatMap((f) => f.args.labels as string[]);
-      expect(listed).toContain('rsolv:detected');
+      expect(listed).toEqual(['rsolv:cwe-CWE-79']);
       expect(listed.filter((label) => !hostAllows(label))).toEqual([]);
       expect(result.issues).toHaveLength(0);
       expect(result.skippedDuplicate).toBe(1);
+    });
+  });
+
+  describe('when a dismissed issue no longer carries rsolv:detected', () => {
+    it('still sees it through an allowlisted label and does not re-file the finding', async () => {
+      const dismissed = { number: 60, title: '[CWE-79] XSS in app/old.js:3', state: 'open', html_url: 'u', labels: ['rsolv:wont-fix', 'rsolv:cwe-CWE-79'] };
+      const { host, channel } = channelFor({
+        list_issues: (args) => {
+          const labels = (args as { labels: string[] }).labels;
+          if (!labels.every(hostAllows)) return { error: 'label not allowed' };
+          return { ok: labels.every((l) => dismissed.labels.includes(l)) ? [dismissed] : [] };
+        },
+        create_issue: () => ({ ok: { number: 77, html_url: 'https://github.com/acme/app/issues/77' } }),
+      });
+      const xss = { type: VulnerabilityType.XSS, severity: 'high', cweId: 'CWE-79', filePath: 'app/old.js', line: 3, message: 'm', description: 'd', confidence: 80 } as Vulnerability;
+
+      const result = await new IssueCreator(new FrameForgeAdapter(channel)).createIssuesFromFindings(
+        [xss],
+        { repository: { owner: 'acme', name: 'app', defaultBranch: 'HEAD' }, createIssues: true }
+      );
+
+      expect(host.received.filter((f) => f.call === 'create_issue')).toEqual([]);
+      expect(result.skippedDismissed).toBe(1);
     });
   });
 

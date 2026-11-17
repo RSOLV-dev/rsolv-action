@@ -149,15 +149,10 @@ function getVulnerabilityTypeName(type: string): string {
   return VULNERABILITY_TYPE_NAMES[type] || type.replace(/[_-]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 }
 
-const TRACKED_ISSUE_LABELS = [
-  'rsolv:detected',
-  'rsolv:unconfirmed',
-  'rsolv:validated',
-  'rsolv:false-positive',
-  'rsolv:wont-fix',
-  'rsolv:accepted-risk',
-  'rsolv:deferred',
-];
+function lineDistance(issue: ForgeIssue, finding: Vulnerability): number {
+  const distance = Math.abs(Number(issue.title.split(':').pop()) - finding.line);
+  return Number.isFinite(distance) ? distance : Number.MAX_SAFE_INTEGER;
+}
 
 export class IssueCreator {
   private forgeAdapter: ForgeAdapter;
@@ -303,7 +298,8 @@ export class IssueCreator {
       logger.info(`Skipping ${vendorCount} vendor findings (require library updates, not code patches)`);
     }
 
-    const existingIssues = trackedIssues ?? await this.listTrackedIssues(config);
+    const existingIssues = trackedIssues ?? await this.listTrackedIssues(config, appFindings);
+    const matches = this.matchFindingsToIssues(appFindings, existingIssues);
 
     // Dedup first, then cap: max_issues limits NEW issues, so findings that
     // already have an open issue never use up a slot.
@@ -312,7 +308,7 @@ export class IssueCreator {
 
     for (const finding of appFindings) {
       try {
-        const existingMatch = this.findMatchingIssue(finding, existingIssues);
+        const existingMatch = matches.get(finding);
 
         if (existingMatch) {
           const labelNames = this.extractLabelNames(
@@ -365,15 +361,17 @@ export class IssueCreator {
   }
 
   /**
-   * Every open issue carrying any RSOLV finding-status label. A single
-   * rsolv:detected query misses issues that v4.8.1 and earlier relabelled
-   * (rsolv:detected swapped for rsolv:false-positive or rsolv:validated), and
-   * issues a person dismissed after removing rsolv:detected.
+   * The open issues that could match these findings. Matching requires the
+   * finding's rsolv:cwe-* label, so one query per CWE sees every candidate
+   * whatever its status label: issues v4.8.1 and earlier relabelled (no
+   * rsolv:detected), dismissed ones, validated ones. The sandbox host
+   * allowlists rsolv:cwe-* too. Each query fails on its own.
    */
-  async listTrackedIssues(config: ScanConfig): Promise<ForgeIssue[]> {
+  async listTrackedIssues(config: ScanConfig, findings: Vulnerability[]): Promise<ForgeIssue[]> {
     const { owner, name } = config.repository;
+    const cweLabels = new Set(findings.filter(f => f.cweId).map(f => `rsolv:cwe-${f.cweId}`));
     const byNumber = new Map<number, ForgeIssue>();
-    for (const label of TRACKED_ISSUE_LABELS) {
+    for (const label of cweLabels) {
       try {
         for (const issue of await this.forgeAdapter.listIssues(owner, name, label, 'open')) {
           byNumber.set(issue.number, issue);
@@ -386,26 +384,46 @@ export class IssueCreator {
   }
 
   /**
-   * Phase 1.5: Find the existing open issue for this finding instance.
-   * An issue matches on its CWE label plus the `file:line` in its title.
-   * An open, undecided issue (rsolv:detected / rsolv:unconfirmed) also matches
-   * the same CWE elsewhere in the file, since lines shift between scans. A
-   * validated or dismissed issue only ever stands for its own instance.
+   * Phase 1.5: pair findings with existing open issues, one-to-one.
+   * An issue matches on its CWE label plus the `file:line` in its title
+   * ("[CWE-XX] Name in file/path:line"). Exact instances are reserved first.
+   * Then each remaining finding may take the nearest still-unclaimed open,
+   * undecided issue (rsolv:detected / rsolv:unconfirmed) for the same CWE in
+   * the same file, since lines shift between scans. A validated or dismissed
+   * issue only ever stands for its own instance, and no issue absorbs two
+   * findings by drift.
    */
-  findMatchingIssue(finding: Vulnerability, existingIssues: ForgeIssue[]): ForgeIssue | null {
-    if (!finding.cweId || !finding.filePath) return null;
-
+  matchFindingsToIssues(findings: Vulnerability[], existingIssues: ForgeIssue[]): Map<Vulnerability, ForgeIssue> {
     const labelsOf = (issue: ForgeIssue): string[] =>
       issue.labels.map(l => typeof l === 'string' ? l : (l as { name?: string }).name || '');
-    const sameCwe = existingIssues.filter(issue => labelsOf(issue).includes(`rsolv:cwe-${finding.cweId}`));
+    const candidates = (finding: Vulnerability): ForgeIssue[] =>
+      finding.cweId && finding.filePath
+        ? existingIssues.filter(issue =>
+          labelsOf(issue).includes(`rsolv:cwe-${finding.cweId}`) && issue.title.includes(` in ${finding.filePath}:`))
+        : [];
 
-    // Title format: "[CWE-XX] Name in file/path:line"
-    const sameInstance = sameCwe.find(issue => issue.title.endsWith(` in ${finding.filePath}:${finding.line}`));
-    if (sameInstance) return sameInstance;
+    const matches = new Map<Vulnerability, ForgeIssue>();
+    const claimed = new Set<ForgeIssue>();
+    for (const finding of findings) {
+      const exact = candidates(finding).find(issue => issue.title.endsWith(` in ${finding.filePath}:${finding.line}`));
+      if (exact) {
+        matches.set(finding, exact);
+        claimed.add(exact);
+      }
+    }
 
-    return sameCwe.find(issue =>
-      issue.title.includes(` in ${finding.filePath}:`) && this.checkSkipStatus(labelsOf(issue)) === null
-    ) ?? null;
+    const drift = findings
+      .filter(finding => !matches.has(finding))
+      .flatMap(finding => candidates(finding)
+        .filter(issue => this.checkSkipStatus(labelsOf(issue)) === null)
+        .map(issue => ({ finding, issue, distance: lineDistance(issue, finding) })))
+      .sort((x, y) => x.distance - y.distance);
+    for (const { finding, issue } of drift) {
+      if (matches.has(finding) || claimed.has(issue)) continue;
+      matches.set(finding, issue);
+      claimed.add(issue);
+    }
+    return matches;
   }
 
   /**

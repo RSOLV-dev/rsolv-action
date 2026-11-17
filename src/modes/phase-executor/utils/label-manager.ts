@@ -7,7 +7,7 @@
  * Classification → Label mapping:
  *   validated   → add rsolv:validated, remove rsolv:detected
  *   anything else (false_positive*, inconclusive, infrastructure_failure, …)
- *               → add rsolv:unconfirmed (+ a detail label where one exists), keep rsolv:detected
+ *               → add rsolv:unconfirmed, then a detail label where one exists; keep rsolv:detected
  *
  * The Action never applies rsolv:false-positive: scans skip issues carrying it,
  * so applying it to an unproven finding hides that finding for good. Only a
@@ -71,10 +71,14 @@ export async function applyValidationLabels(
       return;
     }
 
+    logger.info(`[LABELS] Adding 'rsolv:unconfirmed' to issue #${issueNumber} (${classification})`);
+    await withRetry(() => addLabels(owner, repo, issueNumber, ['rsolv:unconfirmed']), `addLabels(rsolv:unconfirmed, #${issueNumber})`);
+
+    // The detail label is informational: its own call, so a rejection cannot cost rsolv:unconfirmed.
     const detail = DETAIL_LABELS.get(classification);
-    const labels = detail ? ['rsolv:unconfirmed', detail] : ['rsolv:unconfirmed'];
-    logger.info(`[LABELS] Adding ${labels.join(', ')} to issue #${issueNumber} (${classification})`);
-    await withRetry(() => addLabels(owner, repo, issueNumber, labels), `addLabels(${labels.join(',')}, #${issueNumber})`);
+    if (detail) {
+      await withRetry(() => addLabels(owner, repo, issueNumber, [detail]), `addLabels(${detail}, #${issueNumber})`);
+    }
   } catch (error) {
     logger.warn(`[LABELS] Failed to update labels for issue #${issue.issueNumber}:`, error);
     // Non-fatal — don't fail validation if label update fails
