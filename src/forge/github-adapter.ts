@@ -32,13 +32,20 @@ export class GitHubAdapter implements ForgeAdapter {
     labels: string,
     state: 'open' | 'closed'
   ): Promise<ForgeIssue[]> {
-    const { data } = await this.octokit.issues.listForRepo({
-      owner,
-      repo,
-      labels,
-      state,
-      per_page: 100,
-    });
+    const perPage = 100;
+    const data = [];
+    for (let page = 1; ; page++) {
+      const response = await this.octokit.issues.listForRepo({
+        owner,
+        repo,
+        labels,
+        state,
+        per_page: perPage,
+        page,
+      });
+      data.push(...response.data);
+      if (response.data.length < perPage) break;
+    }
 
     return data.map((issue) => ({
       number: issue.number,

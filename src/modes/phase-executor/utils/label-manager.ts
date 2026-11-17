@@ -5,16 +5,13 @@
  * that works with backend classification strings.
  *
  * Classification → Label mapping:
- *   validated            → add rsolv:validated, remove rsolv:detected
- *   false_positive       → add rsolv:false-positive, remove rsolv:detected
- *   false_positive_defense_confirmed → add rsolv:false-positive, remove rsolv:detected
- *   false_positive_counter_indicated → add rsolv:false-positive, remove rsolv:detected
- *   infrastructure_failure → add rsolv:validation-inconclusive, keep rsolv:detected
- *   inconclusive         → add rsolv:validation-inconclusive, keep rsolv:detected
- *   no_test_framework    → add rsolv:validation-unavailable, keep rsolv:detected
- *   max_turns_exceeded   → add rsolv:validation-inconclusive, keep rsolv:detected
- *   test_passed_unexpectedly → add rsolv:validation-inconclusive, keep rsolv:detected
- *   static_test          → add rsolv:validation-inconclusive, keep rsolv:detected
+ *   validated   → add rsolv:validated, remove rsolv:detected and any earlier unconfirmed/detail labels
+ *   anything else (false_positive*, inconclusive, infrastructure_failure, …)
+ *               → add rsolv:unconfirmed, then a detail label where one exists; keep rsolv:detected
+ *
+ * The Action never applies rsolv:false-positive: scans skip issues carrying it,
+ * so applying it to an unproven finding hides that finding for good. Only a
+ * human dismisses a finding.
  */
 
 import { addLabels, removeLabel } from '../../../github/api.js';
@@ -33,6 +30,23 @@ async function withRetry<T>(fn: () => Promise<T>, label: string, maxAttempts = 3
   }
   throw new Error('unreachable');
 }
+
+const DETAIL_LABELS: ReadonlyMap<string, string> = new Map([
+  ['infrastructure_failure', 'rsolv:validation-inconclusive'],
+  ['inconclusive', 'rsolv:validation-inconclusive'],
+  ['max_turns_exceeded', 'rsolv:validation-inconclusive'],
+  ['test_passed_unexpectedly', 'rsolv:validation-inconclusive'],
+  ['static_test', 'rsolv:validation-inconclusive'],
+  ['no_test_framework', 'rsolv:validation-unavailable'],
+]);
+
+// A proven finding drops the labels of an earlier unproven verdict.
+const SUPERSEDED_BY_VALIDATED = [
+  'rsolv:detected',
+  'rsolv:unconfirmed',
+  'rsolv:validation-inconclusive',
+  'rsolv:validation-unavailable',
+];
 
 export interface LabelIssueInfo {
   owner: string;
@@ -55,64 +69,23 @@ export async function applyValidationLabels(
   try {
     const { owner, repo, issueNumber, currentLabels } = issue;
 
-    switch (classification) {
-    case 'validated':
+    if (classification === 'validated') {
       logger.info(`[LABELS] Adding 'rsolv:validated' to issue #${issueNumber}`);
       await withRetry(() => addLabels(owner, repo, issueNumber, ['rsolv:validated']), `addLabels(rsolv:validated, #${issueNumber})`);
-      if (currentLabels.includes('rsolv:detected')) {
-        logger.info(`[LABELS] Removing 'rsolv:detected' from issue #${issueNumber}`);
-        await withRetry(() => removeLabel(owner, repo, issueNumber, 'rsolv:detected'), `removeLabel(rsolv:detected, #${issueNumber})`);
+      for (const stale of SUPERSEDED_BY_VALIDATED.filter(label => currentLabels.includes(label))) {
+        logger.info(`[LABELS] Removing '${stale}' from issue #${issueNumber}`);
+        await withRetry(() => removeLabel(owner, repo, issueNumber, stale), `removeLabel(${stale}, #${issueNumber})`);
       }
-      break;
+      return;
+    }
 
-    case 'false_positive':
-    case 'false_positive_defense_confirmed':
-    case 'false_positive_counter_indicated':
-      logger.info(`[LABELS] Adding 'rsolv:false-positive' to issue #${issueNumber} (${classification})`);
-      await withRetry(() => addLabels(owner, repo, issueNumber, ['rsolv:false-positive']), `addLabels(rsolv:false-positive, #${issueNumber})`);
-      if (currentLabels.includes('rsolv:detected')) {
-        logger.info(`[LABELS] Removing 'rsolv:detected' from issue #${issueNumber}`);
-        await withRetry(() => removeLabel(owner, repo, issueNumber, 'rsolv:detected'), `removeLabel(rsolv:detected, #${issueNumber})`);
-      }
-      break;
+    logger.info(`[LABELS] Adding 'rsolv:unconfirmed' to issue #${issueNumber} (${classification})`);
+    await withRetry(() => addLabels(owner, repo, issueNumber, ['rsolv:unconfirmed']), `addLabels(rsolv:unconfirmed, #${issueNumber})`);
 
-    case 'infrastructure_failure':
-      logger.info(`[LABELS] Adding 'rsolv:validation-inconclusive' to issue #${issueNumber} (infrastructure)`);
-      await withRetry(() => addLabels(owner, repo, issueNumber, ['rsolv:validation-inconclusive']), `addLabels(rsolv:validation-inconclusive, #${issueNumber})`);
-      // Keep rsolv:detected — vulnerability may be real
-      break;
-
-    case 'inconclusive':
-      logger.info(`[LABELS] Adding 'rsolv:validation-inconclusive' to issue #${issueNumber} (static test)`);
-      await withRetry(() => addLabels(owner, repo, issueNumber, ['rsolv:validation-inconclusive']), `addLabels(rsolv:validation-inconclusive, #${issueNumber})`);
-      // Keep rsolv:detected — behavioral test needed
-      break;
-
-    case 'no_test_framework':
-      logger.info(`[LABELS] Adding 'rsolv:validation-unavailable' to issue #${issueNumber} (no test framework)`);
-      await withRetry(() => addLabels(owner, repo, issueNumber, ['rsolv:validation-unavailable']), `addLabels(rsolv:validation-unavailable, #${issueNumber})`);
-      // Keep rsolv:detected — vulnerability may be real
-      break;
-
-    case 'max_turns_exceeded':
-      logger.info(`[LABELS] Adding 'rsolv:validation-inconclusive' to issue #${issueNumber} (max turns exceeded)`);
-      await withRetry(() => addLabels(owner, repo, issueNumber, ['rsolv:validation-inconclusive']), `addLabels(rsolv:validation-inconclusive, #${issueNumber})`);
-      // Keep rsolv:detected — vulnerability likely real, just ran out of turns
-      break;
-
-    case 'test_passed_unexpectedly':
-      logger.info(`[LABELS] Adding 'rsolv:validation-inconclusive' to issue #${issueNumber} (test passed unexpectedly)`);
-      await withRetry(() => addLabels(owner, repo, issueNumber, ['rsolv:validation-inconclusive']), `addLabels(rsolv:validation-inconclusive, #${issueNumber})`);
-      break;
-
-    case 'static_test':
-      logger.info(`[LABELS] Adding 'rsolv:validation-inconclusive' to issue #${issueNumber} (static test)`);
-      await withRetry(() => addLabels(owner, repo, issueNumber, ['rsolv:validation-inconclusive']), `addLabels(rsolv:validation-inconclusive, #${issueNumber})`);
-      break;
-
-    default:
-      logger.warn(`[LABELS] Unknown classification '${classification}' for issue #${issueNumber}, skipping labels`);
-      break;
+    // The detail label is informational: its own call, so a rejection cannot cost rsolv:unconfirmed.
+    const detail = DETAIL_LABELS.get(classification);
+    if (detail) {
+      await withRetry(() => addLabels(owner, repo, issueNumber, [detail]), `addLabels(${detail}, #${issueNumber})`);
     }
   } catch (error) {
     logger.warn(`[LABELS] Failed to update labels for issue #${issue.issueNumber}:`, error);

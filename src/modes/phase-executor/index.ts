@@ -333,6 +333,7 @@ export class PhaseExecutor {
 
       // Loop: process all pending work, re-querying after each pass.
       // Validations create mitigate-ready issues, so we loop until no pending work remains.
+      const attemptedValidations = new Set<number>();
       const MAX_PASSES = 5;
       for (let pass = 0; pass < MAX_PASSES; pass++) {
         const allPending: Array<{ issue_number: number; cwe_id: string; pending_action: string }> = pass === 0
@@ -349,11 +350,18 @@ export class PhaseExecutor {
 
         logger.info(`[PROCESS] Pass ${pass + 1}: ${pending.length} pending issues`);
 
-        const toValidate = pending.filter(i => i.pending_action === 'validate');
+        // An unproven issue can stay pending validate; validate each issue at
+        // most once per run, and never past max_validations.
+        const validationsLeft = (this.config.maxValidations ?? Infinity) - attemptedValidations.size;
+        const toValidate = pending
+          .filter(i => i.pending_action === 'validate' && !attemptedValidations.has(i.issue_number))
+          .slice(0, Math.max(0, validationsLeft));
         const toMitigate = pending.filter(i => i.pending_action === 'mitigate');
 
         // Process validations
         for (const issue of toValidate) {
+          if (attemptedValidations.has(issue.issue_number)) continue;
+          attemptedValidations.add(issue.issue_number);
           logger.info(`[PROCESS] Validating issue #${issue.issue_number} (${issue.cwe_id})`);
           try {
             const validateResult = await this.executeValidate({

@@ -1,6 +1,6 @@
 {
   "name": "rsolv-action",
-  "version": "4.8.1",
+  "version": "4.8.2",
   "description": "GitHub Action for automating issue fixes with AI",
   "main": "src/index.ts",
   "type": "module",
@@ -52,7 +52,7 @@
     "@types/js-yaml": "^4.0.9",
     "@types/nock": "^11.1.0",
     "@types/node": "^26.6.1",
-    "@typescript-eslint/eslint-plugin": "^8.65.0",
+    "@typescript-eslint/eslint-plugin": "^8.70.0",
     "@typescript-eslint/parser": "^8.70.0",
     "@vitest/ui": "^5.1.0",
     "bun-types": "^1.4.2",
