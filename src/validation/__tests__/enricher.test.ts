@@ -2,6 +2,11 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ValidationEnricher } from '../enricher.js';
 import { IssueContext } from '../../types/index.js';
 
+vi.mock('fs', () => ({
+  existsSync: vi.fn(() => true),
+  readFileSync: vi.fn()
+}));
+
 describe('ValidationEnricher', () => {
   let enricher: ValidationEnricher;
   
@@ -114,14 +119,6 @@ describe('ValidationEnricher', () => {
   });
 
   describe('analyzeFile', () => {
-    beforeEach(() => {
-      // Mock file system
-      vi.mock('fs', () => ({
-        existsSync: vi.fn(() => true),
-        readFileSync: vi.fn()
-      }));
-    });
-
     it('should detect SQL injection vulnerability in file content', async () => {
       const fs = await import('fs');
       vi.mocked(fs.readFileSync).mockReturnValue(
