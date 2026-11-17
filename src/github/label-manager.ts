@@ -23,6 +23,21 @@ export const REQUIRED_LABELS: Label[] = [
     description: 'Trigger RSOLV fix generation'
   },
   {
+    name: 'rsolv:unconfirmed',
+    color: 'D4C5F9',
+    description: 'RSOLV could not prove this finding; it stays open for review'
+  },
+  {
+    name: 'rsolv:validation-inconclusive',
+    color: 'EDEDED',
+    description: 'RSOLV validation could not reach a verdict'
+  },
+  {
+    name: 'rsolv:validation-unavailable',
+    color: 'EDEDED',
+    description: 'RSOLV found no test framework to validate with'
+  },
+  {
     name: 'security',
     color: 'D93F0B',
     description: 'Security vulnerability'

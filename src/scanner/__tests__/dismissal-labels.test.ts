@@ -74,4 +74,12 @@ describe('Dismissal Labels', () => {
   it('should prioritize false-positive over dismissed', () => {
     expect(checkSkipStatus(['rsolv:false-positive', 'rsolv:deferred'])).toBe('skip:false-positive');
   });
+
+  it('should return null for rsolv:unconfirmed so unproven findings stay discoverable', () => {
+    expect(checkSkipStatus(['rsolv:detected', 'rsolv:unconfirmed'])).toBeNull();
+  });
+
+  it('still skips an existing rsolv:false-positive label even alongside rsolv:unconfirmed', () => {
+    expect(checkSkipStatus(['rsolv:unconfirmed', 'rsolv:false-positive'])).toBe('skip:false-positive');
+  });
 });

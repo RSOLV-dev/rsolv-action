@@ -85,6 +85,14 @@ export class ScanOrchestrator {
       let scanPlan: ScanPlanResponse | null = null;
 
       if (shouldCreateIssues && prioritizedFindings && prioritizedFindings.length > 0) {
+        // Step 0: findings that already have an open issue are deduped by the
+        // issue creator, so they must not take plan or max_issues slots.
+        const allFindings = prioritizedFindings;
+        const trackedIssues = await this.issueCreator.listTrackedIssues(config, allFindings);
+        const matches = this.issueCreator.matchFindingsToIssues(allFindings, trackedIssues);
+        const isTracked = (f: Vulnerability) => matches.has(f);
+        const candidates = allFindings.filter(f => !isTracked(f));
+
         // Step 1: Query the platform for budget-aware plan
         const apiUrl = process.env.RSOLV_API_URL || 'https://api.rsolv.dev';
         const apiKey = process.env.RSOLV_API_KEY || '';
@@ -96,8 +104,8 @@ export class ScanOrchestrator {
             ? (request: ScanPlanRequest) => new ScanPlanClient({ apiUrl, apiKey }).getPlan(request)
             : null;
 
-        if (getPlan) {
-          const planFindings: ScanPlanFinding[] = prioritizedFindings.map(f => ({
+        if (getPlan && candidates.length > 0) {
+          const planFindings: ScanPlanFinding[] = candidates.map(f => ({
             cwe_id: f.cweId || 'CWE-unknown',
             severity: f.severity,
             file_path: f.filePath || 'unknown',
@@ -129,14 +137,14 @@ export class ScanOrchestrator {
         }
 
         // Step 2: Apply plan to select which findings to process
-        let findingsToProcess: Vulnerability[];
+        let selected: Vulnerability[];
         if (scanPlan) {
           // Map selected findings back to original Vulnerability objects.
           // Keys use the same fallbacks as planFindings construction above.
           const selectedSet = new Set(
             scanPlan.selected.map(f => `${f.cwe_id}:${f.file_path}:${f.line}`)
           );
-          findingsToProcess = prioritizedFindings.filter(f =>
+          selected = candidates.filter(f =>
             selectedSet.has(`${f.cweId || 'CWE-unknown'}:${f.filePath || 'unknown'}:${f.line}`)
           );
         } else {
@@ -145,9 +153,12 @@ export class ScanOrchestrator {
             config.maxIssues || 3,
             config.maxValidations ?? Infinity
           );
-          findingsToProcess = prioritizedFindings.slice(0, fallbackCap);
-          logger.warn(`[ScanPlan] Using conservative fallback — processing ${findingsToProcess.length} findings`);
+          selected = candidates.slice(0, fallbackCap);
+          logger.warn(`[ScanPlan] Using conservative fallback — processing ${selected.length} findings`);
         }
+
+        // Tracked findings ride along so their skips are counted and logged.
+        const findingsToProcess = allFindings.filter(f => isTracked(f) || selected.includes(f));
 
         // Step 3: Create issues from selected findings
         logger.info(
@@ -157,7 +168,8 @@ export class ScanOrchestrator {
 
         const result = await this.issueCreator.createIssuesFromFindings(
           findingsToProcess,
-          { ...config, createIssues: true }
+          { ...config, createIssues: true },
+          trackedIssues
         );
 
         scanResult.createdIssues = result.issues;

@@ -10,6 +10,7 @@ import type { ScanPlatform } from '../scanner/scan-orchestrator.js';
 import type { ValidationRequest, ValidationResponse } from '../scanner/ast-validator.js';
 import type { SeverityTierMap } from '../scanner/finding-prioritizer.js';
 import type { ScanPlanRequest, ScanPlanResponse } from '../scanner/types.js';
+import { logger } from '../utils/logger.js';
 import type { ForgeAdapter, ForgeIssue, IssueCreateParams } from '../forge/forge-adapter.js';
 
 const SCANNER_LANGUAGES = ['javascript', 'typescript', 'python', 'ruby', 'java', 'php', 'elixir'];
@@ -84,6 +85,15 @@ function unavailable(): Promise<never> {
   return Promise.reject(new Error('not available in the sandbox scan'));
 }
 
+// The host's label allowlist (rsolv-host ScanRelay.allowed_label?/1). The host
+// refuses a whole call if any label is outside it.
+const HOST_FIXED_LABELS = ['security', 'automated-scan', 'critical', 'high', 'medium', 'low'];
+const HOST_LABEL = /^rsolv:(detected|vuln-[a-z0-9_-]{1,40}|cwe-(CWE-)?[0-9]{1,5})$/;
+
+export function hostAllowsLabel(label: string): boolean {
+  return HOST_FIXED_LABELS.includes(label) || HOST_LABEL.test(label);
+}
+
 /** Issue listing and creation only; `posted` keeps what each created issue said. */
 export class FrameForgeAdapter implements ForgeAdapter {
   readonly posted = new Map<number, { title: string; body: string }>();
@@ -91,7 +101,13 @@ export class FrameForgeAdapter implements ForgeAdapter {
   constructor(private readonly channel: HostChannel) {}
 
   async listIssues(_owner: string, _repo: string, labels: string): Promise<ForgeIssue[]> {
-    const issues = (await this.channel.call('list_issues', { labels: labels.split(',') })) as Array<{
+    const names = labels.split(',');
+    const refused = names.filter((name) => !hostAllowsLabel(name));
+    if (refused.length > 0) {
+      logger.warn(`Not listing issues labelled ${refused.join(', ')}: the host does not allow these labels`);
+      return [];
+    }
+    const issues = (await this.channel.call('list_issues', { labels: names })) as Array<{
       number: number;
       title: string;
       state: 'open' | 'closed';
