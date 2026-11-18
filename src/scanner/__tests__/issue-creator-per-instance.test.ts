@@ -216,6 +216,27 @@ describe('IssueCreator - Per-Instance Issue Creation (RFC-142)', () => {
       // Should NOT contain "Total Instances" or "Affected Files" count
       expect(body).not.toContain('Total Instances');
     });
+
+    describe('when the platform left a static hint on the finding', () => {
+      it('tells the reader why RSOLV static analysis doubts it', async () => {
+        const findings = [makeFinding({ staticHint: 'Safe pattern detected: using parameterized query' })];
+
+        await issueCreator.createIssuesFromFindings(findings, baseConfig);
+
+        const body = mockForge.createIssue.mock.calls[0][2].body;
+        expect(body).toContain(
+          'RSOLV static analysis thinks this may be safe because Safe pattern detected: using parameterized query'
+        );
+      });
+    });
+
+    describe('without a static hint', () => {
+      it('says nothing about static analysis', async () => {
+        await issueCreator.createIssuesFromFindings([makeFinding()], baseConfig);
+
+        expect(mockForge.createIssue.mock.calls[0][2].body).not.toContain('RSOLV static analysis');
+      });
+    });
   });
 
   describe('labels', () => {

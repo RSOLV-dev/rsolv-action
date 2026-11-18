@@ -535,6 +535,11 @@ export class IssueCreator {
     sections.push(finding.description || this.getVulnerabilityDescription(finding.type));
     sections.push('');
 
+    if (finding.staticHint) {
+      sections.push(`> RSOLV static analysis thinks this may be safe because ${finding.staticHint}`);
+      sections.push('');
+    }
+
     // Code snippet
     if (finding.snippet && finding.filePath) {
       sections.push('### Vulnerable Code');

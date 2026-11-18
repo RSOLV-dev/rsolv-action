@@ -32,6 +32,16 @@ describe('action.yml contract', () => {
     });
   });
 
+  describe('validation_contract', () => {
+    test('defaults off, so the platform flag alone picks the contract', () => {
+      expect(loadActionManifest().inputs?.validation_contract?.default).toBe('');
+    });
+
+    test('reaches the container as RSOLV_VALIDATION_CONTRACT', () => {
+      expect(loadActionManifest().runs?.env?.RSOLV_VALIDATION_CONTRACT).toBe('${{ inputs.validation_contract }}');
+    });
+  });
+
   describe('claude_max_turns removal', () => {
     test('input is no longer declared (deprecated, server-side controlled)', () => {
       const manifest = loadActionManifest();
