@@ -59,7 +59,7 @@ export class ThreeTierExplanationFramework {
 
     return {
       tier: 'line',
-      vulnerabilityId: `${vulnerability.type}-${vulnerability.line}`,
+      vulnerabilityId: `${vulnerability.filePath || ''}:${vulnerability.type}-${vulnerability.line}`,
       title,
       content,
       secureExample,

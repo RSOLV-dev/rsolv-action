@@ -17,6 +17,13 @@ describe('ThreeTierExplanationFramework', () => {
   };
 
   describe('Line-Level Explanations', () => {
+    it('gives same-type, same-line findings in different files distinct ids', () => {
+      const inUsers = framework.generateLineLevelExplanation({ ...sampleVulnerability, filePath: 'app/users.py' }, 'q');
+      const inAdmin = framework.generateLineLevelExplanation({ ...sampleVulnerability, filePath: 'app/admin.py' }, 'q');
+
+      expect(inUsers.vulnerabilityId).not.toBe(inAdmin.vulnerabilityId);
+    });
+
     it('should generate line-level explanation for SQL injection', () => {
       const explanation = framework.generateLineLevelExplanation(
         sampleVulnerability,
