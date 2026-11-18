@@ -42,15 +42,9 @@ export class SecurityDetectorV2 {
       const patterns = await this.patternSource.getPatternsByLanguage(language);
       logger.info(`SecurityDetectorV2: Analyzing ${language} code with ${patterns.length} patterns in file ${filePath}`);
 
-      // Separate patterns into AST-enhanced and regex-only
-      const astPatterns = patterns.filter(p => p.astRules);
-      const regexPatterns = patterns.filter(p => !p.astRules);
-
-      // Process AST patterns
-      await this.processASTPatterns(astPatterns, code, filePath, seen, vulnerabilities);
-
-      // Process regex patterns
-      await this.processRegexPatterns(regexPatterns, code, language, filePath, fileStartTime, seen, vulnerabilities);
+      // AST findings come first; every pattern's regex still runs, so the result never has fewer findings than regex alone.
+      await this.processASTPatterns(patterns.filter(p => p.astRules), code, filePath, seen, vulnerabilities);
+      await this.processRegexPatterns(patterns, code, language, filePath, fileStartTime, seen, vulnerabilities);
 
       const totalDuration = Date.now() - fileStartTime;
       logger.info(`SecurityDetectorV2: Completed ${filePath} in ${totalDuration}ms, found ${vulnerabilities.length} vulnerabilities`);
