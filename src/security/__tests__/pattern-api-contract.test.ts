@@ -36,6 +36,12 @@ describe('the served enhanced Python patterns', () => {
       expect(converted.patterns.regex).toHaveLength(servedRegexCount(served.regex));
     });
 
+    it('matches at least one of its own vulnerable examples', () => {
+      const examples = served.examples?.vulnerable ?? [];
+
+      expect(examples.some(e => converted.patterns.regex.some(r => new RegExp(r.source, r.flags).test(e)))).toBe(true);
+    });
+
     it('keeps the enhanced rules it was served', () => {
       expect(converted.astRules ?? null).toEqual(served.astRules ?? null);
       expect(converted.contextRules ?? null).toEqual(served.contextRules ?? null);
