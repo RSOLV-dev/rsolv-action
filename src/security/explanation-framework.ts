@@ -1,4 +1,4 @@
-import { Vulnerability, VulnerabilityType } from './types.js';
+import { Vulnerability, VulnerabilityType, findingId } from './types.js';
 
 export interface LineLevelExplanation {
   tier: 'line';
@@ -59,7 +59,7 @@ export class ThreeTierExplanationFramework {
 
     return {
       tier: 'line',
-      vulnerabilityId: `${vulnerability.filePath || ''}:${vulnerability.type}-${vulnerability.line}`,
+      vulnerabilityId: findingId(vulnerability),
       title,
       content,
       secureExample,

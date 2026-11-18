@@ -62,6 +62,11 @@ export interface Vulnerability {
   staticHint?: string; // Platform heuristic's reason this may be safe (validation contract 2)
 }
 
+/** A finding's id: file, type, line and column, so same-line findings elsewhere never share one. The validate endpoint echoes it back. */
+export function findingId(v: Pick<Vulnerability, 'filePath' | 'type' | 'line' | 'column'>): string {
+  return `${v.filePath || ''}:${v.type}-${v.line}-${v.column || 0}`;
+}
+
 export interface SecurityScanResult {
   vulnerabilities: Vulnerability[];
   summary: {

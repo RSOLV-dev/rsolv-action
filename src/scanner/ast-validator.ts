@@ -1,6 +1,6 @@
 import { RsolvApiClient } from '../external/api-client.js';
 import { logger } from '../utils/logger.js';
-import type { Vulnerability } from '../security/types.js';
+import { findingId, type Vulnerability } from '../security/types.js';
 import * as crypto from 'crypto';
 
 /**
@@ -69,10 +69,7 @@ export interface ValidationRequest {
   contractVersion?: 2;
 }
 
-/** Request id the platform echoes back; the file keeps same-line findings in different files apart. */
-function validationId(v: Vulnerability): string {
-  return `${v.filePath || ''}:${v.type}-${v.line}-${v.column || 0}`;
-}
+
 
 /** What validates findings: the platform API (v4), or the host's frames (the v5 sandbox). */
 export interface ValidationClient {
@@ -214,7 +211,7 @@ export class ASTValidator {
   ): ValidationRequest {
     // Convert vulnerabilities to API format
     const vulnsForApi = vulnerabilities.map(v => ({
-      id: validationId(v),
+      id: findingId(v),
       type: v.type, // Include type field for API
       patternId: v.type, // Use type as pattern ID
       file: v.filePath || '', // API expects 'file', not 'filePath'
@@ -257,7 +254,7 @@ export class ASTValidator {
     
     // Filter vulnerabilities based on validation results and attach enclosingFunction
     const validated = vulnerabilities.filter(vuln => {
-      const validation = validationMap.get(validationId(vuln));
+      const validation = validationMap.get(findingId(vuln));
 
       if (!validation) {
         // No validation result, keep the vulnerability

@@ -24,6 +24,13 @@ describe('ThreeTierExplanationFramework', () => {
       expect(inUsers.vulnerabilityId).not.toBe(inAdmin.vulnerabilityId);
     });
 
+    it('gives same-line findings in different columns distinct ids', () => {
+      const first = framework.generateLineLevelExplanation({ ...sampleVulnerability, filePath: 'a.py', column: 4 }, 'q');
+      const second = framework.generateLineLevelExplanation({ ...sampleVulnerability, filePath: 'a.py', column: 40 }, 'q');
+
+      expect(first.vulnerabilityId).not.toBe(second.vulnerabilityId);
+    });
+
     it('should generate line-level explanation for SQL injection', () => {
       const explanation = framework.generateLineLevelExplanation(
         sampleVulnerability,
