@@ -59,6 +59,7 @@ export interface Vulnerability {
   snippet?: string;
   isVendor?: boolean; // True if vulnerability is in vendor/third-party code
   enclosingFunction?: EnclosingFunction; // Extracted by platform FunctionExtractor
+  staticHint?: string; // Platform heuristic's reason this may be safe (validation contract 2)
 }
 
 export interface SecurityScanResult {
