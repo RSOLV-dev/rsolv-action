@@ -52,7 +52,7 @@ describe('ASTValidator', () => {
       const mockResponse = {
         validated: [
           {
-            id: 'command_injection-10-5',
+            id: 'src/app.js:command_injection-10-5',
             isValid: true,
             confidence: 0.95,
             astContext: {
@@ -76,7 +76,7 @@ describe('ASTValidator', () => {
       expect(result[0]).toEqual(vulnerabilities[0]);
       expect(mockApiClient.validateVulnerabilities).toHaveBeenCalledWith({
         vulnerabilities: [{
-          id: 'command_injection-10-5',
+          id: 'src/app.js:command_injection-10-5',
           type: VulnerabilityType.COMMAND_INJECTION,
           patternId: 'command_injection',
           file: 'src/app.js', // API expects 'file', not 'filePath'
@@ -131,13 +131,13 @@ describe('ASTValidator', () => {
       const mockResponse = {
         validated: [
           {
-            id: 'command_injection-10-5',
+            id: 'src/app.js:command_injection-10-5',
             isValid: true,
             confidence: 0.95,
             astContext: { inUserInputFlow: true, hasValidation: false }
           },
           {
-            id: 'command_injection-20-5',
+            id: 'src/app.js:command_injection-20-5',
             isValid: false,
             confidence: 0.1,
             reason: 'Code found in comment',
@@ -207,7 +207,7 @@ describe('ASTValidator', () => {
 
       const mockResponse = {
         validated: [{
-          id: 'command_injection-10-5',
+          id: 'missing.js:command_injection-10-5',
           isValid: true,
           confidence: 0.5,
           reason: 'File content unavailable'
@@ -279,9 +279,9 @@ describe('ASTValidator', () => {
 
       mockApiClient.validateVulnerabilities.mockResolvedValue({
         validated: [
-          { id: 'command_injection-10-5', isValid: true, confidence: 0.9 },
-          { id: 'command_injection-20-5', isValid: true, confidence: 0.9 },
-          { id: 'command_injection-5-10', isValid: true, confidence: 0.9 }
+          { id: 'file1.js:command_injection-10-5', isValid: true, confidence: 0.9 },
+          { id: 'file1.js:command_injection-20-5', isValid: true, confidence: 0.9 },
+          { id: 'file2.js:command_injection-5-10', isValid: true, confidence: 0.9 }
         ],
         stats: { total: 3, validated: 3, rejected: 0 }
       });
@@ -292,9 +292,9 @@ describe('ASTValidator', () => {
       expect(mockApiClient.validateVulnerabilities).toHaveBeenCalledTimes(1);
       expect(mockApiClient.validateVulnerabilities).toHaveBeenCalledWith({
         vulnerabilities: expect.arrayContaining([
-          expect.objectContaining({ id: 'command_injection-10-5' }),
-          expect.objectContaining({ id: 'command_injection-20-5' }),
-          expect.objectContaining({ id: 'command_injection-5-10' })
+          expect.objectContaining({ id: 'file1.js:command_injection-10-5' }),
+          expect.objectContaining({ id: 'file1.js:command_injection-20-5' }),
+          expect.objectContaining({ id: 'file2.js:command_injection-5-10' })
         ]),
         files: {
           'file1.js': {
