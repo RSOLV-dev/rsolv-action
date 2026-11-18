@@ -1,6 +1,7 @@
 import { logger } from '../utils/logger.js';
 import type { ForgeAdapter, ForgeIssue } from '../forge/forge-adapter.js';
 import type { Vulnerability } from '../security/types.js';
+import { inertInline } from '../utils/inert-markdown.js';
 import type {
   VulnerabilityGroup,
   CreatedIssue,
@@ -10,6 +11,8 @@ import type {
   IssueCreationResult,
   IssueLabel
 } from './types.js';
+
+const STATIC_HINT_CHARS = 500;
 
 /**
  * Map of vulnerability types to human-readable names
@@ -536,7 +539,7 @@ export class IssueCreator {
     sections.push('');
 
     if (finding.staticHint) {
-      sections.push(`> RSOLV static analysis thinks this may be safe because ${finding.staticHint}`);
+      sections.push(`> RSOLV static analysis thinks this may be safe because ${inertInline(finding.staticHint, STATIC_HINT_CHARS)}`);
       sections.push('');
     }
 
