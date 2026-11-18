@@ -1,6 +1,6 @@
 import { RsolvApiClient } from '../external/api-client.js';
 import { logger } from '../utils/logger.js';
-import type { Vulnerability } from '../security/types.js';
+import { findingId, type Vulnerability } from '../security/types.js';
 import * as crypto from 'crypto';
 
 /**
@@ -28,6 +28,10 @@ export interface ValidationResponse {
     isValid: boolean;
     confidence: number;
     reason?: string;
+    /** Contract 2: a heuristic's doubt, kept with the finding instead of dropping it. */
+    staticHint?: string;
+    /** Contract 2: the only reason to drop a finding. */
+    exclusion?: string;
     enclosingFunction?: {
       name: string;
       startLine: number;
@@ -44,7 +48,11 @@ export interface ValidationResponse {
     validated: number;
     rejected: number;
   };
+  contractVersion?: number;
 }
+
+/** Contract 2 exclusions the Action knows to drop; any other isValid:false is kept. */
+const RECOGNISED_EXCLUSIONS = new Set(['non_executable']);
 
 /** The body of POST /api/v1/vulnerabilities/validate, as prepareValidationRequest builds it. */
 export interface ValidationRequest {
@@ -58,7 +66,10 @@ export interface ValidationRequest {
     severity: string;
   }>;
   files: Record<string, { content: string }>;
+  contractVersion?: 2;
 }
+
+
 
 /** What validates findings: the platform API (v4), or the host's frames (the v5 sandbox). */
 export interface ValidationClient {
@@ -200,7 +211,7 @@ export class ASTValidator {
   ): ValidationRequest {
     // Convert vulnerabilities to API format
     const vulnsForApi = vulnerabilities.map(v => ({
-      id: `${v.type}-${v.line}-${v.column || 0}`, // Generate ID from available fields
+      id: findingId(v),
       type: v.type, // Include type field for API
       patternId: v.type, // Use type as pattern ID
       file: v.filePath || '', // API expects 'file', not 'filePath'
@@ -217,7 +228,9 @@ export class ASTValidator {
 
     return {
       vulnerabilities: vulnsForApi,
-      files
+      files,
+      // Off unless opted in; the platform's :static_hints_not_drops flag can also select contract 2.
+      ...(process.env.RSOLV_VALIDATION_CONTRACT === '2' ? { contractVersion: 2 as const } : {})
     };
   }
   
@@ -241,8 +254,7 @@ export class ASTValidator {
     
     // Filter vulnerabilities based on validation results and attach enclosingFunction
     const validated = vulnerabilities.filter(vuln => {
-      const vulnId = `${vuln.type}-${vuln.line}-${vuln.column || 0}`;
-      const validation = validationMap.get(vulnId);
+      const validation = validationMap.get(findingId(vuln));
 
       if (!validation) {
         // No validation result, keep the vulnerability
@@ -250,8 +262,19 @@ export class ASTValidator {
       }
 
       if (!validation.isValid) {
-        logger.debug(`Filtered false positive: ${vuln.filePath}:${vuln.line} - ${validation.reason}`);
-        return false;
+        if (response.contractVersion !== 2) {
+          logger.debug(`Filtered false positive: ${vuln.filePath}:${vuln.line} - ${validation.reason}`);
+          return false;
+        }
+        if (validation.exclusion && RECOGNISED_EXCLUSIONS.has(validation.exclusion)) {
+          logger.debug(`Excluded (${validation.exclusion}): ${vuln.filePath}:${vuln.line}`);
+          return false;
+        }
+        logger.warn(`Keeping ${vuln.filePath}:${vuln.line}: contract 2 isValid:false without a recognised exclusion (${validation.exclusion ?? 'none'}): ${validation.reason}`);
+      }
+
+      if (validation.staticHint) {
+        vuln.staticHint = validation.staticHint;
       }
 
       // Attach enclosingFunction from platform response for focused test context

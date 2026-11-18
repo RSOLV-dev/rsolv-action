@@ -59,6 +59,12 @@ export interface Vulnerability {
   snippet?: string;
   isVendor?: boolean; // True if vulnerability is in vendor/third-party code
   enclosingFunction?: EnclosingFunction; // Extracted by platform FunctionExtractor
+  staticHint?: string; // Platform heuristic's reason this may be safe (validation contract 2)
+}
+
+/** A finding's id: file, type, line and column, so same-line findings elsewhere never share one. The validate endpoint echoes it back. */
+export function findingId(v: Pick<Vulnerability, 'filePath' | 'type' | 'line' | 'column'>): string {
+  return `${v.filePath || ''}:${v.type}-${v.line}-${v.column || 0}`;
 }
 
 export interface SecurityScanResult {

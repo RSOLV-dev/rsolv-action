@@ -238,7 +238,7 @@ eval(userInput); // vulnerability`).toString('base64')
       // Mock the API validation response
       const mockValidationResponse = {
         validated: [{
-          id: 'js-eval-injection-2-0',
+          id: 'app.js:js-eval-injection-2-0',
           isValid: true,
           confidence: 0.95,
           astContext: { inUserInputFlow: true, hasValidation: false }

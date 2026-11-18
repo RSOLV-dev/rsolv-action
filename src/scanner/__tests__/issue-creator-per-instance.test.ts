@@ -216,6 +216,45 @@ describe('IssueCreator - Per-Instance Issue Creation (RFC-142)', () => {
       // Should NOT contain "Total Instances" or "Affected Files" count
       expect(body).not.toContain('Total Instances');
     });
+
+    describe('when the platform left a static hint on the finding', () => {
+      it('tells the reader why RSOLV static analysis doubts it', async () => {
+        const findings = [makeFinding({ staticHint: 'Safe pattern detected: using parameterized query' })];
+
+        await issueCreator.createIssuesFromFindings(findings, baseConfig);
+
+        const body = mockForge.createIssue.mock.calls[0][2].body;
+        expect(body).toContain(
+          'RSOLV static analysis thinks this may be safe because Safe pattern detected: using parameterized query'
+        );
+      });
+    });
+
+    describe('when the static hint carries markdown', () => {
+      it('publishes it inert, on the quote line', async () => {
+        const hint = 'x\n# Heading @org/team [x](http://evil) ![i](http://evil/i.png) <img src=x> Fixes #1 &amp;#64;';
+
+        await issueCreator.createIssuesFromFindings([makeFinding({ staticHint: hint })], baseConfig);
+
+        const body: string = mockForge.createIssue.mock.calls[0][2].body;
+        const hintLine = body.split('\n').find(l => l.startsWith('> RSOLV static analysis'));
+        expect(body).not.toMatch(/^# Heading/m);
+        expect(hintLine).toContain('# Heading');
+        expect(body).not.toContain('http://evil');
+        expect(body).not.toContain('<img');
+        expect(body).not.toContain('@org');
+        expect(body).not.toMatch(/fixes #1/i);
+        expect(body).not.toContain('&amp;');
+      });
+    });
+
+    describe('without a static hint', () => {
+      it('says nothing about static analysis', async () => {
+        await issueCreator.createIssuesFromFindings([makeFinding()], baseConfig);
+
+        expect(mockForge.createIssue.mock.calls[0][2].body).not.toContain('RSOLV static analysis');
+      });
+    });
   });
 
   describe('labels', () => {

@@ -13,9 +13,12 @@ export class SecurityDetectorV2 {
   private patternSource: PatternSource;
   private cachedPatterns: Map<string, any[]> = new Map();
   private astInterpreter: ASTPatternInterpreter;
+  private clientAst: boolean;
 
-  constructor(patternSource?: PatternSource) {
+  /** `clientAst` sends patterns with AST rules to the client-side interpreter instead of regex. */
+  constructor(patternSource?: PatternSource, options: { clientAst?: boolean } = {}) {
     this.patternSource = patternSource || createPatternSource();
+    this.clientAst = options.clientAst ?? false;
     this.astInterpreter = new ASTPatternInterpreter();
   }
 
@@ -42,9 +45,9 @@ export class SecurityDetectorV2 {
       const patterns = await this.patternSource.getPatternsByLanguage(language);
       logger.info(`SecurityDetectorV2: Analyzing ${language} code with ${patterns.length} patterns in file ${filePath}`);
 
-      // Separate patterns into AST-enhanced and regex-only
-      const astPatterns = patterns.filter(p => p.astRules);
-      const regexPatterns = patterns.filter(p => !p.astRules);
+      // Client-side AST is opt-in; by default every pattern runs as regex.
+      const astPatterns = this.clientAst ? patterns.filter(p => p.astRules) : [];
+      const regexPatterns = patterns.filter(p => !astPatterns.includes(p));
 
       // Process AST patterns
       await this.processASTPatterns(astPatterns, code, filePath, seen, vulnerabilities);

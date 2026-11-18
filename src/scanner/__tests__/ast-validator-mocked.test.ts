@@ -51,7 +51,7 @@ console.log('safe code');`]
       mockApiClient.validateVulnerabilities.mockResolvedValue({
         validated: [
           {
-            id: 'js-eval-injection-2-3',
+            id: 'example.js:js-eval-injection-2-3',
             isValid: false,
             confidence: 0.1,
             reason: 'Code found in comment'
@@ -71,7 +71,7 @@ console.log('safe code');`]
       expect(mockApiClient.validateVulnerabilities).toHaveBeenCalledWith({
         vulnerabilities: [
           {
-            id: 'js-eval-injection-2-3',
+            id: 'example.js:js-eval-injection-2-3',
             patternId: 'js-eval-injection',
             file: 'example.js', // API expects 'file', not 'filePath'
             line: 2,
@@ -115,7 +115,7 @@ console.log('safe code');`
       mockApiClient.validateVulnerabilities.mockResolvedValue({
         validated: [
           {
-            id: 'js-eval-injection-5-3',
+            id: 'calc.js:js-eval-injection-5-3',
             isValid: true,
             confidence: 0.95,
             reason: null
@@ -184,19 +184,19 @@ def process():
       mockApiClient.validateVulnerabilities.mockResolvedValue({
         validated: [
           {
-            id: 'js-eval-injection-1-1',
+            id: 'mixed.js:js-eval-injection-1-1',
             isValid: false,
             confidence: 0.1,
             reason: 'Code found in comment'
           },
           {
-            id: 'js-eval-injection-5-3',
+            id: 'mixed.js:js-eval-injection-5-3',
             isValid: true,
             confidence: 0.95,
             reason: null
           },
           {
-            id: 'python-exec-injection-8-1',
+            id: 'mixed.py:python-exec-injection-8-1',
             isValid: false,
             confidence: 0.1,
             reason: 'Code found in string literal'

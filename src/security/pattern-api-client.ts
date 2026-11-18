@@ -57,22 +57,33 @@ export interface PatternData {
     vulnerable: string[];
     safe: string[];
   };
-  // AST Enhancement fields
-  ast_rules?: {
-    node_type?: string;
-    [key: string]: any;
-  };
-  context_rules?: {
-    exclude_paths?: string[];
-    safe_if_wrapped?: string[];
-    [key: string]: any;
-  };
-  confidence_rules?: {
-    base?: number;
-    adjustments?: Record<string, number>;
-    [key: string]: any;
-  };
-  min_confidence?: number;
+  // AST Enhancement fields. format=enhanced serves camelCase; snake_case is the older spelling.
+  astRules?: ASTRulesData | null;
+  ast_rules?: ASTRulesData | null;
+  contextRules?: ContextRulesData | null;
+  context_rules?: ContextRulesData | null;
+  confidenceRules?: ConfidenceRulesData | null;
+  confidence_rules?: ConfidenceRulesData | null;
+  minConfidence?: number | null;
+  min_confidence?: number | null;
+  examples?: { vulnerable?: string[]; safe?: string[] };
+}
+
+interface ASTRulesData {
+  node_type?: string;
+  [key: string]: any;
+}
+
+interface ContextRulesData {
+  exclude_paths?: string[];
+  safe_if_wrapped?: string[];
+  [key: string]: any;
+}
+
+interface ConfidenceRulesData {
+  base?: number;
+  adjustments?: Record<string, number>;
+  [key: string]: any;
 }
 
 export interface PatternAPIConfig {
@@ -248,8 +259,9 @@ export class PatternAPIClient {
       }
     }).filter(Boolean) as RegExp[];
 
-    // Convert context rules if present (already reconstructed)
-    const contextRules = reconstructedPattern.context_rules || undefined;
+    const astRules = reconstructedPattern.astRules ?? reconstructedPattern.ast_rules;
+    const contextRules = reconstructedPattern.contextRules ?? reconstructedPattern.context_rules;
+    const testCases = reconstructedPattern.examples ?? reconstructedPattern.test_cases ?? reconstructedPattern.testCases;
 
     return {
       id: reconstructedPattern.id,
@@ -260,21 +272,21 @@ export class PatternAPIClient {
       patterns: {
         regex: regexPatterns,
         // Add AST rules to patterns object if present (already reconstructed)
-        ast: reconstructedPattern.ast_rules ? [JSON.stringify(reconstructedPattern.ast_rules)] : undefined
+        ast: astRules ? [JSON.stringify(astRules)] : undefined
       },
       languages: reconstructedPattern.languages,
       cweId: reconstructedPattern.cwe_id || reconstructedPattern.cweId || '',
       owaspCategory: reconstructedPattern.owasp_category || reconstructedPattern.owaspCategory || '',
       remediation: reconstructedPattern.recommendation,
       examples: {
-        vulnerable: reconstructedPattern.test_cases?.vulnerable?.[0] || reconstructedPattern.testCases?.vulnerable?.[0] || '',
-        secure: reconstructedPattern.test_cases?.safe?.[0] || reconstructedPattern.testCases?.safe?.[0] || ''
+        vulnerable: testCases?.vulnerable?.[0] || '',
+        secure: testCases?.safe?.[0] || ''
       },
       // AST Enhancement fields (already reconstructed, may contain RegExp)
-      astRules: reconstructedPattern.ast_rules,
+      astRules,
       contextRules,
-      confidenceRules: reconstructedPattern.confidence_rules,
-      minConfidence: reconstructedPattern.min_confidence
+      confidenceRules: reconstructedPattern.confidenceRules ?? reconstructedPattern.confidence_rules,
+      minConfidence: reconstructedPattern.minConfidence ?? reconstructedPattern.min_confidence
     };
   }
 
