@@ -48,6 +48,24 @@ describe('inertInline', () => {
     ])('breaks %s, so it makes no cross-reference', (_label, text, inert) => {
       expect(inertInline(text, 500)).toBe(inert);
     });
+
+    it('breaks an uppercase path, which GitHub still reads as a reference', () => {
+      expect(inertInline('o/r/ISSUES/1', 500)).toBe(`o/r/ISSUES/${ZWSP}1`);
+    });
+
+    it.each(['1/2', '/2026/report', 'src/2fa/x.py'])('leaves %s, which is no reference, alone', text => {
+      expect(inertInline(text, 500)).toBe(text);
+    });
+  });
+
+  describe('when the text carries reference-style links and images', () => {
+    it('escapes the brackets, so a definition elsewhere in the issue cannot resolve them', () => {
+      expect(inertInline('see ![help] and [help]', 500)).toBe('see !\\[help\\] and \\[help\\]');
+    });
+
+    it('escapes a backslash too, so a pre-escaped bracket cannot undo the escape', () => {
+      expect(inertInline('\\[help\\]', 500)).toBe('\\\\\\[help\\\\\\]');
+    });
   });
 
   it('leaves a fullwidth ＠ alone: GitHub does not read it as a mention', () => {
