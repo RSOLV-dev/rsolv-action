@@ -2,8 +2,10 @@
  * Runtime versions a repository declares through mise config (RFC-150 3d,
  * owner decision 4): mise.toml, .mise.toml, .config/mise.toml or .tool-versions.
  */
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as path from 'path';
+import * as os from 'os';
+import { promises as fs } from 'fs';
 
 type MiseAnswer = { error?: Error; stdout?: string };
 
@@ -134,5 +136,55 @@ describe('TestRunner runtime versions from mise config', () => {
     expect(erlang).toBeGreaterThanOrEqual(0);
     expect(erlang).toBeLessThan(elixir);
     expect(state.execCommands.some((c) => c.includes('erlang@latest'))).toBe(false);
+  });
+
+  describe('version files mise does not read itself', () => {
+    let dir: string;
+
+    beforeEach(async () => {
+      dir = await fs.mkdtemp(path.join(os.tmpdir(), 'rsolv-version-file-'));
+      state.mise = () => ({ stdout: '[]' });
+    });
+
+    afterEach(async () => {
+      await fs.rm(dir, { recursive: true, force: true });
+    });
+
+    it.each([
+      ['ruby', '.ruby-version', 'ruby-3.4.1', '3.4.1'],
+      ['ruby', '.ruby-version', 'ruby-3.3.0\n', '3.3.0'],
+      ['ruby', '.ruby-version', 'ruby-3.4.1\r\n', '3.4.1'],
+      ['ruby', '.ruby-version', '3.2.2@myapp', '3.2.2'],
+      ['ruby', '.ruby-version', 'ruby-3.1.4@myapp\n', '3.1.4'],
+      ['ruby', '.ruby-version', '# rvm\n  3.2.2  \n', '3.2.2'],
+      ['ruby', '.ruby-version', '3.3.6', '3.3.6'],
+      ['ruby', '.ruby-version', 'jruby-9.4.5.0', 'jruby-9.4.5.0'],
+      ['ruby', '.ruby-version', 'system', undefined],
+      ['ruby', '.ruby-version', '3.3.0; touch /tmp/pwned', undefined],
+      ['python', '.python-version', '3.12.7', '3.12.7'],
+      ['python', '.python-version', '3.12.7\n3.11.9\n', '3.12.7'],
+      ['python', '.python-version', 'system', undefined],
+      ['python', '.python-version', 'my-project-venv', undefined],
+      ['node', '.nvmrc', 'v20.11.0', '20.11.0'],
+      ['node', '.nvmrc', 'lts/iron', 'lts/iron'],
+      ['node', '.nvmrc', 'lts/*', 'lts'],
+      ['node', '.nvmrc', 'node', undefined],
+      ['node', '.node-version', '20.11.0\n', '20.11.0'],
+      ['ruby', '.tool-versions', 'ruby 3.3.0 # pinned\n', '3.3.0'],
+      ['python', '.tool-versions', 'python 3.12.7 3.11.9\n', '3.12.7'],
+    ])('reads %s from %s %j as mise version %j', async (runtime, file, content, expected) => {
+      await fs.writeFile(path.join(dir, file), content);
+
+      await expect(runner.detectRuntimeVersion(runtime, dir)).resolves.toBe(expected);
+    });
+
+    it('installs ruby 3.4.1 for the .ruby-version a stock `rails new` writes', async () => {
+      await fs.writeFile(path.join(dir, '.ruby-version'), 'ruby-3.4.1\n');
+
+      await runner.ensureRuntime('rspec', dir);
+
+      expect(state.execCommands.some((c) => c.includes('mise install ruby@3.4.1 '))).toBe(true);
+      expect(state.execCommands.some((c) => c.includes('ruby@ruby-'))).toBe(false);
+    });
   });
 });

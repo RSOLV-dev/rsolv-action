@@ -74,6 +74,30 @@ const VERSION_FILES: Record<string, string[]> = {
 };
 
 /**
+ * The mise version a version file declares, read the way rbenv/rvm, pyenv and
+ * nvm read it: the first non-comment line's first word, without rvm's `ruby-`
+ * prefix or `@gemset`, nvm's `v` prefix, and with `lts/*` as mise's `lts`.
+ * Anything that isn't a version, optionally behind a flavour such as `jruby-`
+ * (pyenv's `system` or a virtualenv name, nvm's `node`), is undefined.
+ */
+function normaliseDeclaredVersion(runtime: string, content: string): string | undefined {
+  let version = content
+    .split(/\r?\n/)
+    .map((line) => line.replace(/#.*/, '').trim())
+    .find(Boolean)
+    ?.split(/\s+/)[0];
+  if (!version) return undefined;
+
+  if (runtime === 'ruby') version = version.replace(/^ruby-/, '').replace(/@.*$/, '');
+  if (runtime === 'node') {
+    if (version === 'lts/*') return 'lts';
+    if (/^lts\/[a-z]+$/.test(version)) return version;
+    version = version.replace(/^v(?=\d)/, '');
+  }
+  return /^([a-z][a-z0-9+]*-)?\d[\w.+-]*$/.test(version) ? version : undefined;
+}
+
+/**
  * TestRunner executes framework-specific test commands with timeout handling
  */
 export class TestRunner {
@@ -422,16 +446,13 @@ export class TestRunner {
     for (const versionFile of versionFiles) {
       try {
         const filePath = path.join(workingDir, versionFile);
-        const content = (await fs.readFile(filePath, 'utf8')).trim();
-
-        if (versionFile === '.tool-versions') {
-          // .tool-versions format: "ruby 3.2.2\npython 3.11.0"
-          const match = content.match(new RegExp(`^${runtime}\\s+(.+)$`, 'm'));
-          if (match) return match[1].trim();
-        } else {
-          // Simple version files contain just the version
-          return content;
-        }
+        const content = await fs.readFile(filePath, 'utf8');
+        // .tool-versions format: "ruby 3.2.2\npython 3.11.0"
+        const declared = versionFile === '.tool-versions'
+          ? content.match(new RegExp(`^${runtime}\\s+(.+)$`, 'm'))?.[1]
+          : content;
+        const version = declared === undefined ? undefined : normaliseDeclaredVersion(runtime, declared);
+        if (version) return version;
       } catch {
         // File doesn't exist, try next
       }
