@@ -15,6 +15,9 @@ const STATIC_HINT_CHARS = 500;
 // Hints filed before the markers: the bare quoted line, as a blockquote (at most three spaces in).
 const LEGACY = /^ {0,3}> RSOLV static analysis thinks this may be safe because /;
 const FENCE = /^ {0,3}(`{3,}|~{3,})/;
+// Markers count only where an HTML comment can start: at most three spaces in.
+const START_LINE = /^ {0,3}<!-- rsolv:static-hint:start -->\s*$/;
+const END_LINE = /^ {0,3}<!-- rsolv:static-hint:end -->\s*$/;
 
 export function renderStaticHint(hint: string): string {
   return [START, `${LEAD}${inertInline(hint, STATIC_HINT_CHARS)}`, END].join('\n');
@@ -41,8 +44,8 @@ export function withoutStaticHint(body: string): string {
     if (open) {
       fence = new RegExp(`^ {0,3}${open[1][0]}{${open[1].length},}\\s*$`);
       kept.push(line);
-    } else if (line.trim() === START) {
-      if (lines[i + 2]?.trim() === END) i += 2;
+    } else if (START_LINE.test(line)) {
+      if (END_LINE.test(lines[i + 2] ?? '')) i += 2;
     } else if (!LEGACY.test(line)) {
       kept.push(line);
     }

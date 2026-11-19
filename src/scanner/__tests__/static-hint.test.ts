@@ -40,6 +40,14 @@ describe('withoutStaticHint', () => {
     });
   });
 
+  describe('with a marker block indented four spaces, where it is a code block', () => {
+    it('keeps it as customer content', () => {
+      const text = body('a', '', `    ${START}`, '    > RSOLV static analysis thinks this may be safe because x', `    ${END}`, 'b');
+
+      expect(withoutStaticHint(text)).toBe(text);
+    });
+  });
+
   describe('with an unterminated start marker', () => {
     it('drops the marker line alone and never the customer text after it', () => {
       const text = body('a', START, 'customer line one', 'customer line two');
