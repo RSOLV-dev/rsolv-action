@@ -22,11 +22,14 @@ vi.mock('child_process', () => ({
     else callback(null, { stdout: '', stderr: '' });
   },
   execFile: (
-    _file: string,
-    _args: string[],
+    file: string,
+    args: string[],
     _options: unknown,
     callback: (e: Error | null, r?: { stdout: string; stderr: string }) => void
-  ) => callback(null, { stdout: state.miseLs, stderr: '' }),
+  ) => {
+    if (args[0] !== 'ls') state.execCommands.push([file, ...args].join(' '));
+    callback(null, { stdout: state.miseLs, stderr: '' });
+  },
 }));
 
 const installs = vi.hoisted(() => ({
@@ -153,7 +156,9 @@ describe('TestRunner runtime installs in the v5 sandbox', () => {
       await runner.ensureRuntime('pytest', cwd);
 
       expect(installs.installPython).not.toHaveBeenCalled();
-      expect(state.execCommands).toContain('mise install python@3.11.9 && mise use --global python@3.11.9');
+      expect(state.execCommands).toEqual(
+        expect.arrayContaining(['mise install python@3.11.9', 'mise use --global python@3.11.9'])
+      );
     });
 
     it('installs Maven with apt-get as before', async () => {

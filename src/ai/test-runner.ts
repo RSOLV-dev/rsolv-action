@@ -74,6 +74,32 @@ const VERSION_FILES: Record<string, string[]> = {
 };
 
 /**
+ * The mise version a version file declares, read the way rbenv/rvm, pyenv and
+ * nvm read it: the first non-comment line's first word, without rvm's `ruby-`
+ * prefix or `@gemset`, nvm's `v` prefix, and with `lts/*` as mise's `lts`.
+ * Anything that isn't a version of at most 64 characters, optionally behind a
+ * flavour such as `jruby-` (pyenv's `system` or a virtualenv name, nvm's
+ * `node`, shell syntax), is undefined. The versions mise reports from the
+ * repository's own config go through it too.
+ */
+function normaliseDeclaredVersion(runtime: string, content: string): string | undefined {
+  let version = content
+    .split(/\r?\n/)
+    .map((line) => line.replace(/#.*/, '').trim())
+    .find(Boolean)
+    ?.split(/\s+/)[0];
+  if (!version) return undefined;
+
+  if (runtime === 'ruby') version = version.replace(/^ruby-/, '').replace(/@.*$/, '');
+  if (runtime === 'node') {
+    if (version === 'lts/*') return 'lts';
+    if (/^lts(\/[a-z]+)?$/.test(version)) return version;
+    version = version.replace(/^v(?=\d)/, '');
+  }
+  return version.length <= 64 && /^([a-z][a-z0-9.+]*-)?\d[\w.+-]*$/.test(version) ? version : undefined;
+}
+
+/**
  * TestRunner executes framework-specific test commands with timeout handling
  */
 export class TestRunner {
@@ -143,10 +169,7 @@ export class TestRunner {
         const erlangSpec = `erlang@${erlangVersion ?? 'latest'}`;
         console.log(`[TestRunner] Installing ${erlangSpec} via mise`);
         try {
-          await execAsync(
-            `mise install ${erlangSpec} && mise use --global ${erlangSpec}`,
-            { cwd: workingDir, timeout: this.RUNTIME_INSTALL_TIMEOUT, encoding: 'utf8' }
-          );
+          await this.miseInstall(erlangSpec, { cwd: workingDir, timeout: this.RUNTIME_INSTALL_TIMEOUT });
           console.log('[TestRunner] Erlang installed successfully');
 
           // CRITICAL: Update PATH immediately after Erlang installation
@@ -207,10 +230,7 @@ export class TestRunner {
         console.log(`[TestRunner] Java ${javaVersion} required by project - using mise (prebuilt binaries)`);
         try {
           const runtimeSpec = `java@temurin-${javaVersion}`;
-          const { stdout, stderr } = await execAsync(
-            `mise install ${runtimeSpec} && mise use --global ${runtimeSpec}`,
-            { cwd: workingDir, timeout: this.MISE_QUICK_TIMEOUT, encoding: 'utf8' }
-          );
+          const { stdout, stderr } = await this.miseInstall(runtimeSpec, { cwd: workingDir, timeout: this.MISE_QUICK_TIMEOUT });
           console.log(`[TestRunner] mise Java installed: ${stdout}`);
           if (stderr) console.log(`[TestRunner] mise Java stderr: ${stderr}`);
 
@@ -292,10 +312,7 @@ export class TestRunner {
     if (!version) {
       try {
         console.log(`[TestRunner] [RFC-112] No version constraint found, trying mise native resolution for ${runtime}`);
-        await execAsync(
-          `mise install ${runtime} && mise use --global ${runtime}`,
-          { cwd: workingDir, timeout: this.RUNTIME_INSTALL_TIMEOUT, encoding: 'utf8' }
-        );
+        await this.miseInstall(runtime, { cwd: workingDir, timeout: this.RUNTIME_INSTALL_TIMEOUT });
 
         // Ensure mise shims are on PATH
         const miseShimsNative = this.getMiseShimsPath();
@@ -317,12 +334,12 @@ export class TestRunner {
     console.log(`[TestRunner] Installing runtime: ${runtimeSpec} via mise`);
 
     try {
-      // For Elixir, prepend the mise shims PATH to the command so that 'erl' is found
+      // For Elixir, prepend the mise shims PATH so that 'erl' is found
       // during Elixir's installation verification step (which spawns its own subprocess)
-      let installCmd = `mise install ${runtimeSpec} && mise use --global ${runtimeSpec}`;
+      let env: NodeJS.ProcessEnv | undefined;
       if (runtime === 'elixir') {
         const miseShimsElixir = this.getMiseShimsPath();
-        installCmd = `PATH="${miseShimsElixir}:$PATH" ${installCmd}`;
+        env = { ...process.env, PATH: `${miseShimsElixir}:${process.env.PATH || ''}` };
         console.log(`[TestRunner] Using PATH prefix for Elixir install: ${miseShimsElixir}`);
       }
 
@@ -330,10 +347,7 @@ export class TestRunner {
       // This prevents hanging on slow builds (e.g., PHP 7.1 from source)
       const miseTimeout = version ? this.MISE_QUICK_TIMEOUT : this.RUNTIME_INSTALL_TIMEOUT;
 
-      const { stdout, stderr } = await execAsync(
-        installCmd,
-        { cwd: workingDir, timeout: miseTimeout, encoding: 'utf8' }
-      );
+      const { stdout, stderr } = await this.miseInstall(runtimeSpec, { cwd: workingDir, timeout: miseTimeout, env });
       console.log(`[TestRunner] Runtime installed: ${stdout}`);
       if (stderr) console.log(`[TestRunner] Runtime install stderr: ${stderr}`);
 
@@ -409,6 +423,17 @@ export class TestRunner {
     }
   }
 
+  /** `mise install <spec> && mise use --global <spec>`, without a shell: the spec comes from the repository. */
+  private async miseInstall(
+    spec: string,
+    options: { cwd: string; timeout: number; env?: NodeJS.ProcessEnv }
+  ): Promise<{ stdout: string; stderr: string }> {
+    const execFileAsync = promisify(execFile);
+    const install = await execFileAsync('mise', ['install', spec], { ...options, encoding: 'utf8' });
+    const use = await execFileAsync('mise', ['use', '--global', spec], { ...options, encoding: 'utf8' });
+    return { stdout: install.stdout + use.stdout, stderr: install.stderr + use.stderr };
+  }
+
   /**
    * Detect the runtime version from project version files.
    * Returns the version string or undefined if no version file found.
@@ -422,16 +447,13 @@ export class TestRunner {
     for (const versionFile of versionFiles) {
       try {
         const filePath = path.join(workingDir, versionFile);
-        const content = (await fs.readFile(filePath, 'utf8')).trim();
-
-        if (versionFile === '.tool-versions') {
-          // .tool-versions format: "ruby 3.2.2\npython 3.11.0"
-          const match = content.match(new RegExp(`^${runtime}\\s+(.+)$`, 'm'));
-          if (match) return match[1].trim();
-        } else {
-          // Simple version files contain just the version
-          return content;
-        }
+        const content = (await fs.readFile(filePath, 'utf8')).replace(/^\uFEFF/, '');
+        // .tool-versions format: "ruby 3.2.2\npython 3.11.0"
+        const declared = versionFile === '.tool-versions'
+          ? content.match(new RegExp(`^${runtime}\\s+(.+)$`, 'm'))?.[1]
+          : content;
+        const version = declared === undefined ? undefined : normaliseDeclaredVersion(runtime, declared);
+        if (version) return version;
       } catch {
         // File doesn't exist, try next
       }
@@ -466,7 +488,9 @@ export class TestRunner {
       const entry = (entries ?? []).find(
         (e) => typeof e?.source?.path === 'string' && path.resolve(e.source.path).startsWith(root)
       );
-      return typeof entry?.requested_version === 'string' ? entry.requested_version : undefined;
+      return typeof entry?.requested_version === 'string'
+        ? normaliseDeclaredVersion(runtime, entry.requested_version)
+        : undefined;
     } catch (error) {
       console.warn(`[TestRunner] mise ls --current failed for ${runtime}, using version files: ${(error as Error).message}`);
       return undefined;
