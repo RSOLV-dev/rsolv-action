@@ -28,6 +28,7 @@ import { TestRunner, type TestFramework } from '../../ai/test-runner.js';
 import { applyValidationLabels } from './utils/label-manager.js';
 import { extractOwaspFromIssue } from './utils/extract-owasp.js';
 import { detectTestFramework } from './detect-test-framework.js';
+import { withoutStaticHint } from '../../scanner/static-hint.js';
 
 export { detectTestFramework };
 
@@ -1207,7 +1208,7 @@ export class PhaseExecutor {
       const validationContext: ValidationContext = {
         vulnerability: {
           type: vulnerabilityType,
-          description: issue.body || issue.title,
+          description: withoutStaticHint(issue.body ?? '').trim() || issue.title,
           location: sourceFile,
           source: sourceFile,
         },
@@ -1426,7 +1427,7 @@ export class PhaseExecutor {
       const mitigationContext: MitigationContext = {
         issue: {
           title: issue.title,
-          body: issue.body || '',
+          body: withoutStaticHint(issue.body || ''),
           number: issue.number,
         },
         analysis: {

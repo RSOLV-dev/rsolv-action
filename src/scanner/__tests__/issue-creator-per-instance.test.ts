@@ -5,6 +5,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { IssueCreator } from '../issue-creator.js';
+import { withoutStaticHint } from '../static-hint.js';
 import type { ForgeAdapter, ForgeIssue } from '../../forge/forge-adapter.js';
 import type { ScanConfig } from '../types.js';
 import type { Vulnerability } from '../../security/types.js';
@@ -227,6 +228,18 @@ describe('IssueCreator - Per-Instance Issue Creation (RFC-142)', () => {
         expect(body).toContain(
           'RSOLV static analysis thinks this may be safe because Safe pattern detected: using parameterized query'
         );
+      });
+
+      it('leaves nothing of it once stripped for the backend prompts', async () => {
+        const hint = 'parameterized query\n> second line\r\nthird line\u2028fourth line';
+
+        await issueCreator.createIssuesFromFindings([makeFinding({ staticHint: hint })], baseConfig);
+
+        const prompt = withoutStaticHint(mockForge.createIssue.mock.calls[0][2].body);
+        expect(prompt).not.toContain('may be safe');
+        ['parameterized query', 'second line', 'third line', 'fourth line']
+          .forEach(text => expect(prompt).not.toContain(text));
+        expect(prompt).toContain('### Description');
       });
     });
 

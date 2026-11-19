@@ -2,6 +2,7 @@ import { IssueContext, ActionConfig, AnalysisData, IssueType } from '../types/in
 import { logger } from '../utils/logger.js';
 import { getAiClient } from './client.js';
 import { buildAnalysisPrompt } from './prompts.js';
+import { withoutStaticHint } from '../scanner/static-hint.js';
 // import { SecurityDetector, Vulnerability } from '../security/index.js';
 
 /**
@@ -37,7 +38,7 @@ export async function analyzeIssue(
   const aiClient = injectedClient || await getAiClient(config.aiProvider);
   
   // Build analysis prompt based on issue context
-  const prompt = buildAnalysisPrompt(issue);
+  const prompt = buildAnalysisPrompt({ ...issue, body: withoutStaticHint(issue.body ?? '') });
   
   try {
     // Send request to AI provider
