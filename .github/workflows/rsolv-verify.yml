@@ -34,9 +34,9 @@ jobs:
     outputs:
       outcome: ${{ steps.host.outputs.outcome }}
     env:
-      RSOLV_HOST_VERSION: "0.2.0"
-      RSOLV_HOST_SHA256_X64: "2ff194d2bac01288664158ef5a5ab13a22e563cf0c4c8216b026612720d4856a"
-      RSOLV_HOST_SHA256_ARM64: "4648190d33dcc25aa0b2a790649a60014b9dc6a336a0ac93c506137cd3a16404"
+      RSOLV_HOST_VERSION: "0.2.1"
+      RSOLV_HOST_SHA256_X64: "a8d19115a0947a9dfe61f8601a7071b7b8f4d3a0ab0720bbdad883ced907d746"
+      RSOLV_HOST_SHA256_ARM64: "8096882c3d14cbc8a2b0a6ef348dfcfc1aa45ec8baf49401006e84c7c7b85cad"
     steps:
       # The run's commit is the scanned base (RFC-150 §3); the host checks HEAD against it.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
