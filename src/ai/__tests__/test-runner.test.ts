@@ -11,7 +11,8 @@ const mockFsAccess = vi.hoisted(() => vi.fn());
 const mockFsReadFile = vi.hoisted(() => vi.fn().mockResolvedValue(''));
 
 vi.mock('child_process', () => ({
-  exec: vi.fn()
+  exec: vi.fn(),
+  execFile: vi.fn()
 }));
 
 vi.mock('util', () => ({
@@ -452,11 +453,8 @@ describe('TestRunner', () => {
 
       await runner.ensureRuntime('junit4', '/tmp/java-repo');
 
-      const calls = mockExecAsync.mock.calls.map((c: unknown[]) => c[0] as string);
       // Should use temurin vendor prefix for mise installation
-      const miseCall = calls.find((c: string) => c.includes('mise install java@temurin-'));
-      expect(miseCall).toBeDefined();
-      expect(miseCall).toContain('java@temurin-11');
+      expect(mockExecAsync).toHaveBeenCalledWith('mise', ['install', 'java@temurin-11'], expect.anything());
     });
   });
 
