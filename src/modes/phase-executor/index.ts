@@ -1208,7 +1208,7 @@ export class PhaseExecutor {
       const validationContext: ValidationContext = {
         vulnerability: {
           type: vulnerabilityType,
-          description: withoutStaticHint(issue.body || issue.title),
+          description: withoutStaticHint(issue.body ?? '').trim() || issue.title,
           location: sourceFile,
           source: sourceFile,
         },

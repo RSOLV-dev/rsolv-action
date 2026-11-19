@@ -7,10 +7,16 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { PhaseExecutor } from '../index.js';
 import type { ActionConfig, IssueContext, ScanPhaseData } from '../../../types/index.js';
+import { renderStaticHint } from '../../../scanner/static-hint.js';
 
-const { runValidation, runMitigation } = vi.hoisted(() => ({
+const { runValidation, runMitigation, complete } = vi.hoisted(() => ({
   runValidation: vi.fn(),
-  runMitigation: vi.fn()
+  runMitigation: vi.fn(),
+  complete: vi.fn()
+}));
+
+vi.mock('../../../ai/client.js', () => ({
+  getAiClient: vi.fn().mockResolvedValue({ complete })
 }));
 
 vi.mock('../../../ai/test-runner.js', () => ({
@@ -88,7 +94,8 @@ describe('PhaseExecutor static hint isolation', () => {
     executor = new PhaseExecutor({
       githubToken: 't',
       rsolvApiKey: 'k',
-      repository: { owner: 'o', name: 'r' }
+      repository: { owner: 'o', name: 'r' },
+      aiProvider: {}
     } as ActionConfig);
   });
 
@@ -118,6 +125,37 @@ describe('PhaseExecutor static hint isolation', () => {
       await executor.executeValidateForIssue(issue, scanData);
 
       expect(runValidation.mock.calls[0][0].vulnerability.description).not.toContain('may be safe');
+    });
+  });
+
+  describe('when the body is only a static hint', () => {
+    it('gives VALIDATE the title instead of an empty description', async () => {
+      const issue = { ...issueWithHint(), body: `\n${renderStaticHint('it is parameterized')}\n` };
+
+      await executor.executeValidateForIssue(issue, scanData);
+
+      expect(runValidation.mock.calls[0][0].vulnerability.description).toBe('CWE-89: SQL injection in users.py');
+    });
+  });
+
+  describe('when a three-phase run takes an issue carrying a generated hint', () => {
+    it('keeps the hint out of the analysis prompt, VALIDATE and MITIGATE', async () => {
+      complete.mockResolvedValue(JSON.stringify({ canBeFixed: true, suggestedApproach: 'parameterize the query' }));
+      runValidation.mockResolvedValue({ validated: true, classification: 'validated' });
+      const issue = { ...issueWithHint(), body: ['User input reaches a SQL string.', renderStaticHint('it is parameterized')].join('\n') };
+
+      await executor.executeThreePhaseForIssue(issue);
+
+      const reads = [
+        complete.mock.calls[0][0],
+        runValidation.mock.calls[0][0].vulnerability.description,
+        runMitigation.mock.calls[0][0].issue.body
+      ];
+      reads.forEach((text: string) => {
+        expect(text).toContain('User input reaches a SQL string.');
+        expect(text).not.toContain('may be safe');
+        expect(text).not.toContain('it is parameterized');
+      });
     });
   });
 });

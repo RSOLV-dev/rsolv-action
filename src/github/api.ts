@@ -1,6 +1,7 @@
 import { Octokit } from '@octokit/rest';
 import { ActionConfig } from '../types/index.js';
 import { logger } from '../utils/logger.js';
+import { withoutStaticHint } from '../scanner/static-hint.js';
 
 let githubClient: Octokit | null = null;
 
@@ -78,7 +79,7 @@ export async function getIssue(
       id: data.id.toString(),
       number: data.number,
       title: data.title,
-      body: data.body || '',
+      body: withoutStaticHint(data.body || ''),
       labels: data.labels.map(label => 
         typeof label === 'string' ? label : label.name || ''
       ),
