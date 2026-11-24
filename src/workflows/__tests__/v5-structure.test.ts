@@ -16,6 +16,30 @@ const edited = (file: string, from: RegExp | string, to: string): string => {
 
 const ZERO = '0'.repeat(64);
 
+describe('the install-host block', () => {
+  const installHost = (file: string): string => {
+    const block = /# BEGIN install-host\n[\s\S]*?# END install-host/.exec(read(file));
+    if (block === null) throw new Error(`${file} has no install-host block`);
+    return block[0];
+  };
+
+  describe.each(Object.keys(ROLE_WORKFLOWS))('in %s', (file) => {
+    test('retries transient GitHub download errors, 403 included, within a bounded time', () => {
+      const curl = /curl (?:[^\n]*\\\n)*[^\n]*/.exec(installHost(file))?.[0] ?? '';
+      for (const flag of ['--fail', '--location', '--retry 5', '--retry-all-errors', '--retry-delay 3',
+        '--retry-max-time 120', '--connect-timeout 15']) {
+        expect(curl).toContain(flag);
+      }
+    });
+
+    test('exits 3 with a clear annotation when the download still fails', () => {
+      expect(installHost(file)).toContain(
+        '|| { echo "::error title=RSOLV sandbox setup::Could not download rsolv-host $RSOLV_HOST_VERSION from GitHub releases after retries (transient GitHub error); re-run the workflow"; exit 3; }'
+      );
+    });
+  });
+});
+
 describe('structureViolations', () => {
   describe('when given the real v5 workflows', () => {
     test.each([...Object.keys(ROLE_WORKFLOWS), 'rsolv-issue.yml'])('%s has none', (file) => {

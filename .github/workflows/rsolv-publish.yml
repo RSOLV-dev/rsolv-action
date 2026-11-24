@@ -63,8 +63,12 @@ jobs:
           bin="$(mktemp -d "$RUNNER_TEMP/rsolv-host-bin.XXXXXXXXXX")/rsolv-host"
           install=$(mktemp -d "$RUNNER_TEMP/rsolv-host.XXXXXXXXXX")
           home=$(mktemp -d "$RUNNER_TEMP/rsolv-host-home.XXXXXXXXXX")
-          curl -fsSL --proto '=https' --proto-redir '=https' --retry 3 -o "$bin" \
-            "https://github.com/RSOLV-dev/rsolv-host/releases/download/host-v$RSOLV_HOST_VERSION/$asset"
+          # A fixed public release asset, so retry everything, 403 included (GitHub returns
+          # transient 403/429/5xx). The SHA-256 check in run_host still guards the result.
+          curl --fail --location --silent --show-error --proto '=https' --proto-redir '=https' \
+            --retry 5 --retry-all-errors --retry-delay 3 --retry-max-time 120 --connect-timeout 15 -o "$bin" \
+            "https://github.com/RSOLV-dev/rsolv-host/releases/download/host-v$RSOLV_HOST_VERSION/$asset" \
+            || { echo "::error title=RSOLV sandbox setup::Could not download rsolv-host $RSOLV_HOST_VERSION from GitHub releases after retries (transient GitHub error); re-run the workflow"; exit 3; }
           chmod 0500 "$bin"
           host_env=(PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin HOME="$home" LANG=C.UTF-8
             RUNNER_TEMP="$RUNNER_TEMP" RSOLV_HOST_INSTALL_DIR="$install")
