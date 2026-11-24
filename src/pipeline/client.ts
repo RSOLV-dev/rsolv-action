@@ -20,12 +20,20 @@ import type {
 const PROVIDER_AUTH_MESSAGE =
   'RSOLV\'s AI provider rejected our credentials. This is a problem on RSOLV\'s side, not your repository; we\'ve been alerted. Re-running won\'t help until it\'s fixed.';
 
+/**
+ * The message for a session that failed because the platform's AI provider
+ * refused RSOLV's credential, from an `error` event's data or a failed
+ * session's status; undefined for any other failure.
+ */
+export function providerAuthMessage(data: { error?: unknown; reason?: unknown }): string | undefined {
+  return data.error === 'service_unavailable' && data.reason === 'provider_auth'
+    ? PROVIDER_AUTH_MESSAGE
+    : undefined;
+}
+
 /** The message for a session `error` event's data. */
 export function sessionErrorMessage(data: Record<string, unknown>): string {
-  if (data.error === 'service_unavailable' && data.reason === 'provider_auth') {
-    return PROVIDER_AUTH_MESSAGE;
-  }
-  return (data.error as string) || 'Unknown error from backend';
+  return providerAuthMessage(data) ?? ((data.error as string) || 'Unknown error from backend');
 }
 
 export class PipelineClient {

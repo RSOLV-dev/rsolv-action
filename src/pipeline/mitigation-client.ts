@@ -9,7 +9,7 @@
  * fix generation). This client just executes tools and reports back.
  */
 
-import { PipelineClient, sessionErrorMessage } from './client.js';
+import { PipelineClient, providerAuthMessage, sessionErrorMessage } from './client.js';
 import { TOOL_DISPATCH } from './tool-executors.js';
 import type {
   PipelineClientConfig,
@@ -142,7 +142,7 @@ export class MitigationClient {
         return { success: false, error: `Session completed during SSE disconnect (status: ${status.status})` };
       }
       if (status.status === 'failed') {
-        return { success: false, error: 'Session failed during SSE disconnect' };
+        return { success: false, error: providerAuthMessage(status) ?? 'Session failed during SSE disconnect' };
       }
       return null;
     } catch {
