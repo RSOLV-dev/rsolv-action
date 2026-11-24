@@ -5,7 +5,7 @@
  * to the backend-orchestrated pipeline.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { PipelineClient } from '../client.js';
+import { PipelineClient, sessionErrorMessage } from '../client.js';
 import type { SessionStartParams, SessionStartResponse, ToolRequest } from '../types.js';
 
 // Mock fetch globally
@@ -214,5 +214,17 @@ describe('PipelineClient', () => {
         })
       );
     });
+  });
+});
+
+describe('sessionErrorMessage', () => {
+  it('passes other errors through, even with a provider_auth reason', () => {
+    expect(sessionErrorMessage({ error: 'api_error: timeout', reason: 'provider_auth' })).toBe(
+      'api_error: timeout'
+    );
+    expect(sessionErrorMessage({ error: 'service_unavailable', reason: 'other' })).toBe(
+      'service_unavailable'
+    );
+    expect(sessionErrorMessage({})).toBe('Unknown error from backend');
   });
 });

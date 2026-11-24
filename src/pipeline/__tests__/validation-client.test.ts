@@ -205,6 +205,113 @@ describe('ValidationClient', () => {
       expect(result.error).toContain('api_error');
     });
 
+    it('says RSOLV is at fault when the session failed on provider_auth during a disconnect', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          session_id: 'sess_v_abc123',
+          stream_url: '/api/v1/validation/stream/sess_v_abc123',
+        }),
+      });
+
+      // The stream drops before the error event arrives.
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: new Map([['content-type', 'text/event-stream']]),
+        body: createSSEStream([]),
+      });
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          session_id: 'sess_v_abc123',
+          status: 'failed',
+          phase: 'validation',
+          event_counter: 1,
+          pending_tools: 0,
+          error: 'service_unavailable',
+          reason: 'provider_auth',
+        }),
+      });
+
+      const result = await client.runValidation(context);
+
+      expect(result.validated).toBe(false);
+      expect(result.error).toBe(
+        'RSOLV\'s AI provider rejected our credentials. This is a problem on RSOLV\'s side, not your repository; we\'ve been alerted. Re-running won\'t help until it\'s fixed.'
+      );
+    });
+
+    it('reports a generic failure when the session failed otherwise during a disconnect', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          session_id: 'sess_v_abc123',
+          stream_url: '/api/v1/validation/stream/sess_v_abc123',
+        }),
+      });
+
+      // The stream drops before the error event arrives.
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: new Map([['content-type', 'text/event-stream']]),
+        body: createSSEStream([]),
+      });
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          session_id: 'sess_v_abc123',
+          status: 'failed',
+          phase: 'validation',
+          event_counter: 1,
+          pending_tools: 0,
+          error: 'api_error',
+          outcome: 'rate_limited',
+        }),
+      });
+
+      const result = await client.runValidation(context);
+
+      expect(result.validated).toBe(false);
+      expect(result.error).toBe(
+        'Session failed during SSE disconnect'
+      );
+    });
+
+    it('says RSOLV is at fault when the platform reports provider_auth', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          session_id: 'sess_v_abc123',
+          stream_url: '/api/v1/validation/stream/sess_v_abc123',
+        }),
+      });
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: new Map([['content-type', 'text/event-stream']]),
+        body: createSSEStream([
+          { type: 'error', id: 1, data: { error: 'service_unavailable', reason: 'provider_auth' } },
+        ]),
+      });
+
+      const result = await client.runValidation(context);
+
+      expect(result.validated).toBe(false);
+      expect(result.error).toBe(
+        'RSOLV\'s AI provider rejected our credentials. This is a problem on RSOLV\'s side, not your repository; we\'ve been alerted. Re-running won\'t help until it\'s fixed.'
+      );
+    });
+
     it('handles start session failure', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: false,

@@ -61,6 +61,12 @@ export interface SessionStatusResponse {
   phase: string;
   event_counter: number;
   pending_tools: number;
+  /** A failed session's bounded error: `service_unavailable` or `api_error`. */
+  error?: string;
+  /** With `service_unavailable`: `provider_auth`. */
+  reason?: string;
+  /** With `api_error`: the provider request's outcome. */
+  outcome?: string;
 }
 
 /** Configuration for PipelineClient */

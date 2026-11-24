@@ -15,7 +15,7 @@
  * - No PR creation — VALIDATE only generates and validates the RED test
  */
 
-import { PipelineClient } from './client.js';
+import { PipelineClient, providerAuthMessage, sessionErrorMessage } from './client.js';
 import { TOOL_DISPATCH } from './tool-executors.js';
 import type {
   PipelineClientConfig,
@@ -167,7 +167,7 @@ export class ValidationClient {
         return { validated: false, error: `Session completed during SSE disconnect (status: ${status.status})` };
       }
       if (status.status === 'failed') {
-        return { validated: false, error: 'Session failed during SSE disconnect' };
+        return { validated: false, error: providerAuthMessage(status) ?? 'Session failed during SSE disconnect' };
       }
       // Session still active — proceed with reconnect
       return null;
@@ -341,7 +341,7 @@ export class ValidationClient {
       const data = event.data as Record<string, unknown>;
       return {
         validated: false,
-        error: (data.error as string) || 'Unknown error from backend',
+        error: sessionErrorMessage(data),
       };
     }
 
