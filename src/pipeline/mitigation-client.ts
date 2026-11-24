@@ -9,7 +9,7 @@
  * fix generation). This client just executes tools and reports back.
  */
 
-import { PipelineClient } from './client.js';
+import { PipelineClient, sessionErrorMessage } from './client.js';
 import { TOOL_DISPATCH } from './tool-executors.js';
 import type {
   PipelineClientConfig,
@@ -304,7 +304,7 @@ export class MitigationClient {
       const data = event.data as Record<string, unknown>;
       return {
         success: false,
-        error: (data.error as string) || 'Unknown error from backend',
+        error: sessionErrorMessage(data),
       };
     }
 

@@ -207,6 +207,33 @@ describe('MitigationClient', () => {
       expect(result.error).toContain('api_error');
     });
 
+    it('says RSOLV is at fault when the platform reports provider_auth', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          session_id: 'sess_m_abc123',
+          stream_url: '/api/v1/mitigation/stream/sess_m_abc123',
+        }),
+      });
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: new Map([['content-type', 'text/event-stream']]),
+        body: createSSEStream([
+          { type: 'error', id: 1, data: { error: 'service_unavailable', reason: 'provider_auth' } },
+        ]),
+      });
+
+      const result = await client.runMitigation(context);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe(
+        'RSOLV\'s AI provider rejected our credentials. This is a problem on RSOLV\'s side, not your repository; we\'ve been alerted. Re-running won\'t help until it\'s fixed.'
+      );
+    });
+
     it('handles no-files-modified scenario', async () => {
       // Mock start session
       mockFetch.mockResolvedValueOnce({

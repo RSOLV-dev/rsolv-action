@@ -15,7 +15,7 @@
  * - No PR creation — VALIDATE only generates and validates the RED test
  */
 
-import { PipelineClient } from './client.js';
+import { PipelineClient, sessionErrorMessage } from './client.js';
 import { TOOL_DISPATCH } from './tool-executors.js';
 import type {
   PipelineClientConfig,
@@ -341,7 +341,7 @@ export class ValidationClient {
       const data = event.data as Record<string, unknown>;
       return {
         validated: false,
-        error: (data.error as string) || 'Unknown error from backend',
+        error: sessionErrorMessage(data),
       };
     }
 

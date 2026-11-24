@@ -17,6 +17,17 @@ import type {
   SessionStatusResponse,
 } from './types.js';
 
+const PROVIDER_AUTH_MESSAGE =
+  'RSOLV\'s AI provider rejected our credentials. This is a problem on RSOLV\'s side, not your repository; we\'ve been alerted. Re-running won\'t help until it\'s fixed.';
+
+/** The message for a session `error` event's data. */
+export function sessionErrorMessage(data: Record<string, unknown>): string {
+  if (data.error === 'service_unavailable' && data.reason === 'provider_auth') {
+    return PROVIDER_AUTH_MESSAGE;
+  }
+  return (data.error as string) || 'Unknown error from backend';
+}
+
 export class PipelineClient {
   private readonly baseUrl: string;
   private readonly apiKey: string;
