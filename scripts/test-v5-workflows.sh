@@ -41,7 +41,7 @@ sed -i -E "0,/RSOLV_HOST_SHA256_X64: /s/(RSOLV_HOST_SHA256_X64: )\"0/\1\"1/" "$t
 want=RSOLV_HOST_SHA256_X64
 check "pins: one changed hash fails, naming the key" fails_saying "$pins" --allow-unreleased --allow-placeholder-keys
 fresh_copy
-sed -i 's/--retry 3/--retry 4/' "$t/r/.github/workflows/rsolv-publish.yml"
+sed -i 's/--retry 5/--retry 6/' "$t/r/.github/workflows/rsolv-publish.yml"
 want="install-host"
 check "pins: a changed install-host block fails" fails_saying "$pins" --allow-unreleased --allow-placeholder-keys
 
